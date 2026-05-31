@@ -1,0 +1,113 @@
+{
+  "$schema": "finance-mvp-seed-v1",
+  "description": "Canonical mock data inserted by apps/api/src/seed.js. Account and transaction IDs are Prisma CUIDs at runtime; shapes below match DB/API fields.",
+  "demoUser": {
+    "email": "demo@finance.app",
+    "password": "Demo@1234",
+    "note": "Password is hashed in DB; never store plaintext in production."
+  },
+  "accounts": [
+    {
+      "institution": "Chase",
+      "name": "Everyday Checking",
+      "type": "CHECKING",
+      "balance": 18350.42,
+      "available": 17920.1,
+      "creditLimit": null,
+      "dueDate": null,
+      "status": "HEALTHY"
+    },
+    {
+      "institution": "SoFi",
+      "name": "High Yield Savings",
+      "type": "SAVINGS",
+      "balance": 23759.78,
+      "available": 23759.78,
+      "creditLimit": null,
+      "dueDate": null,
+      "status": "HEALTHY"
+    },
+    {
+      "institution": "American Express",
+      "name": "Gold Card",
+      "type": "CREDIT_CARD",
+      "balance": 2450.56,
+      "available": 12549.44,
+      "creditLimit": 15000,
+      "dueDate": "2026-06-10",
+      "status": "HEALTHY"
+    }
+  ],
+  "transactions": [
+    {
+      "accountMatch": "Everyday Checking",
+      "date": "2026-05-25",
+      "description": "Payroll Deposit",
+      "category": "Income",
+      "amount": 4250
+    },
+    {
+      "accountMatch": "Everyday Checking",
+      "date": "2026-05-26",
+      "description": "Rent Payment",
+      "category": "Housing",
+      "amount": -1850
+    },
+    {
+      "accountMatch": "Gold Card",
+      "date": "2026-05-27",
+      "description": "Grocery Store",
+      "category": "Groceries",
+      "amount": -128.44
+    }
+  ],
+  "aiInsights": [
+    {
+      "severity": "actionable",
+      "title": "Reduce dining spend by $120 this month",
+      "reason": "Dining is 24% above your 3-month average.",
+      "suggestedAction": "Adjust dining budget cap to $480 and enable weekly alert."
+    },
+    {
+      "severity": "warning",
+      "title": "Pay your card before statement close",
+      "reason": "Card utilization is trending up.",
+      "suggestedAction": "Schedule a payment this week."
+    }
+  ],
+  "snapshotMockConstants": {
+    "description": "Applied in GET /v1/me/snapshot regardless of DB rows",
+    "investments": 265930.4,
+    "loans": 18480,
+    "net_worth_change_30d": 4510.12
+  },
+  "computedSnapshotExample": {
+    "description": "Example after seed (cash and cards from accounts; investments/loans from constants)",
+    "components": {
+      "cash": 42110.2,
+      "investments": 265930.4,
+      "credit_cards": 2450.56,
+      "loans": 18480
+    },
+    "net_worth_total_formula": "cash + investments - credit_cards - loans",
+    "net_worth_total_approx": 284110.04
+  },
+  "debtScenarioBaseTables": {
+    "AVALANCHE": { "months_to_debt_free": 22, "total_interest_paid": 4120 },
+    "SNOWBALL": { "months_to_debt_free": 25, "total_interest_paid": 4580 },
+    "HYBRID": { "months_to_debt_free": 23, "total_interest_paid": 4310 }
+  },
+  "billPayIntentExample": {
+    "request": {
+      "card_account_id": "<CREDIT_CARD account cuid>",
+      "funding_account_id": "<CHECKING account cuid>",
+      "amount": 350,
+      "currency": "USD"
+    },
+    "response_shape": {
+      "intent_id": "cuid",
+      "status": "PENDING",
+      "estimated_settlement_at": "ISO-8601 (+2 days from create)"
+    }
+  }
+}

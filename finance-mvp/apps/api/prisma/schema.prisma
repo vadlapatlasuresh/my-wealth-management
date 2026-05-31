@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  accounts     Account[]
+  transactions Transaction[]
+  insights     AiInsight[]
+  intents      PaymentIntent[]
+  properties    RealEstate[]
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  userId      String
+  institution String
+  name        String
+  type        String
+  balance     Float
+  available   Float?
+  creditLimit Float?
+  dueDate     String?
+  status      String
+  lastSynced  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  accountId   String
+  date        String
+  description String
+  category    String
+  amount      Float
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AiInsight {
+  id              String   @id @default(cuid())
+  userId          String
+  severity        String
+  title           String
+  reason          String
+  suggestedAction String
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PaymentIntent {
+  id                    String   @id @default(cuid())
+  userId                String
+  cardAccountId         String
+  fundingAccountId      String
+  amount                Float
+  currency              String
+  status                String
+  estimatedSettlementAt DateTime
+  createdAt             DateTime @default(now())
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RealEstate {
+  id            String   @id @default(cuid())
+  userId        String
+  address       String
+  units         Int?
+  purchaseDate  String?
+  purchasePrice Float?
+  loanBalance   Float?
+  currentValue  Float?
+  monthlyPayment Float?
+  lastValuation DateTime?
+  grossRent     Float?
+  expenses      Float?
+  capRate       Float?
+  equity        Float?
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Wave 3 models: aggregation items, categories, budgets
+model AggregationItem {
+  id           String   @id @default(cuid())
+  userId       String
+  provider     String
+  institution  String
+  status       String   @default("LINKED")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Budget {
+  id        String       @id @default(cuid())
+  userId    String
+  month     String       // ISO month e.g. 2026-05
+  createdAt DateTime     @default(now())
+  lines     BudgetLine[]
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BudgetLine {
+  id        String   @id @default(cuid())
+  budgetId  String
+  category  String
+  amount    Float
+
+  budget Budget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+}
