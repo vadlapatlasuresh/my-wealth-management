@@ -17,6 +17,8 @@ model User {
   insights     AiInsight[]
   intents      PaymentIntent[]
   properties    RealEstate[]
+  aggregationItems AggregationItem[]
+  budgets      Budget[]
 }
 
 model Account {

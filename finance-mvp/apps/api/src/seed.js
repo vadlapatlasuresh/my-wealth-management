@@ -149,7 +149,35 @@ async function run() {
     include: { lines: true }
   });
 
-  console.log("Seed created. Demo user: demo@finance.app / Demo@1234");
+  // Add real estate properties
+  await prisma.realEstate.createMany({
+    data: [
+      {
+        userId: user.id,
+        address: "1225 Oak Ridge Drive, Austin, TX 78704",
+        purchaseDate: "2020-06-15",
+        purchasePrice: 450000,
+        currentValue: 580000,
+        loanBalance: 320000,
+        monthlyPayment: 2100,
+        equity: 260000
+      },
+      {
+        userId: user.id,
+        address: "5521 Venture Drive, San Diego, CA 92130",
+        purchaseDate: "2019-03-20",
+        purchasePrice: 625000,
+        currentValue: 795000,
+        loanBalance: 385000,
+        monthlyPayment: 2650,
+        equity: 410000,
+        grossRent: 3200,
+        capRate: 4.85
+      }
+    ]
+  });
+
+  console.log("Seed created. Demo user: demo@finance.app / Demo@1234\n✓ 2 real estate properties added");
   await prisma.$disconnect();
 }
 
@@ -158,3 +186,4 @@ run().catch(async (error) => {
   await prisma.$disconnect();
   process.exit(1);
 });
+

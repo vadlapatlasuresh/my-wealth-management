@@ -383,7 +383,11 @@ body {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.kpi-row.five {
+  grid-template-columns: repeat(5, 1fr);
 }
 
 .kpi-tile {
@@ -1001,6 +1005,54 @@ select {
   border-radius: 8px;
   background: repeating-linear-gradient(45deg, #f8fafc 0, #f8fafc 8px, #ffffff 8px, #ffffff 16px);
   padding: 1rem;
+  color: var(--text-muted);
+}
+
+/* Real estate widget */
+.real-estate-widget {
+  margin-bottom: 1.5rem;
+}
+
+.re-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--bg-app);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.re-summary div {
+  text-align: center;
+}
+
+.re-summary span {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.re-summary strong {
+  display: block;
+  font-size: 1.35rem;
+}
+
+.real-estate-widget .simple-list li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.real-estate-widget .simple-list strong {
+  display: block;
+}
+
+.real-estate-widget .simple-list p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 

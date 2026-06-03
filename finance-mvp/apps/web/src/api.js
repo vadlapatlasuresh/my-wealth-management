@@ -3,7 +3,7 @@ let authToken =
   localStorage.getItem("terravet_token") || localStorage.getItem("finance_token") || "";
 
 // MOCK MODE: set to false to use local API; can be toggled to true for frontend-only dev.
-const USE_MOCK = false;
+const USE_MOCK = true;
 
 function timeout(ms) {
   return new Promise((res) => setTimeout(res, ms));
@@ -49,6 +49,12 @@ const MOCK = {
     items: [
       { intent_id: "pi_1", amount: 250, currency: "USD", status: "COMPLETED", created_at: new Date().toISOString() }
     ]
+  },
+  realEstate: {
+    items: [
+      { id: "re1", address: "123 Main St", value: 350000, mortgage: 200000, equity: 150000, type: "PRIMARY_RESIDENCE" },
+      { id: "re2", address: "456 Oak Ave", value: 200000, mortgage: 100000, equity: 100000, type: "RENTAL_PROPERTY" }
+    ]
   }
 };
 
@@ -89,6 +95,7 @@ async function request(path, options = {}) {
         projection: Array.from({ length: 24 }).map((_, i) => ({ month: i + 1, balance: Math.max(0, 22000 - (i + 1) * 900) }))
       };
     }
+    if (path === "/v1/real-estate") return MOCK.realEstate;
     return {};
   }
 
@@ -126,7 +133,7 @@ export const api = {
   getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"),
   // real estate endpoints
   getRealEstate: () => request("/v1/real-estate"),
-  getRealEstateDetail: (id) => request(`/v1/real-estate/${encodeURIComponent(id)}`),
+  getRealEstateDetail: (id) => request(`/v1/real-estate/${id}`),
   getTransactions: () => request("/v1/transactions"),
   getInsights: () => request("/v1/ai/insights"),
   getPaymentIntents: () => request("/v1/payments/bill-pay-intents"),

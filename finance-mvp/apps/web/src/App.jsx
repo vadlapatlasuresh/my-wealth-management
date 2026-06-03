@@ -1,20 +1,21 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { api, setAuthToken } from "./api";
-import Shell from "./components/Shell";
-import AIRail from "./components/AIRail";
+// import Shell from "./components/Shell"; // REMOVED
 import AuthPage from "./pages/AuthPage";
-import HomePage from "./pages/HomePage";
-import CashPage from "./pages/CashPage";
-import InvestPage from "./pages/InvestPage";
-import PlanPage from "./pages/PlanPage";
-import BillPayPage from "./pages/BillPayPage";
-import LearnPage from "./pages/LearnPage";
-import ProfilePage from "./pages/ProfilePage";
-import RealEstatePage from "./pages/RealEstatePage";
+// Removed individual page imports, AppLayout will handle them
+// import HomePage from "./pages/HomePage";
+// import CashPage from "./pages/CashPage";
+// import InvestPage from "./pages/InvestPage";
+// import PlanPage from "./pages/PlanPage";
+// import BillPayPage from "./pages/BillPayPage";
+// import LearnPage from "./pages/LearnPage";
+// import ProfilePage from "./pages/ProfilePage";
+// import RealEstatePage from "./pages/RealEstatePage";
+import AppLayout from "./components/AppLayout"; // NEW IMPORT
 import { formatDate } from "./utils/format";
 
 export default function App() {
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState("home"); // Keep page state for now, might be managed by router later
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
@@ -41,6 +42,7 @@ export default function App() {
   });
   const [billPaySubmitting, setBillPaySubmitting] = useState(false);
   const [lastBillPayIntent, setLastBillPayIntent] = useState(null);
+  const [properties, setProperties] = useState([]);
 
   const creditCards = useMemo(
     () => accounts.filter((item) => item.type === "CREDIT_CARD"),
@@ -51,7 +53,7 @@ export default function App() {
     [accounts]
   );
 
-  const showRail = page === "home";
+  // const showRail = page === "home"; // This logic will be handled within page components if needed
 
   async function loadAll() {
     try {
@@ -79,6 +81,12 @@ export default function App() {
       setTransactions(txRes.items ?? []);
       setInsights(insightsRes.insights ?? []);
       setPaymentIntents(intentsRes.items ?? []);
+      try {
+        const props = await api.getRealEstate();
+        setProperties(props.items ?? []);
+      } catch (err) {
+        console.warn('Failed to load real estate:', err.message);
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -191,12 +199,12 @@ export default function App() {
     setAccounts([]);
     setTransactions([]);
     setInsights([]);
-    setPage("home");
+    setPage("home"); // Reset page to home after logout
   }
 
   function openBillPay() {
     setBillPayStep(0);
-    setPage("billpay");
+    // setPage("billpay"); // This will now be handled by router navigation
   }
 
   if (!api.getToken()) {
@@ -212,87 +220,62 @@ export default function App() {
     );
   }
 
-  let content = null;
-  if (loading && !snapshot) {
-    content = <p className="status">Loading TerraVest…</p>;
-  } else {
-    switch (page) {
-      case "cash":
-        content = <CashPage accounts={accounts} transactions={transactions} />;
-        break;
-      case "invest":
-        content = <InvestPage snapshot={snapshot} />;
-        break;
-      case "plan":
-        content = (
-          <PlanPage
-            planTab={planTab}
-            setPlanTab={setPlanTab}
-            strategy={strategy}
-            setStrategy={setStrategy}
-            extraPayment={extraPayment}
-            setExtraPayment={setExtraPayment}
-            debtScenarios={debtScenarios}
-            onRunAllScenarios={runAllDebtScenarios}
-            debtLoading={debtLoading}
-          />
-        );
-        break;
-      case "billpay":
-        content = (
-          <BillPayPage
-            step={billPayStep}
-            setStep={setBillPayStep}
-            creditCards={creditCards}
-            fundingAccounts={fundingAccounts}
-            billPayForm={billPayForm}
-            setBillPayForm={setBillPayForm}
-            paymentIntents={paymentIntents}
-            onSubmit={submitBillPay}
-            onBack={() => setPage("home")}
-            submitting={billPaySubmitting}
-            lastIntent={lastBillPayIntent}
-          />
-        );
-        break;
-      case "learn":
-        content = <LearnPage />;
-        break;
-      case "realestate":
-        content = <RealEstatePage />;
-        break;
-      case "profile":
-        content = (
-          <ProfilePage user={user} accounts={accounts} onLogout={handleLogout} />
-        );
-        break;
-      default:
-        content = (
-          <HomePage
-            snapshot={snapshot}
-            accounts={accounts}
-            transactions={transactions}
-            creditCards={creditCards}
-            onPay={openBillPay}
-          />
-        );
-    }
-  }
-
+  // All application state and handlers are passed to AppLayout
+  // AppLayout will then manage routing and pass relevant props to specific page components
   return (
-    <Shell
-      page={page === "billpay" ? "cash" : page}
-      onNavigate={setPage}
-      onPayBill={openBillPay}
-      userEmail={user?.email ?? "User"}
-      snapshotTime={snapshot ? formatDate(snapshot.computed_at) : null}
-      onRefresh={loadAll}
-      onSyncIntegrator={syncWithIntegrator}
-      onLogout={handleLogout}
-      rail={showRail ? <AIRail insights={insights} /> : null}
-    >
-      {error && <p className="error banner-error">{error}</p>}
-      {content}
-    </Shell>
+    <AppLayout
+      // State
+      snapshot={snapshot}
+      accounts={accounts}
+      transactions={transactions}
+      insights={insights}
+      paymentIntents={paymentIntents}
+      debtScenarios={debtScenarios}
+      debtLoading={debtLoading}
+      strategy={strategy}
+      extraPayment={extraPayment}
+      planTab={planTab}
+      billPayStep={billPayStep}
+      user={user}
+      billPayForm={billPayForm}
+      billPaySubmitting={billPaySubmitting}
+      lastBillPayIntent={lastBillPayIntent}
+      properties={properties}
+      creditCards={creditCards}
+      fundingAccounts={fundingAccounts}
+      loading={loading}
+      error={error}
+      // Setters
+      setPage={setPage} // Still useful for internal state management or specific actions
+      setAuthMode={setAuthMode}
+      setAuthForm={setAuthForm}
+      setSnapshot={setSnapshot}
+      setAccounts={setAccounts}
+      setTransactions={setTransactions}
+      setInsights={setInsights}
+      setPaymentIntents={setPaymentIntents}
+      setDebtScenarios={setDebtScenarios}
+      setDebtLoading={setDebtLoading}
+      setStrategy={setStrategy}
+      setExtraPayment={setExtraPayment}
+      setPlanTab={setPlanTab}
+      setBillPayStep={setBillPayStep}
+      setUser={setUser}
+      setBillPayForm={setBillPayForm}
+      setBillPaySubmitting={setBillPaySubmitting}
+      setLastBillPayIntent={setLastBillPayIntent}
+      setProperties={setProperties}
+      setError={setError}
+      setLoading={setLoading}
+      // Handlers
+      loadAll={loadAll}
+      syncWithIntegrator={syncWithIntegrator}
+      submitAuth={submitAuth}
+      submitBillPay={submitBillPay}
+      runAllDebtScenarios={runAllDebtScenarios}
+      handleLogout={handleLogout}
+      openBillPay={openBillPay}
+      formatDate={formatDate} // Pass utility function
+    />
   );
 }

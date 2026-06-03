@@ -1,218 +1,157 @@
+import React from "react";
 import { currency } from "../utils/format";
 
-const STEPS = ["Select card", "Amount", "Funding", "Review", "Done"];
+const STEPS_NEW = [
+  { label: "Select card", icon: "1" },
+  { label: "Amount", icon: "2" },
+  { label: "Funding", icon: "3" },
+  { label: "Review", icon: "4" },
+  { label: "Done", icon: "5" },
+];
 
 export default function BillPayPage({
-  step,
-  setStep,
+  step, // Current step from App.jsx state
+  setStep, // Function to update step
   creditCards,
   fundingAccounts,
   billPayForm,
   setBillPayForm,
   paymentIntents,
   onSubmit,
-  onBack,
+  onBack, // This might need to be a router navigation call
   submitting = false,
-  lastIntent = null
+  lastIntent = null,
+  formatDate // Passed from AppLayout
 }) {
   const selectedCard = creditCards.find((c) => c.id === billPayForm.card_account_id);
   const selectedFunding = fundingAccounts.find((f) => f.id === billPayForm.funding_account_id);
 
+  const paymentAmount = Number(billPayForm.amount) || 0;
+  const estimatedRewards = Math.round(paymentAmount * 0.1); // Example calculation
+
   return (
     <>
-      <header className="page-header row">
+      <div className="page-header">
         <div>
-          <button type="button" className="btn-ghost" onClick={onBack}>
-            ← Back
-          </button>
-          <h1>Pay bill</h1>
+          <div className="page-title">Pay a Bill</div>
+          <div className="page-subtitle">Review and confirm your payment</div>
         </div>
-      </header>
+      </div>
 
-      <div className="stepper">
-        {STEPS.map((label, i) => (
-          <div
-            key={label}
-            className={`step ${i === step ? "active" : ""} ${i < step ? "done" : ""}`}
-          >
-            <span className="step-num">{i + 1}</span>
-            <span>{label}</span>
-          </div>
+      {/* Stepper */}
+      <div className="stepper" style={{ maxWidth: '600px' }}>
+        {STEPS_NEW.map((s, idx) => (
+          <React.Fragment key={idx}>
+            <div className={`step ${idx < step ? 'done' : ''} ${idx === step ? 'active' : ''}`}>
+              <div className="step-circle">
+                {idx < step ? <i className="ti ti-check" style={{ fontSize: '14px' }}></i> : s.icon}
+              </div>
+              <div className="step-label">{s.label}</div>
+            </div>
+            {idx < STEPS_NEW.length - 1 && (
+              <div className={`step-line ${idx < step ? 'done' : ''}`}></div>
+            )}
+          </React.Fragment>
         ))}
       </div>
 
-      <div className="billpay-layout">
-        <div className="card billpay-main">
-          {step === 0 && (
-            <>
-              <h3>Select card</h3>
-              <div className="card-picker">
-                {creditCards.map((card) => (
-                  <button
-                    key={card.id}
-                    type="button"
-                    className={`pick-card ${
-                      billPayForm.card_account_id === card.id ? "selected" : ""
-                    }`}
-                    onClick={() =>
-                      setBillPayForm((p) => ({ ...p, card_account_id: card.id }))
-                    }
-                  >
-                    <strong>{card.institution}</strong>
-                    <span>{card.name}</span>
-                    <span>{currency(card.balance)} balance</span>
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!billPayForm.card_account_id}
-                onClick={() => setStep(1)}
-              >
-                Continue
-              </button>
-            </>
-          )}
+      {step === 3 && ( // Review step
+        <div className="grid-2">
+          {/* Review details */}
+          <div className="card">
+            <div className="section-title">Review your payment</div>
+            <p style={{ fontSize: '13px', color: 'var(--tv-text-muted)', marginBottom: '16px' }}>Please review details before confirming.</p>
 
-          {step === 1 && (
-            <>
-              <h3>Payment amount</h3>
-              <div className="amount-options">
-                {[
-                  { key: "min", label: "Minimum", val: 35 },
-                  { key: "stmt", label: "Statement", val: selectedCard?.balance },
-                  { key: "custom", label: "Custom", val: billPayForm.amount }
-                ].map((opt) => (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    className="amount-chip"
-                    onClick={() => setBillPayForm((p) => ({ ...p, amount: opt.val || 0 }))}
-                  >
-                    {opt.label}
-                    {opt.val != null && <small>{currency(opt.val)}</small>}
-                  </button>
-                ))}
-              </div>
-              <label>
-                Amount
-                <input
-                  type="number"
-                  min="1"
-                  step="0.01"
-                  value={billPayForm.amount}
-                  onChange={(e) =>
-                    setBillPayForm((p) => ({ ...p, amount: e.target.value }))
-                  }
-                />
-              </label>
-              <div className="wizard-actions">
-                <button type="button" className="btn-ghost" onClick={() => setStep(0)}>
-                  Back
-                </button>
-                <button type="button" className="btn-primary" onClick={() => setStep(2)}>
-                  Continue
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 2 && (
-            <>
-              <h3>Funding account</h3>
-              <select
-                value={billPayForm.funding_account_id}
-                onChange={(e) =>
-                  setBillPayForm((p) => ({ ...p, funding_account_id: e.target.value }))
-                }
-              >
-                {fundingAccounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.institution} — {a.name} ({currency(a.balance)})
-                  </option>
-                ))}
-              </select>
-              <div className="wizard-actions">
-                <button type="button" className="btn-ghost" onClick={() => setStep(1)}>
-                  Back
-                </button>
-                <button type="button" className="btn-primary" onClick={() => setStep(3)}>
-                  Continue
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 3 && (
-            <>
-              <h3>Review payment</h3>
-              <dl className="review-list">
-                <dt>Card</dt>
-                <dd>
-                  {selectedCard?.institution} {selectedCard?.name}
-                </dd>
-                <dt>Amount</dt>
-                <dd>{currency(Number(billPayForm.amount))}</dd>
-                <dt>From</dt>
-                <dd>
-                  {selectedFunding?.institution} {selectedFunding?.name}
-                </dd>
-                <dt>Est. settlement</dt>
-                <dd>2–3 business days</dd>
-                <dt>Rewards preview</dt>
-                <dd>+125 pts</dd>
-              </dl>
-              <label className="checkbox">
-                <input type="checkbox" defaultChecked /> I authorize this payment
-              </label>
-              <div className="wizard-actions">
-                <button type="button" className="btn-ghost" onClick={() => setStep(2)}>
-                  Back
-                </button>
-                <button type="button" className="btn-primary" onClick={onSubmit} disabled={submitting}>
-                  {submitting ? "Submitting…" : "Confirm payment"}
-                </button>
-              </div>
-            </>
-          )}
-
-          {step === 4 && (
-            <div className="success-panel">
-              <h3>Payment submitted</h3>
-              <p>Your bill pay intent is pending settlement.</p>
-              {lastIntent && (
-                <p className="muted">Intent: <strong>{lastIntent.intent_id}</strong></p>
-              )}
-              <button type="button" className="btn-primary" onClick={onBack}>
-                Back to home
-              </button>
+            <div className="list-item">
+              <div className="item-icon icon-blue" style={{ width: '40px', height: '40px', fontSize: '20px' }}><i className="ti ti-credit-card"></i></div>
+              <div className="item-main"><div className="item-name">Pay from</div><div className="item-sub">Card</div></div>
+              <div className="item-right"><div style={{ fontSize: '14px', fontWeight: '600' }}>{selectedCard?.institution} ···· {selectedCard?.account_number?.slice(-4)}</div></div>
             </div>
-          )}
+            <div className="list-item">
+              <div className="item-icon icon-green" style={{ width: '40px', height: '40px', fontSize: '20px' }}><i className="ti ti-currency-dollar"></i></div>
+              <div className="item-main"><div className="item-name">Payment amount</div></div>
+              <div className="item-right"><div style={{ fontSize: '18px', fontWeight: '600', fontFamily: 'var(--font-display)' }}>{currency(paymentAmount)}</div></div>
+            </div>
+            <div className="list-item">
+              <div className="item-icon icon-forest" style={{ width: '40px', height: '40px', fontSize: '20px' }}><i className="ti ti-building-bank"></i></div>
+              <div className="item-main"><div className="item-name">Fund from</div><div className="item-sub">Available: {currency(selectedFunding?.balance ?? 0)}</div></div>
+              <div className="item-right"><div style={{ fontSize: '14px', fontWeight: '600' }}>{selectedFunding?.institution} {selectedFunding?.name} ···· {selectedFunding?.account_number?.slice(-4)}</div></div>
+            </div>
+            <div className="list-item">
+              <div className="item-icon icon-purple" style={{ width: '40px', height: '40px', fontSize: '20px' }}><i className="ti ti-calendar"></i></div>
+              <div className="item-main"><div className="item-name">Estimated settlement</div><div className="item-sub">By {formatDate(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000))}</div></div> {/* 3 days from now */}
+              <div className="item-right"><div style={{ fontSize: '14px', fontWeight: '600' }}>3 business days</div></div>
+            </div>
+            <div className="list-item">
+              <div className="item-icon icon-amber" style={{ width: '40px', height: '40px', fontSize: '20px' }}><i className="ti ti-tag"></i></div>
+              <div className="item-main"><div className="item-name">Payment fee</div></div>
+              <div className="item-right"><div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--tv-positive)' }}>$0.00</div></div>
+            </div>
+            <div className="list-item">
+              <div className="item-icon" style={{ width: '40px', height: '40px', fontSize: '20px', background: 'var(--tv-gold-pale)', color: 'var(--tv-gold)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="ti ti-star"></i></div>
+              <div className="item-main"><div className="item-name">Estimated rewards</div><div className="item-sub">Rewards preview</div></div>
+              <div className="item-right"><div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--tv-gold)' }}>+{estimatedRewards} pts</div></div>
+            </div>
+            <hr className="divider" />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', paddingTop: '2px' }}>
+              <div className="tv-checkbox checked"><i className="ti ti-check"></i></div> {/* Assuming checked by default for review */}
+              <p style={{ fontSize: '12.5px', color: 'var(--tv-text-muted)', lineHeight: '1.6' }}>I authorize this payment and agree to the <a style={{ color: 'var(--tv-forest-light)', fontWeight: '500' }}>Terms of Service</a> and authorize the bank to debit my account on the settlement date.</p>
+            </div>
+          </div>
+
+          {/* Summary sidebar */}
+          <div>
+            <div className="card" style={{ marginBottom: '12px' }}>
+              <div className="section-title">Payment summary</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', padding: '7px 0', borderBottom: '1px solid var(--tv-border-light)' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Pay from</span>
+                <div style={{ textAlign: 'right' }}><div style={{ fontWeight: '500' }}>{selectedCard?.institution} ···· {selectedCard?.account_number?.slice(-4)}</div></div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', padding: '7px 0', borderBottom: '1px solid var(--tv-border-light)' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Payment amount</span>
+                <span style={{ fontWeight: '500' }}>{currency(paymentAmount)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13.5px', padding: '7px 0', borderBottom: '1px solid var(--tv-border-light)' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Payment fee</span>
+                <span style={{ fontWeight: '500', color: 'var(--tv-positive)' }}>$0.00</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '15px', fontWeight: '700', padding: '10px 0', borderBottom: '1px solid var(--tv-border-light)' }}>
+                <span>Total payment</span>
+                <span style={{ color: 'var(--tv-forest)', fontFamily: 'var(--font-display)' }}>{currency(paymentAmount)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '7px 0' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Est. settlement</span>
+                <span>3 business days</span>
+              </div>
+              <div style={{ background: 'var(--tv-gold-pale)', border: '1px solid var(--tv-gold-light)', borderRadius: 'var(--radius-md)', padding: '12px', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '8px' }}>
+                <i className="ti ti-star" style={{ color: 'var(--tv-gold)', fontSize: '20px', flexShrink: 0 }}></i>
+                <div>
+                  <div style={{ fontSize: '12px', color: 'var(--tv-text-muted)' }}>You'll earn</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: 'var(--tv-gold)', fontFamily: 'var(--font-display)' }}>+{estimatedRewards} pts</div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)' }}>Once your payment settles.</div>
+                </div>
+              </div>
+            </div>
+            <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: '15px', borderRadius: 'var(--radius-md)' }} onClick={onSubmit} disabled={submitting}><i className="ti ti-lock"></i> Confirm Payment</button>
+            <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', padding: '12px', fontSize: '14px', marginTop: '8px', borderRadius: 'var(--radius-md)' }} onClick={onBack}>Cancel</button>
+            <div style={{ textAlign: 'center', marginTop: '12px', fontSize: '12px', color: 'var(--tv-text-muted)' }}><i className="ti ti-shield-check" style={{ color: 'var(--tv-positive)', verticalAlign: 'middle', marginRight: '4px' }}></i>Your security is our priority. <a style={{ color: 'var(--tv-forest-light)', cursor: 'pointer' }}>Learn more</a></div>
+          </div>
         </div>
+      )}
 
-        <aside className="card billpay-summary sticky">
-          <h3>Summary</h3>
-          <p>{selectedCard?.name || "—"}</p>
-          <p className="summary-amount">{currency(Number(billPayForm.amount) || 0)}</p>
-          <p className="muted">Fee $0.00</p>
-          <hr />
-          <h4>Recent intents</h4>
-          <ul className="simple-list">
-            {paymentIntents.slice(0, 3).map((i) => (
-              <li key={i.intent_id}>
-                <span>{currency(i.amount)}</span>
-                <span className="badge">{i.status}</span>
-              </li>
-            ))}
-          </ul>
-          {lastIntent && (
-            <div style={{ marginTop: 12 }}>
-              <small className="muted">Last created: <strong>{lastIntent.intent_id}</strong></small>
-            </div>
-          )}
-        </aside>
-      </div>
+      {step === 4 && ( // Done step
+        <div className="card">
+          <div className="empty-state">
+            <i className="ti ti-check-circle" style={{color: 'var(--tv-positive)'}}></i>
+            <p style={{fontSize: '16px', fontWeight: '600', marginBottom: '8px'}}>Payment submitted successfully!</p>
+            <p>Your bill pay intent is pending settlement.</p>
+            {lastIntent && (
+              <p className="muted">Intent ID: <strong>{lastIntent.intent_id}</strong></p>
+            )}
+            <button className="btn btn-primary" style={{marginTop: '20px'}} onClick={onBack}>Back to Home</button>
+          </div>
+        </div>
+      )}
     </>
   );
 }
