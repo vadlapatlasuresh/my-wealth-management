@@ -139,7 +139,7 @@ export default function DealRoomPage() {
               <hr className="divider" />
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}><i className="ti ti-lock" style={{ fontSize: '16px' }}></i> You must acknowledge all documents to subscribe.</div>
               <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: '.5', cursor: 'not-allowed' }}>Subscribe to Opportunity</button>
-              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}><i className="ti ti-bookmark'></i> Add to Watchlist</button>
+              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}><i className="ti ti-bookmark"></i> Add to Watchlist</button>
             </div>
           </div>
         </div>

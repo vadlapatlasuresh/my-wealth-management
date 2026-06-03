@@ -7,22 +7,34 @@ import {
   useLocation
 } from 'react-router-dom';
 
-// Placeholder for page components
-const HomePage = () => <div id="page-home" className="page active">Home Page Content</div>;
-const AccountsPage = () => <div id="page-accounts" className="page active">Accounts Page Content</div>;
-const TransactionsPage = () => <div id="page-transactions" className="page active">Transactions Page Content</div>;
-const BudgetsPage = () => <div id="page-budget" className="page active">Budgets Page Content</div>;
-const BillPayPage = () => <div id="page-billpay" className="page active">Bill Pay Page Content</div>;
-const DebtLabPage = () => <div id="page-debt" className="page active">Debt Lab Page Content</div>;
-const InvestmentsPage = () => <div id="page-invest" className="page active">Investments Page Content</div>;
-const PropertiesPage = () => <div id="page-realestate" className="page active">Properties Page Content</div>;
-const DealRoomPage = () => <div id="page-dealroom" className="page active">Deal Room Page Content</div>;
-const FractionalLLCPage = () => <div id="page-fractional" className="page active">Fractional LLC Page Content</div>;
-const SecurityPage = () => <div id="page-security" className="page active">Security Page Content</div>;
-const MessagesPage = () => <div id="page-messages" className="page active">Messages Page Content</div>;
-const SettingsPage = () => <div id="page-settings" className="page active">Settings Page Content</div>;
-const StyleGuidePage = () => <div id="page-styleguide" className="page active">Style Guide Page Content</div>;
-const UIFlowMapPage = () => <div id="page-flowmap" className="page active">UI Flow Map Page Content</div>;
+// Import actual page components
+import HomePage from "../pages/HomePage";
+import CashPage from "../pages/CashPage";
+import InvestPage from "../pages/InvestPage";
+import PlanPage from "../pages/PlanPage";
+import BillPayPage from "../pages/BillPayPage";
+import LearnPage from "../pages/LearnPage";
+import ProfilePage from "../pages/ProfilePage";
+import RealEstatePage from "../pages/RealEstatePage";
+import DealRoomPage from "../pages/DealRoomPage";
+import StyleGuidePage from "../pages/StyleGuidePage";
+import UIFlowMapPage from "../pages/UIFlowMapPage";
+import MyBusinessPage from "../pages/MyBusinessPage";
+import AIAssistantPage from "../pages/AIAssistantPage"; // NEW IMPORT
+
+// Placeholder for pages not yet fully implemented or mapped
+const AccountsPage = (props) => <div id="page-accounts" className="page active">
+  <div className="page-header"><div><div className="page-title">Accounts</div><div className="page-subtitle">All linked financial accounts</div></div><button className="btn btn-primary btn-sm"><i className="ti ti-plus"></i> Link Account</button></div>
+  <div className="card"><div className="empty-state"><i className="ti ti-wallet"></i><p>Accounts page — full mockup in Home KPI cards and linked institutions widget.</p></div></div>
+</div>;
+const TransactionsPage = (props) => <div id="page-transactions" className="page active">
+  <div className="page-header"><div><div className="page-title">Transactions</div><div className="page-subtitle">All activity across accounts</div></div></div>
+  <div className="card"><div className="empty-state"><i className="ti ti-arrows-exchange-2"></i><p>Transactions page — see Home → Recent Transactions list for component reference.</p></div></div>
+</div>;
+const FractionalLLCPage = (props) => <div id="page-fractional" className="page active">Fractional LLC Page Content</div>;
+const SecurityPage = (props) => <div id="page-security" className="page active">Security Page Content</div>;
+const MessagesPage = (props) => <div id="page-messages" className="page active">Messages Page Content</div>;
+const SettingsPage = (props) => <div id="page-settings" className="page active">Settings Page Content</div>;
 
 
 const navLabels = {
@@ -33,6 +45,8 @@ const navLabels = {
   '/billpay': 'Pay Bills',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
+  '/mybusiness': 'My Business',
+  '/ai-assistant': 'AI Assistant', // NEW LABEL
   '/realestate': 'Properties',
   '/dealroom': 'Deal Room',
   '/fractional': 'Fractional LLC',
@@ -43,10 +57,12 @@ const navLabels = {
   '/flowmap': 'UI Flow Map',
 };
 
-function Sidebar() {
+function Sidebar({ user, handleLogout, paymentIntents }) {
   const location = useLocation();
   const getNavLinkClass = (path) =>
     `nav-item ${location.pathname === path ? 'active' : ''}`;
+
+  const billPayBadge = paymentIntents.filter(p => p.status === 'PENDING').length;
 
   return (
     <aside className="sidebar">
@@ -80,13 +96,19 @@ function Sidebar() {
         </NavLink>
         <NavLink to="/billpay" className={getNavLinkClass('/billpay')}>
           <i className="ti ti-receipt"></i> Pay Bills
-          <span className="nav-badge">3</span>
+          {billPayBadge > 0 && <span className="nav-badge">{billPayBadge}</span>}
         </NavLink>
         <NavLink to="/debt" className={getNavLinkClass('/debt')}>
           <i className="ti ti-trending-down"></i> Debt Lab
         </NavLink>
         <NavLink to="/invest" className={getNavLinkClass('/invest')}>
           <i className="ti ti-chart-line"></i> Investments
+        </NavLink>
+        <NavLink to="/mybusiness" className={getNavLinkClass('/mybusiness')}>
+          <i className="ti ti-briefcase"></i> My Business
+        </NavLink>
+        <NavLink to="/ai-assistant" className={getNavLinkClass('/ai-assistant')}> {/* NEW NAVLINK */}
+          <i className="ti ti-sparkles"></i> AI Assistant
         </NavLink>
 
         <div className="sidebar-section" style={{marginTop:'16px'}}>
@@ -119,19 +141,19 @@ function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="sidebar-user">
-          <div className="user-avatar">AK</div>
+          <div className="user-avatar">{user?.email ? user.email[0].toUpperCase() : 'U'}K</div>
           <div>
-            <div className="user-name">Alex Kim</div>
+            <div className="user-name">{user?.email ? user.email.split('@')[0] : 'User'}</div>
             <div className="user-role">Accredited Investor</div>
           </div>
-          <i className="ti ti-logout" style={{marginLeft:'auto',color:'rgba(255,255,255,.4)',fontSize:'16px'}} title="Sign out"></i>
+          <i className="ti ti-logout" style={{marginLeft:'auto',color:'rgba(255,255,255,.4)',fontSize:'16px'}} title="Sign out" onClick={handleLogout}></i>
         </div>
       </div>
     </aside>
   );
 }
 
-function Topbar() {
+function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate }) {
   const location = useLocation();
   const currentPageLabel = navLabels[location.pathname] || 'TerraVest';
 
@@ -170,24 +192,101 @@ function OuterTabs() {
 }
 
 
-export default function AppLayout() {
+export default function AppLayout(props) {
+  const {
+    snapshot, accounts, transactions, insights, paymentIntents,
+    debtScenarios, debtLoading, strategy, extraPayment, planTab,
+    billPayStep, user, billPayForm, billPaySubmitting, lastBillPayIntent,
+    properties, creditCards, fundingAccounts, loading, error,
+    setPage, setAuthMode, setAuthForm, setSnapshot, setAccounts,
+    setTransactions, setInsights, setPaymentIntents, setDebtScenarios,
+    setDebtLoading, setStrategy, setExtraPayment, setPlanTab,
+    setBillPayStep, setUser, setBillPayForm, setBillPaySubmitting,
+    setLastBillPayIntent, setProperties, setError, setLoading,
+    loadAll, syncWithIntegrator, submitAuth, submitBillPay,
+    runAllDebtScenarios, handleLogout, openBillPay, formatDate
+  } = props;
+
   return (
     <Router>
       <div className="app-shell">
-        <Sidebar />
+        <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} />
         <div className="main-area">
-          <Topbar />
+          <Topbar
+            snapshot={snapshot}
+            syncWithIntegrator={syncWithIntegrator}
+            loadAll={loadAll}
+            error={error}
+            formatDate={formatDate}
+          />
           <OuterTabs />
           <div className="page-content">
+            {/* {error && <p className="error banner-error">{error}</p>} */}
+            {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/accounts" element={<AccountsPage />} />
-              <Route path="/transactions" element={<TransactionsPage />} />
-              <Route path="/budget" element={<BudgetsPage />} />
-              <Route path="/billpay" element={<BillPayPage />} />
-              <Route path="/debt" element={<DebtLabPage />} />
-              <Route path="/invest" element={<InvestmentsPage />} />
-              <Route path="/realestate" element={<PropertiesPage />} />
+              <Route path="/" element={
+                <HomePage
+                  snapshot={snapshot}
+                  accounts={accounts}
+                  transactions={transactions}
+                  creditCards={creditCards}
+                  properties={properties}
+                  onPay={openBillPay}
+                  user={user}
+                  insights={insights}
+                  formatDate={formatDate}
+                />
+              } />
+              <Route path="/accounts" element={<AccountsPage accounts={accounts} loadAll={loadAll} />} />
+              <Route path="/transactions" element={<TransactionsPage transactions={transactions} />} />
+              <Route path="/budget" element={
+                <PlanPage
+                  planTab={planTab}
+                  setPlanTab={setPlanTab}
+                  strategy={strategy}
+                  setStrategy={setStrategy}
+                  extraPayment={extraPayment}
+                  setExtraPayment={setExtraPayment}
+                  debtScenarios={debtScenarios}
+                  onRunAllScenarios={runAllDebtScenarios}
+                  debtLoading={debtLoading}
+                  formatDate={formatDate}
+                />
+              } />
+              <Route path="/billpay" element={
+                <BillPayPage
+                  step={billPayStep}
+                  setStep={setBillPayStep}
+                  creditCards={creditCards}
+                  fundingAccounts={fundingAccounts}
+                  billPayForm={billPayForm}
+                  setBillPayForm={setBillPayForm}
+                  paymentIntents={paymentIntents}
+                  onSubmit={submitBillPay}
+                  onBack={() => { /* Implement navigation back if needed */ }}
+                  submitting={billPaySubmitting}
+                  lastIntent={lastBillPayIntent}
+                  formatDate={formatDate}
+                />
+              } />
+              <Route path="/debt" element={
+                <PlanPage // Reusing PlanPage for Debt Lab as per original structure
+                  planTab="debt" // Force debt tab
+                  setPlanTab={setPlanTab}
+                  strategy={strategy}
+                  setStrategy={setStrategy}
+                  extraPayment={extraPayment}
+                  setExtraPayment={setExtraPayment}
+                  debtScenarios={debtScenarios}
+                  onRunAllScenarios={runAllDebtScenarios}
+                  debtLoading={debtLoading}
+                  formatDate={formatDate}
+                />
+              } />
+              <Route path="/invest" element={<InvestPage snapshot={snapshot} />} />
+              <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} />} />
+              <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} /> {/* NEW ROUTE */}
+              <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
               <Route path="/security" element={<SecurityPage />} />
