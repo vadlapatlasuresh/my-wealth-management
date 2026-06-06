@@ -1,0 +1,13 @@
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/config/JwtAuthFilter.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/dto/LoginRequest.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/JwtService.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/AuthServiceApplication.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/dto/AuthResponse.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/user/UserRepository.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/config/SecurityConfig.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/user/User.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/config/UserDetailsServiceImpl.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/user/Role.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/dto/RegisterRequest.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/AuthController.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/auth-service/src/main/java/com/mywealthmanagement/authservice/auth/AuthService.java

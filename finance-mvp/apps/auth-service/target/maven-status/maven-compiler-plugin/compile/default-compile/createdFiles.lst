@@ -1,0 +1,13 @@
+com/mywealthmanagement/authservice/config/SecurityConfig.class
+com/mywealthmanagement/authservice/auth/AuthService.class
+com/mywealthmanagement/authservice/auth/AuthController.class
+com/mywealthmanagement/authservice/user/Role.class
+com/mywealthmanagement/authservice/AuthServiceApplication.class
+com/mywealthmanagement/authservice/config/JwtAuthFilter.class
+com/mywealthmanagement/authservice/auth/JwtService.class
+com/mywealthmanagement/authservice/user/UserRepository.class
+com/mywealthmanagement/authservice/auth/dto/RegisterRequest.class
+com/mywealthmanagement/authservice/auth/dto/AuthResponse.class
+com/mywealthmanagement/authservice/auth/dto/LoginRequest.class
+com/mywealthmanagement/authservice/config/UserDetailsServiceImpl.class
+com/mywealthmanagement/authservice/user/User.class
