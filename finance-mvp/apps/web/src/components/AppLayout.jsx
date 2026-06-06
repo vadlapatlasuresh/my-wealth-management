@@ -9,6 +9,8 @@ import {
 
 // Import actual page components
 import HomePage from "../pages/HomePage";
+import AccountsPage from "../pages/AccountsPage";
+import TransactionsPage from "../pages/TransactionsPage"; // Import actual TransactionsPage
 import CashPage from "../pages/CashPage";
 import InvestPage from "../pages/InvestPage";
 import PlanPage from "../pages/PlanPage";
@@ -20,17 +22,9 @@ import DealRoomPage from "../pages/DealRoomPage";
 import StyleGuidePage from "../pages/StyleGuidePage";
 import UIFlowMapPage from "../pages/UIFlowMapPage";
 import MyBusinessPage from "../pages/MyBusinessPage";
-import AIAssistantPage from "../pages/AIAssistantPage"; // NEW IMPORT
+import AIAssistantPage from "../pages/AIAssistantPage";
 
 // Placeholder for pages not yet fully implemented or mapped
-const AccountsPage = (props) => <div id="page-accounts" className="page active">
-  <div className="page-header"><div><div className="page-title">Accounts</div><div className="page-subtitle">All linked financial accounts</div></div><button className="btn btn-primary btn-sm"><i className="ti ti-plus"></i> Link Account</button></div>
-  <div className="card"><div className="empty-state"><i className="ti ti-wallet"></i><p>Accounts page — full mockup in Home KPI cards and linked institutions widget.</p></div></div>
-</div>;
-const TransactionsPage = (props) => <div id="page-transactions" className="page active">
-  <div className="page-header"><div><div className="page-title">Transactions</div><div className="page-subtitle">All activity across accounts</div></div></div>
-  <div className="card"><div className="empty-state"><i className="ti ti-arrows-exchange-2"></i><p>Transactions page — see Home → Recent Transactions list for component reference.</p></div></div>
-</div>;
 const FractionalLLCPage = (props) => <div id="page-fractional" className="page active">Fractional LLC Page Content</div>;
 const SecurityPage = (props) => <div id="page-security" className="page active">Security Page Content</div>;
 const MessagesPage = (props) => <div id="page-messages" className="page active">Messages Page Content</div>;
@@ -46,7 +40,7 @@ const navLabels = {
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
-  '/ai-assistant': 'AI Assistant', // NEW LABEL
+  '/ai-assistant': 'AI Assistant',
   '/realestate': 'Properties',
   '/dealroom': 'Deal Room',
   '/fractional': 'Fractional LLC',
@@ -55,6 +49,7 @@ const navLabels = {
   '/settings': 'Settings',
   '/styleguide': 'Style Guide',
   '/flowmap': 'UI Flow Map',
+  '/profile': 'Profile',
 };
 
 function Sidebar({ user, handleLogout, paymentIntents }) {
@@ -107,7 +102,7 @@ function Sidebar({ user, handleLogout, paymentIntents }) {
         <NavLink to="/mybusiness" className={getNavLinkClass('/mybusiness')}>
           <i className="ti ti-briefcase"></i> My Business
         </NavLink>
-        <NavLink to="/ai-assistant" className={getNavLinkClass('/ai-assistant')}> {/* NEW NAVLINK */}
+        <NavLink to="/ai-assistant" className={getNavLinkClass('/ai-assistant')}>
           <i className="ti ti-sparkles"></i> AI Assistant
         </NavLink>
 
@@ -140,14 +135,23 @@ function Sidebar({ user, handleLogout, paymentIntents }) {
       </ul>
 
       <div className="sidebar-footer">
-        <div className="sidebar-user">
-          <div className="user-avatar">{user?.email ? user.email[0].toUpperCase() : 'U'}K</div>
+        <NavLink to="/profile" className="sidebar-user" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="user-avatar">{user?.email ? user.email[0].toUpperCase() : 'U'}</div>
           <div>
             <div className="user-name">{user?.email ? user.email.split('@')[0] : 'User'}</div>
-            <div className="user-role">Accredited Investor</div>
+            <div className="user-role">View profile</div>
           </div>
-          <i className="ti ti-logout" style={{marginLeft:'auto',color:'rgba(255,255,255,.4)',fontSize:'16px'}} title="Sign out" onClick={handleLogout}></i>
-        </div>
+          <i
+            className="ti ti-logout"
+            style={{ marginLeft: 'auto', color: 'rgba(255,255,255,.4)', fontSize: '16px' }}
+            title="Sign out"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleLogout();
+            }}
+          />
+        </NavLink>
       </div>
     </aside>
   );
@@ -285,13 +289,17 @@ export default function AppLayout(props) {
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} />} />
               <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} />} />
-              <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} /> {/* NEW ROUTE */}
+              <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route
+                path="/profile"
+                element={<ProfilePage user={user} accounts={accounts} onLogout={handleLogout} />}
+              />
               <Route path="/styleguide" element={<StyleGuidePage />} />
               <Route path="/flowmap" element={<UIFlowMapPage />} />
             </Routes>

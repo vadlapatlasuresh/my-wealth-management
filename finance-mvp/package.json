@@ -10,6 +10,16 @@
     "dev:api": "npm run dev -w apps/api",
     "dev:web": "npm run dev -w apps/web",
     "build": "npm run build -w apps/web",
-    "start:api": "npm run start -w apps/api"
+    "start:api": "npm run start -w apps/api",
+    "build:auth-service": "mvn clean install -f apps/auth-service/pom.xml",
+    "start:auth-service": "mvn spring-boot:run -f apps/auth-service/pom.xml",
+    "build:api-gateway": "mvn clean install -f apps/api-gateway/pom.xml",
+    "start:api-gateway": "mvn spring-boot:run -f apps/api-gateway/pom.xml",
+    "build:account-aggregation-service": "mvn clean install -f apps/account-aggregation-service/pom.xml",
+    "start:account-aggregation-service": "mvn spring-boot:run -f apps/account-aggregation-service/pom.xml",
+    "build:financial-core-service": "mvn clean install -f apps/financial-core-service/pom.xml",
+    "start:financial-core-service": "mvn spring-boot:run -f apps/financial-core-service/pom.xml",
+    "start:backend": "npm run start:api-gateway & npm run start:auth-service & npm run start:account-aggregation-service & npm run start:financial-core-service & npm run start:api",
+    "build:backend": "npm run build:auth-service && npm run build:api-gateway && npm run build:account-aggregation-service && npm run build:financial-core-service && npm run build -w apps/api"
   }
 }

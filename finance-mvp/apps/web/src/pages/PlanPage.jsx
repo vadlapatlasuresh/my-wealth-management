@@ -2,23 +2,6 @@ import { useState, useEffect, useMemo } from "react";
 import { currency } from "../utils/format";
 import { api } from "../api";
 
-// Mock data for budget categories if API not available or for initial load
-const MOCK_BUDGET_LINES = [
-  { category: "Groceries", budget: 600, spent: 410 },
-  { category: "Dining", budget: 300, spent: 350 },
-  { category: "Rent", budget: 1500, spent: 1500 },
-  { category: "Utilities", budget: 250, spent: 180 },
-  { category: "Transportation", budget: 350, spent: 380 },
-];
-
-// Mock data for debts if API not available
-const MOCK_DEBTS = [
-  { name: "Visa Card", balance: 6250, apr: 18.24, minPayment: 150 },
-  { name: "Personal Loan", balance: 9800, apr: 11.99, minPayment: 200 },
-  { name: "Auto Loan", balance: 14500, apr: 6.49, minPayment: 300 },
-  { name: "Student Loan", balance: 18750, apr: 5.25, minPayment: 250 },
-];
-
 export default function PlanPage({
   planTab,
   setPlanTab,
@@ -34,25 +17,29 @@ export default function PlanPage({
   const [monthLabel, setMonthLabel] = useState("June 2026"); // Display label
   const [currentMonth, setCurrentMonth] = useState("2026-06"); // YYYY-MM for API
   const [budgetLines, setBudgetLines] = useState([]);
-  const [alerts, setAlerts] = useState([]); // Keep alerts for potential future use or if API returns them
+  const [alerts, setAlerts] = useState([]);
   const [saving, setSaving] = useState(false);
-  const [debts, setDebts] = useState(MOCK_DEBTS); // Using mock debts for now
+  const [debts, setDebts] = useState([]); // Will be fetched from API
 
   useEffect(() => {
-    async function loadBudget() {
+    async function loadBudgetAndDebts() {
       try {
-        // const res = await api.getBudget(currentMonth); // Uncomment when API is ready
-        // setBudgetLines(res.lines || []);
-        // setAlerts(res.alerts || []);
-        setBudgetLines(MOCK_BUDGET_LINES); // Use mock data for now
+        // Load Budget
+        const budgetRes = await api.getBudget(currentMonth);
+        setBudgetLines(budgetRes.lines || []);
+        setAlerts(budgetRes.alerts || []);
+
+        // Load Debts
+        const debtsRes = await api.getDebts();
+        setDebts(debtsRes || []);
       } catch (err) {
-        console.error(err);
+        console.error("Failed to load planning data:", err);
       }
     }
-    loadBudget();
+    loadBudgetAndDebts();
   }, [currentMonth]);
 
-  const totalBudget = useMemo(() => budgetLines.reduce((s, r) => s + (r.budget || 0), 0), [budgetLines]);
+  const totalBudget = useMemo(() => budgetLines.reduce((s, r) => s + (r.amount || 0), 0), [budgetLines]);
   const totalSpent = useMemo(() => budgetLines.reduce((s, r) => s + (r.spent || 0), 0), [budgetLines]);
   const pctUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
   const projectedEnd = totalSpent * (30 / (30 - 12)); // Simple projection based on days left (12 days left in month)
@@ -60,14 +47,12 @@ export default function PlanPage({
   async function saveBudget() {
     setSaving(true);
     try {
-      const lines = budgetLines.map((l) => ({ category: l.category, amount: Number(l.budget) }));
-      // await api.putBudget(currentMonth, lines); // Uncomment when API is ready
-      // const res = await api.getBudget(currentMonth);
-      // setBudgetLines(res.lines || []);
-      // setAlerts(res.alerts || []);
-      console.log("Saving budget:", lines); // Log for mock
+      const lines = budgetLines.map((l) => ({ category: l.category, amount: Number(l.amount) }));
+      const updatedBudget = await api.putBudget(currentMonth, lines);
+      setBudgetLines(updatedBudget.lines || []);
+      setAlerts(updatedBudget.alerts || []);
     } catch (err) {
-      console.error(err);
+      console.error("Failed to save budget:", err);
     } finally {
       setSaving(false);
     }
@@ -153,8 +138,8 @@ export default function PlanPage({
               </thead>
               <tbody>
                 {budgetLines.map((row, idx) => {
-                  const remaining = (row.budget || 0) - (row.spent || 0);
-                  const pacePct = row.budget > 0 ? Math.round((row.spent / row.budget) * 100) : 0;
+                  const remaining = (row.amount || 0) - (row.spent || 0);
+                  const pacePct = row.amount > 0 ? Math.round((row.spent / row.amount) * 100) : 0;
                   const isOver = remaining < 0;
                   const paceColor = isOver ? 'var(--tv-negative)' : 'var(--tv-forest)';
 
@@ -171,8 +156,8 @@ export default function PlanPage({
                       <td>
                         <input
                           type="number"
-                          value={row.budget}
-                          onChange={(e) => updateLine(idx, 'budget', Number(e.target.value))}
+                          value={row.amount}
+                          onChange={(e) => updateLine(idx, 'amount', Number(e.target.value))}
                           style={{ border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-sm)', padding: '4px 8px', width: '80px' }}
                         />
                       </td>

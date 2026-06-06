@@ -1,9 +1,9 @@
-const API_BASE = "http://localhost:4000";
+const API_BASE = "http://localhost:8080"; // Changed to API Gateway port
 let authToken =
   localStorage.getItem("terravet_token") || localStorage.getItem("finance_token") || "";
 
 // MOCK MODE: set to false to use local API; can be toggled to true for frontend-only dev.
-const USE_MOCK = true;
+const USE_MOCK = false; // Set to false to use the real backend
 
 function timeout(ms) {
   return new Promise((res) => setTimeout(res, ms));
@@ -58,15 +58,23 @@ const MOCK = {
   }
 };
 
-export function setAuthToken(token) {
+export function setAuthToken(token, email) {
   authToken = token;
   if (token) {
     localStorage.setItem("terravet_token", token);
     localStorage.removeItem("finance_token");
+    if (email) {
+      localStorage.setItem("terravet_email", email);
+    }
   } else {
     localStorage.removeItem("terravet_token");
+    localStorage.removeItem("terravet_email");
     localStorage.removeItem("finance_token");
   }
+}
+
+export function getStoredEmail() {
+  return localStorage.getItem("terravet_email") || "";
 }
 
 async function request(path, options = {}) {
@@ -109,7 +117,12 @@ async function request(path, options = {}) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error(error.message || "Request failed");
+    const message =
+      error.message ||
+      error.error ||
+      (typeof error === "string" ? error : null) ||
+      `Request failed (${response.status})`;
+    throw new Error(message);
   }
   return response.json();
 }
@@ -117,24 +130,52 @@ async function request(path, options = {}) {
 export const api = {
   getToken: () => authToken || (USE_MOCK ? "demo-token" : ""),
   register: (payload) =>
-    request("/v1/auth/register", {
+    request("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
   login: (payload) =>
-    request("/v1/auth/login", {
+    request("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  // range: '1M' | '3M' | '1Y' | 'All'
-  getSnapshot: (range = "All") => request(`/v1/me/snapshot?range=${encodeURIComponent(range)}`),
-  getAccounts: () => request("/v1/accounts"),
-  // fetch aggregator accounts via backend integrator proxy
-  getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"),
-  // real estate endpoints
+  // Plaid Aggregation Endpoints
+  createPlaidLinkToken: () =>
+    request("/api/v1/aggregation/link-token/create", {
+      method: "POST",
+    }),
+  exchangePlaidPublicToken: (publicToken) =>
+    request("/api/v1/aggregation/public-token/exchange", {
+      method: "POST",
+      body: JSON.stringify({ publicToken })
+    }),
+  getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
+  getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
+
+  // Financial Core Service Endpoints
+  getSnapshot: (range = "All") => request(`/api/v1/me/snapshot?range=${encodeURIComponent(range)}`), // Updated to use new service
+  getBudget: (month) => request(`/api/v1/planning/budgets/${month}`), // Updated to use new service
+  putBudget: (month, lines) =>
+    request(`/api/v1/planning/budgets/${month}`, {
+      method: "PUT",
+      body: JSON.stringify({ lines })
+    }), // Updated to use new service
+  getDebts: () => request("/api/v1/planning/debt-scenarios"), // NEW
+  addDebt: (payload) =>
+    request("/api/v1/planning/debt-scenarios/add", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }), // NEW
+  runDebtScenario: (payload) =>
+    request("/api/v1/planning/debt-scenarios", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }), // Updated to use new service
+
+  // Existing endpoints (will be moved to other services later)
+  getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"), // This will be replaced by Plaid
   getRealEstate: () => request("/v1/real-estate"),
   getRealEstateDetail: (id) => request(`/v1/real-estate/${id}`),
-  getTransactions: () => request("/v1/transactions"),
   getInsights: () => request("/v1/ai/insights"),
   getPaymentIntents: () => request("/v1/payments/bill-pay-intents"),
   createBillPayIntent: (payload) =>
@@ -142,12 +183,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
-  runDebtScenario: (payload) =>
-    request("/v1/planning/debt-scenarios", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    }),
-  // Wave 3 additions
   createAggregationLinkSession: () => request("/v1/aggregation/link-sessions", { method: "POST" }),
   getAggregationItems: () => request("/v1/aggregation/items"),
   categorizeTransaction: (txId, category) =>
@@ -155,10 +190,4 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify({ category })
     }),
-  getBudget: (month) => request(`/v1/planning/budgets/${month}`),
-  putBudget: (month, lines) =>
-    request(`/v1/planning/budgets/${month}`, {
-      method: "PUT",
-      body: JSON.stringify({ lines })
-    })
 };

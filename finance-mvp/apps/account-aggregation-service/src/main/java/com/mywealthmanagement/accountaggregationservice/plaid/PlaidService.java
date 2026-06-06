@@ -1,0 +1,189 @@
+package com.mywealthmanagement.accountaggregationservice.plaid;
+
+import com.mywealthmanagement.accountaggregationservice.account.Account;
+import com.mywealthmanagement.accountaggregationservice.account.AccountRepository;
+import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
+import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
+import com.mywealthmanagement.accountaggregationservice.transaction.Transaction;
+import com.mywealthmanagement.accountaggregationservice.transaction.TransactionRepository;
+import com.plaid.client.model.AccountBase;
+import com.plaid.client.model.AccountsGetRequest;
+import com.plaid.client.model.AccountsGetResponse;
+import com.plaid.client.model.CountryCode;
+import com.plaid.client.model.ItemPublicTokenExchangeRequest;
+import com.plaid.client.model.ItemPublicTokenExchangeResponse;
+import com.plaid.client.model.LinkTokenCreateRequest;
+import com.plaid.client.model.LinkTokenCreateRequestUser;
+import com.plaid.client.model.LinkTokenCreateResponse;
+import com.plaid.client.model.Products;
+import com.plaid.client.model.TransactionsGetRequest;
+import com.plaid.client.model.TransactionsGetResponse;
+import com.plaid.client.request.PlaidApi;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import retrofit2.Response;
+
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class PlaidService {
+
+    private final PlaidApi plaidApi;
+    private final PlaidItemRepository plaidItemRepository;
+    private final AccountRepository accountRepository;
+    private final TransactionRepository transactionRepository;
+
+    @Value("${plaid.client-name}")
+    private String plaidClientName;
+
+    @Value("${plaid.webhook-url:}")
+    private String plaidWebhookUrl;
+
+    public String createLinkToken(LinkTokenRequest request) throws IOException {
+        LinkTokenCreateRequestUser user = new LinkTokenCreateRequestUser()
+                .clientUserId(request.getUserId().toString());
+
+        LinkTokenCreateRequest linkRequest = new LinkTokenCreateRequest()
+                .user(user)
+                .clientName(plaidClientName)
+                .language("en")
+                .countryCodes(List.of(CountryCode.US))
+                .products(List.of(Products.AUTH, Products.TRANSACTIONS));
+
+        if (plaidWebhookUrl != null && !plaidWebhookUrl.isBlank()) {
+            linkRequest.webhook(plaidWebhookUrl);
+        }
+
+        Response<LinkTokenCreateResponse> response = plaidApi.linkTokenCreate(linkRequest).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to create link token: " + errorBody(response));
+        }
+        return response.body().getLinkToken();
+    }
+
+    public void exchangePublicToken(PublicTokenExchangeRequest request) throws IOException {
+        ItemPublicTokenExchangeRequest exchangeRequest = new ItemPublicTokenExchangeRequest()
+                .publicToken(request.getPublicToken());
+
+        Response<ItemPublicTokenExchangeResponse> response = plaidApi.itemPublicTokenExchange(exchangeRequest).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to exchange public token: " + errorBody(response));
+        }
+
+        ItemPublicTokenExchangeResponse body = response.body();
+        PlaidItem plaidItem = new PlaidItem(
+                request.getUserId(),
+                body.getItemId(),
+                body.getAccessToken(),
+                null
+        );
+        plaidItemRepository.save(plaidItem);
+
+        fetchAccounts(request.getUserId(), plaidItem);
+        fetchTransactions(request.getUserId(), plaidItem);
+    }
+
+    public List<Account> fetchAccounts(Long userId, PlaidItem plaidItem) throws IOException {
+        AccountsGetRequest accountsGetRequest = new AccountsGetRequest()
+                .accessToken(plaidItem.getAccessToken());
+
+        Response<AccountsGetResponse> response = plaidApi.accountsGet(accountsGetRequest).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch accounts: " + errorBody(response));
+        }
+
+        List<Account> accounts = response.body().getAccounts().stream()
+                .map(plaidAccount -> mapAccount(userId, plaidItem, plaidAccount))
+                .collect(Collectors.toList());
+
+        return accountRepository.saveAll(accounts);
+    }
+
+    public List<Transaction> fetchTransactions(Long userId, PlaidItem plaidItem) throws IOException {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(30);
+
+        TransactionsGetRequest transactionsGetRequest = new TransactionsGetRequest()
+                .accessToken(plaidItem.getAccessToken())
+                .startDate(startDate)
+                .endDate(endDate);
+
+        Response<TransactionsGetResponse> response = plaidApi.transactionsGet(transactionsGetRequest).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch transactions: " + errorBody(response));
+        }
+
+        List<Transaction> transactions = response.body().getTransactions().stream()
+                .map(plaidTxn -> mapTransaction(userId, plaidTxn))
+                .collect(Collectors.toList());
+
+        return transactionRepository.saveAll(transactions);
+    }
+
+    private Account mapAccount(Long userId, PlaidItem plaidItem, AccountBase plaidAccount) {
+        Account account = accountRepository.findByPlaidAccountId(plaidAccount.getAccountId())
+                .orElse(new Account());
+
+        account.setUserId(userId);
+        account.setPlaidAccountId(plaidAccount.getAccountId());
+        account.setPlaidItem(plaidItem);
+        account.setName(plaidAccount.getName());
+        account.setOfficialName(plaidAccount.getOfficialName());
+        account.setSubtype(plaidAccount.getSubtype() != null ? plaidAccount.getSubtype().getValue() : "other");
+        account.setType(plaidAccount.getType() != null ? plaidAccount.getType().getValue() : "other");
+        account.setCurrentBalance(toBigDecimal(plaidAccount.getBalances().getCurrent()));
+        account.setAvailableBalance(toBigDecimal(plaidAccount.getBalances().getAvailable()));
+        account.setCurrency(
+                plaidAccount.getBalances().getIsoCurrencyCode() != null
+                        ? plaidAccount.getBalances().getIsoCurrencyCode()
+                        : "USD"
+        );
+        return account;
+    }
+
+    private Transaction mapTransaction(Long userId, com.plaid.client.model.Transaction plaidTxn) {
+        Transaction transaction = transactionRepository.findByPlaidTransactionId(plaidTxn.getTransactionId())
+                .orElse(new Transaction());
+
+        Account associatedAccount = accountRepository.findByPlaidAccountId(plaidTxn.getAccountId())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Account not found for transaction: " + plaidTxn.getTransactionId()));
+
+        transaction.setUserId(userId);
+        transaction.setAccountId(associatedAccount.getId());
+        transaction.setPlaidTransactionId(plaidTxn.getTransactionId());
+        transaction.setPlaidAccountId(plaidTxn.getAccountId());
+        transaction.setName(plaidTxn.getName());
+        transaction.setAmount(toBigDecimal(plaidTxn.getAmount()));
+        transaction.setIsoCurrencyCode(
+                plaidTxn.getIsoCurrencyCode() != null ? plaidTxn.getIsoCurrencyCode() : "USD"
+        );
+        transaction.setDate(plaidTxn.getDate());
+        transaction.setCategory(resolveCategory(plaidTxn.getCategory()));
+        return transaction;
+    }
+
+    private static String resolveCategory(List<String> categories) {
+        if (categories == null || categories.isEmpty()) {
+            return "Uncategorized";
+        }
+        return categories.get(0);
+    }
+
+    private static BigDecimal toBigDecimal(Double value) {
+        return value != null ? BigDecimal.valueOf(value) : BigDecimal.ZERO;
+    }
+
+    private static String errorBody(Response<?> response) throws IOException {
+        if (response.errorBody() != null) {
+            return response.errorBody().string();
+        }
+        return "HTTP " + response.code();
+    }
+}

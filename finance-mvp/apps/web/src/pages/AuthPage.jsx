@@ -8,7 +8,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
       </div>
       <div className="card auth-card">
         <h2>{authMode === "login" ? "Sign in" : "Create account"}</h2>
-        <p className="auth-hint">Demo: demo@finance.app / Demo@1234</p>
+        <p className="auth-hint">Register a new account or sign in with your credentials.</p>
         {error && <p className="error">{error}</p>}
         <form onSubmit={onSubmit} className="form">
           <label>

@@ -1,21 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import { api, setAuthToken } from "./api";
-// import Shell from "./components/Shell"; // REMOVED
+import { api, setAuthToken, getStoredEmail } from "./api";
 import AuthPage from "./pages/AuthPage";
-// Removed individual page imports, AppLayout will handle them
-// import HomePage from "./pages/HomePage";
-// import CashPage from "./pages/CashPage";
-// import InvestPage from "./pages/InvestPage";
-// import PlanPage from "./pages/PlanPage";
-// import BillPayPage from "./pages/BillPayPage";
-// import LearnPage from "./pages/LearnPage";
-// import ProfilePage from "./pages/ProfilePage";
-// import RealEstatePage from "./pages/RealEstatePage";
-import AppLayout from "./components/AppLayout"; // NEW IMPORT
+import AppLayout from "./components/AppLayout";
 import { formatDate } from "./utils/format";
 
 export default function App() {
-  const [page, setPage] = useState("home"); // Keep page state for now, might be managed by router later
+  const [page, setPage] = useState("home");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [snapshot, setSnapshot] = useState(null);
@@ -53,42 +43,66 @@ export default function App() {
     [accounts]
   );
 
-  // const showRail = page === "home"; // This logic will be handled within page components if needed
-
   async function loadAll() {
+    if (!api.getToken()) return;
+
     try {
       setLoading(true);
       setError("");
-      const [snapshotRes, accountsRes, txRes, insightsRes, intentsRes] = await Promise.all([
+
+      const results = await Promise.allSettled([
         api.getSnapshot(),
         api.getAccounts(),
         api.getTransactions(),
         api.getInsights(),
-        api.getPaymentIntents()
+        api.getPaymentIntents(),
+        api.getRealEstate()
       ]);
-      setSnapshot(snapshotRes);
-      const accountItems = accountsRes.items ?? [];
-      setAccounts(accountItems);
-      const firstCard = accountItems.find((a) => a.type === "CREDIT_CARD");
-      const firstFunding = accountItems.find(
-        (a) => a.type === "CHECKING" || a.type === "SAVINGS"
-      );
-      setBillPayForm((prev) => ({
-        ...prev,
-        card_account_id: prev.card_account_id || firstCard?.id || "",
-        funding_account_id: prev.funding_account_id || firstFunding?.id || ""
-      }));
-      setTransactions(txRes.items ?? []);
-      setInsights(insightsRes.insights ?? []);
-      setPaymentIntents(intentsRes.items ?? []);
-      try {
-        const props = await api.getRealEstate();
-        setProperties(props.items ?? []);
-      } catch (err) {
-        console.warn('Failed to load real estate:', err.message);
+
+      const [snapshotRes, accountsRes, txRes, insightsRes, intentsRes, propertiesRes] =
+        results;
+
+      if (snapshotRes.status === "fulfilled") {
+        setSnapshot(snapshotRes.value);
+      }
+      if (accountsRes.status === "fulfilled") {
+        const accountItems = accountsRes.value ?? [];
+        setAccounts(accountItems);
+        const firstCard = accountItems.find((a) => a.type === "CREDIT_CARD");
+        const firstFunding = accountItems.find(
+          (a) => a.type === "CHECKING" || a.type === "SAVINGS"
+        );
+        setBillPayForm((prev) => ({
+          ...prev,
+          card_account_id: prev.card_account_id || firstCard?.id || "",
+          funding_account_id: prev.funding_account_id || firstFunding?.id || ""
+        }));
+      }
+      if (txRes.status === "fulfilled") {
+        setTransactions(txRes.value ?? []);
+      }
+      if (insightsRes.status === "fulfilled") {
+        setInsights(insightsRes.value?.insights ?? []);
+      }
+      if (intentsRes.status === "fulfilled") {
+        setPaymentIntents(intentsRes.value?.items ?? []);
+      }
+      if (propertiesRes.status === "fulfilled") {
+        setProperties(propertiesRes.value?.items ?? []);
+      }
+
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length === results.length) {
+        throw failed[0].reason;
+      }
+      if (failed.length > 0) {
+        console.warn(
+          "Some data failed to load:",
+          failed.map((f) => f.reason?.message || f.reason)
+        );
       }
     } catch (err) {
-      setError(err.message);
+      setError(err.message || String(err));
     } finally {
       setLoading(false);
     }
@@ -97,9 +111,9 @@ export default function App() {
   async function syncWithIntegrator() {
     try {
       setLoading(true);
+      // This will eventually be replaced by a Plaid-specific sync
       const resp = await api.getAggregatorAccounts();
       const items = resp.items ?? [];
-      // merge by id (prefer existing)
       setAccounts((prev) => {
         const byId = Object.fromEntries(prev.map((a) => [a.id, a]));
         for (const it of items) {
@@ -116,18 +130,9 @@ export default function App() {
 
   useEffect(() => {
     async function init() {
-      if (api.getToken()) return loadAll();
-      // In dev mode, auto-login seeded demo user to speed up local development
-      if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.DEV) {
-        try {
-          const resp = await api.login({ email: 'demo@finance.app', password: 'Demo@1234' });
-          setAuthToken(resp.token);
-          setUser(resp.user);
-          await loadAll();
-        } catch (err) {
-          // ignore dev auto-login errors and let user sign in manually
-          console.warn('Auto-login failed', err.message || err);
-        }
+      if (api.getToken()) {
+        setUser({ email: getStoredEmail() || authForm.email });
+        return loadAll();
       }
     }
     init();
@@ -139,9 +144,14 @@ export default function App() {
       setError("");
       const response =
         authMode === "login" ? await api.login(authForm) : await api.register(authForm);
-      setAuthToken(response.token);
-      setUser(response.user);
-      await loadAll();
+      
+      if (response && response.token) {
+        setAuthToken(response.token, authForm.email);
+        setUser({ email: authForm.email });
+        await loadAll();
+      } else {
+        throw new Error(response.message || "Authentication failed");
+      }
     } catch (err) {
       setError(err.message);
     }
@@ -156,9 +166,7 @@ export default function App() {
         amount: Number(billPayForm.amount),
         currency: "USD"
       });
-      // update intents locally and store last created
       setLastBillPayIntent(resp);
-      // refresh lists
       await loadAll();
       setBillPayStep(4);
     } catch (err) {
@@ -199,12 +207,11 @@ export default function App() {
     setAccounts([]);
     setTransactions([]);
     setInsights([]);
-    setPage("home"); // Reset page to home after logout
+    setPage("home");
   }
 
   function openBillPay() {
     setBillPayStep(0);
-    // setPage("billpay"); // This will now be handled by router navigation
   }
 
   if (!api.getToken()) {
@@ -220,11 +227,8 @@ export default function App() {
     );
   }
 
-  // All application state and handlers are passed to AppLayout
-  // AppLayout will then manage routing and pass relevant props to specific page components
   return (
     <AppLayout
-      // State
       snapshot={snapshot}
       accounts={accounts}
       transactions={transactions}
@@ -245,8 +249,7 @@ export default function App() {
       fundingAccounts={fundingAccounts}
       loading={loading}
       error={error}
-      // Setters
-      setPage={setPage} // Still useful for internal state management or specific actions
+      setPage={setPage}
       setAuthMode={setAuthMode}
       setAuthForm={setAuthForm}
       setSnapshot={setSnapshot}
@@ -267,7 +270,6 @@ export default function App() {
       setProperties={setProperties}
       setError={setError}
       setLoading={setLoading}
-      // Handlers
       loadAll={loadAll}
       syncWithIntegrator={syncWithIntegrator}
       submitAuth={submitAuth}
@@ -275,7 +277,7 @@ export default function App() {
       runAllDebtScenarios={runAllDebtScenarios}
       handleLogout={handleLogout}
       openBillPay={openBillPay}
-      formatDate={formatDate} // Pass utility function
+      formatDate={formatDate}
     />
   );
 }
