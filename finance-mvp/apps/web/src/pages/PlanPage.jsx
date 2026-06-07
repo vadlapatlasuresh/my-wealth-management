@@ -93,6 +93,7 @@ export default function PlanPage({
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`
   );
   const [budgetLines, setBudgetLines] = useState([]);
+  const [notice, setNotice] = useState(""); // inline error/notice banner (replaces blocking alert())
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -241,9 +242,10 @@ export default function PlanPage({
 
   function applyTemplate() {
     if (!income || income <= 0) {
-      alert(`Enter your monthly take-home income first to build a ${ruleLabel} budget.`);
+      setNotice(`Enter your monthly take-home income first to build a ${ruleLabel} budget.`);
       return;
     }
+    setNotice("");
     // The library's pctOfIncome sums to the classic 50/30/20 within each group.
     // Scale each group so its total matches the user's chosen rule split.
     const baseGroupSum = { needs: 0, wants: 0, savings: 0 };
@@ -273,7 +275,7 @@ export default function PlanPage({
       setTimeout(() => setSavedAt(false), 2500);
     } catch (e) {
       console.error("save failed", e);
-      alert("Could not save the budget. Please try again.");
+      setNotice("Could not save the budget. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -358,12 +360,31 @@ export default function PlanPage({
       setAddingDebt(false);
     } catch (e) {
       console.error("add debt failed", e);
-      alert("Could not add debt.");
+      setNotice("Could not add debt. Please try again.");
     }
   }
 
   return (
     <>
+      {notice && (
+        <div
+          role="alert"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            background: "var(--tv-negative-bg)", color: "var(--tv-negative)",
+            border: "1px solid var(--tv-negative)", borderRadius: "var(--radius-md)",
+            padding: "10px 14px", marginBottom: 16, fontSize: 14,
+          }}
+        >
+          <span><i className="ti ti-alert-circle" style={{ marginRight: 6 }}></i>{notice}</span>
+          <button
+            type="button" aria-label="Dismiss" onClick={() => setNotice("")}
+            style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", fontSize: 16 }}
+          >
+            <i className="ti ti-x"></i>
+          </button>
+        </div>
+      )}
       {planTab === "budget" && (
         <div id="page-budget" className="page active">
           <div className="page-header">

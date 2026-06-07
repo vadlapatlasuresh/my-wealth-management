@@ -92,6 +92,11 @@ public class AuthService {
         return userRepository.findByEmail(email);
     }
 
+    /** Permanently remove a user's identity. Idempotent: a missing id is a no-op. */
+    public void deleteUser(Long userId) {
+        userRepository.deleteById(userId);
+    }
+
     /** Role names (e.g. ["USER","CARE"]) for the JWT roles claim. */
     private static java.util.List<String> roleNames(User user) {
         if (user.getRoles() == null) return java.util.List.of();

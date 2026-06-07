@@ -41,8 +41,8 @@ $COMPOSE pull
 echo "==> Starting stack (rolling)"
 $COMPOSE up -d --remove-orphans
 
-echo "==> Waiting for services to report healthy (up to ~3 min)"
-deadline=$(( $(date +%s) + 200 ))
+echo "==> Waiting for services to report healthy (up to ~7 min; slow on a 1-OCPU box)"
+deadline=$(( $(date +%s) + 420 ))
 while :; do
   unhealthy=$($COMPOSE ps --format '{{.Name}} {{.Health}}' 2>/dev/null \
     | grep -Ev 'healthy|^$' || true)

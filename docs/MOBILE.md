@@ -46,6 +46,23 @@ production build the app is installable and offline-capable:
 > The service worker is intentionally **disabled in `dev`** so it never interferes
 > with HMR. Test PWA behavior via `npm run preview` or a deployed build.
 
+### Responsive layout (phones & small tablets)
+
+The app is a desktop flex shell (fixed sidebar + main area). Responsive behavior lives in
+`src/styles/terravest-theme.css` (note: `src/styles.css` is **not imported** — do not edit it
+expecting effects):
+
+- **≤ 900px:** the sidebar becomes an **off-canvas drawer** toggled by the topbar hamburger,
+  with a dimming backdrop; tapping a nav link or the backdrop closes it. The drawer always
+  shows full labels even if the desktop rail was collapsed. The quick-tabs row scrolls
+  horizontally and `.grid-3` drops to two columns.
+- **≤ 600px:** `.grid-2`/`.grid-3` collapse to a single column, KPI tiles go 2-up, the topbar
+  search hides, and wide tables (`.tv-table`) scroll horizontally.
+
+The drawer state is React-driven (`AppLayout` → `mobileNavOpen`, branched on
+`matchMedia('(max-width: 900px)')`). The `<meta name="viewport">` tag in `index.html` is
+required for any of this to take effect on real devices.
+
 ---
 
 ## 2. Native iOS & Android (Capacitor)

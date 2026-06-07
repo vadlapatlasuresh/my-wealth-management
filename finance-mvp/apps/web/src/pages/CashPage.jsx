@@ -88,6 +88,7 @@ export default function CashPage({ accounts = [], transactions = [] }) {
   const [search, setSearch] = useState("");
   const [txs, setTxs] = useState(transactions || []);
   const [editing, setEditing] = useState({});
+  const [notice, setNotice] = useState(""); // inline error banner (replaces blocking alert())
 
   useMemo(() => setTxs(transactions || []), [transactions]);
 
@@ -118,12 +119,13 @@ export default function CashPage({ accounts = [], transactions = [] }) {
 
   async function changeCategory(txId, newCat) {
     try {
+      setNotice("");
       await api.categorizeTransaction(txId, newCat);
       setTxs((prev) => prev.map((t) => (t.id === txId ? { ...t, category: newCat } : t)));
       setEditing((e) => ({ ...e, [txId]: false }));
     } catch (err) {
       console.error(err);
-      alert("Failed to update category");
+      setNotice("Couldn't update that category. Please try again.");
     }
   }
 
@@ -135,6 +137,26 @@ export default function CashPage({ accounts = [], transactions = [] }) {
           <div className="page-subtitle">All linked depository and card accounts</div>
         </div>
       </div>
+
+      {notice && (
+        <div
+          role="alert"
+          style={{
+            display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
+            background: "var(--tv-negative-bg)", color: "var(--tv-negative)",
+            border: "1px solid var(--tv-negative)", borderRadius: "var(--radius-md)",
+            padding: "10px 14px", marginBottom: 16, fontSize: 14,
+          }}
+        >
+          <span><i className="ti ti-alert-circle" style={{ marginRight: 6 }}></i>{notice}</span>
+          <button
+            type="button" aria-label="Dismiss" onClick={() => setNotice("")}
+            style={{ background: "transparent", border: "none", color: "inherit", cursor: "pointer", fontSize: 16 }}
+          >
+            <i className="ti ti-x"></i>
+          </button>
+        </div>
+      )}
 
       <div className="kpi-grid">
         <div className="kpi-card">

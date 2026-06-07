@@ -31,8 +31,9 @@ x-java-defaults: &java-defaults
     # Audit: any service can emit domain audit events to the audit-service.
     AUDIT_URI: http://audit-service:8080
     AUDIT_INGEST_KEY: ${AUDIT_INGEST_KEY:?set AUDIT_INGEST_KEY in .env.prod}
-    # JVM: respect container memory limits
-    JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50"
+    # JVM: respect container memory limits. Override via JVM_OPTS in .env.prod on
+    # small hosts (e.g. a 6GB box: SerialGC + capped metaspace shrinks each service).
+    JAVA_TOOL_OPTIONS: "${JVM_OPTS:--XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50}"
     # Neon connection budget: cap each service's pool so 10 services don't exhaust
     # Postgres' connection limit (10 * 5 = 50 max). minimum-idle keeps it lean.
     SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
@@ -46,7 +47,8 @@ x-java-defaults: &java-defaults
   deploy:
     resources:
       limits:
-        memory: 640M
+        # Per-service cap. Override via SVC_MEM_LIMIT in .env.prod (e.g. 450M on a 6GB box).
+        memory: ${SVC_MEM_LIMIT:-640M}
 
 services:
   # ---------------- Reverse proxy (the only public service) ----------------
