@@ -25,11 +25,21 @@ if ! id "$DEPLOY_USER" &>/dev/null; then
 fi
 usermod -aG sudo "$DEPLOY_USER"
 
-# Copy root's authorized SSH keys to the deploy user so you can log in as them
-if [ -f /root/.ssh/authorized_keys ]; then
+# Copy the provisioned SSH key to the deploy user so you (and GitHub Actions) can
+# log in as them. Cloud images vary: Oracle Ubuntu uses 'ubuntu', Oracle Oracle-Linux
+# uses 'opc', Hetzner uses 'root'. Take the first authorized_keys we find.
+SRC_KEYS=""
+for f in /root/.ssh/authorized_keys /home/ubuntu/.ssh/authorized_keys \
+         /home/opc/.ssh/authorized_keys "${SUDO_USER:+/home/$SUDO_USER/.ssh/authorized_keys}"; do
+  [ -n "$f" ] && [ -f "$f" ] && { SRC_KEYS="$f"; break; }
+done
+if [ -n "$SRC_KEYS" ]; then
+  echo "==> Seeding $DEPLOY_USER SSH keys from $SRC_KEYS"
   install -d -m 700 -o "$DEPLOY_USER" -g "$DEPLOY_USER" "/home/$DEPLOY_USER/.ssh"
   install -m 600 -o "$DEPLOY_USER" -g "$DEPLOY_USER" \
-    /root/.ssh/authorized_keys "/home/$DEPLOY_USER/.ssh/authorized_keys"
+    "$SRC_KEYS" "/home/$DEPLOY_USER/.ssh/authorized_keys"
+else
+  echo "==> WARNING: no authorized_keys found to copy; add one to /home/$DEPLOY_USER/.ssh/ manually"
 fi
 
 echo "==> Hardening SSH (no root login, no passwords)"
