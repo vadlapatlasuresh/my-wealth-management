@@ -1,5 +1,6 @@
 package com.mywealthmanagement.realestateservice.deal;
 
+import com.mywealthmanagement.realestateservice.deal.dto.DealDocumentDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
@@ -28,13 +29,22 @@ public class DealController {
         return ResponseEntity.ok(dealService.getDeals());
     }
 
-    /** Public marketplace of OPEN deals, optionally filtered. Literal paths declared before /{id}. */
+    /** Public marketplace of OPEN deals, optionally filtered/sorted/paged. Literal paths before /{id}. */
     @GetMapping("/marketplace")
     public ResponseEntity<List<DealDto>> getMarketplace(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String subcategory,
-            @RequestParam(required = false) String returnType) {
-        return ResponseEntity.ok(dealService.getMarketplace(category, subcategory, returnType));
+            @RequestParam(required = false) String returnType,
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset) {
+        return ResponseEntity.ok(dealService.getMarketplace(category, subcategory, returnType, sort, limit, offset));
+    }
+
+    /** The investor's saved/watchlisted deals. */
+    @GetMapping("/watchlist")
+    public ResponseEntity<List<DealDto>> getWatchlist() {
+        return ResponseEntity.ok(dealService.getWatchlist());
     }
 
     /** The deal taxonomy (categories, subcategories, return types, …) for building UI dropdowns. */
@@ -83,6 +93,39 @@ public class DealController {
     @GetMapping("/{id}/sponsor-projects")
     public ResponseEntity<List<SponsorProjectDto>> getSponsorProjects(@PathVariable Long id) {
         return ResponseEntity.ok(dealService.getSponsorProjectsForDeal(id));
+    }
+
+    /** Document links on a deal (visible when the deal is OPEN or you own it). */
+    @GetMapping("/{id}/documents")
+    public ResponseEntity<List<DealDocumentDto>> getDocuments(@PathVariable Long id) {
+        return ResponseEntity.ok(dealService.getDocumentsForDeal(id));
+    }
+
+    /** Owner-only: attach a document link to a deal. */
+    @PostMapping("/{id}/documents")
+    public ResponseEntity<DealDocumentDto> addDocument(@PathVariable Long id, @RequestBody DealDocumentDto dto) {
+        return ResponseEntity.ok(dealService.addDocument(id, dto));
+    }
+
+    /** Owner-only: remove a document from a deal. */
+    @DeleteMapping("/{id}/documents/{docId}")
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id, @PathVariable Long docId) {
+        dealService.deleteDocument(id, docId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Save a deal to the investor's watchlist. */
+    @PostMapping("/{id}/watch")
+    public ResponseEntity<Void> watch(@PathVariable Long id) {
+        dealService.watch(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Remove a deal from the investor's watchlist. */
+    @DeleteMapping("/{id}/watch")
+    public ResponseEntity<Void> unwatch(@PathVariable Long id) {
+        dealService.unwatch(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")

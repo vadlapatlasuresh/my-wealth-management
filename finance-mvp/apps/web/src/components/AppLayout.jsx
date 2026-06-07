@@ -35,6 +35,7 @@ const MyBusinessPage  = MODULE_REGISTRY.mybusiness.component;
 const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
 const CalculatorsPage = MODULE_REGISTRY.calculators.component;
 const GoalsPage       = MODULE_REGISTRY.goals.component;
+const AdminDashboardPage = MODULE_REGISTRY.admin.component;
 const FractionalLLCPage = MODULE_REGISTRY.fractional.component;
 const SecurityPage    = MODULE_REGISTRY.security.component;
 const MessagesPage    = MODULE_REGISTRY.messages.component;
@@ -63,6 +64,7 @@ const navLabels = {
   '/flowmap': 'UI Flow Map',
   '/guide': 'How to use',
   '/profile': 'Profile',
+  '/admin': 'Admin · Analytics',
 };
 
 // Map a route path to its translation key id (used to localize the topbar page
@@ -456,6 +458,7 @@ export default function AppLayout(props) {
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/calculators" element={<CalculatorsPage />} />
               <Route path="/goals" element={<GoalsPage />} />
+              <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />

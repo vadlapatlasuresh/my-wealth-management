@@ -18,6 +18,9 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
     // Whole chain in insertion order, for integrity verification.
     java.util.List<AuditEvent> findAllByOrderByIdAsc();
 
+    // Events within an analytics window (newest first), for the admin dashboard.
+    java.util.List<AuditEvent> findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(LocalDateTime from);
+
     // Flexible filter for the admin query endpoint. Null params are ignored.
     @Query("""
         SELECT a FROM AuditEvent a

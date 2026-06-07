@@ -74,7 +74,9 @@ export default function DealRoomPage() {
   const [leads, setLeads] = useState([]);
   const [projects, setProjects] = useState([]);
   const [interests, setInterests] = useState([]);
-  const [filters, setFilters] = useState({ category: '', subcategory: '', returnType: '' });
+  const [saved, setSaved] = useState([]);
+  const [docs, setDocs] = useState([]);
+  const [filters, setFilters] = useState({ category: '', subcategory: '', returnType: '', sort: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -113,6 +115,13 @@ export default function DealRoomPage() {
     finally { setLoading(false); }
   }, []);
 
+  const loadSaved = useCallback(async () => {
+    setLoading(true); setError('');
+    try { setSaved(await api.getWatchlist() || []); }
+    catch (err) { setError(err?.message || 'Could not load your saved deals.'); }
+    finally { setLoading(false); }
+  }, []);
+
   useEffect(() => { loadMine(); }, [loadMine]);
 
   const switchTab = (tab) => {
@@ -122,6 +131,14 @@ export default function DealRoomPage() {
     if (tab === 'mine') loadMine();
     if (tab === 'track') loadProjects();
     if (tab === 'interests') loadInterests();
+    if (tab === 'saved') loadSaved();
+  };
+
+  const openDocs = async (deal) => {
+    setError(''); setNotice(''); setLoading(true);
+    try { setSelected(deal); setDocs(await api.getDealDocuments(deal.id) || []); setView('docs'); }
+    catch (err) { setError(err?.message || 'Could not load documents.'); }
+    finally { setLoading(false); }
   };
 
   const applyFilter = (key, value) => {
@@ -130,7 +147,7 @@ export default function DealRoomPage() {
     loadMarket(next);
   };
 
-  const isListTab = view === 'mine' || view === 'market' || view === 'track' || view === 'interests';
+  const isListTab = view === 'mine' || view === 'market' || view === 'track' || view === 'interests' || view === 'saved';
 
   // ---- create / edit ----
   const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setNotice(''); setShowForm(true); };
@@ -224,6 +241,7 @@ export default function DealRoomPage() {
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
           <button className={`btn btn-sm ${view === 'mine' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => switchTab('mine')}>My Deals</button>
           <button className={`btn btn-sm ${view === 'market' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => switchTab('market')}>Marketplace</button>
+          <button className={`btn btn-sm ${view === 'saved' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => switchTab('saved')}>Saved</button>
           <button className={`btn btn-sm ${view === 'interests' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => switchTab('interests')}>My Interests</button>
           <button className={`btn btn-sm ${view === 'track' ? 'btn-primary' : 'btn-secondary'}`} onClick={() => switchTab('track')}>Track Record</button>
         </div>
@@ -253,6 +271,9 @@ export default function DealRoomPage() {
                 <DealMetrics deal={deal} />
                 <button className="btn btn-secondary btn-sm" style={{ justifyContent: 'center' }} onClick={() => openLeads(deal)}>
                   <i className="ti ti-users"></i> Interested investors{typeof deal.interestCount === 'number' ? ` (${deal.interestCount})` : ''}
+                </button>
+                <button className="btn btn-secondary btn-sm" style={{ justifyContent: 'center' }} onClick={() => openDocs(deal)}>
+                  <i className="ti ti-files"></i> Documents
                 </button>
                 <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
                   <button className="btn btn-secondary btn-sm" style={{ flex: 1, justifyContent: 'center' }} onClick={() => openEdit(deal)}><i className="ti ti-edit"></i> Edit</button>
@@ -315,6 +336,31 @@ export default function DealRoomPage() {
             </div>
           </div>
         )
+      )}
+
+      {/* SAVED (investor watchlist) */}
+      {view === 'saved' && (
+        loading ? <Loading text="Loading your saved deals…" />
+        : saved.length === 0 ? (
+          <EmptyState icon="🔖" title="No saved deals"
+            body="Save deals from the marketplace to keep an eye on them here." />
+        ) : (
+          <div className="grid-3" style={{ gap: '16px' }}>
+            {saved.map((deal) => (
+              <div key={deal.id} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', cursor: 'pointer' }} onClick={() => openDetail(deal)}>
+                <CardHeader deal={deal} />
+                <CardTags deal={deal} />
+                <DealMetrics deal={deal} />
+                <button className="btn btn-primary btn-sm" style={{ justifyContent: 'center', marginTop: 'auto' }}>View details <i className="ti ti-arrow-right"></i></button>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* OWNER DOCUMENTS MANAGER */}
+      {view === 'docs' && selected && (
+        <DocsManager deal={selected} initialDocs={docs} onBack={() => switchTab('mine')} setError={setError} setNotice={setNotice} />
       )}
 
       {/* TRACK RECORD (sponsor's previous projects) */}
@@ -420,6 +466,13 @@ function MarketFilters({ filters, onChange }) {
         <option value="">All return types</option>
         {RETURN_TYPES.map((r) => <option key={r} value={r}>{humanize(r)}</option>)}
       </select>
+      <span style={{ flex: 1 }} />
+      <select style={sel} value={filters.sort} onChange={(e) => onChange('sort', e.target.value)} title="Sort">
+        <option value="">Newest</option>
+        <option value="RETURN_DESC">Highest return</option>
+        <option value="MIN_INVESTMENT_ASC">Lowest minimum</option>
+        <option value="TARGET_RAISE_DESC">Largest raise</option>
+      </select>
       {hasAny && (
         <button className="btn btn-secondary btn-sm" onClick={() => { onChange('returnType', ''); onChange('category', ''); }}>Clear</button>
       )}
@@ -503,8 +556,11 @@ function DealDetail({ deal, onBack, onNotice }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [sponsorProjects, setSponsorProjects] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [watched, setWatched] = useState(false);
   const [lead, setLead] = useState({
     name: getStoredName() || '', email: getStoredEmail() || '', phone: '', message: '',
+    commitmentAmount: '', accredited: false,
   });
   const set = (k) => (e) => setLead((l) => ({ ...l, [k]: e.target.value }));
 
@@ -513,18 +569,35 @@ function DealDetail({ deal, onBack, onNotice }) {
     api.getDealSponsorProjects(deal.id)
       .then((list) => { if (active) setSponsorProjects(Array.isArray(list) ? list : []); })
       .catch(() => { if (active) setSponsorProjects([]); });
+    api.getDealDocuments(deal.id)
+      .then((list) => { if (active) setDocuments(Array.isArray(list) ? list : []); })
+      .catch(() => { if (active) setDocuments([]); });
     return () => { active = false; };
   }, [deal.id]);
+
+  const toggleWatch = async () => {
+    try {
+      if (watched) { await api.unwatchDeal(deal.id); setWatched(false); }
+      else { await api.watchDeal(deal.id); setWatched(true); }
+    } catch (e) { setErr(e?.message || 'Could not update your saved deals.'); }
+  };
+
+  const targetRaise = deal.targetRaise != null ? Number(deal.targetRaise) : 0;
+  const committed = deal.committedAmount != null ? Number(deal.committedAmount) : 0;
+  const progressPct = targetRaise > 0 ? Math.min(100, Math.round((committed / targetRaise) * 100)) : 0;
 
   const submit = async (e) => {
     e.preventDefault();
     if (!lead.name.trim()) { setErr('Please enter your name.'); return; }
     if (!lead.email.includes('@')) { setErr('Please enter a valid email.'); return; }
+    if (!lead.accredited) { setErr('Please confirm you are an accredited investor to continue.'); return; }
     setSaving(true); setErr('');
     try {
       await api.expressDealInterest(deal.id, {
         name: lead.name.trim(), email: lead.email.trim(),
         phone: lead.phone.trim() || undefined, message: lead.message.trim() || undefined,
+        commitmentAmount: lead.commitmentAmount === '' ? undefined : Number(lead.commitmentAmount),
+        accredited: lead.accredited,
       });
       setSubmitted(true);
       onNotice && onNotice('Your interest was sent to the deal sponsor.');
@@ -534,7 +607,12 @@ function DealDetail({ deal, onBack, onNotice }) {
 
   return (
     <div>
-      <button className="btn btn-secondary btn-sm" style={{ marginBottom: '16px' }} onClick={onBack}><i className="ti ti-arrow-left"></i> Back to marketplace</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px', gap: '8px' }}>
+        <button className="btn btn-secondary btn-sm" onClick={onBack}><i className="ti ti-arrow-left"></i> Back to marketplace</button>
+        <button className={`btn btn-sm ${watched ? 'btn-gold' : 'btn-secondary'}`} onClick={toggleWatch}>
+          <i className={watched ? 'ti ti-bookmark-filled' : 'ti ti-bookmark'}></i> {watched ? 'Saved' : 'Save deal'}
+        </button>
+      </div>
       <div className="grid-2" style={{ gap: '16px', alignItems: 'start' }}>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
@@ -567,6 +645,37 @@ function DealDetail({ deal, onBack, onNotice }) {
             <Metric label="Target raise" value={deal.targetRaise != null ? currency(deal.targetRaise) : '—'} />
             <Metric label="Minimum investment" value={deal.minInvestment != null ? currency(deal.minInvestment) : '—'} />
           </div>
+
+          {targetRaise > 0 && (
+            <div style={{ marginTop: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '5px' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Interest committed</span>
+                <span style={{ fontWeight: 600 }}>{currency(committed)} of {currency(targetRaise)} · {progressPct}%</span>
+              </div>
+              <div style={{ height: '8px', background: 'var(--tv-border)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div style={{ width: `${progressPct}%`, height: '100%', background: 'var(--tv-forest)' }}></div>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '4px' }}>Indicative interest, not binding commitments.</div>
+            </div>
+          )}
+
+          {documents.length > 0 && (
+            <>
+              <hr className="divider" />
+              <div className="section-title">Documents</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {documents.map((d) => (
+                  <a key={d.id} href={d.url} target="_blank" rel="noopener noreferrer"
+                     style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--tv-forest)', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '10px' }}>
+                    <i className="ti ti-file-text"></i>
+                    <span style={{ flex: 1 }}>{d.label}</span>
+                    {d.docType && <span className="badge badge-gray" style={{ fontSize: '10px' }}>{humanize(d.docType)}</span>}
+                    <i className="ti ti-external-link"></i>
+                  </a>
+                ))}
+              </div>
+            </>
+          )}
 
           {sponsorProjects.length > 0 && (
             <>
@@ -615,11 +724,13 @@ function DealDetail({ deal, onBack, onNotice }) {
                 <div><label style={fieldLabel}>Full name *</label><input style={inputStyle} value={lead.name} onChange={set('name')} placeholder="Your name" /></div>
                 <div><label style={fieldLabel}>Email *</label><input style={inputStyle} type="email" value={lead.email} onChange={set('email')} placeholder="you@example.com" /></div>
                 <div><label style={fieldLabel}>Phone</label><input style={inputStyle} value={lead.phone} onChange={set('phone')} placeholder="+1 555 0100" /></div>
+                <div><label style={fieldLabel}>Amount you'd consider ($, optional)</label><input style={inputStyle} type="number" min="0" value={lead.commitmentAmount} onChange={set('commitmentAmount')} placeholder="50000" /></div>
                 <div><label style={fieldLabel}>Message (optional)</label><textarea style={{ ...inputStyle, minHeight: '70px', resize: 'vertical' }} value={lead.message} onChange={set('message')} placeholder="Tell the sponsor what you’d like to know." /></div>
               </div>
-              <div style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)', margin: '12px 0', lineHeight: 1.5 }}>
-                <i className="ti ti-lock"></i> By submitting, you agree to share your name, email{lead.phone ? ', and phone' : ''} with the deal sponsor so they can contact you.
-              </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: 'var(--tv-text-secondary)', margin: '12px 0', lineHeight: 1.5, cursor: 'pointer' }}>
+                <input type="checkbox" checked={lead.accredited} onChange={(e) => setLead((l) => ({ ...l, accredited: e.target.checked }))} style={{ marginTop: '2px' }} />
+                <span>I confirm I am an <strong>accredited investor</strong>, and I agree to share my name, email{lead.phone ? ', and phone' : ''} with the deal sponsor so they can contact me.</span>
+              </label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1, justifyContent: 'center' }} disabled={saving}>{saving ? 'Sending…' : 'Send interest'}</button>
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowInterest(false)} disabled={saving}>Cancel</button>
@@ -670,12 +781,80 @@ function LeadsView({ deal, initialLeads, loading, onBack, setError, setNotice })
                     </select>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginTop: '4px', fontSize: '13px', alignItems: 'center' }}>
                   <a href={`mailto:${l.email}`} style={{ color: 'var(--tv-forest)' }}><i className="ti ti-mail"></i> {l.email}</a>
                   {l.phone && <a href={`tel:${l.phone}`} style={{ color: 'var(--tv-forest)' }}><i className="ti ti-phone"></i> {l.phone}</a>}
+                  {l.commitmentAmount != null && <span style={{ fontWeight: 600 }}><i className="ti ti-coin"></i> {currency(l.commitmentAmount)}</span>}
+                  {l.accredited && <span className="badge badge-green" style={{ fontSize: '10px' }}>Accredited</span>}
                   <span style={{ color: 'var(--tv-text-muted)' }}>{l.createdAt ? new Date(l.createdAt).toLocaleDateString() : ''}</span>
                 </div>
                 {l.message && <div style={{ fontSize: '13px', color: 'var(--tv-text-secondary)', marginTop: '8px', lineHeight: 1.6 }}>{l.message}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const DOC_TYPES = ['PPM', 'FINANCIALS', 'OPERATING_AGREEMENT', 'SUBSCRIPTION', 'OTHER'];
+
+function DocsManager({ deal, initialDocs, onBack, setError, setNotice }) {
+  const [rows, setRows] = useState(initialDocs || []);
+  const [form, setForm] = useState({ label: '', url: '', docType: '' });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { setRows(initialDocs || []); }, [initialDocs]);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const add = async (e) => {
+    e.preventDefault();
+    if (!form.label.trim()) { setError('Add a label for the document.'); return; }
+    if (!form.url.trim()) { setError('Add the document URL.'); return; }
+    setSaving(true); setError('');
+    try {
+      const doc = await api.addDealDocument(deal.id, { label: form.label.trim(), url: form.url.trim(), docType: form.docType || undefined });
+      setRows((r) => [doc, ...r]);
+      setForm({ label: '', url: '', docType: '' });
+      setNotice && setNotice('Document added.');
+    } catch (err) { setError(err?.message || 'Could not add the document.'); }
+    finally { setSaving(false); }
+  };
+
+  const remove = async (doc) => {
+    if (!window.confirm(`Remove "${doc.label}"?`)) return;
+    try { await api.deleteDealDocument(deal.id, doc.id); setRows((r) => r.filter((x) => x.id !== doc.id)); }
+    catch (err) { setError(err?.message || 'Could not remove the document.'); }
+  };
+
+  return (
+    <div>
+      <button className="btn btn-secondary btn-sm" style={{ marginBottom: '16px' }} onClick={onBack}><i className="ti ti-arrow-left"></i> Back to my deals</button>
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <div className="section-title">Documents — {deal.title}</div>
+        <div style={{ fontSize: '12px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}>Link documents hosted in your data room (PPM, financials, agreements). Investors see these on the deal page.</div>
+        <form onSubmit={add} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto auto', gap: '10px', alignItems: 'end' }}>
+          <div><label style={fieldLabel}>Label *</label><input style={inputStyle} value={form.label} onChange={set('label')} placeholder="Private Placement Memo" /></div>
+          <div><label style={fieldLabel}>URL *</label><input style={inputStyle} type="url" value={form.url} onChange={set('url')} placeholder="https://dataroom.example.com/ppm.pdf" /></div>
+          <div><label style={fieldLabel}>Type</label>
+            <select style={inputStyle} value={form.docType} onChange={set('docType')}>
+              <option value="">—</option>
+              {DOC_TYPES.map((t) => <option key={t} value={t}>{humanize(t)}</option>)}
+            </select></div>
+          <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Adding…' : 'Add'}</button>
+        </form>
+      </div>
+      <div className="card">
+        {rows.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '20px', color: 'var(--tv-text-muted)', fontSize: '13px' }}>No documents yet.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {rows.map((d) => (
+              <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '8px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '10px' }}>
+                <i className="ti ti-file-text" style={{ color: 'var(--tv-text-muted)' }}></i>
+                <a href={d.url} target="_blank" rel="noopener noreferrer" style={{ flex: 1, color: 'var(--tv-forest)', fontSize: '13px' }}>{d.label}</a>
+                {d.docType && <span className="badge badge-gray" style={{ fontSize: '10px' }}>{humanize(d.docType)}</span>}
+                <button className="btn btn-secondary btn-sm" style={{ color: 'var(--tv-negative)' }} onClick={() => remove(d)} title="Remove"><i className="ti ti-trash"></i></button>
               </div>
             ))}
           </div>

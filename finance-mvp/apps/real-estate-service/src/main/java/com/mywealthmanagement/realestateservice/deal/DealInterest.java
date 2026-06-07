@@ -45,6 +45,14 @@ public class DealInterest {
     @Column(length = 2000)
     private String message;
 
+    // How much the investor indicated they'd like to invest (optional, non-binding).
+    @Column(name = "commitment_amount")
+    private java.math.BigDecimal commitmentAmount;
+
+    // The investor's self-attestation that they're an accredited investor.
+    @Column(name = "accredited", nullable = false)
+    private boolean accredited;
+
     // Lead status as the sponsor works it: NEW | CONTACTED | COMMITTED | PASSED.
     @Column(nullable = false, length = 20)
     private String status = "NEW";

@@ -28,6 +28,7 @@ public class DealDto {
     private Integer holdPeriodMonths;
     private String status;
     private BigDecimal amountCommitted;
+    private BigDecimal committedAmount;   // sum of investor commitment amounts (detail/owner views)
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

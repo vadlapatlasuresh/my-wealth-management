@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../api';
+import { api, isCareAgent } from '../api';
 
 /* Derive up-to-two-letter initials from an email address. */
 function initialsFromEmail(email) {
@@ -281,6 +281,22 @@ export default function ProfilePage({ user, accounts, onLogout }) {
           </button>
         </div>
       </div>
+
+      {/* Admin-only: operator analytics dashboard */}
+      {isCareAgent() && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card-title">Administration</div>
+          <div className="setting-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <div className="setting-label">Operator analytics</div>
+              <div className="item-sub">KPIs from the audit stream — usage, errors, logins, failures.</div>
+            </div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/admin')}>
+              <i className="ti ti-chart-dots"></i> Open dashboard
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Sign out */}
       <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>

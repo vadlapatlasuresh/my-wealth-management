@@ -20,6 +20,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
@@ -34,6 +35,15 @@ class DealServiceTest {
 
     @Mock
     private com.mywealthmanagement.realestateservice.sponsor.SponsorProjectRepository sponsorProjectRepository;
+
+    @Mock
+    private DealDocumentRepository documentRepository;
+
+    @Mock
+    private DealWatchRepository watchRepository;
+
+    @Mock
+    private LeadNotifier leadNotifier;
 
     @InjectMocks
     private DealService service;
@@ -144,6 +154,8 @@ class DealServiceTest {
         req.setEmail("jane@example.com");
         req.setPhone("+1 555 0100");
         req.setMessage("Interested — please send the PPM.");
+        req.setCommitmentAmount(new BigDecimal("50000"));
+        req.setAccredited(true);
         return req;
     }
 
@@ -247,9 +259,11 @@ class DealServiceTest {
         when(dealRepository.findByStatusOrderByCreatedAtDesc("OPEN")).thenReturn(java.util.List.of(a, b, c));
 
         authenticateAs("9");
-        assertThat(service.getMarketplace("REAL_ESTATE", "MULTIFAMILY", null)).hasSize(1);
-        assertThat(service.getMarketplace("REAL_ESTATE", null, null)).hasSize(2);
-        assertThat(service.getMarketplace(null, null, null)).hasSize(3);
+        assertThat(service.getMarketplace("REAL_ESTATE", "MULTIFAMILY", null, null, null, null)).hasSize(1);
+        assertThat(service.getMarketplace("REAL_ESTATE", null, null, null, null, null)).hasSize(2);
+        assertThat(service.getMarketplace(null, null, null, null, null, null)).hasSize(3);
+        // Pagination: limit 2 of 3.
+        assertThat(service.getMarketplace(null, null, null, "NEWEST", 2, 0)).hasSize(2);
     }
 
     // ---- two-sided interest workflow ----
@@ -278,6 +292,45 @@ class DealServiceTest {
         assertThatThrownBy(() -> service.updateLeadStatus(7L, 3L, "BOGUS"))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Invalid lead status");
+    }
+
+    @Test
+    void expressInterest_rejectedWithoutAccreditation() {
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
+        DealInterestRequest req = interestRequest();
+        req.setAccredited(false);
+
+        authenticateAs("2");
+        assertThatThrownBy(() -> service.expressInterest(7L, req))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("accredited");
+    }
+
+    @Test
+    void expressInterest_capturesCommitmentAndNotifiesSponsor() {
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
+        when(interestRepository.save(any(DealInterest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authenticateAs("2");
+        var lead = service.expressInterest(7L, interestRequest());
+
+        assertThat(lead.getCommitmentAmount()).isEqualByComparingTo("50000");
+        assertThat(lead.isAccredited()).isTrue();
+        org.mockito.Mockito.verify(leadNotifier).notifyNewInterest(eq(1L), any(), eq("Jane Investor"));
+    }
+
+    @Test
+    void watch_isIdempotent_andUnwatchScopedToUser() {
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
+        when(watchRepository.existsByUserIdAndDealId(2L, 7L)).thenReturn(false, true);
+
+        authenticateAs("2");
+        service.watch(7L);
+        service.watch(7L); // already watched -> no second save
+        org.mockito.Mockito.verify(watchRepository, org.mockito.Mockito.times(1)).save(any(DealWatch.class));
+
+        service.unwatch(7L);
+        org.mockito.Mockito.verify(watchRepository).deleteByUserIdAndDealId(2L, 7L);
     }
 
     @Test

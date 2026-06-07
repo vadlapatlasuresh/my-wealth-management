@@ -20,6 +20,7 @@ const InvestPage      = React.lazy(() => import('../pages/InvestPage'));
 const MyBusinessPage  = React.lazy(() => import('../pages/MyBusinessPage'));
 const CalculatorsPage = React.lazy(() => import('../pages/CalculatorsPage'));
 const GoalsPage       = React.lazy(() => import('../pages/GoalsPage'));
+const AdminDashboardPage = React.lazy(() => import('../pages/AdminDashboardPage'));
 const AIAssistantPage = React.lazy(() => import('../pages/AIAssistantPage'));
 const RealEstatePage  = React.lazy(() => import('../pages/RealEstatePage'));
 const DealRoomPage    = React.lazy(() => import('../pages/DealRoomPage'));
@@ -171,6 +172,11 @@ export const MODULE_REGISTRY = {
     id: 'profile', title: 'Profile', icon: 'ti ti-user',
     route: '/profile', section: null, defaultOrder: 0,
     component: ProfilePage, inNavByDefault: false,
+  },
+  admin: {
+    id: 'admin', title: 'Admin · Analytics', icon: 'ti ti-chart-dots',
+    route: '/admin', section: null, defaultOrder: 0, // route-only; linked from Profile for admins
+    component: AdminDashboardPage, inNavByDefault: false,
   },
 };
 

@@ -22,6 +22,7 @@ public class AuditController {
 
     private final AuditEventRepository repository;
     private final AuditChainService chainService;
+    private final AuditStatsService statsService;
 
     @Value("${audit.ingest.key:}")
     private String ingestKey;
@@ -58,6 +59,12 @@ public class AuditController {
             @RequestHeader(value = "X-Internal-Key", required = false) String key) {
         requireInternalKey(key);
         return chainService.verify();
+    }
+
+    // ---- Operator KPI stats (ADMIN/CARE via JWT role) -----------------------
+    @GetMapping("/stats")
+    public java.util.Map<String, Object> stats(@RequestParam(defaultValue = "30") int days) {
+        return statsService.stats(days);
     }
 
     // ---- The signed-in user's own activity ---------------------------------

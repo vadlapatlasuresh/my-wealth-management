@@ -11,4 +11,6 @@ public class DealInterestRequest {
     private String email;
     private String phone;
     private String message;
+    private java.math.BigDecimal commitmentAmount;
+    private boolean accredited;
 }

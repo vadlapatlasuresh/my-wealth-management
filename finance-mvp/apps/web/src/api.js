@@ -206,6 +206,9 @@ export const api = {
     return request(`/api/v1/deals/marketplace${qs ? `?${qs}` : ""}`);
   },
   getMyInterests: () => request("/api/v1/deals/my-interests"),
+  getWatchlist: () => request("/api/v1/deals/watchlist"),
+  watchDeal: (id) => request(`/api/v1/deals/${id}/watch`, { method: "POST" }),
+  unwatchDeal: (id) => request(`/api/v1/deals/${id}/watch`, { method: "DELETE" }),
   getDeal: (id) => request(`/api/v1/deals/${id}`),
   createDeal: (payload) =>
     request("/api/v1/deals", { method: "POST", body: JSON.stringify(payload) }),
@@ -222,6 +225,12 @@ export const api = {
     request(`/api/v1/deals/${dealId}/interests/${interestId}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
   // Sponsor track record (previous projects) shown on a deal's detail page.
   getDealSponsorProjects: (id) => request(`/api/v1/deals/${id}/sponsor-projects`),
+  // Deal documents (link-based: PPM, financials, data room).
+  getDealDocuments: (id) => request(`/api/v1/deals/${id}/documents`),
+  addDealDocument: (id, payload) =>
+    request(`/api/v1/deals/${id}/documents`, { method: "POST", body: JSON.stringify(payload) }),
+  deleteDealDocument: (id, docId) =>
+    request(`/api/v1/deals/${id}/documents/${docId}`, { method: "DELETE" }),
 
   // Sponsor track record management (the signed-in user's own previous projects)
   getMySponsorProjects: () => request("/api/v1/sponsor/projects"),
@@ -259,6 +268,8 @@ export const api = {
   // Notification Service (Phase 7)
   // Signed-in user's real account activity (logins, registrations, etc.) from audit-service.
   getMyActivity: (size = 20) => request(`/api/v1/audit/me?size=${size}`),
+  // Admin KPI dashboard (ADMIN/CARE only — backend enforces the role).
+  getAuditStats: (days = 30) => request(`/api/v1/audit/stats?days=${days}`),
   getNotifications: () => request("/api/v1/notifications"),
   getNotificationPreferences: () => request("/api/v1/notifications/preferences"),
   putNotificationPreferences: (payload) =>

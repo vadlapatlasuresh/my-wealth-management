@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -13,6 +14,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -43,11 +46,24 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             if (Boolean.TRUE.equals(jwtService.validateToken(token, userDetails))) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, token, userDetails.getAuthorities());
+                        userDetails, token, rolesFromToken(token));
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             }
         }
         filterChain.doFilter(request, response);
+    }
+
+    /** Build Spring authorities from the JWT "roles" claim so hasRole(...) works. */
+    private Collection<SimpleGrantedAuthority> rolesFromToken(String token) {
+        try {
+            Object roles = jwtService.extractClaim(token, c -> c.get("roles"));
+            if (roles instanceof List<?> list) {
+                return list.stream()
+                        .map(r -> new SimpleGrantedAuthority("ROLE_" + String.valueOf(r).toUpperCase()))
+                        .toList();
+            }
+        } catch (Exception ignored) { /* no roles → no authorities */ }
+        return List.of();
     }
 }
