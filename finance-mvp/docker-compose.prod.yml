@@ -1,0 +1,232 @@
+# ============================================================
+#  PRODUCTION / prod-like stack — all services + Caddy (auto-HTTPS)
+#  Brings up the API gateway, 9 downstream Spring Boot services, and a
+#  Caddy reverse proxy. ONLY Caddy is publicly exposed (80/443); every
+#  service talks to its neighbours over the internal `wealth` network
+#  using compose DNS (e.g. http://auth-service:8081).
+#
+#  Postgres is EXTERNAL (Neon) by default — set DATABASE_URL per service in .env.prod.
+#  To run Postgres locally instead, uncomment the `postgres` service at the bottom
+#  and point DATABASE_URL at jdbc:postgresql://postgres:5432/wealth.
+#
+#  Usage:
+#    cp .env.prod.example .env.prod   # fill in secrets
+#    export TAG=$(git rev-parse --short HEAD)   # or a released SHA
+#    docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#
+#  Images are pulled from GHCR (built+pushed by CI). To build locally instead,
+#  use the `build:` blocks (uncomment) or the Dockerfile.java-service one-liners.
+# ============================================================
+
+x-java-defaults: &java-defaults
+  restart: unless-stopped
+  networks: [wealth]
+  environment: &java-env
+    SPRING_PROFILES_ACTIVE: prod
+    JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env.prod}
+    # Every container listens on a UNIFORM internal port (8080) so the shared healthcheck
+    # and compose-DNS URLs are identical for all services. Spring relaxed-binding maps
+    # SERVER_PORT -> server.port, overriding the per-service port in application.properties.
+    SERVER_PORT: "8080"
+    # JVM: respect container memory limits
+    JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50"
+  healthcheck:
+    test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
+    interval: 15s
+    timeout: 5s
+    retries: 10
+    start_period: 90s
+  deploy:
+    resources:
+      limits:
+        memory: 640M
+
+services:
+  # ---------------- Reverse proxy (the only public service) ----------------
+  caddy:
+    image: caddy:2-alpine
+    container_name: wealth-caddy
+    restart: unless-stopped
+    networks: [wealth]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env.prod}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+
+  # ---------------- API Gateway (public entry, no DB) ----------------
+  api-gateway:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-api-gateway:${TAG:-latest}
+    container_name: wealth-api-gateway
+    # build: { context: ., dockerfile: Dockerfile.java-service, args: { SERVICE: api-gateway } }
+    environment:
+      <<: *java-env
+      # Downstream routing → compose DNS. All services listen on 8080 internally (SERVER_PORT).
+      SERVICE_AUTH_URI: http://auth-service:8080
+      SERVICE_AGGREGATION_URI: http://account-aggregation-service:8080
+      SERVICE_FINANCIAL_CORE_URI: http://financial-core-service:8080
+      SERVICE_REAL_ESTATE_URI: http://real-estate-service:8080
+      SERVICE_BUSINESS_URI: http://business-financials-service:8080
+      SERVICE_AI_URI: http://ai-insights-service:8080
+      SERVICE_PAYMENT_URI: http://payment-service:8080
+      SERVICE_NOTIFICATION_URI: http://notification-service:8080
+      SERVICE_PLATFORM_CONFIG_URI: http://platform-config-service:8080
+      # Legacy Node API is NOT deployed in prod; point at a dead address so /v1/** 503s cleanly
+      SERVICE_LEGACY_NODE_URI: http://127.0.0.1:4000
+      # CORS: only the real web origin(s), comma-separated. NO wildcard in prod.
+      GATEWAY_CORS_ALLOWED_ORIGINS: ${WEB_ORIGINS:?set WEB_ORIGINS in .env.prod}
+    depends_on:
+      auth-service: { condition: service_healthy }
+      financial-core-service: { condition: service_healthy }
+
+  # ---------------- Stateful services (Postgres-backed) ----------------
+  auth-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-auth-service:${TAG:-latest}
+    container_name: wealth-auth-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${AUTH_DATABASE_URL:?}
+      DATABASE_USER: ${AUTH_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
+
+  account-aggregation-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-account-aggregation-service:${TAG:-latest}
+    container_name: wealth-account-aggregation-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${AGG_DATABASE_URL:?}
+      DATABASE_USER: ${AGG_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${AGG_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      PLAID_CLIENT_ID: ${PLAID_CLIENT_ID:-}
+      PLAID_SECRET: ${PLAID_SECRET:-}
+      PLAID_ENV: ${PLAID_ENV:-sandbox}
+
+  financial-core-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-financial-core-service:${TAG:-latest}
+    container_name: wealth-financial-core-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${CORE_DATABASE_URL:?}
+      DATABASE_USER: ${CORE_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${CORE_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+
+  real-estate-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-real-estate-service:${TAG:-latest}
+    container_name: wealth-real-estate-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${RE_DATABASE_URL:?}
+      DATABASE_USER: ${RE_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      REALESTATE_PROVIDER_API_KEY: ${REALESTATE_PROVIDER_API_KEY:-}
+
+  business-financials-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-business-financials-service:${TAG:-latest}
+    container_name: wealth-business-financials-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${BIZ_DATABASE_URL:?}
+      DATABASE_USER: ${BIZ_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${BIZ_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      QBO_CLIENT_ID: ${QBO_CLIENT_ID:-}
+      QBO_CLIENT_SECRET: ${QBO_CLIENT_SECRET:-}
+      QBO_ENVIRONMENT: ${QBO_ENVIRONMENT:-sandbox}
+
+  ai-insights-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-ai-insights-service:${TAG:-latest}
+    container_name: wealth-ai-insights-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${AI_DATABASE_URL:?}
+      DATABASE_USER: ${AI_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      AI_PROVIDER: ${AI_PROVIDER:-mock}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      AI_MODEL: ${AI_MODEL:-claude-opus-4-8}
+
+  payment-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-payment-service:${TAG:-latest}
+    container_name: wealth-payment-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${PAY_DATABASE_URL:?}
+      DATABASE_USER: ${PAY_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+
+  notification-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-notification-service:${TAG:-latest}
+    container_name: wealth-notification-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${NOTIF_DATABASE_URL:?}
+      DATABASE_USER: ${NOTIF_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      FCM_SERVER_KEY: ${FCM_SERVER_KEY:-}
+
+  platform-config-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-platform-config-service:${TAG:-latest}
+    container_name: wealth-platform-config-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${CONFIG_DATABASE_URL:?}
+      DATABASE_USER: ${CONFIG_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${CONFIG_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+
+  # ---------------- OPTIONAL local Postgres (instead of Neon) ----------------
+  # Uncomment to self-host Postgres in the stack. Then set every *_DATABASE_URL to
+  # jdbc:postgresql://postgres:5432/wealth (one DB, schema-per-service) in .env.prod.
+  # postgres:
+  #   image: postgres:16-alpine
+  #   container_name: wealth-postgres
+  #   restart: unless-stopped
+  #   networks: [wealth]
+  #   environment:
+  #     POSTGRES_DB: ${POSTGRES_DB:-wealth}
+  #     POSTGRES_USER: ${POSTGRES_USER:-wealth}
+  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+  #   volumes:
+  #     - pgdata:/var/lib/postgresql/data
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wealth}"]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 10
+
+networks:
+  wealth:
+    driver: bridge
+
+volumes:
+  caddy_data:
+  caddy_config:
+  # pgdata:

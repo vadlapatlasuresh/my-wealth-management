@@ -1,0 +1,44 @@
+# ============================================================
+#  Caddy reverse proxy — auto-HTTPS (Let's Encrypt) for the API.
+#  The web app is hosted separately on Cloudflare Pages, so Caddy only
+#  fronts the API gateway here. {$API_DOMAIN} / {$ACME_EMAIL} come from
+#  the environment (set in docker-compose.prod.yml from .env.prod).
+#
+#  Local / staging without a public domain? Use the :80 block at the bottom
+#  instead (comment out the {$API_DOMAIN} block) to skip TLS.
+# ============================================================
+
+{
+    email {$ACME_EMAIL}
+    # For Cloudflare-proxied (orange-cloud) setups, Caddy still terminates TLS at origin.
+    # If you front Caddy with Cloudflare proxy, "Full (strict)" SSL mode works with this cert.
+}
+
+{$API_DOMAIN} {
+    encode gzip zstd
+
+    # Security headers (baseline; tighten CSP once asset origins are known)
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        -Server
+    }
+
+    # Health check passthrough (uptime monitors hit https://api.<domain>/actuator/health)
+    reverse_proxy api-gateway:8080 {
+        health_uri /actuator/health
+        health_interval 15s
+        health_timeout 5s
+    }
+}
+
+# ------------------------------------------------------------
+# Plain-HTTP fallback for local prod-like runs without a domain.
+# Uncomment and comment the block above. Then hit http://localhost.
+# ------------------------------------------------------------
+# :80 {
+#     encode gzip zstd
+#     reverse_proxy api-gateway:8080
+# }

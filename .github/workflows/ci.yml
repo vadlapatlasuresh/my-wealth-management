@@ -6,9 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+# Allow pushing images to GHCR (GitHub Container Registry)
+permissions:
+  contents: read
+  packages: write
+
 jobs:
+  # ---------------------------------------------------------------
+  # 1) Build + test every Java service (PRs and main).
+  #    NOTE: tests now RUN (no -DskipTests). If a service has failing/flaky
+  #    tests today, this surfaces it — triage as part of Day 3 (test gates).
+  # ---------------------------------------------------------------
   backend:
-    name: Build Java services
+    name: Build & test Java services
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,6 +33,7 @@ jobs:
           - ai-insights-service
           - payment-service
           - notification-service
+          - platform-config-service
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -30,10 +41,13 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: Build ${{ matrix.service }}
+      - name: Build & test ${{ matrix.service }}
         working-directory: finance-mvp
-        run: mvn -q clean package -DskipTests -f apps/${{ matrix.service }}/pom.xml
+        run: mvn -q clean verify -f apps/${{ matrix.service }}/pom.xml
 
+  # ---------------------------------------------------------------
+  # 2) Build the web app (PRs and main).
+  # ---------------------------------------------------------------
   web:
     name: Build web app
     runs-on: ubuntu-latest
@@ -45,6 +59,86 @@ jobs:
       - name: Install
         working-directory: finance-mvp
         run: npm install
+      - name: Verify i18n locale key parity
+        working-directory: finance-mvp/apps/web/src/i18n/locales
+        run: |
+          python3 - <<'PY'
+          import json, glob, sys
+          def flat(d, p=""):
+              ks=set()
+              for k,v in d.items():
+                  nk=f"{p}.{k}" if p else k
+                  ks |= flat(v, nk) if isinstance(v, dict) else {nk}
+              return ks
+          en = flat(json.load(open("en.json")))
+          ok = True
+          for f in sorted(glob.glob("*.json")):
+              if f == "en.json": continue
+              k = flat(json.load(open(f)))
+              miss, extra = en - k, k - en
+              if miss or extra:
+                  ok = False
+                  print(f"{f}: missing={sorted(miss)} extra={sorted(extra)}")
+          print("locale parity OK" if ok else "LOCALE PARITY FAILED")
+          sys.exit(0 if ok else 1)
+          PY
       - name: Build web
         working-directory: finance-mvp
         run: npm run build -w apps/web
+
+  # ---------------------------------------------------------------
+  # 3) Build & push Docker images to GHCR (main only, after build+test pass).
+  #    Tags each image with the commit SHA (immutable, promotable) and `latest`.
+  #    Deploy = pull these exact SHA tags onto the VM (build once, promote).
+  # ---------------------------------------------------------------
+  images:
+    name: Build & push images
+    needs: [backend, web]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - account-aggregation-service
+          - financial-core-service
+          - real-estate-service
+          - business-financials-service
+          - ai-insights-service
+          - payment-service
+          - notification-service
+          - platform-config-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: finance-mvp
+          file: finance-mvp/Dockerfile.java-service
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------
+  # 4) (Day 3) deploy-qa: SSH to QA VM, pull <sha>, compose up, run Playwright.
+  # 5) (Day 5) deploy-prod: manual-approval GitHub Environment, promote <sha>.
+  #    Stubs intentionally left for the next phases.
+  # ---------------------------------------------------------------
