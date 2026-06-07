@@ -1,0 +1,1124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Wealth Management — Diagram Gallery (53 diagrams)</title>
+<style>
+  :root { --green:#1A4D3B; --gold:#C9973A; --bg:#f7f7f4; --card:#fff; --border:#e4e4df; --muted:#6b6b66; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: -apple-system, "DM Sans", Segoe UI, Roboto, sans-serif; background:var(--bg); color:#1a1a1a; }
+  header { background:var(--green); color:#fff; padding:18px 24px; position:sticky; top:0; z-index:10; }
+  header h1 { margin:0; font-size:18px; } header p { margin:4px 0 0; opacity:.8; font-size:13px; }
+  .layout { display:grid; grid-template-columns: 300px 1fr; gap:0; align-items:start; }
+  nav { position:sticky; top:74px; height:calc(100vh - 74px); overflow:auto; padding:16px; border-right:1px solid var(--border); background:var(--card); }
+  nav ul { list-style:none; margin:0; padding:0; } nav li { margin:2px 0; font-size:13px; }
+  nav a { color:var(--green); text-decoration:none; } nav a:hover { text-decoration:underline; }
+  .count { color:var(--muted); font-size:11px; }
+  main { padding:24px; max-width:1100px; }
+  section { margin-bottom:40px; }
+  section h2 { font-size:15px; color:var(--green); border-bottom:2px solid var(--gold); padding-bottom:6px; }
+  figure { margin:0 0 22px; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  figcaption { font-weight:600; margin-bottom:10px; color:#333; }
+  .mermaid { overflow:auto; }
+  .filterbox { width:100%; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); border-radius:8px; font-size:13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>My Wealth Management — Diagram Gallery</h1>
+  <p>53 flowcharts &amp; sequence diagrams across 29 files · regenerate with <code>node docs/render-diagrams.mjs</code></p>
+</header>
+<div class="layout">
+  <nav>
+    <input class="filterbox" placeholder="Filter files…" oninput="for(const li of document.querySelectorAll('nav li')){li.style.display=li.textContent.toLowerCase().includes(this.value.toLowerCase())?'':'none'}" />
+    <ul><li><a href="#backend_architecture_plan_md">backend-architecture-plan.md</a> <span class="count">1</span></li>
+<li><a href="#docs_MOBILE_md">docs/MOBILE.md</a> <span class="count">3</span></li>
+<li><a href="#docs_architecture_flows_01_auth_flow_md">docs/architecture/flows/01-auth-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_02_account_linking_plaid_flow_md">docs/architecture/flows/02-account-linking-plaid-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_03_transactions_flow_md">docs/architecture/flows/03-transactions-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_04_net_worth_snapshot_flow_md">docs/architecture/flows/04-net-worth-snapshot-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_05_budget_debt_flow_md">docs/architecture/flows/05-budget-debt-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_06_real_estate_flow_md">docs/architecture/flows/06-real-estate-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_07_business_financials_flow_md">docs/architecture/flows/07-business-financials-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_08_ai_insights_flow_md">docs/architecture/flows/08-ai-insights-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_09_payments_billpay_flow_md">docs/architecture/flows/09-payments-billpay-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_flows_10_notifications_flow_md">docs/architecture/flows/10-notifications-flow.md</a> <span class="count">1</span></li>
+<li><a href="#docs_architecture_system_architecture_md">docs/architecture/system-architecture.md</a> <span class="count">1</span></li>
+<li><a href="#docs_workflows_01_high_level_architecture_md">docs/workflows/01-high-level-architecture.md</a> <span class="count">3</span></li>
+<li><a href="#docs_workflows_02_web_app_workflows_md">docs/workflows/02-web-app-workflows.md</a> <span class="count">6</span></li>
+<li><a href="#docs_workflows_03_data_persistence_and_audit_md">docs/workflows/03-data-persistence-and-audit.md</a> <span class="count">3</span></li>
+<li><a href="#docs_workflows_04_feature_status_and_gaps_md">docs/workflows/04-feature-status-and-gaps.md</a> <span class="count">1</span></li>
+<li><a href="#docs_workflows_components_00_api_gateway_md">docs/workflows/components/00-api-gateway.md</a> <span class="count">1</span></li>
+<li><a href="#docs_workflows_components_01_auth_service_md">docs/workflows/components/01-auth-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_02_account_aggregation_service_md">docs/workflows/components/02-account-aggregation-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_03_financial_core_service_md">docs/workflows/components/03-financial-core-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_04_real_estate_service_md">docs/workflows/components/04-real-estate-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_05_business_financials_service_md">docs/workflows/components/05-business-financials-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_06_ai_insights_service_md">docs/workflows/components/06-ai-insights-service.md</a> <span class="count">3</span></li>
+<li><a href="#docs_workflows_components_07_payment_service_md">docs/workflows/components/07-payment-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_08_notification_service_md">docs/workflows/components/08-notification-service.md</a> <span class="count">3</span></li>
+<li><a href="#docs_workflows_components_09_platform_config_service_md">docs/workflows/components/09-platform-config-service.md</a> <span class="count">2</span></li>
+<li><a href="#docs_workflows_components_10_audit_service_md">docs/workflows/components/10-audit-service.md</a> <span class="count">3</span></li>
+<li><a href="#docs_workflows_components_11_customer_care_md">docs/workflows/components/11-customer-care.md</a> <span class="count">1</span></li></ul>
+  </nav>
+  <main><section id="backend_architecture_plan_md"><h2>backend-architecture-plan.md</h2>
+      <figure>
+        <figcaption>2. High-Level Architecture Overview</figcaption>
+        <pre class="mermaid">graph TD
+    A[Client Applications] --&gt; B(API Gateway);
+    B --&gt; C(Authentication &amp; Authorization Service);
+    B --&gt; D(User Management Service);
+    B --&gt; E(Account Aggregation Service);
+    B --&gt; F(Financial Core Service);
+    B --&gt; G(Real Estate Service);
+    B --&gt; H(Business Financials Service);
+    B --&gt; I(AI Insights Service);
+    B --&gt; J(Payment Processing Service);
+    B --&gt; K(Notification Service);
+
+    E --&gt; L[External Financial APIs];
+    G --&gt; M[External Real Estate APIs];
+    H --&gt; N[External Business APIs];
+    I --&gt; O[External AI/ML APIs];
+    J --&gt; P[External Payment Gateways];
+
+    C -- Token Validation --&gt; B;
+    E -- Webhooks --&gt; Q(Message Queue);
+    L -- Webhooks --&gt; Q;
+    Q --&gt; E;
+    Q --&gt; F;
+    Q --&gt; K;
+
+    subgraph Databases
+        D -- DB --&gt; D_DB[User DB];
+        E -- DB --&gt; E_DB[Plaid/Aggregator DB];
+        F -- DB --&gt; F_DB[Financial Core DB];
+        G -- DB --&gt; G_DB[Real Estate DB];
+        H -- DB --&gt; H_DB[Business DB];
+        I -- DB --&gt; I_DB[AI Insights DB];
+        J -- DB --&gt; J_DB[Payment DB];
+        K -- DB --&gt; K_DB[Notification DB];
+    end</pre>
+      </figure></section>
+<section id="docs_MOBILE_md"><h2>docs/MOBILE.md</h2>
+      <figure>
+        <figcaption>Platform topology — one codebase → three platforms</figcaption>
+        <pre class="mermaid">flowchart TD
+    SRC["Single codebase&lt;br/&gt;finance-mvp/apps/web · React + Vite"]
+    SRC --&gt; BUILD["npm run build → dist/&lt;br/&gt;(+ manifest + service worker)"]
+    BUILD --&gt; PWA["Web / Installable PWA&lt;br/&gt;browser · Add to Home Screen"]
+    BUILD --&gt; SYNC["npx cap sync&lt;br/&gt;copy web build into native shells"]
+    SYNC --&gt; IOS["iOS shell&lt;br/&gt;Capacitor + Xcode (SPM)"]
+    SYNC --&gt; AND["Android shell&lt;br/&gt;Capacitor + Gradle"]
+    PWA --&gt; HOST["Deploy to host&lt;br/&gt;Vercel / Netlify / Nginx"]
+    IOS --&gt; APPSTORE["App Store"]
+    AND --&gt; PLAY["Google Play"]
+    PWA -. same API .-&gt; GW["API Gateway :8080"]
+    IOS -. same API .-&gt; GW
+    AND -. same API .-&gt; GW</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Build &amp; ship pipeline</figcaption>
+        <pre class="mermaid">flowchart LR
+    EDIT["Edit web code"] --&gt; CHOICE{Target?}
+    CHOICE --&gt;|PWA / web| PREVIEW["npm run build&lt;br/&gt;→ npm run preview / deploy"]
+    CHOICE --&gt;|native| CAPSYNC["npm run cap:sync&lt;br/&gt;build web + copy into iOS &amp; Android"]
+    CAPSYNC --&gt; OPEN["cap:android / cap:ios&lt;br/&gt;open IDE"]
+    CAPSYNC --&gt; RUN["android:run / ios:run&lt;br/&gt;device / emulator"]
+    OPEN --&gt; RELEASE["Archive / Generate signed bundle&lt;br/&gt;→ App Store / Play"]
+    RUN --&gt; RELEASE</pre>
+      </figure>
+
+      <figure>
+        <figcaption>3. Pointing the app at your backend (important for devices)</figcaption>
+        <pre class="mermaid">flowchart TD
+    A{Where is the app running?}
+    A --&gt;|Web / iOS simulator| B["http://localhost:8080"]
+    A --&gt;|Android emulator| C["http://10.0.2.2:8080&lt;br/&gt;(auto-detected)"]
+    A --&gt;|Physical device| D["VITE_API_BASE&lt;br/&gt;= your machine's LAN IP:8080"]
+    B --&gt; GW["API Gateway → services"]
+    C --&gt; GW
+    D --&gt; GW</pre>
+      </figure></section>
+<section id="docs_architecture_flows_01_auth_flow_md"><h2>docs/architecture/flows/01-auth-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant Auth as AuthPage.jsx
+    participant App as App.jsx
+    participant Api as api.js (login/register)
+    participant GW as API Gateway :8080
+    participant Svc as auth-service :8081&lt;br/&gt;AuthController
+    participant DB as H2 authdb (users)
+
+    User-&gt;&gt;Auth: submit email + password
+    Auth-&gt;&gt;App: onSubmit(event) → submitAuth
+    App-&gt;&gt;Api: api.login / api.register(authForm)
+    Api-&gt;&gt;GW: POST /api/v1/auth/login (public, JSON)
+    GW-&gt;&gt;Svc: route /api/v1/auth/** → AuthController@login
+    Svc-&gt;&gt;DB: UserRepository.findByEmail + verify hash
+    DB--&gt;&gt;Svc: User (id, passwordHash)
+    Svc-&gt;&gt;Svc: JwtService.generateToken(userId), HS256, sub=userId
+    Svc--&gt;&gt;GW: 200 { token, message }
+    GW--&gt;&gt;Api: 200 { token, message }
+    Api--&gt;&gt;App: { token, message }
+    App-&gt;&gt;Api: setAuthToken(token, email) → localStorage
+    App-&gt;&gt;App: loadAll() (subsequent calls send Bearer)</pre>
+      </figure></section>
+<section id="docs_architecture_flows_02_account_linking_plaid_flow_md"><h2>docs/architecture/flows/02-account-linking-plaid-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant Page as AccountsPage.jsx
+    participant Btn as PlaidLinkButton.jsx
+    participant Api as api.js
+    participant GW as API Gateway :8080
+    participant Agg as aggregation :8082&lt;br/&gt;AggregationController
+    participant Plaid as Plaid API (sandbox)
+    participant DB as H2 aggdb
+
+    User-&gt;&gt;Page: click "Link Account"
+    Page-&gt;&gt;Btn: render PlaidLinkButton(onLinkSuccess=loadAll)
+    User-&gt;&gt;Btn: handleClick
+    Btn-&gt;&gt;Api: createPlaidLinkToken() (Bearer)
+    Api-&gt;&gt;GW: POST /api/v1/aggregation/link-token/create
+    GW-&gt;&gt;Agg: AggregationController@createLinkToken
+    Agg-&gt;&gt;Plaid: PlaidService.createLinkToken (linkTokenCreate)
+    Plaid--&gt;&gt;Agg: link_token
+    Agg--&gt;&gt;Api: 200 { link_token }
+    Btn-&gt;&gt;Plaid: usePlaidLink open() → Link UI
+    User-&gt;&gt;Plaid: pick bank + credentials
+    Plaid--&gt;&gt;Btn: onSuccess(public_token)
+    Btn-&gt;&gt;Api: exchangePlaidPublicToken(publicToken)
+    Api-&gt;&gt;GW: POST /api/v1/aggregation/public-token/exchange
+    GW-&gt;&gt;Agg: AggregationController@exchangePublicToken
+    Agg-&gt;&gt;Plaid: itemPublicTokenExchange → access_token
+    Agg-&gt;&gt;Plaid: accountsGet + transactionsGet
+    Agg-&gt;&gt;DB: save plaid_items, accounts, transactions
+    Agg--&gt;&gt;Api: 200 { message }
+    Btn-&gt;&gt;Page: onLinkSuccess() → loadAll()
+    Page-&gt;&gt;Api: getAccounts() → refetched list</pre>
+      </figure></section>
+<section id="docs_architecture_flows_03_transactions_flow_md"><h2>docs/architecture/flows/03-transactions-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant App as App.jsx (loadAll)
+    participant Api as api.js
+    participant GW as API Gateway :8080
+    participant Agg as aggregation :8082&lt;br/&gt;AggregationController
+    participant DB as H2 aggdb (transactions)
+    participant Page as TransactionsPage.jsx
+
+    App-&gt;&gt;Api: api.getTransactions() (Bearer)
+    Api-&gt;&gt;GW: GET /api/v1/aggregation/transactions
+    GW-&gt;&gt;Agg: AggregationController@getTransactions
+    Agg-&gt;&gt;DB: TransactionService.getTransactionsByUserId(userId)
+    DB--&gt;&gt;Agg: rows scoped by user_id
+    Agg--&gt;&gt;Api: 200 [TransactionDto]
+    Api--&gt;&gt;App: transactions[]
+    App-&gt;&gt;Page: &lt;TransactionsPage transactions={transactions}/&gt;
+    User-&gt;&gt;Page: type search / pick category / IN-OUT
+    Page-&gt;&gt;Page: filter + recompute KPIs (no network)</pre>
+      </figure></section>
+<section id="docs_architecture_flows_04_net_worth_snapshot_flow_md"><h2>docs/architecture/flows/04-net-worth-snapshot-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant App as App.jsx / NetWorthChart.jsx
+    participant Api as api.js
+    participant GW as API Gateway :8080
+    participant Fin as financial-core :8083&lt;br/&gt;FinancialCoreController
+    participant Agg as aggregation :8082
+    participant DB as H2 aggdb
+
+    User-&gt;&gt;App: open Home / pick chart range
+    App-&gt;&gt;Api: api.getSnapshot(range) (Bearer)
+    Api-&gt;&gt;GW: GET /api/v1/me/snapshot?range=3M
+    GW-&gt;&gt;Fin: FinancialCoreController@getSnapshot
+    Fin-&gt;&gt;Agg: AccountAggregationClient.getAccounts/getTransactions (Bearer)
+    Agg-&gt;&gt;DB: query by user_id
+    DB--&gt;&gt;Agg: accounts + transactions
+    Agg--&gt;&gt;Fin: [AccountDto], [TransactionDto]
+    Fin-&gt;&gt;Fin: FinancialCoreService.getSnapshot computes net worth
+    Fin--&gt;&gt;Api: 200 SnapshotDto
+    Api--&gt;&gt;App: snapshot → KPI cards + chart</pre>
+      </figure></section>
+<section id="docs_architecture_flows_05_budget_debt_flow_md"><h2>docs/architecture/flows/05-budget-debt-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant Page as PlanPage.jsx
+    participant Api as api.js
+    participant GW as API Gateway :8080
+    participant Fin as financial-core :8083
+    participant Agg as aggregation :8082
+    participant DB as H2 financialdb
+
+    User-&gt;&gt;Page: open Plan (month=2026-06)
+    Page-&gt;&gt;Api: getBudget(month) + getDebts()
+    Api-&gt;&gt;GW: GET /api/v1/planning/budgets/2026-06
+    GW-&gt;&gt;Fin: BudgetController@getBudget
+    Fin-&gt;&gt;DB: BudgetRepository.findByUserIdAndMonth
+    Fin-&gt;&gt;Agg: getTransactions (compute spent)
+    Fin--&gt;&gt;Api: 200 BudgetDto {month,lines,alerts}
+    Api-&gt;&gt;GW: GET /api/v1/planning/debt-scenarios
+    GW-&gt;&gt;Fin: DebtController@getDebts → 200 [DebtDto]
+    User-&gt;&gt;Page: edit amounts → Save
+    Page-&gt;&gt;Api: putBudget(month, lines)
+    Api-&gt;&gt;GW: PUT .../budgets/2026-06 (raw List)
+    GW-&gt;&gt;Fin: BudgetController@putBudget (saveBudget)
+    Fin-&gt;&gt;DB: clear+re-add lines (orphanRemoval)
+    Fin--&gt;&gt;Api: 200 updated BudgetDto
+    User-&gt;&gt;Page: Compare strategies
+    Page-&gt;&gt;Api: runDebtScenario x3 (AVAL/SNOW/HYBRID)
+    Api-&gt;&gt;GW: POST .../debt-scenarios → DebtController@runDebtScenario
+    Fin--&gt;&gt;Api: 200 DebtScenarioDto each</pre>
+      </figure></section>
+<section id="docs_architecture_flows_06_real_estate_flow_md"><h2>docs/architecture/flows/06-real-estate-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant UI as RealEstatePage.jsx
+    participant API as api.js (getRealEstate / revalueProperty)
+    participant GW as API Gateway :8080
+    participant SVC as real-estate-service :8084&lt;br/&gt;RealEstateController
+    participant PSVC as PropertyService
+    participant PROV as MockPropertyValuationProvider
+    participant DB as (H2 realestatedb) properties
+
+    User-&gt;&gt;UI: Open Properties page
+    UI-&gt;&gt;API: api.getRealEstate()
+    API-&gt;&gt;GW: GET /api/v1/real-estate&lt;br/&gt;Authorization: Bearer &lt;JWT&gt;
+    GW-&gt;&gt;SVC: route /api/v1/real-estate/** → :8084
+    SVC-&gt;&gt;PSVC: getProperties()
+    PSVC-&gt;&gt;DB: findByUserId(userId)
+    DB--&gt;&gt;PSVC: [Property...]
+    PSVC--&gt;&gt;SVC: [PropertyDto] (equity computed)
+    SVC--&gt;&gt;GW: 200 [PropertyDto]
+    GW--&gt;&gt;API: 200 JSON array
+    API--&gt;&gt;UI: properties[]
+
+    User-&gt;&gt;UI: Re-value a property
+    UI-&gt;&gt;API: api.revalueProperty(id)
+    API-&gt;&gt;GW: POST /api/v1/real-estate/{id}/revalue + JWT
+    GW-&gt;&gt;SVC: route → :8084
+    SVC-&gt;&gt;PSVC: revalue(id)
+    PSVC-&gt;&gt;PROV: estimateValue(address, purchasePrice)
+    PROV--&gt;&gt;PSVC: BigDecimal estimate
+    PSVC-&gt;&gt;DB: save(currentValue, lastValuedAt)
+    PSVC--&gt;&gt;SVC: PropertyDto
+    SVC--&gt;&gt;GW: 200 PropertyDto
+    GW--&gt;&gt;UI: updated property</pre>
+      </figure></section>
+<section id="docs_architecture_flows_07_business_financials_flow_md"><h2>docs/architecture/flows/07-business-financials-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant UI as MyBusinessPage.jsx
+    participant API as api.js
+    participant GW as API Gateway :8080
+    participant SVC as business-financials-service :8085&lt;br/&gt;BusinessController
+    participant BSVC as BusinessService
+    participant PROV as MockBusinessDataProvider
+    participant DB as (H2 businessdb) qbo_connections
+
+    User-&gt;&gt;UI: Open My Business
+    UI-&gt;&gt;API: Promise.allSettled(getBusinessConnection, getBusinessDashboard, getBusinessInvoices, getBusinessExpenses)
+    API-&gt;&gt;GW: GET /api/v1/business/{connection,dashboard,invoices,expenses} + JWT
+    GW-&gt;&gt;SVC: route /api/v1/business/** → :8085
+    SVC-&gt;&gt;BSVC: getConnection()/getDashboard()/getInvoices()/getExpenses()
+    BSVC-&gt;&gt;DB: getOrCreateConnection(userId)
+    DB--&gt;&gt;BSVC: QboConnection (auto-created, connected=true)
+    BSVC-&gt;&gt;PROV: getDashboard/getInvoices/getExpenses(userId, ...)
+    PROV--&gt;&gt;BSVC: deterministic DTOs (per-user seed)
+    BSVC--&gt;&gt;SVC: dashboard / [InvoiceDto] / [ExpenseDto]
+    SVC--&gt;&gt;GW: 200 JSON
+    GW--&gt;&gt;UI: render KPIs + tables
+
+    User-&gt;&gt;UI: Click Sync
+    UI-&gt;&gt;API: api.syncBusiness()
+    API-&gt;&gt;GW: POST /api/v1/business/sync + JWT
+    GW-&gt;&gt;SVC: → BusinessController.sync()
+    SVC-&gt;&gt;BSVC: sync() (updates lastSyncAt)
+    BSVC-&gt;&gt;DB: save(lastSyncAt = now)
+    SVC--&gt;&gt;UI: {connected, lastSyncAt} then reload</pre>
+      </figure></section>
+<section id="docs_architecture_flows_08_ai_insights_flow_md"><h2>docs/architecture/flows/08-ai-insights-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant UI as AIAssistantPage.jsx
+    participant API as api.js
+    participant GW as API Gateway :8080
+    participant SVC as ai-insights-service :8086&lt;br/&gt;AiController
+    participant PROV as MockAiProvider
+    participant DB as (H2 aidb) insights
+
+    User-&gt;&gt;UI: Open AI Assistant
+    UI-&gt;&gt;API: api.getInsights()
+    API-&gt;&gt;GW: GET /api/v1/ai/insights + JWT
+    GW-&gt;&gt;SVC: route /api/v1/ai/** → :8086
+    SVC-&gt;&gt;DB: findByUserIdOrderByCreatedAtDesc(userId)
+    alt none stored yet
+        SVC-&gt;&gt;PROV: generateInsights(userId)
+        PROV--&gt;&gt;SVC: [GeneratedInsight]
+        SVC-&gt;&gt;DB: saveAll(insights)
+    end
+    SVC--&gt;&gt;GW: 200 [InsightDto]
+    GW--&gt;&gt;UI: render insight cards
+
+    User-&gt;&gt;UI: Refresh insights
+    UI-&gt;&gt;API: api.refreshInsights()
+    API-&gt;&gt;GW: POST /api/v1/ai/insights/refresh + JWT
+    SVC-&gt;&gt;DB: deleteByUserId(userId)
+    SVC-&gt;&gt;PROV: generateInsights(userId)
+    SVC-&gt;&gt;DB: saveAll → re-read
+    SVC--&gt;&gt;UI: [InsightDto]
+
+    User-&gt;&gt;UI: Send chat message
+    UI-&gt;&gt;API: api.chatWithAssistant(message, history)
+    API-&gt;&gt;GW: POST /api/v1/ai/chat {message,history} + JWT
+    SVC-&gt;&gt;PROV: chat(message, history)
+    PROV--&gt;&gt;SVC: reply string
+    SVC--&gt;&gt;UI: { "reply": "..." }</pre>
+      </figure></section>
+<section id="docs_architecture_flows_09_payments_billpay_flow_md"><h2>docs/architecture/flows/09-payments-billpay-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant UI as BillPayPage.jsx
+    participant API as api.js
+    participant GW as API Gateway :8080
+    participant SVC as payment-service :8087&lt;br/&gt;PaymentController
+    participant PSVC as PaymentService
+    participant PROV as MockPaymentProvider
+    participant DB as (H2 paymentdb) bill_pay_intents
+
+    User-&gt;&gt;UI: Review + Confirm Payment
+    UI-&gt;&gt;API: api.createBillPayIntent(form)
+    API-&gt;&gt;GW: POST /api/v1/payments/bill-pay-intents {amount,currency,...} + JWT
+    GW-&gt;&gt;SVC: route /api/v1/payments/** → :8087
+    SVC-&gt;&gt;PSVC: createIntent(body)
+    PSVC-&gt;&gt;PROV: createPayment(amount, currency, payee)
+    PROV--&gt;&gt;PSVC: providerRef "pi_mock_&lt;nanoTime&gt;"
+    PSVC-&gt;&gt;DB: save(status=COMPLETED, provider_ref)
+    DB--&gt;&gt;PSVC: BillPayIntent (id, created_at)
+    PSVC--&gt;&gt;SVC: BillPayIntentDto (snake_case)
+    SVC--&gt;&gt;GW: 200 { intent_id, status, created_at }
+    GW--&gt;&gt;UI: lastIntent → "Done" step shows intent_id
+
+    User-&gt;&gt;UI: View past payments
+    UI-&gt;&gt;API: api.getPaymentIntents()
+    API-&gt;&gt;GW: GET /api/v1/payments/bill-pay-intents + JWT
+    SVC-&gt;&gt;DB: findByUserIdOrderByCreatedAtDesc(userId)
+    SVC--&gt;&gt;UI: { "items": [BillPayIntentDto] }</pre>
+      </figure></section>
+<section id="docs_architecture_flows_10_notifications_flow_md"><h2>docs/architecture/flows/10-notifications-flow.md</h2>
+      <figure>
+        <figcaption>Sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor User
+    participant UI as ProfilePage.jsx
+    participant API as api.js
+    participant GW as API Gateway :8080
+    participant SVC as notification-service :8088&lt;br/&gt;NotificationController
+    participant PROV as MockNotificationProvider
+    participant DB as (H2 notifdb) notification_preferences / notifications
+
+    User-&gt;&gt;UI: Open Profile
+    UI-&gt;&gt;API: api.getNotificationPreferences()
+    API-&gt;&gt;GW: GET /api/v1/notifications/preferences + JWT
+    GW-&gt;&gt;SVC: route /api/v1/notifications/** → :8088
+    SVC-&gt;&gt;DB: findByUserId(userId) (else create defaults)
+    SVC--&gt;&gt;UI: PreferenceDto
+
+    User-&gt;&gt;UI: Toggle a preference
+    UI-&gt;&gt;API: api.putNotificationPreferences(payload)
+    API-&gt;&gt;GW: PUT /api/v1/notifications/preferences + JWT
+    SVC-&gt;&gt;DB: save(NotificationPreference)
+    SVC--&gt;&gt;UI: PreferenceDto (optimistic toggle; revert on error)
+
+    User-&gt;&gt;UI: (feed / test)
+    UI-&gt;&gt;API: api.getNotifications() / api.testNotification() / api.markNotificationRead(id)
+    API-&gt;&gt;GW: GET / POST /test / POST /{id}/read + JWT
+    SVC-&gt;&gt;PROV: send(userId, type, title, body, channel)
+    PROV-&gt;&gt;DB: save(Notification), log delivery
+    SVC-&gt;&gt;DB: read / mark is_read=true
+    SVC--&gt;&gt;UI: { "items": [NotificationDto] } / NotificationDto</pre>
+      </figure></section>
+<section id="docs_architecture_system_architecture_md"><h2>docs/architecture/system-architecture.md</h2>
+      <figure>
+        <figcaption>Component diagram</figcaption>
+        <pre class="mermaid">flowchart TB
+  subgraph Client
+    WEB["Web app (React + Vite)\nlocalhost:5173"]
+    MOB["Mobile app (Expo/React Native)\n(Phase 8 scaffold)"]
+  end
+
+  GW["API Gateway (Spring Cloud Gateway)\nlocalhost:8080\n• routing by path prefix\n• single CORS authority"]
+
+  WEB --&gt;|"HTTPS/JSON + JWT"| GW
+  MOB --&gt;|"HTTPS/JSON + JWT"| GW
+
+  GW --&gt;|/api/v1/auth/**| AUTH["auth-service :8081\nregister / login / JWT"]
+  GW --&gt;|/api/v1/aggregation/**| AGG["account-aggregation-service :8082\nPlaid: link, accounts, transactions"]
+  GW --&gt;|"/api/v1/me/**, /api/v1/planning/**"| FIN["financial-core-service :8083\nsnapshot, budgets, debt"]
+  GW --&gt;|/api/v1/real-estate/**| RE["real-estate-service :8084\nproperties + valuation"]
+  GW --&gt;|/api/v1/business/**| BIZ["business-financials-service :8085\nQuickBooks (mock)"]
+  GW --&gt;|/api/v1/ai/**| AI["ai-insights-service :8086\ninsights + chat"]
+  GW --&gt;|/api/v1/payments/**| PAY["payment-service :8087\nbill pay (Stripe mock)"]
+  GW --&gt;|/api/v1/notifications/**| NOT["notification-service :8088\nprefs + log"]
+  GW --&gt;|/v1/** (legacy)| NODE["Node API :4000\nSQLite (being retired)"]
+
+  AGG --&gt;|REST| PLAID[("Plaid API\nsandbox")]
+  AUTH --- DBA[("H2 / Postgres")]
+  AGG --- DBB[("H2 / Postgres")]
+  FIN --- DBC[("H2 / Postgres")]
+  RE --- DBD[("H2 / Postgres")]
+  BIZ --- DBE[("H2 / Postgres")]
+  AI --- DBF[("H2 / Postgres")]
+  PAY --- DBG[("H2 / Postgres")]
+  NOT --- DBH[("H2 / Postgres")]</pre>
+      </figure></section>
+<section id="docs_workflows_01_high_level_architecture_md"><h2>docs/workflows/01-high-level-architecture.md</h2>
+      <figure>
+        <figcaption>System container diagram</figcaption>
+        <pre class="mermaid">flowchart TB
+    subgraph Clients
+        WEB["Web app&lt;br/&gt;React 18 + Vite"]
+        MOB["Mobile (Expo)&lt;br/&gt;scaffold"]
+    end
+
+    GW["API Gateway :8080&lt;br/&gt;Spring Cloud Gateway&lt;br/&gt;routing • CORS"]
+
+    subgraph Services["Spring Boot services (JWT-secured)"]
+        AUTH["auth :8081 🗄️"]
+        AGG["account-aggregation :8082 🗄️🔑"]
+        CORE["financial-core :8083 🗄️"]
+        RE["real-estate :8084 🗄️"]
+        BIZ["business-financials :8085 🗄️"]
+        AI["ai-insights :8086 🗄️"]
+        PAY["payment :8087 🗄️"]
+        NOTIF["notification :8088 🗄️"]
+        CFG["platform-config :8089 🗄️"]
+    end
+
+    subgraph Data["PostgreSQL (schema per service)"]
+        DB[("Neon / Postgres")]
+    end
+
+    subgraph External["External providers"]
+        PLAID["Plaid 🟢 (sandbox)"]
+        STRIPE["Stripe 🟡 mock"]
+        QBO["QuickBooks 🟡 mock"]
+        LLM["LLM (Claude/OpenAI) 🟡 mock"]
+        REVAL["RE valuation 🟡 mock"]
+        COMMS["Email/SMS/Push 🟡 mock"]
+    end
+
+    WEB --&gt; GW
+    MOB --&gt; GW
+    GW --&gt; AUTH &amp; AGG &amp; CORE &amp; RE &amp; BIZ &amp; AI &amp; PAY &amp; NOTIF &amp; CFG
+
+    CORE -. "Feign (via gateway)" .-&gt; AGG
+
+    AUTH &amp; AGG &amp; CORE &amp; RE &amp; BIZ &amp; AI &amp; PAY &amp; NOTIF &amp; CFG --&gt; DB
+
+    AGG --&gt; PLAID
+    PAY --&gt; STRIPE
+    BIZ --&gt; QBO
+    AI --&gt; LLM
+    RE --&gt; REVAL
+    NOTIF --&gt; COMMS</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Gateway routing (path → service)</figcaption>
+        <pre class="mermaid">flowchart LR
+    C["client"] --&gt; GW["API Gateway :8080"]
+    GW --&gt;|"/api/v1/auth/**"| AUTH[auth :8081]
+    GW --&gt;|"/api/v1/aggregation/**"| AGG[aggregation :8082]
+    GW --&gt;|"/api/v1/me/**&lt;br/&gt;/api/v1/planning/**"| CORE[financial-core :8083]
+    GW --&gt;|"/api/v1/real-estate/**"| RE[real-estate :8084]
+    GW --&gt;|"/api/v1/business/**"| BIZ[business :8085]
+    GW --&gt;|"/api/v1/ai/**"| AI[ai-insights :8086]
+    GW --&gt;|"/api/v1/payments/**"| PAY[payment :8087]
+    GW --&gt;|"/api/v1/notifications/**"| NOTIF[notification :8088]
+    GW --&gt;|"/api/v1/config/**&lt;br/&gt;/api/v1/content/**"| CFG[platform-config :8089]
+    GW --&gt;|"/v1/** (legacy)"| NODE["Node API (not deployed to prod)"]</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Authentication model</figcaption>
+        <pre class="mermaid">flowchart LR
+    U["User"] --&gt;|"login"| AUTH["auth-service"]
+    AUTH --&gt;|"issues JWT (shared secret)"| U
+    U --&gt;|"Bearer JWT on every call"| GW["gateway"]
+    GW --&gt; S["any service"]
+    S --&gt;|"JwtAuthFilter validates&lt;br/&gt;same shared secret"| S</pre>
+      </figure></section>
+<section id="docs_workflows_02_web_app_workflows_md"><h2>docs/workflows/02-web-app-workflows.md</h2>
+      <figure>
+        <figcaption>A. App boot + auth gate</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant APP as App.jsx
+    participant API as api.js
+    participant GW as Gateway
+    participant AUTH as auth-service
+
+    U-&gt;&gt;APP: open app
+    APP-&gt;&gt;APP: read token from localStorage (terravet_token)
+    alt token present
+        APP-&gt;&gt;API: loadAll() (see flow B)
+    else no token
+        APP--&gt;&gt;U: show AuthPage
+        U-&gt;&gt;API: register / login (+ optional SMS verify)
+        API-&gt;&gt;GW: POST /api/v1/auth/login
+        GW-&gt;&gt;AUTH: validate credentials
+        AUTH--&gt;&gt;API: { token, name, email }
+        API-&gt;&gt;APP: setAuthToken(); loadAll()
+    end
+    Note over API,APP: Any 401/403 → clear token →&lt;br/&gt;dispatch "auth:unauthorized" → back to login</pre>
+      </figure>
+
+      <figure>
+        <figcaption>B. Dashboard load (`loadAll`) — parallel fan-out</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant APP as App.jsx
+    participant API as api.js
+    participant GW as Gateway
+
+    APP-&gt;&gt;API: loadAll()
+    par Promise.allSettled (6 calls)
+        API-&gt;&gt;GW: GET /api/v1/me/snapshot
+        API-&gt;&gt;GW: GET /api/v1/aggregation/accounts
+        API-&gt;&gt;GW: GET /api/v1/aggregation/transactions
+        API-&gt;&gt;GW: GET /api/v1/ai/insights
+        API-&gt;&gt;GW: GET /api/v1/payments/bill-pay-intents
+        API-&gt;&gt;GW: GET /api/v1/real-estate
+    end
+    GW--&gt;&gt;API: results (each may fulfil or reject)
+    API--&gt;&gt;APP: setSnapshot/Accounts/Transactions/Insights/Intents/Properties
+    Note over APP: Failures are per-item warnings;&lt;br/&gt;only all-failed throws. UI degrades gracefully.</pre>
+      </figure>
+
+      <figure>
+        <figcaption>C. Remote config + disclaimers (config-driven UI)</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant AL as AppLayout
+    participant RC as config/remoteConfig.js
+    participant CC as content/contentClient.js
+    participant GW as Gateway
+    participant CFG as platform-config-service
+
+    AL-&gt;&gt;RC: load app config (nav, sections, flags, theme)
+    RC-&gt;&gt;GW: GET /api/v1/config/app?platform=web
+    RC-&gt;&gt;GW: GET /api/v1/config/flags
+    GW-&gt;&gt;CFG: resolve from DB
+    CFG--&gt;&gt;RC: { modules, sections, flags, theme }
+    RC-&gt;&gt;RC: cache localStorage (tv_remote_config), 4s timeout → DEFAULT_CONFIG fallback
+    AL-&gt;&gt;AL: build nav, filter by flags
+
+    Note over CC,CFG: On screens needing legal copy:
+    CC-&gt;&gt;GW: GET /api/v1/content/disclaimers?keys=..&amp;locale=en
+    GW-&gt;&gt;CFG: fetch current versions
+    CFG--&gt;&gt;CC: markdown bodies (cached per locale)
+    CC--&gt;&gt;AL: &lt;Disclaimer/&gt; renders; acceptance → POST /content/disclaimers/accept</pre>
+      </figure>
+
+      <figure>
+        <figcaption>D. Link a bank (Plaid) — the only live integration</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant BTN as PlaidLinkButton
+    participant API as api.js
+    participant GW as Gateway
+    participant AGG as account-aggregation
+    participant PLAID as Plaid 🟢
+
+    U-&gt;&gt;BTN: "Link Account"
+    BTN-&gt;&gt;API: createPlaidLinkToken()
+    API-&gt;&gt;GW: POST /api/v1/aggregation/link-token/create
+    GW-&gt;&gt;AGG: create link token
+    AGG-&gt;&gt;PLAID: /link/token/create
+    PLAID--&gt;&gt;BTN: link_token → Plaid Link UI opens
+    U-&gt;&gt;PLAID: pick bank, log in (sandbox: user_good/pass_good)
+    PLAID--&gt;&gt;BTN: public_token
+    BTN-&gt;&gt;API: exchangePlaidPublicToken(public_token)
+    API-&gt;&gt;GW: POST /api/v1/aggregation/public-token/exchange
+    GW-&gt;&gt;AGG: exchange
+    AGG-&gt;&gt;PLAID: /item/public_token/exchange → access_token
+    AGG-&gt;&gt;AGG: 🗄️🔑 store PlaidItem(access_token), Accounts, Transactions
+    AGG--&gt;&gt;API: ok → loadAll() refresh</pre>
+      </figure>
+
+      <figure>
+        <figcaption>E. Bill Pay wizard (5 steps)</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant BP as BillPayPage
+    participant API as api.js
+    participant PAY as payment-service 🟡
+
+    U-&gt;&gt;BP: Payee → Amount → Funding → Review
+    BP-&gt;&gt;API: createBillPayIntent({..., idempotencyKey})
+    API-&gt;&gt;PAY: POST /api/v1/payments/bill-pay-intents
+    PAY-&gt;&gt;PAY: 🗄️ store BillPayIntent (mock provider_ref, confirmation#)
+    PAY--&gt;&gt;BP: intent (status SCHEDULED)
+    BP--&gt;&gt;U: Done step
+    Note over PAY: idempotencyKey prevents double-charge on retry</pre>
+      </figure>
+
+      <figure>
+        <figcaption>F. AI assistant chat</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant AIP as AIAssistantPage
+    participant API as api.js
+    participant AI as ai-insights 🟡
+
+    U-&gt;&gt;AIP: type message (+ scope toggles)
+    AIP-&gt;&gt;API: chatWithAssistant(message, history)
+    API-&gt;&gt;AI: POST /api/v1/ai/chat
+    AI--&gt;&gt;AIP: templated reply (MockAiProvider)
+    Note over AI: Insights persisted (🗄️ insights table);&lt;br/&gt;refresh deletes+regenerates per user</pre>
+      </figure></section>
+<section id="docs_workflows_03_data_persistence_and_audit_md"><h2>docs/workflows/03-data-persistence-and-audit.md</h2>
+      <figure>
+        <figcaption>1. What we store from external APIs</figcaption>
+        <pre class="mermaid">flowchart LR
+    PLAID["Plaid 🟢"] --&gt;|accounts, transactions, access_token| AGG[("aggregation schema 🗄️🔑")]
+    QBO["QuickBooks 🟡 mock"] --&gt;|connection metadata (realm_id, mock)| BIZ[("business schema 🗄️")]
+    LLM["LLM 🟡 mock"] --&gt;|generated insights (mock)| AI[("ai schema 🗄️")]
+    REVAL["RE valuation 🟡 mock"] --&gt;|current_value, last_valued_at (mock)| RE[("real_estate schema 🗄️")]
+    STRIPE["Stripe 🟡 mock"] --&gt;|provider_ref, confirmation# (mock)| PAY[("payments schema 🗄️")]
+    COMMS["Email/SMS/Push 🟡 mock"] -.-&gt;|no inbound data stored| NOTIF[("notifications schema 🗄️")]</pre>
+      </figure>
+
+      <figure>
+        <figcaption>3. What audit/reference data we keep today</figcaption>
+        <pre class="mermaid">flowchart TB
+    subgraph Kept["✅ Kept today"]
+        TS["created_at / updated_at&lt;br/&gt;(Hibernate @CreationTimestamp/@UpdateTimestamp)&lt;br/&gt;on most entities"]
+        DA["disclaimer_acceptance&lt;br/&gt;(user_id, key, version, accepted_at)"]
+        NH["notifications history&lt;br/&gt;(what was sent to a user)"]
+        VF["identity_verified / phone_verified flags"]
+    end
+    subgraph Missing["❌ Missing for real audit/compliance"]
+        AL["audit_log (who/what/when, before→after)"]
+        LOGIN["login/auth events (success/fail, IP, UA)"]
+        CONSENT["OAuth consent log (Plaid/Stripe/QBO scope grants)"]
+        APICALL["external API call log (req/resp, status)"]
+        WH["stored + verified webhook events"]
+        SOFT["soft-delete / retention (deleted_by, deleted_at)"]
+        WHO["created_by / updated_by on entities"]
+    end</pre>
+      </figure>
+
+      <figure>
+        <figcaption>4. Recommended audit/reference layer (proposed)</figcaption>
+        <pre class="mermaid">flowchart LR
+    subgraph App["each service"]
+        SVC["service logic"]
+    end
+    SVC --&gt;|emit| EV["Domain event&lt;br/&gt;(action, entity, before/after, actor, ip)"]
+    EV --&gt; ALOG[("audit_log table&lt;br/&gt;append-only 🗄️")]
+    AUTH2["auth-service"] --&gt;|login/issue/fail| ALOG
+    AGG2["aggregation"] --&gt;|consent + plaid call| ALOG
+    PAY2["payment"] --&gt;|verified webhook event| WHT[("webhook_events 🗄️")]</pre>
+      </figure></section>
+<section id="docs_workflows_04_feature_status_and_gaps_md"><h2>docs/workflows/04-feature-status-and-gaps.md</h2>
+      <figure>
+        <figcaption>1. Flip mocks → real providers (config + one class each)</figcaption>
+        <pre class="mermaid">flowchart LR
+    subgraph Mock["🟡 mock today"]
+        S[Stripe] 
+        Q[QuickBooks]
+        L["LLM (Claude/OpenAI)"]
+        V["RE valuation"]
+        E["Email/SMS/Push"]
+    end
+    Mock --&gt;|add keys + impl behind existing interface| Real["🟢 real"]</pre>
+      </figure></section>
+<section id="docs_workflows_components_00_api_gateway_md"><h2>docs/workflows/components/00-api-gateway.md</h2>
+      <figure>
+        <figcaption>Request flow</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant C as Client
+    participant GW as Gateway
+    participant S as Target service
+    C-&gt;&gt;GW: HTTP + Bearer JWT
+    GW-&gt;&gt;GW: CORS (allowed origins) + route match
+    GW-&gt;&gt;S: proxy request
+    S-&gt;&gt;S: JwtAuthFilter validates JWT (shared secret)
+    S--&gt;&gt;GW: response
+    GW-&gt;&gt;GW: DedupeResponseHeader (single ACAO)
+    GW--&gt;&gt;C: response</pre>
+      </figure></section>
+<section id="docs_workflows_components_01_auth_service_md"><h2>docs/workflows/components/01-auth-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    USERS {
+        bigint id PK
+        string email UK
+        string password_hash
+        string name
+        string first_name
+        string last_name
+        string phone
+        string account_type "INDIVIDUAL|BUSINESS"
+        string business_name
+        string ssn_last4 "last 4 only"
+        string ein_last4 "last 4 only"
+        boolean phone_verified
+        boolean identity_verified
+        timestamp created_at
+        timestamp updated_at
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Login sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant AUTH as auth-service
+    participant DB as auth schema 🗄️
+    U-&gt;&gt;AUTH: POST /login {email,password}
+    AUTH-&gt;&gt;DB: find user by email
+    AUTH-&gt;&gt;AUTH: bcrypt verify; sign JWT (shared secret, 24h)
+    AUTH--&gt;&gt;U: { token, name, email }</pre>
+      </figure></section>
+<section id="docs_workflows_components_02_account_aggregation_service_md"><h2>docs/workflows/components/02-account-aggregation-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    PLAID_ITEMS ||--o{ ACCOUNTS : has
+    ACCOUNTS ||--o{ TRANSACTIONS : has
+    PLAID_ITEMS {
+        bigint id PK
+        bigint user_id
+        string plaid_item_id UK
+        text access_token "🔑 PLAINTEXT today"
+        string institution_id
+    }
+    ACCOUNTS {
+        bigint id PK
+        bigint user_id
+        string plaid_account_id UK
+        string plaid_item_id FK
+        string name
+        string type "credit|depository|investment|loan"
+        string subtype
+        decimal current_balance
+        decimal available_balance
+        string currency
+    }
+    TRANSACTIONS {
+        bigint id PK
+        bigint user_id
+        bigint account_id FK
+        string plaid_transaction_id UK
+        string plaid_account_id
+        string name
+        decimal amount
+        date date
+        string category
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Link + sync sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant AGG as aggregation
+    participant PLAID as Plaid 🟢
+    participant DB as aggregation 🗄️
+    U-&gt;&gt;AGG: link-token/create
+    AGG-&gt;&gt;PLAID: /link/token/create
+    U-&gt;&gt;PLAID: authenticate (Plaid Link)
+    PLAID--&gt;&gt;U: public_token
+    U-&gt;&gt;AGG: public-token/exchange
+    AGG-&gt;&gt;PLAID: exchange → access_token
+    AGG-&gt;&gt;DB: 🔑 save PlaidItem(access_token)
+    AGG-&gt;&gt;PLAID: /accounts/get, /transactions/get
+    AGG-&gt;&gt;DB: upsert Accounts + Transactions</pre>
+      </figure></section>
+<section id="docs_workflows_components_03_financial_core_service_md"><h2>docs/workflows/components/03-financial-core-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    BUDGETS ||--o{ BUDGET_LINES : has
+    BUDGETS { bigint id PK; bigint user_id; string month "YYYY-MM" }
+    BUDGET_LINES { bigint id PK; bigint budget_id FK; string category; decimal amount }
+    DEBTS { bigint id PK; bigint user_id; string name; decimal balance; decimal apr; decimal min_payment }
+    DEBT_SCENARIOS { bigint id PK; bigint user_id; string strategy "AVALANCHE|SNOWBALL|HYBRID"; decimal extra_payment_monthly; int months_to_debt_free; decimal total_interest_paid; date debt_free_date }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Snapshot sequence (the one cross-service call)</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant CORE as financial-core
+    participant GW as Gateway
+    participant AGG as account-aggregation
+    CORE-&gt;&gt;GW: Feign GET /api/v1/aggregation/accounts
+    GW-&gt;&gt;AGG: accounts
+    CORE-&gt;&gt;GW: Feign GET /api/v1/aggregation/transactions
+    GW-&gt;&gt;AGG: transactions
+    CORE-&gt;&gt;CORE: compute net worth, components, series
+    CORE--&gt;&gt;CORE: return snapshot (camelCase; client normalizes)</pre>
+      </figure></section>
+<section id="docs_workflows_components_04_real_estate_service_md"><h2>docs/workflows/components/04-real-estate-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    PROPERTIES {
+        bigint id PK
+        bigint user_id
+        string address
+        string property_type "PRIMARY_RESIDENCE|RENTAL_PROPERTY|LAND"
+        decimal purchase_price
+        date purchase_date
+        decimal current_value "mock valuation"
+        decimal mortgage_balance
+        timestamp last_valued_at
+        int beds
+        decimal baths
+        int sqft
+        int year_built
+        decimal rent_estimate
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Provider selection</figcaption>
+        <pre class="mermaid">flowchart LR
+    SVC[real-estate service] --&gt; IFACE[PropertyValuationProvider]
+    IFACE --&gt; MOCK["MockPropertyValuationProvider 🟡&lt;br/&gt;deterministic by address hash"]
+    IFACE -.future.-&gt; REAL["RentCast/ATTOM impl 🟢&lt;br/&gt;key: realestate.provider.api-key"]</pre>
+      </figure></section>
+<section id="docs_workflows_components_05_business_financials_service_md"><h2>docs/workflows/components/05-business-financials-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    QBO_CONNECTIONS {
+        bigint id PK
+        bigint user_id UK
+        boolean connected
+        string realm_id "QBO company id (mock)"
+        string company_name
+        timestamp last_sync_at
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Provider selection</figcaption>
+        <pre class="mermaid">flowchart LR
+    SVC[business service] --&gt; IFACE[BusinessDataProvider]
+    IFACE --&gt; MOCK["MockBusinessDataProvider 🟡&lt;br/&gt;deterministic per-user seed"]
+    IFACE -.future.-&gt; REAL["QBO impl 🟢&lt;br/&gt;qbo.client-id / secret / redirect-uri"]</pre>
+      </figure></section>
+<section id="docs_workflows_components_06_ai_insights_service_md"><h2>docs/workflows/components/06-ai-insights-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    INSIGHTS {
+        bigint id PK
+        bigint user_id
+        string title
+        string reason "LLM-generated (mock)"
+        string severity "INFO|WARNING|ACTIONABLE"
+        string suggested_action
+        timestamp created_at
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Provider selection</figcaption>
+        <pre class="mermaid">flowchart LR
+    SVC[ai-insights] --&gt; IFACE[AiProvider]
+    IFACE --&gt; MOCK["MockAiProvider 🟡 templated"]
+    IFACE -.future.-&gt; REAL["Claude/OpenAI impl 🟢&lt;br/&gt;AI_PROVIDER, AI_MODEL, *_API_KEY"]</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Chat sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant AI as ai-insights
+    U-&gt;&gt;AI: POST /ai/chat {message, history, scope}
+    AI-&gt;&gt;AI: MockAiProvider → templated reply
+    AI--&gt;&gt;U: reply
+    Note over AI: refresh = deleteByUserId + regenerate (hard delete)</pre>
+      </figure></section>
+<section id="docs_workflows_components_07_payment_service_md"><h2>docs/workflows/components/07-payment-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    BILL_PAY_INTENTS {
+        bigint id PK
+        bigint user_id
+        decimal amount
+        string currency
+        string payee
+        string from_account
+        string to_account
+        string payee_type "CREDIT_CARD|UTILITY|LOAN|PERSON|OTHER"
+        date scheduled_date
+        string memo
+        string confirmation_number "mock"
+        string idempotency_key "dedupe double-pay"
+        string status "SCHEDULED|PROCESSING|COMPLETED|FAILED|CANCELED"
+        string provider_ref "external ref (mock)"
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Provider selection</figcaption>
+        <pre class="mermaid">flowchart LR
+    SVC[payment] --&gt; IFACE[PaymentProvider]
+    IFACE --&gt; MOCK["MockPaymentProvider 🟡 generates mock intent ids"]
+    IFACE -.future.-&gt; REAL["Stripe impl 🟢&lt;br/&gt;STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET"]</pre>
+      </figure></section>
+<section id="docs_workflows_components_08_notification_service_md"><h2>docs/workflows/components/08-notification-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    NOTIFICATIONS { bigint id PK; bigint user_id; string type "BUDGET|PAYMENT|ACCOUNT|SYSTEM"; string title; text body; string channel "EMAIL|PUSH|INAPP"; boolean is_read; timestamp created_at }
+    NOTIFICATION_PREFERENCES { bigint id PK; bigint user_id UK; boolean email_enabled; boolean push_enabled; boolean weekly_summary; boolean budget_alerts; boolean payment_alerts }
+    MESSAGE_TEMPLATE { bigint id PK; string template_key; string channel "SMS|EMAIL|PUSH|IN_APP"; string locale; string subject; string body; string variables; int version; boolean enabled }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Orchestrated send</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant ORCH as NotificationOrchestrator
+    participant ROUTER as ChannelRouter
+    participant T as MessageTemplate 🗄️
+    participant P as Channel provider
+    ORCH-&gt;&gt;ORCH: check prefs + consent + quiet hours + idempotency
+    ORCH-&gt;&gt;T: resolve template (key, channel, locale, version)
+    ORCH-&gt;&gt;ROUTER: pick provider by comms.provider.&lt;channel&gt;
+    ROUTER-&gt;&gt;P: send (mock email/sms/push, or real in-app 🗄️)
+    Note over ORCH: failures/skips logged (SLF4J), not persisted</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Provider selection (config-driven — swap without code)</figcaption>
+        <pre class="mermaid">flowchart LR
+    ROUTER[ChannelRouter] --&gt; EMAIL["mock → SendGrid/SES 🟢"]
+    ROUTER --&gt; SMS["mock → Twilio 🟢"]
+    ROUTER --&gt; PUSH["mock → FCM/OneSignal 🟢"]
+    ROUTER --&gt; INAPP["InAppProvider ✅ 🗄️"]</pre>
+      </figure></section>
+<section id="docs_workflows_components_09_platform_config_service_md"><h2>docs/workflows/components/09-platform-config-service.md</h2>
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    APP_SECTION { string id PK; string label; int sort_order }
+    APP_MODULE { string id PK; string title; string icon; string route; string section; int sort_order; boolean enabled; string platforms; string required_flags }
+    FEATURE_FLAG { string flag_key PK; boolean enabled }
+    APP_SETTING { string setting_key PK; string setting_value }
+    DISCLAIMER { bigint id PK; string disclaimer_key; int version; string locale; string title; text body_markdown; boolean requires_acceptance; timestamp effective_at }
+    DISCLAIMER_ACCEPTANCE { bigint id PK; bigint user_id; string disclaimer_key; int version; timestamp accepted_at }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Config-driven UI flow</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    participant WEB as Web (remoteConfig.js)
+    participant CFG as platform-config
+    WEB-&gt;&gt;CFG: GET /config/app + /config/flags
+    CFG--&gt;&gt;WEB: modules/sections/flags/theme (from DB)
+    WEB-&gt;&gt;WEB: build nav, gate features by flag, set theme (cache + DEFAULT_CONFIG fallback)
+    WEB-&gt;&gt;CFG: GET /content/disclaimers (when a screen needs legal copy)
+    CFG--&gt;&gt;WEB: markdown; on accept → POST /content/disclaimers/accept (🗄️ disclaimer_acceptance)</pre>
+      </figure></section>
+<section id="docs_workflows_components_10_audit_service_md"><h2>docs/workflows/components/10-audit-service.md</h2>
+      <figure>
+        <figcaption>How "every action" is captured</figcaption>
+        <pre class="mermaid">flowchart LR
+    subgraph Clients
+        WEB[Web/Mobile]
+    end
+    WEB --&gt;|request + JWT| GW["API Gateway&lt;br/&gt;AuditLoggingFilter (GlobalFilter)"]
+    GW --&gt;|routes| SVC[any service]
+    GW -.-&gt;|"fire-and-forget POST&lt;br/&gt;X-Internal-Key"| AUD[(audit-service 🗄️)]
+    SVC -.-&gt;|"domain events&lt;br/&gt;(e.g. auth.* via AuditClient)"| AUD
+    ADMIN[Admin / User] --&gt;|"GET /audit/me, /events"| GW --&gt; AUD</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Data model</figcaption>
+        <pre class="mermaid">erDiagram
+    AUDIT_EVENTS {
+        bigint id PK
+        string user_id "JWT subject; null = anonymous/pre-auth"
+        string actor_type "USER|SYSTEM|ANONYMOUS"
+        string action "auth.login.success | GET /api/v1/accounts"
+        string service "derived target or 'auth'/'gateway'"
+        string method
+        string path
+        int status
+        string source_ip
+        string user_agent
+        int latency_ms
+        string outcome "SUCCESS|FAILURE|DENIED"
+        text metadata "optional JSON"
+        timestamp created_at
+    }</pre>
+      </figure>
+
+      <figure>
+        <figcaption>Ingest sequence</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor U as User
+    participant GW as Gateway filter
+    participant AUTH as auth-service
+    participant AUD as audit-service 🗄️
+    U-&gt;&gt;GW: POST /api/v1/auth/login
+    GW-&gt;&gt;AUTH: route
+    AUTH-&gt;&gt;AUTH: authenticate
+    AUTH--&gt;&gt;AUD: AuditClient → auth.login.success (userId)
+    AUTH--&gt;&gt;GW: 200 + JWT
+    GW--&gt;&gt;AUD: filter → "POST /api/v1/auth/login" (anonymous, status 200, ip, latency)
+    GW--&gt;&gt;U: 200
+    Note over AUD: both rows stored — a semantic event&lt;br/&gt;and the raw request line</pre>
+      </figure></section>
+<section id="docs_workflows_components_11_customer_care_md"><h2>docs/workflows/components/11-customer-care.md</h2>
+      <figure>
+        <figcaption>How a 360 view is assembled</figcaption>
+        <pre class="mermaid">sequenceDiagram
+    actor CARE as Care agent (ROLE_CARE)
+    participant GW as Gateway
+    participant AUTH as auth-service (support)
+    participant DB as users 🗄️
+    participant AUD as audit-service 🗄️
+    CARE-&gt;&gt;GW: GET /api/v1/support/users/42  (Bearer JWT w/ roles)
+    GW-&gt;&gt;AUTH: route (filter records this access too)
+    AUTH-&gt;&gt;AUTH: SecurityConfig requires ROLE_CARE/ADMIN
+    AUTH-&gt;&gt;DB: load user 42 (profile, verification, roles — last-4 only)
+    AUTH-&gt;&gt;AUD: GET /audit/users/42 (X-Internal-Key)  ×2 (all + onlyIssues)
+    AUD--&gt;&gt;AUTH: activity + failures
+    AUTH--&gt;&gt;CARE: SupportUserDetailDto (profile + activity + issues + issueCount)</pre>
+      </figure></section></main>
+</div>
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs";
+  mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+</script>
+</body>
+</html>

@@ -8,31 +8,8 @@ import { BROKERS, getBroker } from '../config/brokers';
  * Static data / fallbacks
  * ------------------------------------------------------------------ */
 
-const MOCK_HOLDINGS = [
-  { symbol: 'VTI', name: 'Vanguard Total Stock', qty: 120, price: 248.2, dayChg: 0.82, broker: 'Fidelity' },
-  { symbol: 'VXUS', name: 'Vanguard Intl Stock', qty: 85, price: 62.4, dayChg: -0.31, broker: 'Vanguard' },
-  { symbol: 'BND', name: 'Vanguard Bond', qty: 200, price: 72.1, dayChg: 0.12, broker: 'Vanguard' },
-  { symbol: 'CASH', name: 'Brokerage Cash', qty: 1, price: 12400, dayChg: 0, broker: 'Fidelity' }
-];
-
-const MOCK_OFFERINGS = [
-  {
-    id: '1',
-    title: 'Willow Creek Land LLC',
-    geography: 'Texas Hill Country',
-    risk: 'Medium',
-    ticketMin: 25000,
-    target: '10–12% target'
-  },
-  {
-    id: '2',
-    title: 'Pine Ridge Parcel Fund',
-    geography: 'Georgia',
-    risk: 'Low',
-    ticketMin: 15000,
-    target: '8–10% target'
-  }
-];
+/* Holdings start empty and are populated by real synced data via `snapshot.holdings`. */
+const EMPTY_HOLDINGS = [];
 
 const ALLOCATION = [
   { label: 'US Equity', pct: 58, color: 'var(--tv-forest)' },
@@ -96,39 +73,6 @@ function saveJson(key, value) {
 /* Generate a unique-ish id without crypto. */
 const newId = () => `${Date.now()}${Math.random()}`;
 
-/* Seed data so the page looks alive on a first visit (only when empty). */
-const SEED_BROKERS = [
-  {
-    id: 'seed-fidelity',
-    brokerId: 'fidelity',
-    name: 'Fidelity',
-    accountType: 'Individual',
-    value: 184200,
-    linkedAt: new Date().toISOString()
-  }
-];
-
-const SEED_ALTS = [
-  {
-    id: 'seed-llc',
-    type: 'LLC',
-    name: 'Sunbelt Holdings LLC',
-    value: 75000,
-    ownershipPct: 40,
-    notes: 'Operating company — quarterly distributions.',
-    addedAt: new Date().toISOString()
-  },
-  {
-    id: 'seed-land',
-    type: 'Land',
-    name: '12 acres — Hill Country',
-    value: 48000,
-    ownershipPct: 100,
-    notes: 'Raw land held for appreciation.',
-    addedAt: new Date().toISOString()
-  }
-];
-
 /* Map an offering's risk level to a badge color. */
 function riskBadge(risk) {
   const r = (risk || '').toLowerCase();
@@ -159,7 +103,7 @@ function syncedLabel(iso) {
 
 export default function InvestPage({ snapshot }) {
   const totalInvested = snapshot?.components?.investments ?? 0;
-  const holdings = snapshot?.holdings || MOCK_HOLDINGS;
+  const holdings = snapshot?.holdings || EMPTY_HOLDINGS;
   const series = snapshot?.series || null;
 
   /* Active sub-tab */
@@ -171,21 +115,11 @@ export default function InvestPage({ snapshot }) {
   /* Stocks tab — broker filter */
   const [brokerFilter, setBrokerFilter] = useState('all');
 
-  /* Persisted broker accounts (seed when empty). */
-  const [brokers, setBrokers] = useState(() => {
-    const existing = loadJson(LS_BROKERS, null);
-    if (existing && existing.length) return existing;
-    saveJson(LS_BROKERS, SEED_BROKERS);
-    return SEED_BROKERS;
-  });
+  /* Persisted broker accounts — start empty; the user links real accounts. */
+  const [brokers, setBrokers] = useState(() => loadJson(LS_BROKERS, []));
 
-  /* Persisted alternative investments (seed when empty). */
-  const [alts, setAlts] = useState(() => {
-    const existing = loadJson(LS_ALTS, null);
-    if (existing && existing.length) return existing;
-    saveJson(LS_ALTS, SEED_ALTS);
-    return SEED_ALTS;
-  });
+  /* Persisted alternative investments — start empty; the user adds their own. */
+  const [alts, setAlts] = useState(() => loadJson(LS_ALTS, []));
 
   /* Write-through setters keep state + localStorage in sync. */
   const persistBrokers = (next) => {
@@ -227,7 +161,7 @@ export default function InvestPage({ snapshot }) {
   /* Persist a newly connected broker. We deliberately store ONLY connected
    * metadata — never the entered credentials/passwords. The "name" prefers a
    * user-supplied broker name (the generic "Other" form) and falls back to the
-   * config display name. A mock account value seeds the KPI/total. */
+   * config display name. A newly linked account shows $0 until real data syncs. */
   const finalizeConnect = (broker, inputs = {}) => {
     const displayName = (inputs.name && inputs.name.trim()) || broker.name;
     const entry = {
@@ -235,8 +169,8 @@ export default function InvestPage({ snapshot }) {
       brokerId: broker.id,
       name: displayName,
       accountType: ACCOUNT_TYPES[0],
-      /* Demo value so the new account contributes to the totals immediately. */
-      value: Math.round(25000 + Math.random() * 175000),
+      /* No fabricated balance — a freshly linked account starts at $0 until it syncs. */
+      value: 0,
       connected: true,
       linkedAt: new Date().toISOString()
     };
@@ -333,6 +267,18 @@ export default function InvestPage({ snapshot }) {
   const brokersTotal = brokers.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
   const altsTotal = alts.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
 
+  /* Day change derived from real holdings (no fabricated number). */
+  const dayChangeValue = useMemo(
+    () =>
+      holdings.reduce((sum, h) => {
+        const mv = (Number(h.qty) || 0) * (Number(h.price) || 0);
+        const pct = Number(h.dayChg) || 0;
+        return sum + mv * (pct / 100);
+      }, 0),
+    [holdings]
+  );
+  const dayChangePct = totalInvested > 0 ? (dayChangeValue / totalInvested) * 100 : 0;
+
   /* Alternatives breakdown by type (only types with at least one entry). */
   const altBreakdown = useMemo(() => {
     const map = new Map();
@@ -405,8 +351,11 @@ export default function InvestPage({ snapshot }) {
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-trending-up" style={{ color: 'var(--tv-positive)' }}></i> Day Change</div>
-              <div className="kpi-value">{currency(1240.55)}</div>
-              <div className="kpi-delta pos"><i className="ti ti-arrow-up-right"></i> +0.42% today</div>
+              <div className="kpi-value">{currency(dayChangeValue)}</div>
+              <div className={`kpi-delta ${dayChangeValue >= 0 ? 'pos' : 'neg'}`}>
+                <i className={dayChangeValue >= 0 ? 'ti ti-arrow-up-right' : 'ti ti-arrow-down-right'}></i>
+                {dayChangeValue >= 0 ? '+' : ''}{dayChangePct.toFixed(2)}% today
+              </div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-list-details" style={{ color: 'var(--tv-gold)' }}></i> Holdings</div>
@@ -449,7 +398,9 @@ export default function InvestPage({ snapshot }) {
                 </div>
                 <div className="stat-tile">
                   <div className="stat-tile-label">Day Change</div>
-                  <div className="stat-tile-value" style={{ color: 'var(--tv-positive)' }}>+{currency(1240.55)}</div>
+                  <div className="stat-tile-value" style={{ color: dayChangeValue >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)' }}>
+                    {dayChangeValue >= 0 ? '+' : ''}{currency(dayChangeValue)}
+                  </div>
                 </div>
                 <div className="stat-tile">
                   <div className="stat-tile-label">Positions</div>
@@ -457,7 +408,13 @@ export default function InvestPage({ snapshot }) {
                 </div>
                 <div className="stat-tile">
                   <div className="stat-tile-label">Cash</div>
-                  <div className="stat-tile-value">{currency(12400)}</div>
+                  <div className="stat-tile-value">
+                    {currency(
+                      holdings
+                        .filter((h) => (h.symbol || '').toUpperCase() === 'CASH')
+                        .reduce((sum, h) => sum + (Number(h.qty) || 0) * (Number(h.price) || 0), 0)
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -505,8 +462,12 @@ export default function InvestPage({ snapshot }) {
                     <tr>
                       <td colSpan={8}>
                         <div className="empty-state">
-                          <i className="ti ti-filter-off"></i>
-                          <p>No holdings for this broker.</p>
+                          <i className={holdings.length === 0 ? 'ti ti-chart-line' : 'ti ti-filter-off'}></i>
+                          <p>
+                            {holdings.length === 0
+                              ? 'No holdings yet. Link a broker to sync your positions.'
+                              : 'No holdings for this broker.'}
+                          </p>
                         </div>
                       </td>
                     </tr>
@@ -775,7 +736,7 @@ export default function InvestPage({ snapshot }) {
 
                     <hr className="divider" />
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => syncBroker(b.id)} title="Sync (mock)">
+                      <button className="btn btn-secondary btn-sm" onClick={() => syncBroker(b.id)} title="Refresh last-synced time">
                         <i className="ti ti-refresh"></i> Sync
                       </button>
                       <button className="icon-btn" onClick={() => disconnectBroker(b.id)} title="Disconnect">
@@ -982,44 +943,21 @@ export default function InvestPage({ snapshot }) {
         <>
           <div className="section-header">
             <div className="section-title" style={{ marginBottom: 0 }}>Marketplace</div>
-            <span className="page-subtitle" style={{ marginTop: 0 }}>Land-backed offerings</span>
           </div>
-          <div className="card-grid">
-            {MOCK_OFFERINGS.map((o) => (
-              <div key={o.id} className="card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <span className={`badge ${riskBadge(o.risk)}`}>{o.risk} risk</span>
-                  <span className="badge badge-gray">{o.target}</span>
-                </div>
-                <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--tv-text-primary)', marginBottom: 4 }}>
-                  {o.title}
-                </div>
-                <div className="item-sub" style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
-                  <i className="ti ti-map-pin" style={{ color: 'var(--tv-text-muted)' }}></i> {o.geography}
-                </div>
-                <hr className="divider" />
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div className="stat-tile-label">Minimum</div>
-                    <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--tv-text-primary)' }}>
-                      {currency(o.ticketMin)}
-                    </div>
-                  </div>
-                  {requested[o.id] ? (
-                    <span className="badge badge-green">
-                      <i className="ti ti-check"></i> Request sent — our team will reach out.
-                    </span>
-                  ) : (
-                    <button
-                      className="btn btn-secondary btn-sm"
-                      onClick={() => setRequested((prev) => ({ ...prev, [o.id]: true }))}
-                    >
-                      View deal <i className="ti ti-arrow-right"></i>
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+          {/* No fabricated offerings. Real curated deals will populate here when a
+              marketplace provider is connected; until then, an honest empty state. */}
+          <div className="card">
+            <div className="empty-state" style={{ padding: '40px 16px', textAlign: 'center' }}>
+              <i className="ti ti-building-store" style={{ fontSize: 30, opacity: 0.5 }}></i>
+              <p style={{ marginTop: 10, fontWeight: 600, color: 'var(--tv-text-primary)' }}>
+                No live offerings yet
+              </p>
+              <p style={{ fontSize: 13, color: 'var(--tv-text-muted)', maxWidth: 420, margin: '4px auto 0' }}>
+                Curated alternative-investment deals will appear here once a marketplace
+                provider is connected. You can still track your own alternatives in the
+                Alternatives tab.
+              </p>
+            </div>
           </div>
         </>
       )}

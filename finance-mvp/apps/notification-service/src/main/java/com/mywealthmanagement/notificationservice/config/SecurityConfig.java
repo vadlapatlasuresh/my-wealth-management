@@ -28,7 +28,8 @@ public class SecurityConfig {
         http
                 .csrf().disable()
                 .authorizeHttpRequests()
-                .anyRequest().authenticated() // All requests require authentication
+                .requestMatchers("/error").permitAll() // avoid 5xx being masked as 403
+                .anyRequest().authenticated() // All other requests require authentication
                 .and()
                 .sessionManagement()
                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS) // Use stateless sessions for JWT

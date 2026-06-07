@@ -18,6 +18,7 @@ import java.util.Optional;
 public class AuthController {
 
     private final AuthService authService;
+    private final JwtService jwtService;
 
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -44,11 +45,8 @@ public class AuthController {
 
     @GetMapping("/validate")
     public ResponseEntity<String> validateToken(@RequestParam String token) {
-        // This endpoint is primarily for API Gateway to validate tokens
-        // In a real scenario, JwtAuthFilter would handle this implicitly for protected resources
-        // For explicit validation, we can use jwtService.validateToken(token, userDetails)
-        // For now, a simple check if token is present and not empty is sufficient for basic routing
-        if (token != null && !token.isEmpty()) {
+        // Cryptographically verify the token's signature and expiry — do NOT trust mere presence.
+        if (token != null && !token.isBlank() && jwtService.isTokenValid(token)) {
             return ResponseEntity.ok("Token is valid");
         }
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Token is invalid or missing");

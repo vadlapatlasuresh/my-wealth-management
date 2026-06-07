@@ -1,19 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { api } from '../api';
 
-/* Mock active sessions — the first is the current device. */
-const INITIAL_SESSIONS = [
-  { id: 's1', device: 'MacBook Pro · Chrome', location: 'San Francisco, CA', lastActive: 'Active now', current: true },
-  { id: 's2', device: 'iPhone 15 · Safari', location: 'San Francisco, CA', lastActive: '2 hours ago', current: false },
-  { id: 's3', device: 'Windows PC · Edge', location: 'New York, NY', lastActive: 'Yesterday, 6:42 PM', current: false },
-];
-
-/* Mock recent login history. */
-const LOGIN_HISTORY = [
-  { id: 'l1', when: 'Jun 6, 2026 · 9:12 AM', location: 'San Francisco, CA', status: 'Success', tone: 'green' },
-  { id: 'l2', when: 'Jun 5, 2026 · 7:48 PM', location: 'San Francisco, CA', status: 'Success', tone: 'green' },
-  { id: 'l3', when: 'Jun 4, 2026 · 11:03 PM', location: 'Berlin, DE', status: 'Blocked', tone: 'red' },
-  { id: 'l4', when: 'Jun 3, 2026 · 8:21 AM', location: 'San Francisco, CA', status: 'Success', tone: 'green' },
-];
+/* Active sessions come from real account-activity data. Login history is loaded
+   live from the audit-service (/api/v1/audit/me) — real events, never faked. */
+const INITIAL_SESSIONS = [];
 
 export default function SecurityPage() {
   // Toggle-backed protections used for the security score.
@@ -29,6 +19,29 @@ export default function SecurityPage() {
 
   // Active sessions (local state so rows can be revoked).
   const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+
+  // Real login/account-activity history from the audit-service.
+  const [loginHistory, setLoginHistory] = useState([]);
+  useEffect(() => {
+    let active = true;
+    api.getMyActivity(20)
+      .then((rows) => {
+        if (!active) return;
+        const list = (Array.isArray(rows) ? rows : rows?.content || [])
+          .filter((e) => /login|register|auth/i.test(e.action || ''))
+          .map((e) => ({
+            id: e.id,
+            action: e.action,
+            outcome: e.outcome,
+            when: e.createdAt,
+            ip: e.sourceIp,
+            ok: (e.outcome || '').toUpperCase() === 'SUCCESS',
+          }));
+        setLoginHistory(list);
+      })
+      .catch(() => { /* keep empty state on failure */ });
+    return () => { active = false; };
+  }, []);
 
   // Security score derived from the protections above.
   const protections = [twoFA, strongPassword, alertsOn];
@@ -279,22 +292,34 @@ export default function SecurityPage() {
       {/* Login history */}
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-title">Login history</div>
+        {loginHistory.length === 0 ? (
+          <div className="empty-state">
+            <i className="ti ti-history"></i>
+            <p>No login history to show yet.</p>
+          </div>
+        ) : (
         <div>
-          {LOGIN_HISTORY.map((l) => (
-            <div className="list-item" key={l.id}>
-              <div className={`item-icon ${l.tone === 'green' ? 'icon-green' : 'icon-red'}`}>
-                <i className={`ti ${l.tone === 'green' ? 'ti-login-2' : 'ti-shield-x'}`}></i>
+          {loginHistory.map((l) => {
+            let when = l.when;
+            try { when = new Date(l.when).toLocaleString(); } catch { /* keep raw */ }
+            const label = (l.action || '').replace(/[._]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+            return (
+              <div className="list-item" key={l.id}>
+                <div className={`item-icon ${l.ok ? 'icon-green' : 'icon-red'}`}>
+                  <i className={`ti ${l.ok ? 'ti-login-2' : 'ti-shield-x'}`}></i>
+                </div>
+                <div className="item-main">
+                  <div className="item-name">{label}</div>
+                  <div className="item-sub">{when}{l.ip ? ` · ${l.ip}` : ''}</div>
+                </div>
+                <div className="item-right">
+                  <span className={`badge badge-${l.ok ? 'green' : 'red'}`}>{l.outcome || (l.ok ? 'SUCCESS' : 'FAILURE')}</span>
+                </div>
               </div>
-              <div className="item-main">
-                <div className="item-name">{l.when}</div>
-                <div className="item-sub">{l.location}</div>
-              </div>
-              <div className="item-right">
-                <span className={`badge badge-${l.tone}`}>{l.status}</span>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+        )}
       </div>
     </div>
   );

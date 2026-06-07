@@ -30,8 +30,8 @@ public class ApiGatewayApplication {
     private String notificationUri;
     @Value("${service.platform-config.uri:http://localhost:8089}")
     private String platformConfigUri;
-    @Value("${service.legacy-node.uri:http://localhost:4000}")
-    private String legacyNodeUri;
+    @Value("${service.audit.uri:http://localhost:8090}")
+    private String auditUri;
 
     public static void main(String[] args) {
         SpringApplication.run(ApiGatewayApplication.class, args);
@@ -50,6 +50,10 @@ public class ApiGatewayApplication {
                         .uri(financialCoreUri)) // Route to financial-core-service for planning
                 .route("real_estate_service_route", r -> r.path("/api/v1/real-estate/**")
                         .uri(realEstateUri)) // Route to real-estate-service
+                .route("deals_service_route", r -> r.path("/api/v1/deals/**")
+                        .uri(realEstateUri)) // Route to real-estate-service (deals feature)
+                .route("sponsor_service_route", r -> r.path("/api/v1/sponsor/**")
+                        .uri(realEstateUri)) // Route to real-estate-service (sponsor track record)
                 .route("business_financials_service_route", r -> r.path("/api/v1/business/**")
                         .uri(businessUri)) // Route to business-financials-service
                 .route("ai_insights_service_route", r -> r.path("/api/v1/ai/**")
@@ -62,8 +66,8 @@ public class ApiGatewayApplication {
                         .uri(platformConfigUri)) // Route to platform-config-service
                 .route("content_service_route", r -> r.path("/api/v1/content/**")
                         .uri(platformConfigUri)) // Route to platform-config-service (disclaimer content)
-                .route("legacy_node_api_route", r -> r.path("/v1/**")
-                        .uri(legacyNodeUri)) // Route to legacy Node.js API (mocks; not deployed to prod)
+                .route("audit_service_route", r -> r.path("/api/v1/audit/**")
+                        .uri(auditUri)) // Route to audit-service (activity log query APIs)
                 .build();
     }
 }

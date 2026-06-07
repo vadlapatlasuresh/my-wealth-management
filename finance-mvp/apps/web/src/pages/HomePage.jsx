@@ -1,12 +1,51 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NetWorthChart from "../components/NetWorthChart";
 // import RealEstateWidget from "../components/RealEstateWidget"; // Removed
-import { currency } from "../utils/format"; // formatDate is now passed as a prop
+import { currency, greeting, formatDateTime } from "../utils/format"; // formatDate is now passed as a prop
+import { computeDownfall, computeContributors, deriveUpcomingBills } from "../utils/netWorth";
 import LastRefreshed from "../components/LastRefreshed";
 import { api } from "../api";
 
+/* Dashboard greeting + live clock. Self-contained so its per-minute tick re-renders
+   only this header — not the net-worth chart below it. Uses the user's system locale
+   and timezone by default; pass `locale`/`timeZone` later to let users switch. */
+function DashboardGreeting({ user, locale, timeZone, hour12 }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    // Tick at the top of each minute so the clock + greeting stay accurate without
+    // re-rendering every second. Re-aligns to the next minute boundary each tick.
+    let timer;
+    const schedule = () => {
+      const msToNextMinute = 60000 - (Date.now() % 60000);
+      timer = setTimeout(() => { setNow(new Date()); schedule(); }, msToNextMinute + 50);
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, []);
+
+  const name = user?.name || (user?.email ? user.email.split("@")[0] : "there");
+  const { dateStr, timeStr } = formatDateTime(now, { locale, timeZone, hour12 });
+
+  return (
+    <div>
+      <div className="page-title">{greeting(now)}, {name}</div>
+      <div className="page-subtitle">
+        {dateStr} · {timeStr} &mdash; Here's your financial picture
+      </div>
+    </div>
+  );
+}
+
 const RANGES = ["1H", "1D", "1W", "1M", "3M", "1Y", "All"];
+
+// Net-worth chart layout options. Area = trend at a glance (default), Line =
+// clean read, Bar = period-over-period comparison.
+const CHART_TYPES = [
+  { id: "area", icon: "ti ti-chart-area-line", label: "Area" },
+  { id: "line", icon: "ti ti-chart-line", label: "Line" },
+  { id: "bar", icon: "ti ti-chart-bar", label: "Bars" },
+];
 
 export default function HomePage({
   snapshot,
@@ -19,12 +58,21 @@ export default function HomePage({
   // onSync, // Removed
   user, // Added user prop
   insights = [], // Added insights prop
+  paymentIntents = [], // real scheduled/pending bill-pay intents
   formatDate // Passed as prop from AppLayout
 }) {
   const navigate = useNavigate();
   const [range, setRange] = useState("3M");
+  const [chartType, setChartType] = useState(
+    () => localStorage.getItem("tv_nw_charttype") || "area"
+  );
   const [chartSnapshot, setChartSnapshot] = useState(null);
   const [showCustom, setShowCustom] = useState(false);
+
+  const pickChartType = (id) => {
+    setChartType(id);
+    try { localStorage.setItem("tv_nw_charttype", id); } catch { /* ignore */ }
+  };
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
@@ -102,6 +150,13 @@ export default function HomePage({
   const chartChange = activeSnapshot?.net_worth?.change_30d ?? change30;
   const chartSeries = activeSnapshot?.series ?? snapshot?.series;
 
+  // --- Downfall detection + attribution (pure logic in utils/netWorth, tested) ---
+  const { declinePct: nwDeclinePct, alert: nwAlert } = computeDownfall(
+    chartSeries, chartTotal, chartChange
+  );
+  const contributors = computeContributors(activeSnapshot?.components || snapshot?.components);
+  const negativeContributors = contributors.filter((c) => c.value < 0);
+
   const realEstateEquity = properties.reduce((sum, p) => sum + (p.equity || 0), 0);
   const totalRealEstateValue = properties.reduce((sum, p) => sum + (p.currentValue || 0), 0);
   // const totalAssets = (snapshot?.components?.cash || 0) + (snapshot?.components?.investments || 0) + totalRealEstateValue; // Not directly used in new KPI grid
@@ -110,26 +165,17 @@ export default function HomePage({
   const getDeltaIcon = (value) =>
     value >= 0 ? "ti ti-arrow-up-right" : "ti ti-arrow-down-right";
 
-  // Mock data for upcoming bills for now, will be replaced with actual data from props
-  const upcomingBills = [
-    { id: 'mortgage', name: 'Mortgage', dueDate: 'Jun 15', amount: 1842.00, icon: 'ti ti-home', iconClass: 'icon-forest' },
-    { id: 'electricity', name: 'Electricity', dueDate: 'Jun 17', amount: 87.64, icon: 'ti ti-bolt', iconClass: 'icon-amber' },
-    { id: 'internet', name: 'Internet', dueDate: 'Jun 21', amount: 65.00, icon: 'ti ti-wifi', iconClass: 'icon-blue' },
-  ];
+  // Real upcoming bills from scheduled/pending intents (pure helper, tested).
+  const upcomingBills = deriveUpcomingBills(paymentIntents, formatDate);
   const totalBillsDue = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
 
-  // Mock AI Insights for now, will be replaced with actual data from props
+  // AI Insights come from props (real insights). No fabricated placeholders.
   const aiInsights = insights.slice(0, 2); // Take top 2 insights
 
   return (
     <>
       <div className="page-header">
-        <div>
-          <div className="page-title">Good morning, {user?.name || (user?.email ? user.email.split('@')[0] : 'there')}</div>
-          <div className="page-subtitle">
-            {formatDate(new Date())} &mdash; Here's your financial picture
-          </div>
-        </div>
+        <DashboardGreeting user={user} />
         <div className="page-actions" style={{ alignItems: "center" }}>
           <LastRefreshed onRefresh={loadAll} />
           <button className="btn btn-secondary btn-sm" onClick={handleExport}>
@@ -237,6 +283,38 @@ export default function HomePage({
           <div className="section-header">
             <div className="section-title">Net worth over time</div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', position: 'relative', flexWrap: 'wrap' }}>
+              {/* Chart layout toggle: Area / Line / Bars */}
+              <div
+                role="group"
+                aria-label="Chart type"
+                style={{
+                  display: 'inline-flex', border: '1px solid var(--tv-border)',
+                  borderRadius: 'var(--radius-md)', overflow: 'hidden', marginRight: 4,
+                }}
+              >
+                {CHART_TYPES.map((c, i) => {
+                  const on = chartType === c.id;
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => pickChartType(c.id)}
+                      title={c.label}
+                      aria-pressed={on}
+                      data-no-translate
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '4px 9px', fontSize: '12px', fontWeight: 600, cursor: 'pointer',
+                        border: 'none',
+                        borderRight: i < CHART_TYPES.length - 1 ? '1px solid var(--tv-border)' : 'none',
+                        background: on ? 'var(--tv-forest)' : 'transparent',
+                        color: on ? '#fff' : 'var(--tv-text-secondary)',
+                      }}
+                    >
+                      <i className={c.icon} style={{ fontSize: 14 }}></i>
+                    </button>
+                  );
+                })}
+              </div>
               {RANGES.map((r) => (
                 <button
                   key={r}
@@ -278,8 +356,63 @@ export default function HomePage({
               )}
             </div>
           </div>
-          {/* NetWorthChart component will need to be updated to match the new SVG design */}
-          <NetWorthChart total={chartTotal} change30d={chartChange} series={chartSeries} />
+
+          {/* Downfall alert: shown only when net worth fell beyond the threshold */}
+          {nwAlert && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 12,
+              background: 'var(--tv-negative-bg)', border: '1px solid var(--tv-negative)',
+              borderLeft: '4px solid var(--tv-negative)', borderRadius: 'var(--radius-md)',
+            }}>
+              <i className="ti ti-alert-triangle" style={{ color: 'var(--tv-negative)', fontSize: 20, flexShrink: 0 }}></i>
+              <div style={{ flex: 1, fontSize: 13, color: 'var(--tv-text-primary)', lineHeight: 1.5 }}>
+                <strong style={{ color: 'var(--tv-negative)' }}>
+                  Net worth fell {Math.abs(nwDeclinePct).toFixed(1)}% this period.
+                </strong>
+                {negativeContributors.length > 0 && (
+                  <> Biggest drag: <strong>{negativeContributors[0].label}</strong> ({currency(negativeContributors[0].value)}).</>
+                )}
+              </div>
+            </div>
+          )}
+
+          <NetWorthChart total={chartTotal} change30d={chartChange} series={chartSeries} chartType={chartType} alert={nwAlert} declinePct={nwDeclinePct} />
+
+          {/* What moved net worth — color-coded contributions (green up / red down) */}
+          {contributors.length > 0 && (
+            <div style={{
+              display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center',
+              marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--tv-border-light)',
+            }}>
+              <span style={{
+                fontSize: 11, color: 'var(--tv-text-muted)', textTransform: 'uppercase',
+                letterSpacing: '.04em', marginRight: 2,
+              }}>
+                What moved it · 30d
+              </span>
+              {contributors.map((c) => {
+                const neg = c.value < 0;
+                const emph = neg && nwAlert; // emphasize the draggers during a downfall
+                return (
+                  <span
+                    key={c.key}
+                    title={`${c.label}: ${currency(c.value)}`}
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '4px 9px', borderRadius: 999, fontSize: 12,
+                      fontWeight: emph ? 700 : 600,
+                      background: neg ? 'var(--tv-negative-bg)' : 'var(--tv-positive-bg)',
+                      color: neg ? 'var(--tv-negative)' : 'var(--tv-positive)',
+                      border: emph ? '1px solid var(--tv-negative)' : '1px solid transparent',
+                    }}
+                  >
+                    <i className={c.icon}></i>
+                    {c.label} {neg ? '' : '+'}{currency(c.value)}
+                  </span>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -309,26 +442,35 @@ export default function HomePage({
             <div className="section-title">Upcoming bills</div>
             <a onClick={() => navigate('/billpay')} style={{ fontSize: '12.5px', color: 'var(--tv-forest-light)', cursor: 'pointer', fontWeight: '500' }}>View all →</a>
           </div>
-          <div>
-            {upcomingBills.map(bill => (
-              <div className="list-item" key={bill.id}>
-                <div className={`item-icon ${bill.iconClass}`}><i className={bill.icon}></i></div>
-                <div className="item-main">
-                  <div className="item-name">{bill.name}</div>
-                  <div className="item-sub">Due {bill.dueDate}</div>
-                </div>
-                <div className="item-right">
-                  <div className="item-amount">{currency(bill.amount)}</div>
-                  <button className="btn btn-primary btn-sm" style={{ marginTop: '4px', padding: '4px 10px', fontSize: '11.5px' }} onClick={() => handlePayBill(bill)}>Pay</button>
-                </div>
+          {upcomingBills.length === 0 ? (
+            <div className="empty-state">
+              <i className="ti ti-calendar-off"></i>
+              <p>No upcoming bills.</p>
+            </div>
+          ) : (
+            <>
+              <div>
+                {upcomingBills.map(bill => (
+                  <div className="list-item" key={bill.id}>
+                    <div className={`item-icon ${bill.iconClass}`}><i className={bill.icon}></i></div>
+                    <div className="item-main">
+                      <div className="item-name">{bill.name}</div>
+                      <div className="item-sub">Due {bill.dueDate}</div>
+                    </div>
+                    <div className="item-right">
+                      <div className="item-amount">{currency(bill.amount)}</div>
+                      <button className="btn btn-primary btn-sm" style={{ marginTop: '4px', padding: '4px 10px', fontSize: '11.5px' }} onClick={() => handlePayBill(bill)}>Pay</button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <hr className="divider" />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600' }}>
-            <span style={{ color: 'var(--tv-text-muted)' }}>Total due</span>
-            <span>{currency(totalBillsDue)}</span>
-          </div>
+              <hr className="divider" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', fontWeight: '600' }}>
+                <span style={{ color: 'var(--tv-text-muted)' }}>Total due</span>
+                <span>{currency(totalBillsDue)}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -365,7 +507,12 @@ export default function HomePage({
             <span className="badge badge-gold">Updated daily</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {aiInsights.map((insight, index) => (
+            {aiInsights.length === 0 ? (
+              <div className="empty-state">
+                <i className="ti ti-sparkles"></i>
+                <p>No insights yet. Link accounts and we'll surface personalized insights here.</p>
+              </div>
+            ) : aiInsights.map((insight, index) => (
               <div key={index} style={{ background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <div className={`item-icon ${insight.type === 'positive' ? 'icon-green' : 'icon-red'}`} style={{ flexShrink: 0 }}>

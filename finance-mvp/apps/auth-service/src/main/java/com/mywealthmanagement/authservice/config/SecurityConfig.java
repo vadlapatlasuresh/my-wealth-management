@@ -29,6 +29,11 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests()
                 .requestMatchers("/api/v1/auth/**").permitAll() // Allow public access to auth endpoints
+                .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
+                .requestMatchers("/actuator/**").permitAll()
+                .requestMatchers("/internal/**").permitAll() // server-to-server; guarded by X-Internal-Key
+                .requestMatchers("/api/v1/support/users/*/roles").hasRole("ADMIN") // role changes: admin only
+                .requestMatchers("/api/v1/support/**").hasAnyRole("CARE", "ADMIN") // customer-care only
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()
                 .sessionManagement()

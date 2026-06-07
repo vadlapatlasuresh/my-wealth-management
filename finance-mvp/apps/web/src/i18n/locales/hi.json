@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "भाषा",
+    "auto": "स्वचालित (ब्राउज़र)",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "होम",
+    "accounts": "खाते",
+    "transactions": "लेन-देन",
+    "budget": "बजट",
+    "billpay": "बिल भुगतान",
+    "debt": "ऋण प्रयोगशाला",
+    "invest": "निवेश",
+    "mybusiness": "मेरा व्यवसाय",
+    "ai-assistant": "एआई सहायक",
+    "realestate": "संपत्तियाँ",
+    "dealroom": "डील रूम",
+    "fractional": "आंशिक एलएलसी",
+    "security": "सुरक्षा",
+    "messages": "संदेश",
+    "settings": "सेटिंग्स",
+    "styleguide": "स्टाइल गाइड",
+    "flowmap": "यूआई फ्लो मैप",
+    "guide": "उपयोग कैसे करें",
+    "profile": "प्रोफ़ाइल",
+    "learn": "सीखें",
+    "calculators": "कैलकुलेटर",
+    "goals": "लक्ष्य"
+  },
+  "section": {
+    "finance": "वित्त",
+    "realestate": "रियल एस्टेट",
+    "settings": "सेटिंग्स"
+  },
+  "brand": {
+    "tagline": "आपकी सारी संपत्ति · एक ही जगह"
+  },
+  "topbar": {
+    "searchPlaceholder": "लेन-देन खोजें… (एंटर दबाएँ)",
+    "notifications": "सूचनाएँ",
+    "noNotifications": "कोई सूचना नहीं",
+    "viewAllMessages": "सभी संदेश देखें",
+    "new": "{{count}} नई",
+    "help": "सहायता और सीखना",
+    "themeTip": "थीम: {{theme}} — बदलने के लिए क्लिक करें",
+    "toggleMenu": "नेविगेशन मेनू टॉगल करें",
+    "expandMenu": "मेनू विस्तृत करें",
+    "collapseMenu": "मेनू संक्षिप्त करें"
+  },
+  "theme": {
+    "light": "हल्का",
+    "dark": "गहरा",
+    "glass": "ग्लास"
+  },
+  "user": {
+    "viewProfile": "प्रोफ़ाइल देखें",
+    "signOut": "साइन आउट करें",
+    "user": "उपयोगकर्ता"
+  },
+  "common": {
+    "loading": "लोड हो रहा है…",
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "close": "बंद करें",
+    "confirm": "पुष्टि करें",
+    "delete": "हटाएँ",
+    "edit": "संपादित करें",
+    "add": "जोड़ें",
+    "back": "वापस",
+    "next": "अगला",
+    "done": "हो गया",
+    "refresh": "रिफ़्रेश करें",
+    "search": "खोजें",
+    "retry": "पुनः प्रयास करें",
+    "all": "सभी",
+    "none": "कोई नहीं",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "amount": "राशि",
+    "date": "तारीख",
+    "status": "स्थिति",
+    "type": "प्रकार",
+    "name": "नाम",
+    "total": "कुल",
+    "today": "आज",
+    "lastRefreshed": "अंतिम बार रिफ़्रेश किया गया {{time}}",
+    "viewAll": "सभी देखें",
+    "comingSoon": "जल्द आ रहा है",
+    "sessionExpired": "आपका सत्र समाप्त हो गया। कृपया फिर से साइन इन करें।"
+  },
+  "disclaimer": {
+    "iUnderstand": "मैं समझता हूँ"
+  }
+}

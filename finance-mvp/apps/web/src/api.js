@@ -1,62 +1,9 @@
-const API_BASE = "http://localhost:8080"; // Changed to API Gateway port
+import { API_BASE } from "./config/apiBase"; // configurable gateway base (web/iOS/Android)
 let authToken =
   localStorage.getItem("terravet_token") || localStorage.getItem("finance_token") || "";
 
-// MOCK MODE: set to false to use local API; can be toggled to true for frontend-only dev.
-const USE_MOCK = false; // Set to false to use the real backend
-
-function timeout(ms) {
-  return new Promise((res) => setTimeout(res, ms));
-}
-
-const MOCK = {
-  snapshot: {
-    computed_at: new Date().toISOString(),
-    net_worth: { total: 128430, change_30d: 2140 },
-    components: { cash: 10450, investments: 110000, credit_cards: -22020 },
-    // simple timeseries (most recent last) for chart rendering
-    series: [110000, 112500, 113200, 114800, 116000, 118500, 120000, 121500, 124000, 128430],
-    holdings: [
-      { symbol: "VTI", name: "Vanguard Total Stock", qty: 120, price: 248.2, dayChg: 0.82 },
-      { symbol: "VXUS", name: "Vanguard Intl Stock", qty: 85, price: 62.4, dayChg: -0.31 },
-      { symbol: "BND", name: "Vanguard Bond", qty: 200, price: 72.1, dayChg: 0.12 },
-      { symbol: "CASH", name: "Brokerage Cash", qty: 1, price: 12400, dayChg: 0 }
-    ]
-  },
-  accounts: {
-    items: [
-      { id: "acc_1", name: "Primary Checking", institution: "Acme Bank", type: "CHECKING", balance: 8450, available: 8450, lastSynced: new Date().toISOString(), status: "OK" },
-      { id: "acc_2", name: "Savings", institution: "Acme Bank", type: "SAVINGS", balance: 2000, available: 2000, lastSynced: new Date().toISOString(), status: "OK" },
-      { id: "card_1", name: "Visa Gold", institution: "BankCard", type: "CREDIT_CARD", balance: 1200, creditLimit: 8000, dueDate: "2026-06-05" , lastSynced: new Date().toISOString(), status: "OK" },
-      { id: "card_2", name: "Amex", institution: "PremiumBank", type: "CREDIT_CARD", balance: 20820, creditLimit: 25000, dueDate: "2026-06-12", lastSynced: new Date().toISOString(), status: "OK" }
-    ]
-  },
-  transactions: {
-    items: [
-      { id: "t1", description: "Paycheck", category: "Income", amount: 4500, date: "2026-05-15" },
-      { id: "t2", description: "Acme Grocery", category: "Groceries", amount: -120.5, date: "2026-05-20" },
-      { id: "t3", description: "Spotify", category: "Subscriptions", amount: -9.99, date: "2026-05-18" },
-      { id: "t4", description: "Rent", category: "Housing", amount: -1600, date: "2026-05-01" }
-    ]
-  },
-  insights: {
-    insights: [
-      { id: "i1", title: "High credit utilization on Amex", reason: "Your Amex is at 83% utilization.", severity: "actionable", suggested_action: "Pay down balance on Amex to reduce utilization.", created_at: new Date().toISOString() },
-      { id: "i2", title: "Emergency fund low", reason: "Cash buffer is below 1 month of expenses.", severity: "warning", suggested_action: "Consider moving $1,000 to savings.", created_at: new Date().toISOString() }
-    ]
-  },
-  paymentIntents: {
-    items: [
-      { intent_id: "pi_1", amount: 250, currency: "USD", status: "COMPLETED", created_at: new Date().toISOString() }
-    ]
-  },
-  realEstate: {
-    items: [
-      { id: "re1", address: "123 Main St", value: 350000, mortgage: 200000, equity: 150000, type: "PRIMARY_RESIDENCE" },
-      { id: "re2", address: "456 Oak Ave", value: 200000, mortgage: 100000, equity: 100000, type: "RENTAL_PROPERTY" }
-    ]
-  }
-};
+// NOTE: the frontend always talks to the real backend. (The old USE_MOCK/MOCK
+// fixtures were removed so mock data can never leak into the app.)
 
 export function setAuthToken(token, email, name) {
   authToken = token;
@@ -81,36 +28,28 @@ export function getStoredName() {
   return localStorage.getItem("terravet_name") || "";
 }
 
-async function request(path, options = {}) {
-  if (USE_MOCK) {
-    // small simulated delay
-    await timeout(220 + Math.random() * 180);
-    if (path === "/v1/me/snapshot") return MOCK.snapshot;
-    if (path === "/v1/accounts") return MOCK.accounts;
-    if (path === "/v1/transactions") return MOCK.transactions;
-    if (path === "/v1/ai/insights") return MOCK.insights;
-    if (path === "/v1/payments/bill-pay-intents") {
-      if (options.method === "POST") {
-        // create a new mock intent
-        const body = JSON.parse(options.body || "{}");
-        const newIntent = { intent_id: `pi_${Date.now()}`, amount: body.amount || 0, currency: body.currency || "USD", status: "PENDING", created_at: new Date().toISOString() };
-        MOCK.paymentIntents.items.unshift(newIntent);
-        return newIntent;
-      }
-      return MOCK.paymentIntents;
-    }
-    if (path === "/v1/planning/debt-scenarios") {
-      // simple mocked response for debt scenario
-      return {
-        months_to_debt_free: 24,
-        total_interest_paid: 4200,
-        projection: Array.from({ length: 24 }).map((_, i) => ({ month: i + 1, balance: Math.max(0, 22000 - (i + 1) * 900) }))
-      };
-    }
-    if (path === "/v1/real-estate") return MOCK.realEstate;
-    return {};
+// Decode the (already-trusted) JWT payload to read the user's roles. Client-side gating only —
+// the backend still enforces role checks on every support endpoint.
+export function getUserRoles() {
+  try {
+    const token = authToken || localStorage.getItem("terravet_token") || "";
+    const payload = token.split(".")[1];
+    if (!payload) return [];
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    const roles = json.roles || [];
+    return Array.isArray(roles) ? roles.map((r) => String(r).toUpperCase()) : [];
+  } catch {
+    return [];
   }
+}
 
+// True if the signed-in user is a customer-care agent or admin.
+export function isCareAgent() {
+  const roles = getUserRoles();
+  return roles.includes("CARE") || roles.includes("ADMIN");
+}
+
+async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
@@ -140,7 +79,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  getToken: () => authToken || (USE_MOCK ? "demo-token" : ""),
+  getToken: () => authToken,
   register: (payload) =>
     request("/api/v1/auth/register", {
       method: "POST",
@@ -205,6 +144,15 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(lines) // backend expects a raw List<BudgetLineDto>
     }), // Updated to use new service
+  // Goals (financial-core, planning)
+  getGoals: () => request("/api/v1/planning/goals"),
+  addGoal: (payload) =>
+    request("/api/v1/planning/goals", { method: "POST", body: JSON.stringify(payload) }),
+  updateGoal: (id, payload) =>
+    request(`/api/v1/planning/goals/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteGoal: (id) =>
+    request(`/api/v1/planning/goals/${id}`, { method: "DELETE" }),
+
   getDebts: () => request("/api/v1/planning/debt-scenarios"), // NEW
   addDebt: (payload) =>
     request("/api/v1/planning/debt-scenarios/add", {
@@ -248,6 +196,41 @@ export const api = {
   lookupProperty: (address) =>
     request("/api/v1/real-estate/lookup", { method: "POST", body: JSON.stringify({ address }) }),
 
+  // Deals — user-registered investment opportunities (real estate + other asset classes)
+  getDeals: () => request("/api/v1/deals"),
+  getDealTaxonomy: () => request("/api/v1/deals/taxonomy"),
+  getMarketplace: (filters = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(filters).filter(([, v]) => v)
+    ).toString();
+    return request(`/api/v1/deals/marketplace${qs ? `?${qs}` : ""}`);
+  },
+  getMyInterests: () => request("/api/v1/deals/my-interests"),
+  getDeal: (id) => request(`/api/v1/deals/${id}`),
+  createDeal: (payload) =>
+    request("/api/v1/deals", { method: "POST", body: JSON.stringify(payload) }),
+  updateDeal: (id, payload) =>
+    request(`/api/v1/deals/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteDeal: (id) => request(`/api/v1/deals/${id}`, { method: "DELETE" }),
+  // Express interest in a deal — shares the investor's contact details with the deal owner.
+  expressDealInterest: (id, payload) =>
+    request(`/api/v1/deals/${id}/interests`, { method: "POST", body: JSON.stringify(payload) }),
+  // Owner-only: the list of investors who expressed interest in a deal.
+  getDealInterests: (id) => request(`/api/v1/deals/${id}/interests`),
+  // Owner-only: update a lead's status (NEW/CONTACTED/COMMITTED/PASSED).
+  updateLeadStatus: (dealId, interestId, status) =>
+    request(`/api/v1/deals/${dealId}/interests/${interestId}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
+  // Sponsor track record (previous projects) shown on a deal's detail page.
+  getDealSponsorProjects: (id) => request(`/api/v1/deals/${id}/sponsor-projects`),
+
+  // Sponsor track record management (the signed-in user's own previous projects)
+  getMySponsorProjects: () => request("/api/v1/sponsor/projects"),
+  createSponsorProject: (payload) =>
+    request("/api/v1/sponsor/projects", { method: "POST", body: JSON.stringify(payload) }),
+  updateSponsorProject: (id, payload) =>
+    request(`/api/v1/sponsor/projects/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteSponsorProject: (id) => request(`/api/v1/sponsor/projects/${id}`, { method: "DELETE" }),
+
   // Business Financials Service (Phase 4)
   getBusinessConnection: () => request("/api/v1/business/connection"),
   getBusinessDashboard: () => request("/api/v1/business/dashboard"),
@@ -274,12 +257,26 @@ export const api = {
     request(`/api/v1/payments/bill-pay-intents/${id}/cancel`, { method: "POST" }),
 
   // Notification Service (Phase 7)
+  // Signed-in user's real account activity (logins, registrations, etc.) from audit-service.
+  getMyActivity: (size = 20) => request(`/api/v1/audit/me?size=${size}`),
   getNotifications: () => request("/api/v1/notifications"),
   getNotificationPreferences: () => request("/api/v1/notifications/preferences"),
   putNotificationPreferences: (payload) =>
     request("/api/v1/notifications/preferences", { method: "PUT", body: JSON.stringify(payload) }),
   testNotification: () => request("/api/v1/notifications/test", { method: "POST" }),
   markNotificationRead: (id) => request(`/api/v1/notifications/${id}/read`, { method: "POST" }),
+
+  // Customer Care / Support (role-gated: CARE or ADMIN)
+  supportSearchUsers: (query = "", page = 0, size = 25) =>
+    request(`/api/v1/support/users?query=${encodeURIComponent(query)}&page=${page}&size=${size}`),
+  supportGetUser: (id) => request(`/api/v1/support/users/${id}`),
+  supportGetUserActivity: (id, onlyIssues = false, limit = 100) =>
+    request(`/api/v1/support/users/${id}/activity?onlyIssues=${onlyIssues}&limit=${limit}`),
+  supportChangeUserRole: (id, role, action) =>
+    request(`/api/v1/support/users/${id}/roles`, {
+      method: "POST",
+      body: JSON.stringify({ role, action })
+    }),
 
   // Legacy / internal (Node API — being retired)
   getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"),

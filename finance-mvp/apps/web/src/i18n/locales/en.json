@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "Language",
+    "auto": "Auto (browser)",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "Home",
+    "accounts": "Accounts",
+    "transactions": "Transactions",
+    "budget": "Budget",
+    "billpay": "Pay Bills",
+    "debt": "Debt Lab",
+    "invest": "Investments",
+    "mybusiness": "My Business",
+    "ai-assistant": "AI Assistant",
+    "calculators": "Calculators",
+    "goals": "Goals",
+    "realestate": "Properties",
+    "dealroom": "Deal Room",
+    "fractional": "Fractional LLC",
+    "security": "Security",
+    "messages": "Messages",
+    "settings": "Settings",
+    "styleguide": "Style Guide",
+    "flowmap": "UI Flow Map",
+    "guide": "How to use",
+    "profile": "Profile",
+    "learn": "Learn"
+  },
+  "section": {
+    "finance": "Finance",
+    "realestate": "Real Estate",
+    "settings": "Settings"
+  },
+  "brand": {
+    "tagline": "All your wealth · One place"
+  },
+  "topbar": {
+    "searchPlaceholder": "Search transactions… (press Enter)",
+    "notifications": "Notifications",
+    "noNotifications": "No notifications",
+    "viewAllMessages": "View all messages",
+    "new": "{{count}} new",
+    "help": "Help & learning",
+    "themeTip": "Theme: {{theme}} — click to switch",
+    "toggleMenu": "Toggle navigation menu",
+    "expandMenu": "Expand menu",
+    "collapseMenu": "Collapse menu"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "glass": "Glass"
+  },
+  "disclaimer": {
+    "iUnderstand": "I understand"
+  },
+  "user": {
+    "viewProfile": "View profile",
+    "signOut": "Sign out",
+    "user": "User"
+  },
+  "common": {
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "add": "Add",
+    "back": "Back",
+    "next": "Next",
+    "done": "Done",
+    "refresh": "Refresh",
+    "search": "Search",
+    "retry": "Retry",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "amount": "Amount",
+    "date": "Date",
+    "status": "Status",
+    "type": "Type",
+    "name": "Name",
+    "total": "Total",
+    "today": "Today",
+    "lastRefreshed": "Last refreshed {{time}}",
+    "viewAll": "View all",
+    "comingSoon": "Coming soon",
+    "sessionExpired": "Your session expired. Please sign in again."
+  }
+}

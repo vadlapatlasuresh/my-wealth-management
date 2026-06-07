@@ -4,32 +4,41 @@ import {
   Routes,
   Route,
   NavLink,
+  Navigate,
   useLocation,
   useNavigate
 } from 'react-router-dom';
-import { api } from "../api";
+import { useTranslation } from "react-i18next";
+import { api, isCareAgent } from "../api";
+import CustomerCarePage from "../pages/CustomerCarePage";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
+import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
+import { MODULE_REGISTRY } from "../config/moduleRegistry";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { setupAutoTranslate } from "../i18n/domTranslator";
 
-// Import actual page components
-import HomePage from "../pages/HomePage";
-import AccountsPage from "../pages/AccountsPage";
-import TransactionsPage from "../pages/TransactionsPage"; // Import actual TransactionsPage
-import InvestPage from "../pages/InvestPage";
-import PlanPage from "../pages/PlanPage";
-import BillPayPage from "../pages/BillPayPage";
-import LearnPage from "../pages/LearnPage";
-import ProfilePage from "../pages/ProfilePage";
-import RealEstatePage from "../pages/RealEstatePage";
-import DealRoomPage from "../pages/DealRoomPage";
-import StyleGuidePage from "../pages/StyleGuidePage";
-import UIFlowMapPage from "../pages/UIFlowMapPage";
-import GuidePage from "../pages/GuidePage";
-import MyBusinessPage from "../pages/MyBusinessPage";
-import AIAssistantPage from "../pages/AIAssistantPage";
-import FractionalLLCPage from "../pages/FractionalLLCPage";
-import SecurityPage from "../pages/SecurityPage";
-import MessagesPage from "../pages/MessagesPage";
-import SettingsPage from "../pages/SettingsPage";
+// Lazy page components come from the module registry so modules code-split.
+const HomePage        = MODULE_REGISTRY.home.component;
+const AccountsPage    = MODULE_REGISTRY.accounts.component;
+const TransactionsPage = MODULE_REGISTRY.transactions.component;
+const InvestPage      = MODULE_REGISTRY.invest.component;
+const PlanPage        = MODULE_REGISTRY.budget.component;
+const BillPayPage     = MODULE_REGISTRY.billpay.component;
+const LearnPage       = MODULE_REGISTRY.learn.component;
+const ProfilePage     = MODULE_REGISTRY.profile.component;
+const RealEstatePage  = MODULE_REGISTRY.realestate.component;
+const DealRoomPage    = MODULE_REGISTRY.dealroom.component;
+const StyleGuidePage  = MODULE_REGISTRY.styleguide.component;
+const UIFlowMapPage   = MODULE_REGISTRY.flowmap.component;
+const GuidePage       = MODULE_REGISTRY.guide.component;
+const MyBusinessPage  = MODULE_REGISTRY.mybusiness.component;
+const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
+const CalculatorsPage = MODULE_REGISTRY.calculators.component;
+const GoalsPage       = MODULE_REGISTRY.goals.component;
+const FractionalLLCPage = MODULE_REGISTRY.fractional.component;
+const SecurityPage    = MODULE_REGISTRY.security.component;
+const MessagesPage    = MODULE_REGISTRY.messages.component;
+const SettingsPage    = MODULE_REGISTRY.settings.component;
 
 
 const navLabels = {
@@ -42,6 +51,8 @@ const navLabels = {
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
   '/ai-assistant': 'AI Assistant',
+  '/calculators': 'Calculators',
+  '/goals': 'Goals',
   '/realestate': 'Properties',
   '/dealroom': 'Deal Room',
   '/fractional': 'Fractional LLC',
@@ -54,43 +65,27 @@ const navLabels = {
   '/profile': 'Profile',
 };
 
-/* Sidebar navigation is config-driven so it's generic and easy to extend:
-   add an item to a section's `items` (or a whole new section) — no markup changes. */
-const NAV_SECTIONS = [
-  {
-    label: 'Finance',
-    items: [
-      { to: '/', icon: 'ti ti-layout-dashboard', label: 'Home' },
-      { to: '/accounts', icon: 'ti ti-wallet', label: 'Accounts' },
-      { to: '/transactions', icon: 'ti ti-arrows-exchange-2', label: 'Transactions' },
-      { to: '/budget', icon: 'ti ti-chart-pie', label: 'Budgets' },
-      { to: '/billpay', icon: 'ti ti-receipt', label: 'Pay Bills', badge: 'billpay' },
-      { to: '/debt', icon: 'ti ti-trending-down', label: 'Debt Lab' },
-      { to: '/invest', icon: 'ti ti-chart-line', label: 'Investments' },
-      { to: '/mybusiness', icon: 'ti ti-briefcase', label: 'My Business' },
-      { to: '/ai-assistant', icon: 'ti ti-sparkles', label: 'AI Assistant' },
-    ],
-  },
-  {
-    label: 'Real Estate',
-    items: [
-      { to: '/realestate', icon: 'ti ti-building-estate', label: 'Properties' },
-      { to: '/dealroom', icon: 'ti ti-briefcase', label: 'Deal Room' },
-      { to: '/fractional', icon: 'ti ti-brand-stackshare', label: 'Fractional LLC' },
-    ],
-  },
-  {
-    label: 'Settings',
-    items: [
-      { to: '/security', icon: 'ti ti-shield-lock', label: 'Security' },
-      { to: '/messages', icon: 'ti ti-message-2', label: 'Messages', badge: 2 },
-      { to: '/settings', icon: 'ti ti-settings', label: 'Settings' },
-    ],
-  },
-];
+// Map a route path to its translation key id (used to localize the topbar page
+// label). Falls back to the English navLabels value when no key exists.
+const PATH_TO_NAVID = {
+  '/': 'home', '/accounts': 'accounts', '/transactions': 'transactions',
+  '/budget': 'budget', '/billpay': 'billpay', '/debt': 'debt',
+  '/invest': 'invest', '/mybusiness': 'mybusiness', '/ai-assistant': 'ai-assistant',
+  '/calculators': 'calculators', '/goals': 'goals',
+  '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
+  '/security': 'security', '/messages': 'messages', '/settings': 'settings',
+  '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/guide': 'guide',
+  '/profile': 'profile', '/learn': 'learn',
+};
 
-function Sidebar({ user, handleLogout, paymentIntents }) {
+/* Sidebar navigation is now config-driven: the sections + items are resolved
+   from the remote config intersected with the module registry (see
+   resolveNav). If the remote config is unavailable, resolveNav falls back to
+   the bundled DEFAULT, which reproduces exactly the previous hardcoded nav. */
+
+function Sidebar({ user, handleLogout, paymentIntents, navSections }) {
   const location = useLocation();
+  const { t } = useTranslation();
   const getNavLinkClass = (path) =>
     `nav-item ${location.pathname === path ? 'active' : ''}`;
 
@@ -119,28 +114,42 @@ function Sidebar({ user, handleLogout, paymentIntents }) {
         </div>
         <div className="brand-text">
           <div className="brand-name">TerraVest</div>
-          <div className="brand-tagline">All your wealth · One place</div>
+          <div className="brand-tagline">{t('brand.tagline')}</div>
         </div>
       </div>
 
       <ul className="sidebar-nav" style={{paddingTop:'12px'}}>
-        {NAV_SECTIONS.map((section) => (
-          <React.Fragment key={section.label}>
+        {navSections.map((section) => (
+          <React.Fragment key={section.id}>
             <div className="sidebar-section" style={{ marginTop: 4 }}>
-              <div className="sidebar-section-label">{section.label}</div>
+              <div className="sidebar-section-label">{t(`section.${section.id}`, section.label)}</div>
             </div>
             {section.items.map((item) => {
               const val = badgeValue(item.badge);
+              const label = t(`nav.${item.id}`, item.label);
               return (
-                <NavLink key={item.to} to={item.to} title={item.label} className={getNavLinkClass(item.to)}>
+                <NavLink key={item.id} to={item.to} title={label} className={getNavLinkClass(item.to)}>
                   <i className={item.icon}></i>
-                  <span className="nav-label">{item.label}</span>
+                  <span className="nav-label">{label}</span>
                   {val > 0 && <span className="nav-badge">{val}</span>}
                 </NavLink>
               );
             })}
           </React.Fragment>
         ))}
+
+        {/* Customer-care console — only shown to support agents / admins. */}
+        {isCareAgent() && (
+          <React.Fragment>
+            <div className="sidebar-section" style={{ marginTop: 4 }}>
+              <div className="sidebar-section-label">Support</div>
+            </div>
+            <NavLink to="/customer-care" title="Customer Care" className={getNavLinkClass('/customer-care')}>
+              <i className="ti ti-headset"></i>
+              <span className="nav-label">Customer Care</span>
+            </NavLink>
+          </React.Fragment>
+        )}
       </ul>
 
       <div className="sidebar-footer">
@@ -169,7 +178,11 @@ function Sidebar({ user, handleLogout, paymentIntents }) {
 function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onToggleSidebar, collapsed }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const currentPageLabel = navLabels[location.pathname] || 'TerraVest';
+  const { t } = useTranslation();
+  const navId = PATH_TO_NAVID[location.pathname];
+  const currentPageLabel = navId
+    ? t(`nav.${navId}`, navLabels[location.pathname] || 'TerraVest')
+    : (navLabels[location.pathname] || 'TerraVest');
 
   const [notifs, setNotifs] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -212,8 +225,8 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
       <button
         className="icon-btn hamburger"
         onClick={onToggleSidebar}
-        title={collapsed ? 'Expand menu' : 'Collapse menu'}
-        aria-label="Toggle navigation menu"
+        title={collapsed ? t('topbar.expandMenu') : t('topbar.collapseMenu')}
+        aria-label={t('topbar.toggleMenu')}
       >
         <i className="ti ti-menu-2"></i>
       </button>
@@ -221,7 +234,7 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
         <i className="ti ti-search"></i>
         <input
           type="text"
-          placeholder="Search transactions… (press Enter)"
+          placeholder={t('topbar.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           onKeyDown={onSearchKey}
@@ -240,14 +253,14 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
               boxShadow: 'var(--shadow-lg)', zIndex: 50, overflow: 'hidden'
             }}>
               <div className="section-header" style={{ padding: '12px 14px', marginBottom: 0, borderBottom: '1px solid var(--tv-border-light)' }}>
-                <div className="section-title" style={{ marginBottom: 0 }}>Notifications</div>
-                {unread > 0 && <span className="badge badge-forest">{unread} new</span>}
+                <div className="section-title" style={{ marginBottom: 0 }}>{t('topbar.notifications')}</div>
+                {unread > 0 && <span className="badge badge-forest">{t('topbar.new', { count: unread })}</span>}
               </div>
               <div style={{ maxHeight: 320, overflowY: 'auto', padding: '4px 14px' }}>
                 {notifs.length === 0 ? (
                   <div className="empty-state" style={{ padding: '24px 8px' }}>
                     <i className="ti ti-bell-off"></i>
-                    <p>No notifications</p>
+                    <p>{t('topbar.noNotifications')}</p>
                   </div>
                 ) : notifs.slice(0, 6).map((n) => (
                   <div className="list-item" key={n.id}>
@@ -265,16 +278,17 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
               <div style={{ padding: '10px 14px', borderTop: '1px solid var(--tv-border-light)' }}>
                 <button className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}
                   onClick={() => { setShowNotifs(false); navigate('/messages'); }}>
-                  View all messages
+                  {t('topbar.viewAllMessages')}
                 </button>
               </div>
             </div>
           )}
         </div>
-        <button className="icon-btn" title="Help & learning" onClick={() => navigate('/learn')}>
+        <button className="icon-btn" title={t('topbar.help')} onClick={() => navigate('/learn')}>
           <i className="ti ti-help-circle"></i>
         </button>
-        <button className="icon-btn" title={`Theme: ${THEME_META[theme].label} — click to switch`} onClick={cycleTheme}>
+        <LanguageSwitcher />
+        <button className="icon-btn" title={t('topbar.themeTip', { theme: THEME_META[theme].label })} onClick={cycleTheme}>
           <i className={THEME_META[theme].icon}></i>
         </button>
         <div style={{width:'1px',height:'22px',background:'var(--tv-border)',margin:'0 4px'}}></div>
@@ -303,6 +317,25 @@ function OuterTabs() {
 }
 
 
+// Whole-page auto-translation. Re-runs whenever the language or route changes,
+// translating everything inside .page-content via the machine-translation
+// provider (see i18n/domTranslator). A MutationObserver keeps async-loaded
+// content translated too. No-op in English.
+function AutoTranslate() {
+  const location = useLocation();
+  const { i18n } = useTranslation();
+  useEffect(() => {
+    const lang = (i18n.language || 'en').split('-')[0];
+    const root = document.querySelector('.page-content');
+    if (!root) return undefined;
+    // setupAutoTranslate does an initial pass; its MutationObserver covers lazy /
+    // suspended page chunks and async data that arrive afterwards.
+    const cleanup = setupAutoTranslate(root, lang);
+    return cleanup;
+  }, [i18n.language, location.pathname]);
+  return null;
+}
+
 export default function AppLayout(props) {
   const {
     snapshot, accounts, transactions, insights, paymentIntents,
@@ -330,10 +363,16 @@ export default function AppLayout(props) {
       return next;
     });
 
+  // Config-driven nav: resolves from remote config + module registry, with a
+  // built-in fallback to the default (current) nav when config is unavailable.
+  const { config, flags } = useRemoteConfig();
+  const navSections = resolveNav(config, MODULE_REGISTRY, flags);
+
   return (
     <Router>
+      <AutoTranslate />
       <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
-        <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} />
+        <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} />
         <div className="main-area">
           <Topbar
             snapshot={snapshot}
@@ -348,6 +387,7 @@ export default function AppLayout(props) {
           <div className="page-content">
             {/* {error && <p className="error banner-error">{error}</p>} */}
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
+            <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
             <Routes>
               <Route path="/" element={
                 <HomePage
@@ -360,11 +400,12 @@ export default function AppLayout(props) {
                   loadAll={loadAll}
                   user={user}
                   insights={insights}
+                  paymentIntents={paymentIntents}
                   formatDate={formatDate}
                 />
               } />
               <Route path="/accounts" element={<AccountsPage accounts={accounts} loadAll={loadAll} />} />
-              <Route path="/transactions" element={<TransactionsPage transactions={transactions} loadAll={loadAll} />} />
+              <Route path="/transactions" element={<TransactionsPage transactions={transactions} accounts={accounts} loadAll={loadAll} />} />
               <Route path="/budget" element={
                 <PlanPage
                   planTab={planTab}
@@ -413,11 +454,14 @@ export default function AppLayout(props) {
               <Route path="/invest" element={<InvestPage snapshot={snapshot} />} />
               <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} />} />
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
+              <Route path="/calculators" element={<CalculatorsPage />} />
+              <Route path="/goals" element={<GoalsPage />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/customer-care" element={isCareAgent() ? <CustomerCarePage /> : <Navigate to="/" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route
                 path="/profile"
@@ -428,6 +472,7 @@ export default function AppLayout(props) {
               <Route path="/styleguide" element={<StyleGuidePage />} />
               <Route path="/flowmap" element={<UIFlowMapPage />} />
             </Routes>
+            </React.Suspense>
           </div>
         </div>
       </div>

@@ -13,6 +13,40 @@ Actions tab. This guide is the one-time setup.
 
 ---
 
+## Test the whole stack locally first (no cloud, no Docker) ✅ verified
+
+Before paying for / setting up any cloud, run the entire platform on your Mac against a
+real local Postgres. This is the fast test loop.
+
+```bash
+# one-time
+brew install openjdk@17 postgresql@16 && brew services start postgresql@16
+cd finance-mvp
+bash deploy/init-local-db.sh        # creates the `wealth` role + one DB per service
+
+# build + run the backend (11 services on Postgres, dev profile, mock providers)
+REBUILD=1 bash deploy/start-local.sh   # omit REBUILD next time if jars exist
+#   builds per-service: mvn -f apps/<svc>/pom.xml clean package -DskipTests
+
+# run the web app (new terminal)
+npm install && npm run dev -w apps/web   # http://localhost:5173
+```
+
+Services may take ~60–70s to finish booting (the script's 45s wait is conservative).
+Verify everything is wired:
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://localhost:8080/actuator/health   # 200
+# register → returns a JWT; that token then authorizes /api/v1/me/snapshot (200)
+```
+Open http://localhost:5173 → register → link a Plaid sandbox account
+(`user_good` / `pass_good`). All major routes (accounts, real-estate, AI, notifications,
+business, planning) answer 200 through the gateway on :8080.
+
+> This native path is the dev/test loop. The cloud steps below are for a real, always-on
+> deployment. Both run the *same* code; only the DB/host/provider keys differ.
+
+---
+
 ## 0. Prerequisites
 - A GitHub account with this repo (CI builds the images to GHCR on every push to `main`).
 - An Oracle Cloud account (free signup; needs a card for identity, **not charged** on Always Free).

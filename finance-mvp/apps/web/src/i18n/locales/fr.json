@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "Langue",
+    "auto": "Automatique (navigateur)",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "Accueil",
+    "accounts": "Comptes",
+    "transactions": "Transactions",
+    "budget": "Budget",
+    "billpay": "Payer les factures",
+    "debt": "Labo des dettes",
+    "invest": "Investissements",
+    "mybusiness": "Mon entreprise",
+    "ai-assistant": "Assistant IA",
+    "realestate": "Biens immobiliers",
+    "dealroom": "Salle des transactions",
+    "fractional": "LLC fractionnée",
+    "security": "Sécurité",
+    "messages": "Messages",
+    "settings": "Paramètres",
+    "styleguide": "Guide de style",
+    "flowmap": "Carte des flux de l'interface",
+    "guide": "Mode d'emploi",
+    "profile": "Profil",
+    "learn": "Apprendre",
+    "calculators": "Calculatrices",
+    "goals": "Objectifs"
+  },
+  "section": {
+    "finance": "Finance",
+    "realestate": "Immobilier",
+    "settings": "Paramètres"
+  },
+  "brand": {
+    "tagline": "Tout votre patrimoine · Un seul endroit"
+  },
+  "topbar": {
+    "searchPlaceholder": "Rechercher des transactions… (appuyez sur Entrée)",
+    "notifications": "Notifications",
+    "noNotifications": "Aucune notification",
+    "viewAllMessages": "Voir tous les messages",
+    "new": "{{count}} nouvelles",
+    "help": "Aide et apprentissage",
+    "themeTip": "Thème : {{theme}} — cliquez pour changer",
+    "toggleMenu": "Basculer le menu de navigation",
+    "expandMenu": "Développer le menu",
+    "collapseMenu": "Réduire le menu"
+  },
+  "theme": {
+    "light": "Clair",
+    "dark": "Sombre",
+    "glass": "Verre"
+  },
+  "user": {
+    "viewProfile": "Voir le profil",
+    "signOut": "Se déconnecter",
+    "user": "Utilisateur"
+  },
+  "common": {
+    "loading": "Chargement…",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "confirm": "Confirmer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "back": "Retour",
+    "next": "Suivant",
+    "done": "Terminé",
+    "refresh": "Actualiser",
+    "search": "Rechercher",
+    "retry": "Réessayer",
+    "all": "Tout",
+    "none": "Aucun",
+    "yes": "Oui",
+    "no": "Non",
+    "amount": "Montant",
+    "date": "Date",
+    "status": "Statut",
+    "type": "Type",
+    "name": "Nom",
+    "total": "Total",
+    "today": "Aujourd'hui",
+    "lastRefreshed": "Dernière actualisation {{time}}",
+    "viewAll": "Tout voir",
+    "comingSoon": "Bientôt disponible",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter."
+  },
+  "disclaimer": {
+    "iUnderstand": "J'ai compris"
+  }
+}

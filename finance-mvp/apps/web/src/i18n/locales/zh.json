@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "语言",
+    "auto": "自动（浏览器）",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "首页",
+    "accounts": "账户",
+    "transactions": "交易",
+    "budget": "预算",
+    "billpay": "支付账单",
+    "debt": "债务实验室",
+    "invest": "投资",
+    "mybusiness": "我的企业",
+    "ai-assistant": "AI 助手",
+    "realestate": "房产",
+    "dealroom": "交易室",
+    "fractional": "份额制 LLC",
+    "security": "安全",
+    "messages": "消息",
+    "settings": "设置",
+    "styleguide": "样式指南",
+    "flowmap": "界面流程图",
+    "guide": "使用指南",
+    "profile": "个人资料",
+    "learn": "学习",
+    "calculators": "计算器",
+    "goals": "目标"
+  },
+  "section": {
+    "finance": "财务",
+    "realestate": "房地产",
+    "settings": "设置"
+  },
+  "brand": {
+    "tagline": "您的全部财富 · 尽在一处"
+  },
+  "topbar": {
+    "searchPlaceholder": "搜索交易…（按回车键）",
+    "notifications": "通知",
+    "noNotifications": "暂无通知",
+    "viewAllMessages": "查看所有消息",
+    "new": "{{count}} 条新消息",
+    "help": "帮助与学习",
+    "themeTip": "主题：{{theme}} — 点击切换",
+    "toggleMenu": "切换导航菜单",
+    "expandMenu": "展开菜单",
+    "collapseMenu": "收起菜单"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "glass": "玻璃"
+  },
+  "user": {
+    "viewProfile": "查看个人资料",
+    "signOut": "退出登录",
+    "user": "用户"
+  },
+  "common": {
+    "loading": "加载中…",
+    "save": "保存",
+    "cancel": "取消",
+    "close": "关闭",
+    "confirm": "确认",
+    "delete": "删除",
+    "edit": "编辑",
+    "add": "添加",
+    "back": "返回",
+    "next": "下一步",
+    "done": "完成",
+    "refresh": "刷新",
+    "search": "搜索",
+    "retry": "重试",
+    "all": "全部",
+    "none": "无",
+    "yes": "是",
+    "no": "否",
+    "amount": "金额",
+    "date": "日期",
+    "status": "状态",
+    "type": "类型",
+    "name": "名称",
+    "total": "总计",
+    "today": "今天",
+    "lastRefreshed": "上次刷新于 {{time}}",
+    "viewAll": "查看全部",
+    "comingSoon": "敬请期待",
+    "sessionExpired": "您的会话已过期。请重新登录。"
+  },
+  "disclaimer": {
+    "iUnderstand": "我明白了"
+  }
+}

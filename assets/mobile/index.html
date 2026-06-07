@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TerraVest — Mobile Design (iOS & Android)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css" />
+<style>
+  :root{
+    --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68;
+    --tv-sage:#8AB89A; --tv-sage-pale:#EAF3EE;
+    --tv-gold:#C9973A; --tv-gold-light:#F0C878;
+    --tv-text:#EAF3EE; --tv-muted:#9FBAAC;
+    --font-display:'DM Serif Display',Georgia,serif;
+    --font-body:'DM Sans',system-ui,sans-serif;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:var(--font-body);
+    color:var(--tv-text);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(61,138,104,.25), transparent 60%),
+      radial-gradient(900px 600px at 0% 100%, rgba(201,151,58,.12), transparent 55%),
+      #0c1612;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    padding:48px 24px 64px;
+  }
+  .wrap{max-width:1080px;margin:0 auto}
+  .brand{display:flex;align-items:center;gap:14px;margin-bottom:40px}
+  .mark{width:46px;height:46px;border-radius:13px;background:linear-gradient(135deg,#C9973A,#F0C878);
+    display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 8px 24px rgba(201,151,58,.3)}
+  .mark svg{width:26px;height:26px}
+  .brand .name{font-family:var(--font-display);font-size:26px;line-height:1}
+  .brand .tag{font-size:13px;color:var(--tv-muted);margin-top:3px}
+  .hero{margin-bottom:44px}
+  .hero h1{font-family:var(--font-display);font-size:clamp(30px,5vw,46px);line-height:1.08;max-width:18ch}
+  .hero p{color:var(--tv-muted);font-size:16px;margin-top:14px;max-width:62ch;line-height:1.6}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;margin-bottom:48px}
+  .card{
+    position:relative;display:block;text-decoration:none;color:inherit;overflow:hidden;
+    border-radius:22px;padding:30px;border:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(255,255,255,.02));
+    transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+  }
+  .card:hover{transform:translateY(-4px);border-color:rgba(138,184,154,.5);box-shadow:0 24px 60px rgba(0,0,0,.4)}
+  .card .plat{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+  .card .plat i{font-size:30px;color:var(--tv-sage)}
+  .card .plat .ttl{font-family:var(--font-display);font-size:24px}
+  .card .plat .sub{font-size:12.5px;color:var(--tv-muted)}
+  .card .desc{font-size:14px;color:var(--tv-muted);line-height:1.6;margin-bottom:22px}
+  .card .go{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:14px;color:var(--tv-gold-light)}
+  .card .go i{transition:transform .2s ease}
+  .card:hover .go i{transform:translateX(4px)}
+  .card .glow{position:absolute;inset:auto -40px -60px auto;width:200px;height:200px;border-radius:50%;
+    background:radial-gradient(circle,rgba(61,138,104,.4),transparent 70%);pointer-events:none}
+
+  .feat-title{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--tv-muted);margin:0 0 16px}
+  .feat{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px}
+  .feat .f{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:#cfe0d7;line-height:1.45}
+  .feat .f i{color:var(--tv-forest-light);font-size:17px;flex-shrink:0;margin-top:1px}
+  footer{margin-top:48px;color:var(--tv-muted);font-size:12.5px;line-height:1.7;border-top:1px solid rgba(255,255,255,.08);padding-top:22px}
+  code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:5px;font-size:12px}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-label="TerraVest">
+          <path d="M20 70 L40 54 L54 62 L76 30" stroke="#1A4D3B" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="76" cy="30" r="7" fill="#1A4D3B"/>
+        </svg>
+      </div>
+      <div>
+        <div class="name">TerraVest</div>
+        <div class="tag">All your wealth · One place</div>
+      </div>
+    </div>
+
+    <div class="hero">
+      <h1>Mobile design system — iOS &amp; Android</h1>
+      <p>
+        Native-pattern mockups of every TerraVest feature, rendered for both platforms from one
+        shared brand language. Same screens, platform-correct chrome: iOS uses the Dynamic Island,
+        large titles, sliding segmented controls and a frosted tab bar; Android uses Material 3
+        top app bars, segmented buttons, filter chips, FABs and bottom navigation.
+      </p>
+    </div>
+
+    <div class="cards">
+      <a class="card" href="./terravest-ios.html">
+        <span class="glow"></span>
+        <div class="plat">
+          <i class="ti ti-brand-apple"></i>
+          <div>
+            <div class="ttl">iOS — iPhone</div>
+            <div class="sub">16 screens · Human Interface Guidelines</div>
+          </div>
+        </div>
+        <div class="desc">
+          Dynamic Island, large navigation titles, iOS segmented controls, grouped inset cards,
+          Face ID, frosted bottom tab bar and home indicator.
+        </div>
+        <span class="go">Open iOS designs <i class="ti ti-arrow-right"></i></span>
+      </a>
+
+      <a class="card" href="./terravest-android.html">
+        <span class="glow"></span>
+        <div class="plat">
+          <i class="ti ti-brand-android"></i>
+          <div>
+            <div class="ttl">Android — Material 3</div>
+            <div class="sub">16 screens · Material You</div>
+          </div>
+        </div>
+        <div class="desc">
+          Material top app bars, segmented buttons, filter chips, sliders, FABs, tonal buttons,
+          fingerprint unlock and bottom navigation with the active pill indicator.
+        </div>
+        <span class="go">Open Android designs <i class="ti ti-arrow-right"></i></span>
+      </a>
+    </div>
+
+    <p class="feat-title">Every feature is covered on both platforms</p>
+    <div class="feat">
+      <div class="f"><i class="ti ti-login-2"></i> Sign in, sign up (Individual/Business, SSN/EIN) &amp; SMS verification</div>
+      <div class="f"><i class="ti ti-layout-dashboard"></i> Home dashboard with KPI cards &amp; range filters</div>
+      <div class="f"><i class="ti ti-chart-area-line"></i> Net-worth chart — Area / Line / Bars toggle</div>
+      <div class="f"><i class="ti ti-alert-triangle"></i> Downfall alert (&gt;15% drop) — red chart &amp; color-coded drag</div>
+      <div class="f"><i class="ti ti-wallet"></i> Accounts grouped by type + bank linking</div>
+      <div class="f"><i class="ti ti-arrows-exchange-2"></i> Transactions with filter chips</div>
+      <div class="f"><i class="ti ti-chart-pie"></i> Budget — 50/30/20 customizable presets &amp; periods</div>
+      <div class="f"><i class="ti ti-receipt"></i> Pay Bills end-to-end with confirmation</div>
+      <div class="f"><i class="ti ti-trending-down"></i> Debt Lab strategy comparison (Avalanche/Snowball/Hybrid)</div>
+      <div class="f"><i class="ti ti-chart-line"></i> Investments — Stocks + brokers &amp; Alternatives</div>
+      <div class="f"><i class="ti ti-briefcase"></i> My Business multi-business dashboard</div>
+      <div class="f"><i class="ti ti-sparkles"></i> AI Assistant — scope, styles, voice, prompt library</div>
+      <div class="f"><i class="ti ti-building-estate"></i> Properties with auto-estimated values</div>
+      <div class="f"><i class="ti ti-language"></i> Language switch &amp; whole-app auto-translate</div>
+      <div class="f"><i class="ti ti-palette"></i> Light / Dark / Glass themes</div>
+      <div class="f"><i class="ti ti-bell"></i> Notification channels (SMS/Email/Push/In-app)</div>
+    </div>
+
+    <footer>
+      Single-file, self-contained mockups (Google Fonts + Tabler icons via CDN). Open either file
+      directly in a browser. These designs map 1:1 to the React app under
+      <code>finance-mvp/apps/web</code>, which is wrapped for iOS/Android via Capacitor.
+    </footer>
+  </div>
+</body>
+</html>

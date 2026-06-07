@@ -2,6 +2,7 @@ package com.mywealthmanagement.paymentservice.payment;
 
 import com.mywealthmanagement.paymentservice.payment.dto.BillPayIntentDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 public class PaymentController {
 
     private final PaymentService paymentService;
+    private final StripeWebhookVerifier stripeWebhookVerifier;
 
     @GetMapping("/bill-pay-intents")
     public ResponseEntity<Map<String, Object>> getBillPayIntents() {
@@ -39,9 +41,15 @@ public class PaymentController {
     }
 
     @PostMapping("/webhook")
-    public ResponseEntity<Map<String, Object>> webhook(@RequestBody(required = false) Map<String, Object> payload) {
-        // Public (permitAll) mock webhook. A real implementation would verify the
-        // Stripe signature using STRIPE_WEBHOOK_SECRET before processing the event.
+    public ResponseEntity<Map<String, Object>> webhook(
+            @RequestBody(required = false) String payload,
+            @RequestHeader(value = "Stripe-Signature", required = false) String signature) {
+        // Verify the Stripe signature over the RAW body before trusting the event.
+        if (!stripeWebhookVerifier.verify(payload == null ? "" : payload, signature)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("received", false, "error", "invalid signature"));
+        }
+        // Signature OK — a real implementation would now parse the event and update intents.
         return ResponseEntity.ok(Map.of("received", true));
     }
 }

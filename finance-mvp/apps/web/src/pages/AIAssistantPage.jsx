@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../api';
 import LastRefreshed from "../components/LastRefreshed";
+import Disclaimer from "../components/Disclaimer";
 
 /* Portfolio scopes the user can toggle — tells the assistant which slice of
    their finances to weigh. We send the labels in a directive prefix. */
@@ -446,15 +447,13 @@ export default function AIAssistantPage({ user }) {
         </div>
       </div>
 
-      {/* Disclaimer */}
-      <div className="card" style={{ background: 'var(--tv-warning-bg)', borderLeft: '4px solid var(--tv-warning)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <i className="ti ti-alert-triangle" style={{ fontSize: '24px', color: 'var(--tv-warning)', flexShrink: 0 }}></i>
-          <p style={{ fontSize: '12.5px', color: 'var(--tv-warning)', lineHeight: '1.6' }}>
-            This AI assistant provides general financial insights for informational purposes only. These suggestions do not constitute financial advice. Please conduct your own research or consult a certified financial advisor before making investment decisions.
-          </p>
-        </div>
-      </div>
+      {/* Disclaimer (DB/CMS-driven) */}
+      <Disclaimer
+        keyId="ai.assistant"
+        variant="warning"
+        fallbackTitle="AI guidance notice"
+        fallbackBody="This AI assistant provides general financial insights for informational purposes only. **Not financial advice.** Consult a certified financial advisor before making decisions."
+      />
     </div>
   );
 }

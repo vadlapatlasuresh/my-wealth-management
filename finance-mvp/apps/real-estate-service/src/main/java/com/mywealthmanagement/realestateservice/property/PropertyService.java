@@ -71,10 +71,20 @@ public class PropertyService {
 
     private void applyEditableFields(Property property, PropertyDto dto) {
         property.setAddress(dto.getAddress());
-        property.setPropertyType(dto.getPropertyType());
-        property.setPurchasePrice(dto.getPurchasePrice());
+
+        // NOT NULL columns must always end up set so a property can be saved with
+        // just an address (value auto-estimated later). Prefer the incoming value,
+        // then keep any existing value, then a sensible default.
+        String type = firstNonBlank(dto.getPropertyType(), property.getPropertyType(), "PRIMARY_RESIDENCE");
+        property.setPropertyType(type);
+
+        BigDecimal currentValue = firstNonNull(dto.getCurrentValue(), property.getCurrentValue(), BigDecimal.ZERO);
+        property.setCurrentValue(currentValue);
+
+        // Purchase price defaults to the current value when unknown (NOT NULL column).
+        property.setPurchasePrice(firstNonNull(dto.getPurchasePrice(), property.getPurchasePrice(), currentValue));
+
         property.setPurchaseDate(dto.getPurchaseDate());
-        property.setCurrentValue(dto.getCurrentValue());
         property.setMortgageBalance(dto.getMortgageBalance());
         property.setLastValuedAt(dto.getLastValuedAt());
         if (dto.getBeds() != null) {
@@ -92,6 +102,20 @@ public class PropertyService {
         if (dto.getRentEstimate() != null) {
             property.setRentEstimate(dto.getRentEstimate());
         }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (v != null && !v.isBlank()) return v;
+        }
+        return null;
+    }
+
+    private static BigDecimal firstNonNull(BigDecimal... values) {
+        for (BigDecimal v : values) {
+            if (v != null) return v;
+        }
+        return BigDecimal.ZERO;
     }
 
     private PropertyDto convertToDto(Property property) {

@@ -28,6 +28,9 @@ x-java-defaults: &java-defaults
     # and compose-DNS URLs are identical for all services. Spring relaxed-binding maps
     # SERVER_PORT -> server.port, overriding the per-service port in application.properties.
     SERVER_PORT: "8080"
+    # Audit: any service can emit domain audit events to the audit-service.
+    AUDIT_URI: http://audit-service:8080
+    AUDIT_INGEST_KEY: ${AUDIT_INGEST_KEY:?set AUDIT_INGEST_KEY in .env.prod}
     # JVM: respect container memory limits
     JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50"
   healthcheck:
@@ -80,6 +83,7 @@ services:
       SERVICE_PAYMENT_URI: http://payment-service:8080
       SERVICE_NOTIFICATION_URI: http://notification-service:8080
       SERVICE_PLATFORM_CONFIG_URI: http://platform-config-service:8080
+      SERVICE_AUDIT_URI: http://audit-service:8080
       # Legacy Node API is NOT deployed in prod; point at a dead address so /v1/** 503s cleanly
       SERVICE_LEGACY_NODE_URI: http://127.0.0.1:4000
       # CORS: only the real web origin(s), comma-separated. NO wildcard in prod.
@@ -200,6 +204,17 @@ services:
       DATABASE_URL: ${CONFIG_DATABASE_URL:?}
       DATABASE_USER: ${CONFIG_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CONFIG_DATABASE_PASSWORD:?}
+      API_GATEWAY_URL: http://api-gateway:8080
+
+  audit-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-audit-service:${TAG:-latest}
+    container_name: wealth-audit-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${AUDIT_DATABASE_URL:?}
+      DATABASE_USER: ${AUDIT_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${AUDIT_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
 
   # ---------------- OPTIONAL local Postgres (instead of Neon) ----------------
