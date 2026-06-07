@@ -141,6 +141,31 @@ export default function HomePage({
         </div>
       </div>
 
+      {/* How-to entry point — opens the full feature guide / demo walkthrough */}
+      <div
+        className="home-guide-banner"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate('/guide')}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('/guide'); } }}
+        title="Open the feature guide"
+      >
+        <div className="item-icon icon-forest" style={{ width: 42, height: 42, fontSize: 20, flexShrink: 0 }}>
+          <i className="ti ti-compass"></i>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, color: 'var(--tv-text-primary)' }}>
+            New to TerraVest? Take the guided tour
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--tv-text-muted)' }}>
+            Learn what every feature does and how to use it — step by step.
+          </div>
+        </div>
+        <span className="btn btn-primary btn-sm" style={{ flexShrink: 0 }}>
+          <i className="ti ti-book-2"></i> How to use
+        </span>
+      </div>
+
       {/* KPI Row — each card navigates to its detail screen */}
       <div className="kpi-grid">
         <div className="kpi-card kpi-clickable" style={{ cursor: 'pointer' }} title="View accounts" onClick={() => navigate('/accounts')}>

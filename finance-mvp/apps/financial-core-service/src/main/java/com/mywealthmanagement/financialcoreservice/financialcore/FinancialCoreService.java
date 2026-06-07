@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -78,20 +77,59 @@ public class FinancialCoreService {
                 realEstateEquity, change30dRealEstateEquity
         );
 
-        // --- Generate Time Series (Mock for now) ---
+        // --- Generate Time Series ---
         List<SnapshotDto.TimeSeriesPoint> series = generateTimeSeriesPoints(netTotal, range);
 
         return new SnapshotDto(userId, LocalDateTime.now(), netWorthDto, componentsDto, series);
     }
 
-    private List<SnapshotDto.TimeSeriesPoint> generateTimeSeriesPoints(BigDecimal baseValue, String range) {
-        int points = 10;
-        if (range.equals("1M")) points = 3;
-        else if (range.equals("3M")) points = 6;
-        else if (range.equals("1Y")) points = 12;
+    /**
+     * Builds a smooth, deterministic net-worth time series that ends exactly at the
+     * current value and rises toward it. Point count and span scale with the range,
+     * and the total growth is a range-scaled percentage of the current value so the
+     * curve stays realistic regardless of balance size.
+     * (Synthetic until per-day historical snapshots are persisted.)
+     */
+    private List<SnapshotDto.TimeSeriesPoint> generateTimeSeriesPoints(
+            BigDecimal baseValue, String range) {
 
-        // Simple synthetic time series generation
-        return Collections.emptyList(); // For now, return empty list, implement later
+        String r = range == null ? "3M" : range;
+        if (r.startsWith("custom")) r = "3M";
+
+        int points;
+        long totalMinutes;
+        double growthPct; // total rise across the window, as a fraction of current value
+        switch (r) {
+            case "1H": points = 12; totalMinutes = 60L;        growthPct = 0.003; break;
+            case "1D": points = 24; totalMinutes = 1440L;      growthPct = 0.01;  break;
+            case "1W": points = 14; totalMinutes = 10_080L;    growthPct = 0.03;  break;
+            case "1M": points = 30; totalMinutes = 43_200L;    growthPct = 0.06;  break;
+            case "3M": points = 13; totalMinutes = 129_600L;   growthPct = 0.12;  break;
+            case "6M": points = 26; totalMinutes = 259_200L;   growthPct = 0.18;  break;
+            case "1Y": points = 12; totalMinutes = 525_600L;   growthPct = 0.25;  break;
+            case "All": points = 24; totalMinutes = 1_051_200L; growthPct = 0.45; break;
+            default:    points = 16; totalMinutes = 129_600L;  growthPct = 0.10;  break;
+        }
+
+        double end = baseValue.doubleValue();
+        // Start lower and grow to the current value (or flat when there's no balance).
+        double start = end > 0 ? end / (1 + growthPct) : end;
+        double amplitude = Math.abs(end - start) * 0.10 + Math.abs(end) * 0.004;
+
+        List<SnapshotDto.TimeSeriesPoint> series = new java.util.ArrayList<>(points);
+        LocalDateTime now = LocalDateTime.now();
+        for (int i = 0; i < points; i++) {
+            double t = points == 1 ? 1.0 : (double) i / (points - 1);
+            double eased = t * t * (3 - 2 * t);               // smoothstep
+            double v = start + (end - start) * eased
+                    + amplitude * Math.sin(i * 1.7);          // gentle deterministic wiggle
+            if (i == points - 1) v = end;                      // land exactly on current value
+            long minutesAgo = Math.round((1 - t) * totalMinutes);
+            series.add(new SnapshotDto.TimeSeriesPoint(
+                    now.minusMinutes(minutesAgo),
+                    BigDecimal.valueOf(Math.round(v))));
+        }
+        return series;
     }
 
     public List<AccountDto> getAccounts() {

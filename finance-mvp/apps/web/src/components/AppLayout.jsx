@@ -8,6 +8,7 @@ import {
   useNavigate
 } from 'react-router-dom';
 import { api } from "../api";
+import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 
 // Import actual page components
 import HomePage from "../pages/HomePage";
@@ -22,6 +23,7 @@ import RealEstatePage from "../pages/RealEstatePage";
 import DealRoomPage from "../pages/DealRoomPage";
 import StyleGuidePage from "../pages/StyleGuidePage";
 import UIFlowMapPage from "../pages/UIFlowMapPage";
+import GuidePage from "../pages/GuidePage";
 import MyBusinessPage from "../pages/MyBusinessPage";
 import AIAssistantPage from "../pages/AIAssistantPage";
 import FractionalLLCPage from "../pages/FractionalLLCPage";
@@ -48,6 +50,7 @@ const navLabels = {
   '/settings': 'Settings',
   '/styleguide': 'Style Guide',
   '/flowmap': 'UI Flow Map',
+  '/guide': 'How to use',
   '/profile': 'Profile',
 };
 
@@ -171,7 +174,10 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
   const [notifs, setNotifs] = useState([]);
   const [showNotifs, setShowNotifs] = useState(false);
   const [search, setSearch] = useState('');
+  const [theme, setTheme] = useState(getTheme());
   const bellRef = useRef(null);
+
+  const cycleTheme = () => setTheme((t) => applyTheme(nextTheme(t)));
 
   useEffect(() => {
     let active = true;
@@ -267,6 +273,9 @@ function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onTo
         </div>
         <button className="icon-btn" title="Help & learning" onClick={() => navigate('/learn')}>
           <i className="ti ti-help-circle"></i>
+        </button>
+        <button className="icon-btn" title={`Theme: ${THEME_META[theme].label} — click to switch`} onClick={cycleTheme}>
+          <i className={THEME_META[theme].icon}></i>
         </button>
         <div style={{width:'1px',height:'22px',background:'var(--tv-border)',margin:'0 4px'}}></div>
         <span id="topbar-label" className="topbar-page-label">{currentPageLabel}</span>
@@ -415,6 +424,7 @@ export default function AppLayout(props) {
                 element={<ProfilePage user={user} accounts={accounts} onLogout={handleLogout} />}
               />
               <Route path="/learn" element={<LearnPage />} />
+              <Route path="/guide" element={<GuidePage />} />
               <Route path="/styleguide" element={<StyleGuidePage />} />
               <Route path="/flowmap" element={<UIFlowMapPage />} />
             </Routes>

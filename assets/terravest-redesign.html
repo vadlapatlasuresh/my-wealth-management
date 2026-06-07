@@ -1012,6 +1012,15 @@ a { text-decoration: none; color: inherit; }
     • Messages: proper master–detail split (fixed-width inbox with independent scroll + sticky reading pane,
       hover/selection, auto-select first, mark read/unread).
     • Visual polish: antialiased font rendering, tabular numerals for figures, larger/tighter display headings.
+
+    CHANGELOG — 2026-06-07 (chart + themes)
+    • Net-worth chart rebuilt: smooth gradient area, baseline gridlines with value labels, animated draw,
+      glowing last-point marker, and an interactive hover crosshair + tooltip (value follows the cursor).
+    • Themes: Light / Dark / Glass, toggled from the topbar (sun/moon/sparkles), persisted. Implemented as
+      CSS-variable overrides under html[data-theme=...] so every screen adapts automatically; Glass uses
+      frosted translucent cards (backdrop-filter) over a soft gradient.
+    • AI Assistant: response styles (Concise/Balanced/Detailed), persisted conversation, voice input,
+      markdown answers, copy/regenerate/feedback, prompt library; backend chat is now topic-aware.
   -->
   <div class="main-area">
     <!-- Top bar -->
@@ -1024,6 +1033,7 @@ a { text-decoration: none; color: inherit; }
       <div class="topbar-right">
         <button class="icon-btn"><i class="ti ti-bell"></i><span class="dot"></span></button>
         <button class="icon-btn"><i class="ti ti-help-circle"></i></button>
+        <button class="icon-btn" title="Theme: Light / Dark / Glass"><i class="ti ti-sun"></i></button>
         <div style="width:1px;height:22px;background:var(--tv-border);margin:0 4px;"></div>
         <span id="topbar-label" class="topbar-page-label">Home</span>
       </div>

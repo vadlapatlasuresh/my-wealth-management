@@ -1201,3 +1201,174 @@ body.tv-compact .setting-row { padding: 9px 0; }
 body.tv-compact .tv-table td,
 body.tv-compact .tv-table th { padding-top: 7px; padding-bottom: 7px; }
 body.tv-compact .page-title { font-size: 26px; }
+
+/* =============================================
+   GUIDE / HOW-TO PAGE
+   ============================================= */
+.guide-group-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--tv-text-muted);
+  font-weight: 600;
+  margin: 0 0 10px 2px;
+}
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.guide-card { display: flex; flex-direction: column; }
+.guide-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.guide-card-head { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.guide-card-title { font-family: var(--font-display); font-size: 17px; color: var(--tv-text-primary); line-height: 1.2; }
+.guide-card-what { font-size: 12.5px; color: var(--tv-text-muted); margin-top: 2px; }
+.guide-steps {
+  margin: 0 0 16px;
+  padding-left: 18px;
+  display: grid;
+  gap: 7px;
+  color: var(--tv-text-secondary);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.guide-steps li::marker { color: var(--tv-forest-light); font-weight: 600; }
+
+/* =============================================
+   UI FLOW MAP — nodes & journey steps
+   ============================================= */
+.flow-node {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--tv-card);
+  border: 1px solid var(--tv-border);
+  border-left: 3px solid var(--node-accent, var(--tv-forest));
+  border-radius: var(--radius-md);
+  padding: 9px 12px;
+  min-width: 150px;
+  text-align: left;
+  transition: box-shadow .18s ease, transform .14s ease, border-color .14s ease;
+}
+.flow-node:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+.flow-node-icon {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--tv-sage-pale); color: var(--node-accent, var(--tv-forest));
+  font-size: 16px;
+}
+.flow-node-label { display: block; font-size: 13px; font-weight: 600; color: var(--tv-text-primary); line-height: 1.2; }
+.flow-node-sub { display: block; font-size: 11px; color: var(--tv-text-muted); }
+.flow-step {
+  display: inline-flex; align-items: center;
+  background: var(--tv-sage-pale);
+  border: 1px solid var(--tv-border-light);
+  color: var(--tv-text-secondary);
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.flow-step-end { background: var(--tv-forest); color: #fff; border-color: var(--tv-forest); }
+
+/* Home → "How to use" entry banner */
+.home-guide-banner {
+  display: flex; align-items: center; gap: 14px;
+  background: linear-gradient(135deg, var(--tv-sage-pale) 0%, var(--tv-white) 70%);
+  border: 1px solid var(--tv-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+  cursor: pointer;
+  transition: box-shadow .2s ease, transform .16s ease, border-color .16s ease;
+}
+.home-guide-banner:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); border-color: var(--tv-sage); }
+
+/* =============================================
+   THEMES — Dark & Glass
+   Toggled by setting data-theme on <html>. Because the whole
+   design system is driven by CSS variables, themes are mostly
+   variable overrides plus a few surface treatments.
+   ============================================= */
+
+/* ---- DARK ---- */
+html[data-theme="dark"] {
+  --tv-forest:       #2E7D5B;
+  --tv-forest-mid:   #3D8A68;
+  --tv-forest-light: #5BB98C;
+  --tv-sage:         #6E9683;
+  --tv-sage-light:   #9FC3B1;
+  --tv-sage-pale:    #18241E;
+
+  --tv-gold:         #D9A94B;
+  --tv-gold-light:   #F0C878;
+  --tv-gold-pale:    #2A2417;
+
+  --tv-positive:     #4FBE83;
+  --tv-positive-bg:  #16291F;
+  --tv-negative:     #E5675A;
+  --tv-negative-bg:  #2E1A18;
+  --tv-warning:      #E0B255;
+  --tv-warning-bg:   #2A2417;
+
+  --tv-white:        #16201B;
+  --tv-bg:           #0E1512;
+  --tv-card:         #16201B;
+  --tv-border:       #28352E;
+  --tv-border-light: #1E2A24;
+
+  --tv-text-primary:   #ECF3EE;
+  --tv-text-secondary: #BCCFC4;
+  --tv-text-muted:     #8AA396;
+  --tv-text-inverse:   #0E1512;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,.4);
+  --shadow-md:  0 4px 14px rgba(0,0,0,.45);
+  --shadow-lg:  0 10px 34px rgba(0,0,0,.55);
+}
+/* Keep the sidebar a touch darker than cards in dark mode */
+html[data-theme="dark"] .sidebar { background: #0B1310; }
+html[data-theme="dark"] .topbar { background: var(--tv-card); }
+/* Inputs/selects read better with the card surface in dark mode */
+html[data-theme="dark"] .form-input,
+html[data-theme="dark"] .form-select,
+html[data-theme="dark"] .topbar-search input { background: #0E1512; color: var(--tv-text-primary); }
+html[data-theme="dark"] .btn-secondary { background: #1E2A24; color: var(--tv-text-primary); }
+html[data-theme="dark"] .btn-secondary:hover { background: #25332B; }
+
+/* ---- GLASS ---- (light, frosted) */
+html[data-theme="glass"] {
+  --tv-bg:           #E7F0EA;
+  --tv-card:         rgba(255,255,255,.62);
+  --tv-white:        rgba(255,255,255,.62);
+  --tv-border:       rgba(26,77,59,.14);
+  --tv-border-light: rgba(26,77,59,.08);
+  --shadow-sm:  0 2px 10px rgba(26,77,59,.10);
+  --shadow-md:  0 6px 22px rgba(26,77,59,.14);
+  --shadow-lg:  0 14px 40px rgba(26,77,59,.18);
+}
+html[data-theme="glass"] body {
+  background: linear-gradient(135deg, #D7E8DF 0%, #EAF3EE 38%, #F3ECDD 72%, #E4EEF6 100%);
+  background-attachment: fixed;
+}
+html[data-theme="glass"] .card,
+html[data-theme="glass"] .kpi-card,
+html[data-theme="glass"] .topbar,
+html[data-theme="glass"] .stat-tile {
+  background: var(--tv-card);
+  backdrop-filter: blur(16px) saturate(150%);
+  -webkit-backdrop-filter: blur(16px) saturate(150%);
+  border: 1px solid rgba(255,255,255,.55);
+}
+html[data-theme="glass"] .sidebar {
+  background: linear-gradient(180deg, rgba(26,77,59,.88), rgba(20,60,46,.92));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+html[data-theme="glass"] .form-input,
+html[data-theme="glass"] .form-select,
+html[data-theme="glass"] .topbar-search input { background: rgba(255,255,255,.6); }
+
+/* Smooth the switch between themes */
+.app-shell, .card, .kpi-card, .topbar, .sidebar, .btn, .form-input, .form-select {
+  transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+}

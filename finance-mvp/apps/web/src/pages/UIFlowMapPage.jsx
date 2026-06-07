@@ -1,133 +1,134 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+
+/* The app's navigation architecture, mirroring the sidebar plus utility routes.
+   Data-driven so it stays complete as features are added. */
+const SECTIONS = [
+  {
+    label: 'Finance', color: 'var(--tv-forest)',
+    items: [
+      { to: '/', icon: 'ti ti-layout-dashboard', label: 'Home', sub: 'Dashboard' },
+      { to: '/accounts', icon: 'ti ti-wallet', label: 'Accounts', sub: 'Linked banks' },
+      { to: '/transactions', icon: 'ti ti-arrows-exchange-2', label: 'Transactions', sub: 'Search · sort · export' },
+      { to: '/budget', icon: 'ti ti-chart-pie', label: 'Budgets', sub: 'Category limits' },
+      { to: '/billpay', icon: 'ti ti-receipt', label: 'Pay Bills', sub: '5-step wizard' },
+      { to: '/debt', icon: 'ti ti-trending-down', label: 'Debt Lab', sub: 'Strategy compare' },
+      { to: '/invest', icon: 'ti ti-chart-line', label: 'Investments', sub: 'Portfolio' },
+      { to: '/mybusiness', icon: 'ti ti-briefcase', label: 'My Business', sub: 'P&L · invoices' },
+      { to: '/ai-assistant', icon: 'ti ti-sparkles', label: 'AI Assistant', sub: 'Insights · chat' },
+    ],
+  },
+  {
+    label: 'Real Estate', color: 'var(--tv-gold)',
+    items: [
+      { to: '/realestate', icon: 'ti ti-building-estate', label: 'Properties', sub: 'Value & equity' },
+      { to: '/dealroom', icon: 'ti ti-briefcase', label: 'Deal Room', sub: 'Opportunity detail' },
+      { to: '/fractional', icon: 'ti ti-brand-stackshare', label: 'Fractional LLC', sub: 'Co-investment' },
+    ],
+  },
+  {
+    label: 'Account & Help', color: 'var(--tv-forest-light)',
+    items: [
+      { to: '/security', icon: 'ti ti-shield-lock', label: 'Security', sub: '2FA · sessions' },
+      { to: '/messages', icon: 'ti ti-message-2', label: 'Messages', sub: 'Inbox' },
+      { to: '/settings', icon: 'ti ti-settings', label: 'Settings', sub: 'Preferences' },
+      { to: '/profile', icon: 'ti ti-user', label: 'Profile', sub: 'Your account' },
+      { to: '/guide', icon: 'ti ti-compass', label: 'How to use', sub: 'Feature guide' },
+      { to: '/learn', icon: 'ti ti-book-2', label: 'Learn', sub: 'Education' },
+    ],
+  },
+];
+
+/* Key end-to-end journeys, as ordered steps. */
+const JOURNEYS = [
+  {
+    title: 'Onboarding', icon: 'ti ti-rocket',
+    steps: ['Sign up', 'Link account (Plaid)', 'Dashboard populates', 'Set a budget'],
+  },
+  {
+    title: 'Pay a bill', icon: 'ti ti-receipt',
+    steps: ['Pick card / biller', 'Amount', 'Funding account', 'Review', 'Done ✓'],
+  },
+  {
+    title: 'Plan debt payoff', icon: 'ti ti-trending-down',
+    steps: ['Add debts', 'Set extra payment', 'Run strategies', 'Compare savings'],
+  },
+  {
+    title: 'Fractional invest', icon: 'ti ti-brand-stackshare',
+    steps: ['Browse deals', 'Review docs', 'Invest', 'Track returns'],
+  },
+  {
+    title: 'AI insight → action', icon: 'ti ti-sparkles',
+    steps: ['Read insight', 'Ask assistant', 'Open suggested screen', 'Act'],
+  },
+];
 
 export default function UIFlowMapPage() {
+  const navigate = useNavigate();
+
   return (
     <div id="page-flowmap" className="page active">
       <div className="page-header">
-        <div><div className="page-title">UI Flow Map</div><div className="page-subtitle">Navigation architecture and user journeys</div></div>
+        <div>
+          <div className="page-title">UI Flow Map</div>
+          <div className="page-subtitle">Navigation architecture and key user journeys — click any node to open it</div>
+        </div>
+        <div className="page-actions">
+          <button className="btn btn-primary btn-sm" onClick={() => navigate('/guide')}>
+            <i className="ti ti-book-2"></i> Open the how-to guide
+          </button>
+        </div>
       </div>
 
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div className="section-title">Application navigation architecture</div>
-        <svg viewBox="0 0 820 600" width="100%" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-              <path d="M2 1L8 5L2 9" fill="none" stroke="#8AB89A" strokeWidth="1.5" strokeLinecap="round"/>
-            </marker>
-          </defs>
+      {/* Navigation architecture */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="section-title" style={{ marginBottom: 14 }}>Application navigation architecture</div>
+        <div style={{ display: 'grid', gap: 18 }}>
+          {SECTIONS.map((section) => (
+            <div key={section.label}>
+              <div className="guide-group-label" style={{ color: section.color }}>{section.label}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {section.items.map((item) => (
+                  <button
+                    key={item.to}
+                    className="flow-node"
+                    style={{ '--node-accent': section.color }}
+                    onClick={() => navigate(item.to)}
+                    title={`Open ${item.label}`}
+                  >
+                    <span className="flow-node-icon"><i className={item.icon}></i></span>
+                    <span style={{ textAlign: 'left', minWidth: 0 }}>
+                      <span className="flow-node-label">{item.label}</span>
+                      <span className="flow-node-sub">{item.sub}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          {/* Sidebar / Root */}
-          <rect x="10" y="260" width="120" height="44" rx="8" fill="#1A4D3B" stroke="#1A4D3B"/>
-          <text x="70" y="283" textAnchor="middle" fontSize="13" fill="white" fontFamily="DM Sans,sans-serif" fontWeight="600">TerraVest App</text>
-          <text x="70" y="297" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.6)" fontFamily="DM Sans,sans-serif">Left sidebar</text>
-
-          {/* Finance section label */}
-          <text x="220" y="42" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif" fontWeight="600" letterSpacing="1">FINANCE</text>
-
-          {/* Finance pages row 1 */}
-          <rect x="160" y="50" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="215" y="73" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Home</text>
-          <text x="215" y="87" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Dashboard</text>
-
-          <rect x="290" y="50" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="345" y="73" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Accounts</text>
-          <text x="345" y="87" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Linked banks</text>
-
-          <rect x="420" y="50" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="475" y="73" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Transactions</text>
-          <text x="475" y="87" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">History &amp; search</text>
-
-          <rect x="550" y="50" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="605" y="73" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Budgets</text>
-          <text x="605" y="87" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Category limits</text>
-
-          <rect x="680" y="50" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="735" y="73" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Investments</text>
-          <text x="735" y="87" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Portfolio</text>
-
-          {/* Finance row 2 */}
-          <rect x="160" y="130" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="215" y="153" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Pay Bills</text>
-          <text x="215" y="167" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">5-step wizard</text>
-
-          <rect x="290" y="130" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" strokeWidth="1"/>
-          <text x="345" y="153" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Debt Lab</text>
-          <text x="345" y="167" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Strategy compare</text>
-
-          {/* Arrows: sidebar → finance pages */}
-          <line x1="130" y1="275" x2="160" y2="72" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="275" x2="290" y2="72" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="275" x2="420" y2="72" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="275" x2="550" y2="72" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="275" x2="680" y2="72" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="282" x2="160" y2="152" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-          <line x1="130" y1="282" x2="290" y2="152" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".5"/>
-
-          {/* Real Estate section label */}
-          <text x="350" y="240" textAnchor="middle" fontSize="10" fill="#C9973A" fontFamily="DM Sans,sans-serif" fontWeight="600" letterSpacing="1">REAL ESTATE</text>
-
-          <rect x="160" y="250" width="120" height="44" rx="8" fill="#FDF5E4" stroke="#C9973A" strokeWidth="1.5"/>
-          <text x="220" y="273" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Properties</text>
-          <text x="220" y="287" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Portfolio widget</text>
-
-          <rect x="300" y="250" width="120" height="44" rx="8" fill="#FDF5E4" stroke="#C9973A" strokeWidth="1.5"/>
-          <text x="360" y="273" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Deal Room</text>
-          <text x="360" y="287" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Opportunity detail</text>
-
-          <rect x="440" y="250" width="120" height="44" rx="8" fill="#FDF5E4" stroke="#C9973A" strokeWidth="1.5"/>
-          <text x="500" y="273" textAnchor="middle" fontSize="12" fill="#1A4D3B" fontFamily="DM Sans,sans-serif" fontWeight="600">Fractional LLC</text>
-          <text x="500" y="287" textAnchor="middle" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif">Auto formation</text>
-
-          {/* Arrows sidebar → RE pages */}
-          <line x1="130" y1="290" x2="160" y2="272" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".6"/>
-          <line x1="130" y1="290" x2="300" y2="272" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".6"/>
-          <line x1="130" y1="290" x2="440" y2="272" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)" opacity=".6"/>
-
-          {/* Key interactions */}
-          <text x="160" y="360" textAnchor="start" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif" fontWeight="600" letterSpacing="1">KEY USER JOURNEYS</text>
-
-          {/* Journey 1: Bill Pay flow */}
-          <text x="160" y="382" textAnchor="start" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif" fontWeight="600">Bill Pay wizard:</text>
-          <rect x="160" y="390" width="70" height="28" rx="6" fill="#EAF3EE" stroke="#8AB89A"/>
-          <text x="195" y="408" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Select card</text>
-          <line x1="230" y1="404" x2="245" y2="404" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="245" y="390" width="60" height="28" rx="6" fill="#EAF3EE" stroke="#8AB89A"/>
-          <text x="275" y="408" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Amount</text>
-          <line x1="305" y1="404" x2="320" y2="404" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="320" y="390" width="65" height="28" rx="6" fill="#EAF3EE" stroke="#8AB89A"/>
-          <text x="352" y="408" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Funding</text>
-          <line x1="385" y1="404" x2="400" y2="404" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="400" y="390" width="60" height="28" rx="6" fill="#C9973A" stroke="#C9973A"/>
-          <text x="430" y="408" textAnchor="middle" fontSize="10" fill="white" fontFamily="DM Sans,sans-serif">Review</text>
-          <line x1="460" y1="404" x2="475" y2="404" stroke="#8AB89A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="475" y="390" width="55" height="28" rx="6" fill="#1A4D3B" stroke="#1A4D3B"/>
-          <text x="502" y="408" textAnchor="middle" fontSize="10" fill="white" fontFamily="DM Sans,sans-serif">Done ✓</text>
-
-          {/* Journey 2: Investment subscription */}
-          <text x="160" y="450" textAnchor="start" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif" fontWeight="600">Investment subscription:</text>
-          <rect x="160" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-          <text x="205" y="476" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Browse deals</text>
-          <line x1="250" y1="472" x2="265" y2="472" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="265" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-          <text x="310" y="476" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Review docs</text>
-          <line x1="355" y1="472" x2="370" y2="472" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="370" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-          <text x="415" y="476" textAnchor="middle" fontSize="10" fill="#1A4D3B" fontFamily="DM Sans,sans-serif">Acknowledge</text>
-          <line x1="460" y1="472" x2="475" y2="472" stroke="#C9973A" strokeWidth="1" markerEnd="url(#arr2)"/>
-          <rect x="475" y="458" width="80" height="28" rx="6" fill="#1A4D3B" stroke="#1A4D3B"/>
-          <text x="515" y="476" textAnchor="middle" fontSize="10" fill="white" fontFamily="DM Sans,sans-serif">Subscribe ✓</text>
-
-          {/* Settings section */}
-          <text x="160" y="530" textAnchor="start" fontSize="10" fill="#7A9086" fontFamily="DM Sans,sans-serif" fontWeight="600" letterSpacing="1">ACCOUNT</text>
-          <rect x="160" y="540" width="90" height="36" rx="8" fill="#F0F4F8" stroke="#DDE5E1"/>
-          <text x="205" y="562" textAnchor="middle" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif">Security</text>
-          <rect x="265" y="540" width="90" height="36" rx="8" fill="#F0F4F8" stroke="#DDE5E1"/>
-          <text x="310" y="562" textAnchor="middle" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif">Messages</text>
-          <rect x="370" y="540" width="90" height="36" rx="8" fill="#F0F4F8" stroke="#DDE5E1"/>
-          <text x="415" y="562" textAnchor="middle" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif">Settings</text>
-          <rect x="475" y="540" width="90" height="36" rx="8" fill="#F0F4F8" stroke="#DDE5E1"/>
-          <text x="520" y="562" textAnchor="middle" fontSize="11" fill="#4A5E54" fontFamily="DM Sans,sans-serif">Sign out</text>
-        </svg>
+      {/* Key user journeys */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="section-title" style={{ marginBottom: 14 }}>Key user journeys</div>
+        <div style={{ display: 'grid', gap: 16 }}>
+          {JOURNEYS.map((j) => (
+            <div key={j.title}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--tv-text-secondary)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className={j.icon} style={{ color: 'var(--tv-forest-light)' }}></i> {j.title}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+                {j.steps.map((step, i) => (
+                  <React.Fragment key={step}>
+                    <span className={`flow-step ${i === j.steps.length - 1 ? 'flow-step-end' : ''}`}>{step}</span>
+                    {i < j.steps.length - 1 && <i className="ti ti-arrow-right" style={{ color: 'var(--tv-text-muted)', fontSize: 14 }}></i>}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Responsive notes */}
