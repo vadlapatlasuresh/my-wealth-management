@@ -33,6 +33,10 @@ x-java-defaults: &java-defaults
     AUDIT_INGEST_KEY: ${AUDIT_INGEST_KEY:?set AUDIT_INGEST_KEY in .env.prod}
     # JVM: respect container memory limits
     JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50"
+    # Neon connection budget: cap each service's pool so 10 services don't exhaust
+    # Postgres' connection limit (10 * 5 = 50 max). minimum-idle keeps it lean.
+    SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
+    SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE: "1"
   healthcheck:
     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/actuator/health"]
     interval: 15s
@@ -139,6 +143,9 @@ services:
       DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
       REALESTATE_PROVIDER_API_KEY: ${REALESTATE_PROVIDER_API_KEY:-}
+      # Deal Room lead notifications -> notification-service (best-effort, shared key)
+      SERVICE_NOTIFICATION_URL: http://notification-service:8080
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
 
   business-financials-service:
     <<: *java-defaults
@@ -194,6 +201,8 @@ services:
       API_GATEWAY_URL: http://api-gateway:8080
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
       FCM_SERVER_KEY: ${FCM_SERVER_KEY:-}
+      # Shared key the real-estate-service presents to /notifications/internal
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
 
   platform-config-service:
     <<: *java-defaults
