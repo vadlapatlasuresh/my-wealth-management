@@ -84,23 +84,9 @@ function accountTypeBadge(type) {
   }
 }
 
-/* Seed exactly one example business when the list is empty. */
-function seedBusinesses() {
-  return [
-    {
-      id: makeId(),
-      name: 'TerraVest Holdings LLC',
-      industry: 'Real Estate',
-      entityType: 'LLC',
-      ein: '',
-      createdAt: new Date().toISOString(),
-    },
-  ];
-}
-
-/* Build a deterministic 6-month revenue series.
-   Prefers a real series from the dashboard; otherwise derives a stable
-   demo series from the dashboard's revenueMtd (or a static fallback). */
+/* Build a 6-month revenue series from REAL dashboard data only.
+   When there's no real trend data we return a zeroed series (honest empty
+   chart) rather than fabricating revenue numbers. */
 function buildRevenueSeries(dashboard) {
   // If the API already returns a trend array, trust it.
   const apiSeries = dashboard?.revenueTrend || dashboard?.revenueSeries;
@@ -111,13 +97,10 @@ function buildRevenueSeries(dashboard) {
     }));
   }
 
-  // Deterministic demo series anchored on revenueMtd (or a sensible default).
-  const base = Number(dashboard?.revenueMtd) || 42000;
-  // Fixed multipliers keep the chart stable across renders (no randomness).
-  const mult = [0.72, 0.81, 0.78, 0.9, 0.95, 1.0];
-  return mult.map((m, i) => ({
-    label: monthLabel(5 - i),
-    value: Math.round(base * m),
+  // No real series → empty (zeroed) chart, no fabricated revenue.
+  return [5, 4, 3, 2, 1, 0].map((monthsAgo) => ({
+    label: monthLabel(monthsAgo),
+    value: 0,
   }));
 }
 
@@ -141,13 +124,11 @@ export default function MyBusinessPage({ user, formatDate }) {
   const [invoices, setInvoices] = useState([]);
   const [expenses, setExpenses] = useState([]);
 
-  /* ---- Local multi-business state (localStorage-backed) ---- */
+  /* ---- Local multi-business state (localStorage-backed) ----
+   * Start empty; the user adds their own business or connects QuickBooks. */
   const [businesses, setBusinesses] = useState(() => {
     const stored = readLS(LS_BUSINESSES, null);
-    if (Array.isArray(stored) && stored.length) return stored;
-    const seeded = seedBusinesses();
-    writeLS(LS_BUSINESSES, seeded);
-    return seeded;
+    return Array.isArray(stored) ? stored : [];
   });
   const [selectedId, setSelectedId] = useState(() => readLS(LS_SELECTED, null));
 
@@ -221,19 +202,10 @@ export default function MyBusinessPage({ user, formatDate }) {
       setManualFigures(null);
       return;
     }
-    // Load accounts; seed a checking account for the seeded example business.
+    // Load accounts; start empty — the user adds real accounts themselves.
     let acc = readLS(accountsKey(selectedBusiness.id), null);
     if (!Array.isArray(acc)) {
-      acc = selectedBusiness.name === 'TerraVest Holdings LLC'
-        ? [{
-            id: makeId(),
-            name: 'Operating Checking',
-            institution: 'Mercury',
-            type: 'CHECKING',
-            balance: 128450,
-            createdAt: new Date().toISOString(),
-          }]
-        : [];
+      acc = [];
       writeLS(accountsKey(selectedBusiness.id), acc);
     }
     setAccounts(acc);

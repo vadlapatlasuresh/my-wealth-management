@@ -1372,3 +1372,17 @@ html[data-theme="glass"] .topbar-search input { background: rgba(255,255,255,.6)
 .app-shell, .card, .kpi-card, .topbar, .sidebar, .btn, .form-input, .form-select {
   transition: background-color .25s ease, color .25s ease, border-color .25s ease;
 }
+
+/* =============================================
+   RTL (right-to-left) support — Arabic, etc.
+   The shell is flex, so [dir=rtl] mirrors the sidebar to the right
+   automatically; these rules tidy up text alignment and a few icon-spacing
+   cases that don't flip on their own.
+   ============================================= */
+html[dir="rtl"] body,
+html[dir="rtl"] .page-content { text-align: right; }
+html[dir="rtl"] .topbar-search i { left: auto; right: 14px; }
+html[dir="rtl"] .topbar-search input { padding-left: 12px; padding-right: 40px; }
+html[dir="rtl"] .nav-badge { margin-left: 0; margin-right: auto; }
+html[dir="rtl"] .sidebar-user .ti-logout { margin-left: 0 !important; margin-right: auto !important; }
+html[dir="rtl"] .btn i { margin-left: 6px; margin-right: 0; }

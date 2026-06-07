@@ -19,6 +19,29 @@ export function pct(value) {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+/* Time-of-day greeting based on the given (or current) time.
+   Morning < 12:00, afternoon < 17:00, evening otherwise. */
+export function greeting(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  const h = Number.isNaN(d.getTime()) ? new Date().getHours() : d.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/* Full date + time in the user's system locale + timezone by default.
+   Pass a `locale` (e.g. "en-GB"), `timeZone`, or `hour12` later to let users switch. */
+export function formatDateTime(date = new Date(), { locale, timeZone, hour12 } = {}) {
+  const d = date instanceof Date ? date : new Date(date);
+  const dateStr = d.toLocaleDateString(locale, {
+    weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone,
+  });
+  const timeStr = d.toLocaleTimeString(locale, {
+    hour: "numeric", minute: "2-digit", timeZone, hour12,
+  });
+  return { dateStr, timeStr };
+}
+
 /* Compact "time ago" for last-refreshed indicators: "just now", "5m ago", "3h ago", "2d ago". */
 export function timeAgo(input) {
   if (!input) return "—";

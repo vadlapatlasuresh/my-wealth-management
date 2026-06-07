@@ -20,10 +20,11 @@ CREATE SCHEMA IF NOT EXISTS ai;
 CREATE SCHEMA IF NOT EXISTS payments;
 CREATE SCHEMA IF NOT EXISTS notifications;
 CREATE SCHEMA IF NOT EXISTS platform_config;
+CREATE SCHEMA IF NOT EXISTS audit;
 
 -- Optional: a least-privilege app role (recommended over the Neon owner role).
 -- Replace 'CHANGE_ME' and grant on each schema.
 -- CREATE ROLE wealth_app LOGIN PASSWORD 'CHANGE_ME';
 -- GRANT USAGE, CREATE ON SCHEMA
---   auth, aggregation, core, real_estate, business, ai, payments, notifications, platform_config
+--   auth, aggregation, core, real_estate, business, ai, payments, notifications, platform_config, audit
 --   TO wealth_app;

@@ -1,5 +1,6 @@
 package com.mywealthmanagement.authservice.auth;
 
+import com.mywealthmanagement.authservice.audit.AuditClient;
 import com.mywealthmanagement.authservice.auth.dto.LoginRequest;
 import com.mywealthmanagement.authservice.auth.dto.RegisterRequest;
 import com.mywealthmanagement.authservice.user.Role;
@@ -23,6 +24,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final AuditClient auditClient;
 
     public Optional<User> registerUser(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -65,7 +67,9 @@ public class AuthService {
                 : newUser.getSsnLast4() != null;
         newUser.setIdentityVerified(idVerified);
 
-        return Optional.of(userRepository.save(newUser));
+        User saved = userRepository.save(newUser);
+        auditClient.record(String.valueOf(saved.getId()), "auth.register.success", "SUCCESS", null);
+        return Optional.of(saved);
     }
 
     private static boolean isBlank(String s) {
@@ -88,15 +92,30 @@ public class AuthService {
         return userRepository.findByEmail(email);
     }
 
+    /** Role names (e.g. ["USER","CARE"]) for the JWT roles claim. */
+    private static java.util.List<String> roleNames(User user) {
+        if (user.getRoles() == null) return java.util.List.of();
+        return user.getRoles().stream().map(Enum::name).toList();
+    }
+
     public String loginUser(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+        Authentication authentication;
+        try {
+            authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+        } catch (RuntimeException ex) {
+            // Bad credentials / disabled / locked etc. — record the failed attempt (no userId).
+            auditClient.record(null, "auth.login.failure", "FAILURE", "email=" + request.getEmail());
+            throw ex;
+        }
         if (authentication.isAuthenticated()) {
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found"));
-            return jwtService.generateToken(String.valueOf(user.getId()));
+            auditClient.record(String.valueOf(user.getId()), "auth.login.success", "SUCCESS", null);
+            return jwtService.generateToken(String.valueOf(user.getId()), roleNames(user));
         }
+        auditClient.record(null, "auth.login.failure", "FAILURE", "email=" + request.getEmail());
         throw new RuntimeException("Invalid credentials"); // Should be caught by AuthenticationManager
     }
 }

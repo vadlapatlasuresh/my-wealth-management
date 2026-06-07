@@ -2,90 +2,18 @@ import { useState } from 'react';
 import { currency } from '../utils/format';
 
 /* ------------------------------------------------------------------ *
- * Self-contained mock data
+ * Real data only — populated by a fractional-investing provider when
+ * connected. Empty until then (honest empty states below).
  * ------------------------------------------------------------------ */
 
 // Properties the investor already co-owns through fractional LLCs.
-const HOLDINGS = [
-  {
-    id: 'h1',
-    name: 'Cedar Ridge Farmland LLC',
-    address: '2,400 ac · Story County, Iowa',
-    icon: 'ti ti-plant-2',
-    shares: 120,
-    totalShares: 5000,
-    invested: 24000,
-    currentValue: 28850,
-  },
-  {
-    id: 'h2',
-    name: 'Harborview Apartments LLC',
-    address: '88-unit multifamily · Tampa, FL',
-    icon: 'ti ti-building-community',
-    shares: 60,
-    totalShares: 4000,
-    invested: 30000,
-    currentValue: 31650,
-  },
-  {
-    id: 'h3',
-    name: 'Timberline Forest Tract LLC',
-    address: '1,150 ac managed timber · Bend, OR',
-    icon: 'ti ti-trees',
-    shares: 40,
-    totalShares: 6000,
-    invested: 10000,
-    currentValue: 11420,
-  },
-];
+// Real data only — no fabricated positions/offerings. These populate from a
+// fractional-investing provider once connected; until then the views below show
+// honest empty states.
+const HOLDINGS = [];
 
 // Open offerings on the marketplace.
-const OFFERINGS = [
-  {
-    id: 'o1',
-    name: 'Magnolia Grove Build-to-Rent LLC',
-    address: '36-home BTR community · Austin, TX',
-    icon: 'ti ti-home-2',
-    risk: 'Medium',
-    targetReturn: '11.4% IRR',
-    minInvestment: 5000,
-    raiseTarget: 4200000,
-    raised: 2940000,
-  },
-  {
-    id: 'o2',
-    name: 'Prairie Wind Cropland LLC',
-    address: '1,800 ac row crop · Champaign, IL',
-    icon: 'ti ti-plant-2',
-    risk: 'Low',
-    targetReturn: '7.8% IRR',
-    minInvestment: 2500,
-    raiseTarget: 3100000,
-    raised: 2635000,
-  },
-  {
-    id: 'o3',
-    name: 'Beacon Street Mixed-Use LLC',
-    address: 'Retail + 24 lofts · Charleston, SC',
-    icon: 'ti ti-building-store',
-    risk: 'Medium',
-    targetReturn: '13.2% IRR',
-    minInvestment: 10000,
-    raiseTarget: 6800000,
-    raised: 1564000,
-  },
-  {
-    id: 'o4',
-    name: 'Sierra Solar Land Lease LLC',
-    address: '640 ac utility lease · Bakersfield, CA',
-    icon: 'ti ti-sun-electricity',
-    risk: 'Low',
-    targetReturn: '6.5% IRR',
-    minInvestment: 1000,
-    raiseTarget: 2400000,
-    raised: 2280000,
-  },
-];
+const OFFERINGS = [];
 
 function pctOf(part, whole) {
   if (!whole) return 0;
@@ -107,7 +35,12 @@ export default function FractionalLLCPage() {
     <div id="page-fractional-llc" className="page active">
       <div className="page-header">
         <div>
-          <div className="page-title">Fractional LLC</div>
+          <div className="page-title">
+            Fractional LLC{' '}
+            <span className="badge badge-gray" style={{ verticalAlign: 'middle', fontSize: 11 }}>
+              <i className="ti ti-flask"></i> Example offerings — not live
+            </span>
+          </div>
           <div className="page-subtitle">
             Co-invest in land &amp; property through fractional ownership
           </div>
@@ -301,6 +234,17 @@ function HoldingsView() {
  * Marketplace
  * ------------------------------------------------------------------ */
 function MarketplaceView({ invested, setInvested }) {
+  if (OFFERINGS.length === 0) {
+    return (
+      <div className="card">
+        <div className="empty-state">
+          <i className="ti ti-building-store"></i>
+          <p>No open offerings right now. Curated fractional deals will appear here
+            once a marketplace provider is connected.</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div>
       <div className="section-header">

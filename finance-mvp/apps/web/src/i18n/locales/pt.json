@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "Idioma",
+    "auto": "Automático (navegador)",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "Início",
+    "accounts": "Contas",
+    "transactions": "Transações",
+    "budget": "Orçamento",
+    "billpay": "Pagar contas",
+    "debt": "Laboratório de dívidas",
+    "invest": "Investimentos",
+    "mybusiness": "Meu negócio",
+    "ai-assistant": "Assistente de IA",
+    "realestate": "Imóveis",
+    "dealroom": "Sala de negócios",
+    "fractional": "LLC fracionada",
+    "security": "Segurança",
+    "messages": "Mensagens",
+    "settings": "Configurações",
+    "styleguide": "Guia de estilo",
+    "flowmap": "Mapa de fluxo da interface",
+    "guide": "Como usar",
+    "profile": "Perfil",
+    "learn": "Aprender",
+    "calculators": "Calculadoras",
+    "goals": "Metas"
+  },
+  "section": {
+    "finance": "Finanças",
+    "realestate": "Imóveis",
+    "settings": "Configurações"
+  },
+  "brand": {
+    "tagline": "Todo o seu patrimônio · Em um só lugar"
+  },
+  "topbar": {
+    "searchPlaceholder": "Buscar transações… (pressione Enter)",
+    "notifications": "Notificações",
+    "noNotifications": "Nenhuma notificação",
+    "viewAllMessages": "Ver todas as mensagens",
+    "new": "{{count}} novas",
+    "help": "Ajuda e aprendizado",
+    "themeTip": "Tema: {{theme}} — clique para alternar",
+    "toggleMenu": "Alternar menu de navegação",
+    "expandMenu": "Expandir menu",
+    "collapseMenu": "Recolher menu"
+  },
+  "theme": {
+    "light": "Claro",
+    "dark": "Escuro",
+    "glass": "Vidro"
+  },
+  "user": {
+    "viewProfile": "Ver perfil",
+    "signOut": "Sair",
+    "user": "Usuário"
+  },
+  "common": {
+    "loading": "Carregando…",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "add": "Adicionar",
+    "back": "Voltar",
+    "next": "Avançar",
+    "done": "Concluído",
+    "refresh": "Atualizar",
+    "search": "Buscar",
+    "retry": "Tentar novamente",
+    "all": "Tudo",
+    "none": "Nenhum",
+    "yes": "Sim",
+    "no": "Não",
+    "amount": "Valor",
+    "date": "Data",
+    "status": "Status",
+    "type": "Tipo",
+    "name": "Nome",
+    "total": "Total",
+    "today": "Hoje",
+    "lastRefreshed": "Última atualização {{time}}",
+    "viewAll": "Ver tudo",
+    "comingSoon": "Em breve",
+    "sessionExpired": "Sua sessão expirou. Faça login novamente."
+  },
+  "disclaimer": {
+    "iUnderstand": "Entendi"
+  }
+}

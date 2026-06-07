@@ -52,7 +52,16 @@ public class BudgetService {
                 .map(line -> new BudgetLineDto(line.getCategory(), line.getAmount(), spentByCategory.getOrDefault(line.getCategory(), BigDecimal.ZERO)))
                 .collect(Collectors.toList()) : Collections.emptyList();
 
-        return new BudgetDto(month, budgetLineDtos, Collections.emptyList()); // Alerts will be calculated in frontend
+        // Real alerts: any category whose actual spend exceeds its budgeted amount.
+        List<com.mywealthmanagement.financialcoreservice.budget.dto.BudgetAlertDto> alerts =
+                budgetLineDtos.stream()
+                        .filter(l -> l.getAmount() != null && l.getSpent() != null
+                                && l.getSpent().compareTo(l.getAmount()) > 0)
+                        .map(l -> new com.mywealthmanagement.financialcoreservice.budget.dto.BudgetAlertDto(
+                                l.getCategory(), l.getSpent().subtract(l.getAmount())))
+                        .collect(Collectors.toList());
+
+        return new BudgetDto(month, budgetLineDtos, alerts);
     }
 
     @Transactional

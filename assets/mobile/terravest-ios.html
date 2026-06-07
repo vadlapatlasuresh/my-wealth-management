@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TerraVest — iOS Design (iPhone)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css" rel="stylesheet" />
+<style>
+:root{
+  --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68; --tv-sage:#8AB89A; --tv-sage-pale:#EAF3EE;
+  --tv-gold:#C9973A; --tv-gold-light:#F0C878; --tv-gold-pale:#FDF5E4;
+  --tv-positive:#1E7B4B; --tv-positive-bg:#E6F4EC; --tv-negative:#C0392B; --tv-negative-bg:#FDECEA; --tv-warning:#B07D1C; --tv-warning-bg:#FEF6E0;
+  --tv-bg:#F4F6F5; --tv-card:#FFFFFF; --tv-border:#DDE5E1; --tv-border-light:#EEF3F0;
+  --tv-text-primary:#111D17; --tv-text-secondary:#4A5E54; --tv-text-muted:#7A9086;
+  --display:'DM Serif Display', Georgia, serif;
+  --body:'DM Sans', -apple-system, system-ui, sans-serif;
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-font-smoothing:antialiased;}
+html,body{font-family:var(--body); color:var(--tv-text-primary);}
+body{
+  background:radial-gradient(circle at 50% 0%, #14241c 0%, #0c1612 70%);
+  min-height:100vh; padding:0 0 80px;
+}
+
+/* ===== Studio header ===== */
+.studio-header{
+  text-align:center; padding:54px 24px 30px; color:#fff;
+}
+.studio-brand{
+  display:inline-flex; align-items:center; gap:14px; margin-bottom:22px;
+}
+.logo-tile{
+  width:54px; height:54px; border-radius:15px;
+  background:linear-gradient(150deg, var(--tv-gold-light), var(--tv-gold));
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 8px 24px rgba(201,151,58,.35), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.brand-text .name{ font-family:var(--display); font-size:32px; line-height:1; color:#fff; letter-spacing:.3px;}
+.brand-text .tag{ font-size:13px; color:#9db8aa; margin-top:6px; letter-spacing:.4px;}
+.studio-pill{
+  display:inline-flex; align-items:center; gap:9px;
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  color:#dff0e7; padding:9px 18px; border-radius:999px; font-size:14px; font-weight:600;
+  backdrop-filter:blur(8px);
+}
+.studio-pill i{ font-size:18px; }
+.studio-sub{ color:#7e988b; font-size:13.5px; margin-top:14px; letter-spacing:.3px;}
+
+/* ===== Phone wall ===== */
+.wall{
+  display:flex; flex-wrap:wrap; gap:42px 36px; justify-content:center;
+  max-width:1760px; margin:24px auto 0; padding:0 28px;
+}
+.phone-wrap{ display:flex; flex-direction:column; align-items:center; }
+.caption-chip{
+  margin-top:18px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  color:#cfe3d8; font-size:13px; font-weight:600; padding:7px 16px; border-radius:999px;
+  display:inline-flex; align-items:center; gap:8px; backdrop-filter:blur(6px);
+}
+.caption-chip .num{
+  width:20px;height:20px;border-radius:50%;background:var(--tv-gold);color:#3a2a08;
+  display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
+}
+
+/* ===== iPhone frame ===== */
+.iphone{
+  position:relative; width:390px; height:844px; flex:0 0 auto;
+  background:#0a0a0a; border-radius:54px; padding:11px;
+  box-shadow:0 0 0 2px #1c1c1e, 0 30px 70px -20px rgba(0,0,0,.8), 0 10px 30px rgba(0,0,0,.5);
+}
+.screen{
+  position:relative; width:100%; height:100%; background:var(--tv-bg);
+  border-radius:44px; overflow:hidden;
+  display:flex; flex-direction:column;
+}
+.screen.dark{ background:#0A130E; color:#E8F0EB; }
+
+/* Dynamic Island */
+.dynamic-island{
+  position:absolute; top:13px; left:50%; transform:translateX(-50%);
+  width:122px; height:34px; background:#000; border-radius:20px; z-index:60;
+  display:flex; align-items:center; justify-content:flex-end; padding-right:11px; gap:8px;
+}
+.dynamic-island::before{ content:""; width:9px; height:9px; border-radius:50%; background:#0e1f17; box-shadow:inset 0 0 3px rgba(40,90,70,.8);}
+
+/* iOS status bar */
+.statusbar{
+  height:54px; padding:18px 30px 0; display:flex; align-items:center; justify-content:space-between;
+  font-size:15px; font-weight:600; flex:0 0 auto; position:relative; z-index:50;
+}
+.statusbar .time{ letter-spacing:.3px; }
+.statusbar .indicators{ display:flex; align-items:center; gap:6px; font-size:16px; }
+.dark .statusbar{ color:#E8F0EB; }
+
+/* Scrollable content */
+.content{
+  flex:1 1 auto; overflow:hidden; position:relative;
+  display:flex; flex-direction:column;
+}
+.scroll{ flex:1; overflow:hidden; padding:4px 18px 14px; }
+.scroll.bills{ padding-bottom:0; }
+
+/* iOS nav large title */
+.nav-large{ padding:6px 18px 8px; }
+.nav-large h1{ font-size:32px; font-weight:700; letter-spacing:-.5px; }
+.nav-back{
+  display:inline-flex; align-items:center; gap:1px; color:var(--tv-forest);
+  font-size:17px; font-weight:500; padding:6px 18px 2px; cursor:default;
+}
+.nav-back i{ font-size:22px; margin-left:-4px; }
+.dark .nav-back{ color:var(--tv-sage); }
+
+/* iOS bottom tab bar */
+.tabbar{
+  flex:0 0 auto; height:84px; padding:9px 8px 0;
+  background:rgba(255,255,255,.82); backdrop-filter:blur(22px) saturate(180%);
+  border-top:.5px solid rgba(0,0,0,.12);
+  display:flex; justify-content:space-around; align-items:flex-start;
+  position:relative; z-index:40;
+}
+.dark .tabbar{ background:rgba(12,22,16,.82); border-top:.5px solid rgba(255,255,255,.1); }
+.tab{ display:flex; flex-direction:column; align-items:center; gap:3px; color:#8a958f; font-size:10px; font-weight:500; width:60px;}
+.tab i{ font-size:25px; }
+.tab.active{ color:var(--tv-forest); }
+.dark .tab.active{ color:var(--tv-sage); }
+.dark .tab{ color:#5d6b63; }
+.home-indicator{
+  position:absolute; bottom:8px; left:50%; transform:translateX(-50%);
+  width:134px; height:5px; border-radius:3px; background:#000; z-index:55;
+}
+.dark .home-indicator{ background:#E8F0EB; }
+
+/* ===== Reusable UI bits ===== */
+.muted{ color:var(--tv-text-muted); }
+.sec-label{ font-size:13px; font-weight:600; color:var(--tv-text-muted); letter-spacing:.4px; text-transform:uppercase; margin:18px 2px 8px; }
+.dark .sec-label{ color:#6f857a; }
+
+/* grouped inset card */
+.group{
+  background:var(--tv-card); border-radius:16px; overflow:hidden;
+  box-shadow:0 1px 2px rgba(17,29,23,.05);
+}
+.dark .group{ background:#0E1A14; box-shadow:none; border:.5px solid rgba(255,255,255,.06); }
+.row{
+  display:flex; align-items:center; gap:13px; padding:13px 15px;
+  border-bottom:.5px solid var(--tv-border-light);
+}
+.dark .row{ border-bottom:.5px solid rgba(255,255,255,.06); }
+.row:last-child{ border-bottom:none; }
+.row .lead-ic{
+  width:34px; height:34px; border-radius:9px; flex:0 0 auto;
+  display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;
+}
+.row .body{ flex:1; min-width:0; }
+.row .body .t{ font-size:15.5px; font-weight:500; }
+.row .body .s{ font-size:12.5px; color:var(--tv-text-muted); margin-top:1px; }
+.row .val{ text-align:right; }
+.row .val .v{ font-size:15.5px; font-weight:600; }
+.row .val .d{ font-size:12px; }
+.row .chev{ color:#c2cdc7; font-size:20px; }
+.dark .row .chev{ color:#3a4742; }
+
+/* segmented control */
+.segmented{
+  display:flex; background:#E6E9E7; border-radius:10px; padding:2px; gap:2px;
+}
+.dark .segmented{ background:#16241c; }
+.segmented .seg{
+  flex:1; text-align:center; padding:7px 4px; font-size:13px; font-weight:600;
+  color:var(--tv-text-secondary); border-radius:8px; white-space:nowrap;
+}
+.dark .segmented .seg{ color:#9db8aa; }
+.segmented .seg.on{
+  background:#fff; color:var(--tv-text-primary); box-shadow:0 1px 3px rgba(0,0,0,.14);
+}
+.dark .segmented .seg.on{ background:#27392f; color:#fff; }
+
+/* iOS toggle */
+.toggle{ width:51px; height:31px; border-radius:16px; background:#E3E6E4; position:relative; flex:0 0 auto;}
+.toggle.on{ background:var(--tv-positive); }
+.toggle::after{ content:""; position:absolute; top:2px; left:2px; width:27px; height:27px; border-radius:50%; background:#fff; box-shadow:0 2px 4px rgba(0,0,0,.25); transition:.2s;}
+.toggle.on::after{ left:22px; }
+
+/* chips */
+.chips{ display:flex; gap:8px; flex-wrap:wrap; }
+.chip{
+  font-size:13px; font-weight:600; padding:7px 13px; border-radius:999px;
+  background:#fff; border:1px solid var(--tv-border); color:var(--tv-text-secondary); white-space:nowrap;
+}
+.chip.on{ background:var(--tv-forest); border-color:var(--tv-forest); color:#fff; }
+.chip.gold{ background:var(--tv-gold-pale); border-color:var(--tv-gold-light); color:var(--tv-warning); }
+.chip.green{ background:var(--tv-positive-bg); border-color:#bfe3cd; color:var(--tv-positive); }
+.chip.red{ background:var(--tv-negative-bg); border-color:#f1bdb6; color:var(--tv-negative); }
+
+/* buttons */
+.btn{
+  width:100%; padding:15px; border-radius:14px; border:none; font-family:var(--body);
+  font-size:16px; font-weight:600; background:var(--tv-forest); color:#fff; text-align:center;
+}
+.btn.gold{ background:linear-gradient(135deg,var(--tv-gold),#b3812c); color:#fff; }
+.btn-sm{
+  padding:7px 15px; border-radius:10px; font-size:13px; font-weight:600;
+  background:var(--tv-forest); color:#fff; border:none; white-space:nowrap;
+}
+.btn-sm.ghost{ background:var(--tv-sage-pale); color:var(--tv-forest); }
+
+/* inputs */
+.field{
+  background:#fff; border:1px solid var(--tv-border); border-radius:13px;
+  padding:14px 15px; font-size:15px; display:flex; align-items:center; gap:11px; margin-bottom:11px;
+}
+.field i{ color:var(--tv-text-muted); font-size:19px; }
+.field .ph{ color:var(--tv-text-muted); }
+.field .typed{ color:var(--tv-text-primary); }
+.dark .field{ background:#0E1A14; border-color:rgba(255,255,255,.1); color:#E8F0EB; }
+
+.pos{ color:var(--tv-positive); }
+.neg{ color:var(--tv-negative); }
+.gold-t{ color:var(--tv-gold); }
+
+/* hero card */
+.hero{
+  border-radius:20px; padding:18px; color:#fff; position:relative; overflow:hidden;
+  background:linear-gradient(150deg, var(--tv-forest-mid) 0%, var(--tv-forest) 70%);
+  box-shadow:0 12px 30px -10px rgba(26,77,59,.55);
+}
+.hero.danger{ background:linear-gradient(150deg,#9e3528 0%,#7d2a20 75%); box-shadow:0 12px 30px -10px rgba(150,40,30,.55);}
+.hero .lab{ font-size:13px; color:rgba(255,255,255,.7); font-weight:500; }
+.hero .big{ font-size:38px; font-weight:700; letter-spacing:-1px; margin-top:2px; }
+.hero .delta{ font-size:13.5px; font-weight:600; margin-top:3px; display:inline-flex; align-items:center; gap:5px; }
+.hero .delta.up{ color:#9fe8bd; }
+.hero .delta.dn{ color:#ffc4bc; }
+.hero-seg{ background:rgba(255,255,255,.16); }
+.hero-seg .seg{ color:rgba(255,255,255,.7); }
+.hero-seg .seg.on{ background:rgba(255,255,255,.95); color:var(--tv-forest); box-shadow:none; }
+.danger .hero-seg .seg.on{ color:#7d2a20; }
+.range-row{ display:flex; gap:5px; margin-top:12px; }
+.range-row .r{ flex:1; text-align:center; font-size:11.5px; font-weight:600; padding:5px 0; border-radius:7px; color:rgba(255,255,255,.6);}
+.range-row .r.on{ background:rgba(255,255,255,.2); color:#fff; }
+.value-pill{
+  position:absolute; top:18px; right:18px; background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.3); padding:5px 11px; border-radius:999px; font-size:12px; font-weight:700;
+}
+
+/* alert banner */
+.alert-banner{
+  background:var(--tv-negative-bg); border:1px solid #f1bdb6; border-radius:14px;
+  padding:13px 14px; display:flex; gap:11px; align-items:flex-start; margin-top:14px;
+}
+.alert-banner i{ color:var(--tv-negative); font-size:20px; margin-top:1px;}
+.alert-banner .txt{ font-size:13px; color:#8e2c20; line-height:1.4; }
+.alert-banner .txt b{ font-weight:700; }
+
+/* KPI grid */
+.kpi-grid{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+.kpi{
+  background:#fff; border-radius:15px; padding:13px; box-shadow:0 1px 2px rgba(17,29,23,.05);
+}
+.dark .kpi{ background:#0E1A14; border:.5px solid rgba(255,255,255,.06); }
+.kpi .top{ display:flex; align-items:center; justify-content:space-between; }
+.kpi .ic{ width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.kpi .lab{ font-size:12px; color:var(--tv-text-muted); margin-top:9px; }
+.kpi .v{ font-size:19px; font-weight:700; margin-top:1px; letter-spacing:-.3px;}
+.kpi .d{ font-size:11.5px; font-weight:600; margin-top:2px; }
+
+/* AI card */
+.ai-card{
+  border-radius:16px; padding:15px; margin-top:14px;
+  background:linear-gradient(135deg,#FDF5E4,#fbfdfb); border:1px solid var(--tv-gold-light);
+  display:flex; gap:12px;
+}
+.ai-card .spark{ width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--tv-gold-light),var(--tv-gold));display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex:0 0 auto;}
+.ai-card .t{ font-size:13px; font-weight:700; color:var(--tv-warning); }
+.ai-card .s{ font-size:13px; color:var(--tv-text-secondary); margin-top:3px; line-height:1.45; }
+
+/* progress bar */
+.pbar{ height:9px; border-radius:6px; background:#EAEFEC; overflow:hidden; margin-top:9px;}
+.pbar > span{ display:block; height:100%; border-radius:6px; }
+
+/* institution circle */
+.inst{ width:34px;height:34px;border-radius:50%; display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px; flex:0 0 auto;}
+
+/* code boxes */
+.code-boxes{ display:flex; gap:9px; justify-content:center; margin:8px 0; }
+.code-box{
+  width:46px; height:56px; border-radius:13px; border:1.5px solid var(--tv-border); background:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:24px; font-weight:700;
+}
+.code-box.filled{ border-color:var(--tv-forest); color:var(--tv-forest); }
+.code-box.cursor{ border-color:var(--tv-forest); }
+
+/* face id */
+.faceid-row{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  background:var(--tv-sage-pale); border-radius:13px; padding:13px; color:var(--tv-forest);
+  font-weight:600; font-size:15px; margin-top:11px;
+}
+.faceid-row i{ font-size:22px; }
+
+/* progress dots */
+.dots{ display:flex; gap:6px; align-items:center; }
+.dots .d{ width:7px;height:7px;border-radius:50%; background:var(--tv-border); }
+.dots .d.on{ width:22px; border-radius:4px; background:var(--tv-forest); }
+
+/* chat bubbles */
+.bubble{ max-width:80%; padding:11px 14px; border-radius:18px; font-size:14px; line-height:1.45; }
+.bubble.user{ background:var(--tv-forest); color:#fff; align-self:flex-end; border-bottom-right-radius:5px; }
+.bubble.ai{ background:#fff; color:var(--tv-text-primary); border:1px solid var(--tv-border-light); align-self:flex-start; border-bottom-left-radius:5px; }
+.bubble.ai ul{ margin:7px 0 0 16px; }
+.bubble.ai li{ margin-bottom:4px; }
+.msg-actions{ display:flex; gap:14px; color:var(--tv-text-muted); font-size:17px; align-self:flex-start; padding-left:4px; }
+
+/* property card */
+.prop{ border-radius:16px; overflow:hidden; background:#fff; box-shadow:0 1px 3px rgba(17,29,23,.06); }
+.prop .photo{ height:108px; background:linear-gradient(135deg,var(--tv-sage),var(--tv-forest-light)); position:relative;}
+.prop .photo .badge{ position:absolute; top:10px; right:10px; background:var(--tv-gold-pale); color:var(--tv-warning); font-size:11px; font-weight:700; padding:4px 9px; border-radius:999px; border:1px solid var(--tv-gold-light);}
+.prop .info{ padding:13px; }
+
+/* theme tile */
+.theme-tiles{ display:flex; gap:11px; }
+.theme-tile{ flex:1; border-radius:13px; overflow:hidden; border:2px solid transparent; }
+.theme-tile.sel{ border-color:var(--tv-forest); }
+.theme-tile .prev{ height:74px; padding:8px; }
+.theme-tile .name{ text-align:center; font-size:12.5px; font-weight:600; padding:7px 0; }
+.mini-bar{ height:7px; border-radius:3px; margin-bottom:5px; }
+
+/* business KPI */
+.biz-kpis{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px; }
+.biz-kpi{ background:#fff; border-radius:13px; padding:12px 10px; box-shadow:0 1px 2px rgba(17,29,23,.05); }
+.biz-kpi .l{ font-size:11px; color:var(--tv-text-muted); }
+.biz-kpi .v{ font-size:18px; font-weight:700; margin-top:2px; letter-spacing:-.3px;}
+
+.pill-select{
+  display:inline-flex; align-items:center; gap:7px; background:#fff; border:1px solid var(--tv-border);
+  border-radius:999px; padding:8px 14px; font-size:14px; font-weight:600;
+}
+.dark .pill-select{ background:#0E1A14; border-color:rgba(255,255,255,.12); color:#E8F0EB; }
+
+/* search bar */
+.searchbar{
+  background:#E9ECEA; border-radius:11px; padding:9px 13px; display:flex; align-items:center; gap:9px;
+  color:var(--tv-text-muted); font-size:15px;
+}
+
+/* strategy card */
+.strat{ background:#fff; border-radius:15px; padding:14px; box-shadow:0 1px 2px rgba(17,29,23,.05); border:1px solid var(--tv-border-light);}
+.strat.best{ border:1.5px solid var(--tv-gold-light); box-shadow:0 8px 22px -12px rgba(201,151,58,.5); }
+.strat .head{ display:flex; align-items:center; justify-content:space-between; }
+.strat .nm{ font-size:16px; font-weight:700; }
+.badge{ font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; }
+.badge.gold{ background:var(--tv-gold-pale); color:var(--tv-warning); }
+.badge.green{ background:var(--tv-positive-bg); color:var(--tv-positive); }
+.badge.grey{ background:#EEF1EF; color:var(--tv-text-secondary); }
+.strat .met{ display:flex; justify-content:space-between; font-size:13px; margin-top:9px; }
+.strat .met .l{ color:var(--tv-text-muted); }
+.costbar{ height:8px; border-radius:5px; background:#EEF1EF; margin-top:10px; overflow:hidden;}
+.costbar > span{ display:block; height:100%; }
+
+/* slider */
+.slider{ height:6px; border-radius:4px; background:#EAEFEC; position:relative; margin:16px 4px; }
+.slider .fill{ position:absolute; left:0; top:0; bottom:0; border-radius:4px; background:var(--tv-forest); }
+.slider .knob{ position:absolute; top:50%; transform:translate(-50%,-50%); width:24px;height:24px;border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.25); border:1px solid var(--tv-border);}
+
+.greet{ font-family:var(--display); font-size:26px; letter-spacing:.2px;}
+.greet-sub{ font-size:13.5px; color:var(--tv-text-muted); margin-top:1px; }
+
+.sparkline{ display:block; }
+
+@media (max-width:520px){
+  .iphone{ transform:scale(.82); transform-origin:top center; margin-bottom:-130px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===================== STUDIO HEADER ===================== -->
+<header class="studio-header">
+  <div class="studio-brand">
+    <div class="logo-tile">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <path d="M4 21 L11 13 L16 17 L26 6" stroke="#1A4D3B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M22 6 H26 V10" stroke="#1A4D3B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M4 25 H26" stroke="#1A4D3B" stroke-width="2.2" stroke-linecap="round" opacity=".5"/>
+      </svg>
+    </div>
+    <div class="brand-text">
+      <div class="name">TerraVest</div>
+      <div class="tag">All your wealth · One place</div>
+    </div>
+  </div>
+  <div><span class="studio-pill"><i class="ti ti-brand-apple"></i> iOS Design — iPhone</span></div>
+  <div class="studio-sub">Every feature, native iOS patterns</div>
+</header>
+
+<main class="wall">
+
+<!-- ============ helper: status bar / island / tabbar are repeated inline ============ -->
+
+<!-- ===================== 1. SIGN IN ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content"><div class="scroll" style="display:flex;flex-direction:column;justify-content:center;">
+      <div style="text-align:center;margin-bottom:26px;">
+        <div class="logo-tile" style="margin:0 auto 16px;width:64px;height:64px;border-radius:18px;">
+          <svg width="36" height="36" viewBox="0 0 30 30" fill="none"><path d="M4 21 L11 13 L16 17 L26 6" stroke="#1A4D3B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 6 H26 V10" stroke="#1A4D3B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div style="font-family:var(--display);font-size:28px;">Welcome back</div>
+        <div class="muted" style="font-size:14px;margin-top:4px;">Sign in to your TerraVest account</div>
+      </div>
+      <div class="field"><i class="ti ti-mail"></i><span class="typed">alex.morgan@email.com</span></div>
+      <div class="field"><i class="ti ti-lock"></i><span class="typed">••••••••••</span><i class="ti ti-eye" style="margin-left:auto;"></i></div>
+      <div style="text-align:right;margin:-4px 4px 16px;"><a style="color:var(--tv-forest);font-size:13.5px;font-weight:600;">Forgot password?</a></div>
+      <button class="btn">Sign in</button>
+      <div class="faceid-row"><i class="ti ti-face-id"></i> Use Face ID</div>
+      <div style="text-align:center;margin-top:22px;font-size:14px;color:var(--tv-text-secondary);">New here? <a style="color:var(--tv-forest);font-weight:700;">Create account</a></div>
+    </div></div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">1</span> Sign In</div>
+</div>
+
+<!-- ===================== 2. SIGN UP ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
+      <div class="nav-large"><h1>Create account</h1></div>
+      <div class="scroll" style="padding-top:6px;">
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;"><span class="typed">Alex</span></div>
+          <div class="field" style="flex:1;"><span class="typed">Morgan</span></div>
+        </div>
+        <div class="field"><i class="ti ti-mail"></i><span class="typed">alex.morgan@email.com</span></div>
+        <div class="field"><i class="ti ti-phone"></i><span class="typed">(415) 555-4821</span></div>
+        <div class="sec-label" style="margin-top:10px;">Account type</div>
+        <div class="segmented"><div class="seg on">Individual</div><div class="seg">Business</div></div>
+        <div class="field" style="margin-top:11px;"><i class="ti ti-id"></i><span class="ph">SSN (last 4)</span><span style="margin-left:auto;color:var(--tv-text-muted);font-size:12px;">•••• 6 4 1 9</span></div>
+        <div class="field"><i class="ti ti-lock"></i><span class="typed">••••••••</span></div>
+        <div style="display:flex;gap:8px;align-items:flex-start;margin:2px 2px 16px;color:var(--tv-text-muted);font-size:12px;line-height:1.4;"><i class="ti ti-shield-lock" style="color:var(--tv-forest);font-size:15px;"></i> Your data is encrypted end-to-end and never sold. SSN is used only for identity verification.</div>
+        <button class="btn">Continue</button>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">2</span> Sign Up</div>
+</div>
+
+<!-- ===================== 3. SMS VERIFY ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
+      <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;text-align:center;">
+        <div class="logo-tile" style="margin:0 auto 18px;width:60px;height:60px;border-radius:17px;background:linear-gradient(150deg,var(--tv-sage),var(--tv-forest-light));"><i class="ti ti-message-2-code" style="color:#fff;font-size:30px;"></i></div>
+        <div style="font-family:var(--display);font-size:26px;">Verify your number</div>
+        <div class="muted" style="font-size:14px;margin:8px 24px 26px;line-height:1.5;">Enter the 6-digit code sent to<br><b style="color:var(--tv-text-secondary);">••• ••• 4821</b></div>
+        <div class="code-boxes">
+          <div class="code-box filled">4</div>
+          <div class="code-box filled">9</div>
+          <div class="code-box filled">2</div>
+          <div class="code-box filled">7</div>
+          <div class="code-box cursor"></div>
+          <div class="code-box"></div>
+        </div>
+        <div class="muted" style="font-size:13.5px;margin:18px 0 26px;">Resend in <b style="color:var(--tv-text-secondary);">0:24</b></div>
+        <button class="btn">Verify</button>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">3</span> SMS Verification</div>
+</div>
+
+<!-- ===================== 4. HOME DASHBOARD (NORMAL) ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content"><div class="scroll">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 14px;">
+        <div><div class="greet">Good morning, Alex</div><div class="greet-sub">Saturday, June 7</div></div>
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">AM</div>
+      </div>
+      <!-- hero -->
+      <div class="hero">
+        <div class="lab">Current net worth</div>
+        <div class="big">$128,430</div>
+        <div class="delta up"><i class="ti ti-trending-up"></i> +$2,140 · 30d</div>
+        <div class="segmented hero-seg" style="margin-top:14px;"><div class="seg on">Area</div><div class="seg">Line</div><div class="seg">Bars</div></div>
+        <svg viewBox="0 0 320 110" width="100%" height="106" style="margin-top:12px;display:block;">
+          <defs><linearGradient id="g4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fe8bd" stop-opacity=".55"/><stop offset="1" stop-color="#9fe8bd" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="28" x2="320" y2="28" stroke="rgba(255,255,255,.13)"/>
+          <line x1="0" y1="56" x2="320" y2="56" stroke="rgba(255,255,255,.13)"/>
+          <line x1="0" y1="84" x2="320" y2="84" stroke="rgba(255,255,255,.13)"/>
+          <path d="M0,82 C30,78 50,70 80,66 C110,62 130,72 160,58 C190,46 210,52 240,40 C270,30 290,34 320,22 L320,110 L0,110 Z" fill="url(#g4)"/>
+          <path d="M0,82 C30,78 50,70 80,66 C110,62 130,72 160,58 C190,46 210,52 240,40 C270,30 290,34 320,22" fill="none" stroke="#bdf2d4" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="320" cy="22" r="4" fill="#fff"/>
+        </svg>
+        <div class="range-row"><div class="r">1H</div><div class="r">1D</div><div class="r">1W</div><div class="r">1M</div><div class="r on">3M</div><div class="r">1Y</div><div class="r">All</div></div>
+      </div>
+      <!-- KPI grid -->
+      <div class="kpi-grid" style="margin-top:14px;">
+        <div class="kpi"><div class="top"><div class="ic" style="background:var(--tv-sage-pale);color:var(--tv-forest);"><i class="ti ti-chart-arcs"></i></div><i class="ti ti-chevron-right chev" style="color:#c2cdc7;font-size:18px;"></i></div><div class="lab">Net Worth</div><div class="v">$128,430</div><div class="d pos">+1.7%</div></div>
+        <div class="kpi"><div class="top"><div class="ic" style="background:var(--tv-positive-bg);color:var(--tv-positive);"><i class="ti ti-cash"></i></div><i class="ti ti-chevron-right chev" style="color:#c2cdc7;font-size:18px;"></i></div><div class="lab">Cash</div><div class="v">$24,180</div><div class="d pos">+$320</div></div>
+        <div class="kpi"><div class="top"><div class="ic" style="background:var(--tv-gold-pale);color:var(--tv-gold);"><i class="ti ti-chart-candle"></i></div><i class="ti ti-chevron-right chev" style="color:#c2cdc7;font-size:18px;"></i></div><div class="lab">Investments</div><div class="v">$86,300</div><div class="d pos">+$1,940</div></div>
+        <div class="kpi"><div class="top"><div class="ic" style="background:var(--tv-negative-bg);color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><i class="ti ti-chevron-right chev" style="color:#c2cdc7;font-size:18px;"></i></div><div class="lab">Debt</div><div class="v">$18,050</div><div class="d neg">−$120</div></div>
+      </div>
+      <div class="sec-label">Upcoming bills</div>
+      <div class="group">
+        <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-home"></i></div><div class="body"><div class="t">Mortgage</div><div class="s">Due Jun 15</div></div><div class="val"><div class="v">$1,842</div></div><button class="btn-sm ghost">Pay</button></div>
+        <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-bolt"></i></div><div class="body"><div class="t">Electricity</div><div class="s">Due Jun 17</div></div><div class="val"><div class="v">$87.64</div></div><button class="btn-sm ghost">Pay</button></div>
+        <div class="row"><div class="lead-ic" style="background:var(--tv-forest-light);"><i class="ti ti-wifi"></i></div><div class="body"><div class="t">Internet</div><div class="s">Due Jun 21</div></div><div class="val"><div class="v">$65.00</div></div><button class="btn-sm ghost">Pay</button></div>
+      </div>
+      <div class="ai-card">
+        <div class="spark"><i class="ti ti-sparkles"></i></div>
+        <div><div class="t">AI insight</div><div class="s">You're spending 12% less on dining this month. At this pace you'll hit your savings goal 3 weeks early.</div></div>
+      </div>
+    </div></div>
+    <div class="tabbar">
+      <div class="tab active"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">4</span> Home — Dashboard</div>
+</div>
+
+<!-- ===================== 5. HOME — DOWNFALL ALERT ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content"><div class="scroll">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 14px;">
+        <div><div class="greet">Good morning, Alex</div><div class="greet-sub">Saturday, June 7</div></div>
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">AM</div>
+      </div>
+      <div class="hero danger">
+        <div class="value-pill"><i class="ti ti-alert-triangle"></i> Down 18.2%</div>
+        <div class="lab">Current net worth</div>
+        <div class="big">$104,820</div>
+        <div class="delta dn"><i class="ti ti-trending-down"></i> −$23,310 · this period</div>
+        <div class="segmented hero-seg" style="margin-top:14px;"><div class="seg">Area</div><div class="seg on">Line</div><div class="seg">Bars</div></div>
+        <svg viewBox="0 0 320 110" width="100%" height="106" style="margin-top:12px;display:block;">
+          <defs><linearGradient id="g5" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3a8" stop-opacity=".55"/><stop offset="1" stop-color="#ffb3a8" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="28" x2="320" y2="28" stroke="rgba(255,255,255,.13)"/>
+          <line x1="0" y1="56" x2="320" y2="56" stroke="rgba(255,255,255,.13)"/>
+          <line x1="0" y1="84" x2="320" y2="84" stroke="rgba(255,255,255,.13)"/>
+          <path d="M0,24 C30,22 50,30 80,34 C110,40 130,36 160,48 C190,58 210,66 240,76 C270,84 290,90 320,96 L320,110 L0,110 Z" fill="url(#g5)"/>
+          <path d="M0,24 C30,22 50,30 80,34 C110,40 130,36 160,48 C190,58 210,66 240,76 C270,84 290,90 320,96" fill="none" stroke="#ffd2cb" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="320" cy="96" r="4" fill="#fff"/>
+        </svg>
+        <div class="range-row"><div class="r">1H</div><div class="r">1D</div><div class="r">1W</div><div class="r">1M</div><div class="r on">3M</div><div class="r">1Y</div><div class="r">All</div></div>
+      </div>
+      <div class="alert-banner">
+        <i class="ti ti-alert-triangle-filled"></i>
+        <div class="txt"><b>Net worth fell 18.2% this period.</b> Biggest drag: <b>Credit cards (−$1,038)</b>. Review what changed below.</div>
+      </div>
+      <div class="sec-label">What moved it · 30d</div>
+      <div class="chips">
+        <div class="chip green">Cash +$2,320</div>
+        <div class="chip green">Investments +$10,450</div>
+        <div class="chip green">Real estate +$1,800</div>
+        <div class="chip red" style="border-width:2px;font-weight:700;">Credit cards −$1,038</div>
+      </div>
+      <div class="group" style="margin-top:16px;">
+        <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Credit cards</div><div class="s">2 cards · balance rising</div></div><div class="val"><div class="v neg">−$1,038</div><div class="d neg">+5.8%</div></div></div>
+        <div class="row"><div class="lead-ic" style="background:var(--tv-warning);"><i class="ti ti-receipt"></i></div><div class="body"><div class="t">Recurring fees</div><div class="s">Subscriptions up</div></div><div class="val"><div class="v neg">−$214</div><div class="d neg">+2.1%</div></div></div>
+      </div>
+    </div></div>
+    <div class="tabbar">
+      <div class="tab active"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">5</span> Home — Downfall Alert</div>
+</div>
+
+<!-- ===================== 6. ACCOUNTS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Accounts</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="sec-label">Cash</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#117ACA;">CH</div><div class="body"><div class="t">Chase Checking</div><div class="s">•••• 2841</div></div><div class="val"><div class="v">$8,420</div></div><i class="ti ti-chevron-right chev"></i></div>
+          <div class="row"><div class="inst" style="background:#6B1FB1;">AL</div><div class="body"><div class="t">Ally Savings</div><div class="s">•••• 9032</div></div><div class="val"><div class="v">$15,760</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+        <div class="sec-label">Credit cards</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#2671B9;">AX</div><div class="body"><div class="t">Amex Platinum</div><div class="s">•••• 1005</div></div><div class="val"><div class="v neg">−$2,140</div></div><i class="ti ti-chevron-right chev"></i></div>
+          <div class="row"><div class="inst" style="background:#1A1F71;">VI</div><div class="body"><div class="t">Visa Signature</div><div class="s">•••• 7766</div></div><div class="val"><div class="v neg">−$1,890</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+        <div class="sec-label">Investments</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#00854D;">FI</div><div class="body"><div class="t">Fidelity Brokerage</div><div class="s">Individual</div></div><div class="val"><div class="v">$54,300</div></div><i class="ti ti-chevron-right chev"></i></div>
+          <div class="row"><div class="inst" style="background:#00C805;">RH</div><div class="body"><div class="t">Robinhood</div><div class="s">Taxable</div></div><div class="val"><div class="v">$32,000</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+        <div class="group" style="margin-top:16px;">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-plus"></i></div><div class="body"><div class="t" style="color:var(--tv-forest);font-weight:600;">Link a bank</div><div class="s">Securely via Plaid</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab active"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">6</span> Accounts</div>
+</div>
+
+<!-- ===================== 7. TRANSACTIONS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Transactions</h1></div>
+      <div style="padding:0 18px 10px;"><div class="searchbar"><i class="ti ti-search"></i> Search transactions</div></div>
+      <div style="padding:0 18px 10px;overflow:hidden;"><div class="chips" style="flex-wrap:nowrap;">
+        <div class="chip"><i class="ti ti-calendar" style="font-size:13px;"></i> Date</div>
+        <div class="chip"><i class="ti ti-currency-dollar" style="font-size:13px;"></i> Amount</div>
+        <div class="chip on">Category</div>
+        <div class="chip"><i class="ti ti-arrows-sort" style="font-size:13px;"></i> Sort</div>
+      </div></div>
+      <div class="scroll" style="padding-top:0;">
+        <div class="sec-label" style="margin-top:6px;">Today</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:#3D8A68;"><i class="ti ti-shopping-cart"></i></div><div class="body"><div class="t">Whole Foods</div><div class="s">Groceries · 8:42 AM</div></div><div class="val"><div class="v neg">−$84.20</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-building-bank"></i></div><div class="body"><div class="t">Payroll — Acme Co.</div><div class="s">Income · 6:00 AM</div></div><div class="val"><div class="v pos">+$3,200</div></div></div>
+        </div>
+        <div class="sec-label">Yesterday</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-gas-station"></i></div><div class="body"><div class="t">Shell</div><div class="s">Transport</div></div><div class="val"><div class="v neg">−$52.10</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:#C0392B;"><i class="ti ti-device-tv"></i></div><div class="body"><div class="t">Netflix</div><div class="s">Subscriptions</div></div><div class="val"><div class="v neg">−$15.49</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:#2D6B52;"><i class="ti ti-coffee"></i></div><div class="body"><div class="t">Blue Bottle Coffee</div><div class="s">Dining</div></div><div class="val"><div class="v neg">−$6.75</div></div></div>
+        </div>
+        <div class="sec-label">Jun 5</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:#6B1FB1;"><i class="ti ti-plane"></i></div><div class="body"><div class="t">United Airlines</div><div class="s">Travel</div></div><div class="val"><div class="v neg">−$412.00</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-cash-banknote"></i></div><div class="body"><div class="t">Refund — Amazon</div><div class="s">Shopping</div></div><div class="val"><div class="v pos">+$38.99</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab active"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">7</span> Transactions</div>
+</div>
+
+<!-- ===================== 8. BUDGET ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Budget</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="sec-label" style="margin-top:0;">Rule preset</div>
+        <div style="overflow:hidden;"><div class="chips" style="flex-wrap:nowrap;">
+          <div class="chip on">50/30/20</div>
+          <div class="chip">50/20/30</div>
+          <div class="chip">50/40/10</div>
+          <div class="chip">Custom</div>
+        </div></div>
+        <div class="segmented" style="margin-top:14px;"><div class="seg on">Month</div><div class="seg">YTD</div><div class="seg">12-mo</div></div>
+
+        <div class="group" style="margin-top:16px;padding:15px;display:block;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:16px;font-weight:700;">Needs</div><div class="badge green">50% target</div></div>
+          <div class="muted" style="font-size:13px;margin-top:3px;">$2,180 spent of $2,400 budget</div>
+          <div class="pbar"><span style="width:91%;background:var(--tv-positive);"></span></div>
+        </div>
+        <div class="group" style="margin-top:12px;padding:15px;display:block;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:16px;font-weight:700;">Wants</div><div class="badge gold">30% target</div></div>
+          <div class="muted" style="font-size:13px;margin-top:3px;">$1,290 spent of $1,440 budget</div>
+          <div class="pbar"><span style="width:90%;background:var(--tv-gold);"></span></div>
+        </div>
+        <div class="group" style="margin-top:12px;padding:15px;display:block;">
+          <div style="display:flex;justify-content:space-between;align-items:center;"><div style="font-size:16px;font-weight:700;">Savings</div><div class="badge grey">20% target</div></div>
+          <div class="muted" style="font-size:13px;margin-top:3px;">$640 saved of $960 budget</div>
+          <div class="pbar"><span style="width:67%;background:var(--tv-forest);"></span></div>
+        </div>
+        <div class="ai-card" style="margin-top:16px;">
+          <div class="spark"><i class="ti ti-sparkles"></i></div>
+          <div><div class="t">On track</div><div class="s">Needs & Wants are near target. Add $320 to Savings to hit 20% this month.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab active"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">8</span> Budget</div>
+</div>
+
+<!-- ===================== 9. PAY BILLS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
+      <div style="padding:2px 18px 12px;display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:26px;font-weight:700;">Pay a bill</h1>
+        <div class="dots"><div class="d on"></div><div class="d"></div><div class="d"></div></div>
+      </div>
+      <div class="scroll" style="padding-top:2px;">
+        <div class="sec-label" style="margin-top:0;">Pay to</div>
+        <div class="segmented"><div class="seg on">Your card</div><div class="seg">External biller</div></div>
+        <div class="sec-label">Amount</div>
+        <div style="text-align:center;padding:14px 0 8px;">
+          <span style="font-family:var(--display);font-size:52px;letter-spacing:-1px;">$250.00</span>
+          <div class="muted" style="font-size:13px;margin-top:2px;">Amex Platinum · balance −$2,140</div>
+        </div>
+        <div class="sec-label">Funding account</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#117ACA;">CH</div><div class="body"><div class="t">Chase Checking</div><div class="s">•••• 2841 · $8,420 available</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+        <div class="sec-label">Schedule</div>
+        <div class="segmented"><div class="seg on">Pay now</div><div class="seg">Schedule</div></div>
+        <div class="group" style="margin-top:10px;"><div class="row"><i class="ti ti-calendar" style="color:var(--tv-forest);font-size:20px;"></i><div class="body"><div class="t">Date</div></div><div class="val"><div class="v" style="color:var(--tv-forest);">Today, Jun 7</div></div></div></div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:7px;margin:14px 0 10px;font-size:12.5px;color:var(--tv-positive);background:var(--tv-positive-bg);padding:9px;border-radius:10px;font-weight:600;"><i class="ti ti-circle-check"></i> Confirmation #TV-48213</div>
+        <button class="btn">Review payment</button>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">9</span> Pay Bills</div>
+</div>
+
+<!-- ===================== 10. DEBT LAB ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Debt Lab</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="group" style="padding:15px;display:block;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:600;font-size:14px;">Extra payment</div><div style="font-family:var(--display);font-size:24px;color:var(--tv-forest);">$300<span style="font-size:14px;color:var(--tv-text-muted);">/mo</span></div></div>
+          <div class="slider"><div class="fill" style="width:42%;"></div><div class="knob" style="left:42%;"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);"><span>$0</span><span>$700</span></div>
+        </div>
+        <div class="sec-label">Strategy comparison</div>
+        <div class="strat best" style="margin-bottom:12px;">
+          <div class="head"><div class="nm">Avalanche</div><div class="badge gold"><i class="ti ti-coin" style="font-size:11px;"></i> Cheapest</div></div>
+          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Mar 2028</span></div>
+          <div class="met"><span class="l">Total interest</span><span style="font-weight:700;color:var(--tv-positive);">$2,140</span></div>
+          <div class="costbar"><span style="width:38%;background:var(--tv-positive);"></span></div>
+        </div>
+        <div class="strat" style="margin-bottom:12px;">
+          <div class="head"><div class="nm">Snowball</div><div class="badge green"><i class="ti ti-bolt" style="font-size:11px;"></i> Fastest</div></div>
+          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Jan 2028</span></div>
+          <div class="met"><span class="l">Total interest</span><span style="font-weight:700;">$2,680</span></div>
+          <div class="costbar"><span style="width:56%;background:var(--tv-gold);"></span></div>
+        </div>
+        <div class="strat">
+          <div class="head"><div class="nm">Hybrid</div><div class="badge grey">Balanced</div></div>
+          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Feb 2028</span></div>
+          <div class="met"><span class="l">Total interest</span><span style="font-weight:700;">$2,410</span></div>
+          <div class="costbar"><span style="width:47%;background:var(--tv-forest-light);"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab active"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">10</span> Debt Lab</div>
+</div>
+
+<!-- ===================== 11. INVESTMENTS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Investments</h1></div>
+      <div style="padding:0 18px 12px;"><div class="segmented"><div class="seg on">Stocks</div><div class="seg">Alternatives</div></div></div>
+      <div class="scroll" style="padding-top:0;">
+        <div class="group" style="padding:15px;display:block;">
+          <div class="muted" style="font-size:13px;">Total value</div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;">
+            <div><div style="font-size:30px;font-weight:700;letter-spacing:-.6px;">$86,300</div><div class="pos" style="font-size:13.5px;font-weight:600;"><i class="ti ti-trending-up"></i> +$1,240 (1.46%) today</div></div>
+            <svg width="90" height="40" viewBox="0 0 90 40"><polyline points="0,32 12,28 24,30 36,22 48,24 60,14 72,18 84,6" fill="none" stroke="var(--tv-positive)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="sec-label">Holdings</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#000;">🍎</div><div class="body"><div class="t">AAPL</div><div class="s">Apple Inc · 42 sh</div></div><div class="val"><div class="v">$8,910</div><div class="d pos">+0.9%</div></div></div>
+          <div class="row"><div class="inst" style="background:#76B900;">NV</div><div class="body"><div class="t">NVDA</div><div class="s">NVIDIA · 18 sh</div></div><div class="val"><div class="v">$21,420</div><div class="d pos">+2.7%</div></div></div>
+          <div class="row"><div class="inst" style="background:#8E1F2C;">VTI</div><div class="body"><div class="t">VTI</div><div class="s">Total Market ETF · 96 sh</div></div><div class="val"><div class="v">$28,170</div><div class="d neg">−0.3%</div></div></div>
+        </div>
+        <div class="sec-label">Linked brokers</div>
+        <div class="chips">
+          <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Robinhood</div>
+          <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Fidelity</div>
+          <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Schwab</div>
+          <div class="chip"><i class="ti ti-plus" style="font-size:13px;"></i> Add broker</div>
+        </div>
+        <div class="group" style="margin-top:16px;padding:13px;opacity:.65;border:1px dashed var(--tv-border);box-shadow:none;">
+          <div style="display:flex;gap:11px;align-items:center;">
+            <div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-building-estate"></i></div>
+            <div style="font-size:13px;color:var(--tv-text-secondary);line-height:1.4;"><b>Alternatives</b> would list LLCs, Land & Apartments — equity, valuations and income in one view.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab active"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">11</span> Investments</div>
+</div>
+
+<!-- ===================== 12. MY BUSINESS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div style="padding:2px 18px 8px;display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:28px;font-weight:700;">My Business</h1>
+        <div class="pill-select">Acme LLC <i class="ti ti-chevron-down" style="font-size:15px;"></i></div>
+      </div>
+      <div class="scroll" style="padding-top:6px;">
+        <div class="biz-kpis">
+          <div class="biz-kpi"><div class="l">Revenue</div><div class="v pos">$42k</div></div>
+          <div class="biz-kpi"><div class="l">Expenses</div><div class="v neg">$28k</div></div>
+          <div class="biz-kpi"><div class="l">Net</div><div class="v" style="color:var(--tv-forest);">$14k</div></div>
+        </div>
+        <div class="sec-label">Cash flow · 6 mo</div>
+        <div class="group" style="padding:16px 15px;display:block;">
+          <svg viewBox="0 0 290 96" width="100%" height="96">
+            <line x1="0" y1="80" x2="290" y2="80" stroke="var(--tv-border)"/>
+            <g>
+              <rect x="14" y="40" width="26" height="40" rx="4" fill="var(--tv-sage)"/>
+              <rect x="60" y="28" width="26" height="52" rx="4" fill="var(--tv-forest-light)"/>
+              <rect x="106" y="48" width="26" height="32" rx="4" fill="var(--tv-sage)"/>
+              <rect x="152" y="20" width="26" height="60" rx="4" fill="var(--tv-forest)"/>
+              <rect x="198" y="34" width="26" height="46" rx="4" fill="var(--tv-forest-light)"/>
+              <rect x="244" y="14" width="26" height="66" rx="4" fill="var(--tv-forest)"/>
+            </g>
+            <g font-size="9" fill="var(--tv-text-muted)" text-anchor="middle">
+              <text x="27" y="92">Jan</text><text x="73" y="92">Feb</text><text x="119" y="92">Mar</text><text x="165" y="92">Apr</text><text x="211" y="92">May</text><text x="257" y="92">Jun</text>
+            </g>
+          </svg>
+        </div>
+        <div class="sec-label">Invoices</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">#1042 · Northwind Co.</div><div class="s">Paid Jun 2</div></div><div class="val"><div class="v">$6,500</div><div class="d pos">Paid</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-alert-circle"></i></div><div class="body"><div class="t">#1043 · Globex Inc.</div><div class="s">Due May 28</div></div><div class="val"><div class="v neg">$3,200</div><div class="d neg">Overdue</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">12</span> My Business</div>
+</div>
+
+<!-- ===================== 13. AI ASSISTANT ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div style="padding:2px 18px 8px;"><h1 style="font-size:26px;font-weight:700;">AI Assistant</h1></div>
+      <div style="padding:0 18px 8px;display:flex;gap:8px;align-items:center;">
+        <div class="pill-select" style="font-size:13px;padding:7px 12px;"><i class="ti ti-target" style="font-size:15px;color:var(--tv-forest);"></i> Scope: All accounts <i class="ti ti-chevron-down" style="font-size:14px;"></i></div>
+      </div>
+      <div style="padding:0 18px 10px;"><div class="segmented"><div class="seg">Concise</div><div class="seg on">Balanced</div><div class="seg">Detailed</div></div></div>
+      <div class="scroll" style="display:flex;flex-direction:column;gap:11px;padding-top:6px;">
+        <div class="bubble user">Where did my money go last month?</div>
+        <div class="bubble ai">
+          Your top spending categories in May were:
+          <ul>
+            <li><b>Housing</b> — $1,842 (mortgage)</li>
+            <li><b>Dining</b> — $612 (up 18%)</li>
+            <li><b>Travel</b> — $498 (United)</li>
+          </ul>
+          Dining rose most — cutting it 20% saves ~$122/mo.
+        </div>
+        <div class="msg-actions"><i class="ti ti-copy"></i><i class="ti ti-refresh"></i><i class="ti ti-thumb-up"></i><i class="ti ti-thumb-down"></i></div>
+        <div style="margin-top:auto;">
+          <div class="chips" style="margin-bottom:10px;">
+            <div class="chip"><i class="ti ti-sparkles" style="font-size:13px;color:var(--tv-gold);"></i> Am I on track to retire?</div>
+            <div class="chip"><i class="ti ti-sparkles" style="font-size:13px;color:var(--tv-gold);"></i> Cut my spending</div>
+          </div>
+          <div class="field" style="margin-bottom:0;border-radius:24px;padding:11px 14px;">
+            <span class="ph" style="flex:1;">Ask about your finances…</span>
+            <i class="ti ti-microphone" style="color:var(--tv-forest);"></i>
+            <div style="width:34px;height:34px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;"><i class="ti ti-arrow-up"></i></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">13</span> AI Assistant</div>
+</div>
+
+<!-- ===================== 14. PROPERTIES ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Properties</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="prop">
+          <div class="photo" style="background:linear-gradient(135deg,#a9d3ba,#3D8A68);"><div class="badge"><i class="ti ti-sparkles" style="font-size:11px;"></i> Auto-estimated</div></div>
+          <div class="info">
+            <div style="font-size:16px;font-weight:700;">1420 Cedar Lane</div>
+            <div class="muted" style="font-size:13px;">Austin, TX 78704 · Primary home</div>
+            <div style="display:flex;justify-content:space-between;margin-top:10px;">
+              <div><div class="muted" style="font-size:11px;">Current value</div><div style="font-weight:700;">$540,000</div></div>
+              <div style="text-align:right;"><div class="muted" style="font-size:11px;">Equity</div><div style="font-weight:700;color:var(--tv-positive);">$180,000</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="prop" style="margin-top:14px;">
+          <div class="photo" style="background:linear-gradient(135deg,#8AB89A,#2D6B52);"><div class="badge"><i class="ti ti-sparkles" style="font-size:11px;"></i> Auto-estimated</div></div>
+          <div class="info">
+            <div style="font-size:16px;font-weight:700;">88 Riverside Apt 3B</div>
+            <div class="muted" style="font-size:13px;">Denver, CO 80211 · Rental</div>
+            <div style="display:flex;justify-content:space-between;margin-top:10px;">
+              <div><div class="muted" style="font-size:11px;">Current value</div><div style="font-weight:700;">$310,000</div></div>
+              <div style="text-align:right;"><div class="muted" style="font-size:11px;">Equity</div><div style="font-weight:700;color:var(--tv-positive);">$95,000</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="group" style="margin-top:16px;">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-plus"></i></div><div class="body"><div class="t" style="color:var(--tv-forest);font-weight:600;">Add by address</div><div class="s">We'll auto-estimate the value</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">14</span> Properties</div>
+</div>
+
+<!-- ===================== 15. SETTINGS — APPEARANCE & LANGUAGE ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Settings</div>
+      <div class="nav-large" style="padding-top:0;"><h1>Appearance</h1></div>
+      <div class="scroll" style="padding-top:2px;">
+        <div class="theme-tiles">
+          <div class="theme-tile sel">
+            <div class="prev" style="background:#F4F6F5;"><div class="mini-bar" style="background:var(--tv-forest);width:60%;"></div><div class="mini-bar" style="background:#DDE5E1;"></div><div class="mini-bar" style="background:#DDE5E1;width:80%;"></div></div>
+            <div class="name">Light ✓</div>
+          </div>
+          <div class="theme-tile">
+            <div class="prev" style="background:#0E1A14;"><div class="mini-bar" style="background:var(--tv-sage);width:60%;"></div><div class="mini-bar" style="background:#23332b;"></div><div class="mini-bar" style="background:#23332b;width:80%;"></div></div>
+            <div class="name">Dark</div>
+          </div>
+          <div class="theme-tile">
+            <div class="prev" style="background:linear-gradient(135deg,rgba(138,184,154,.4),rgba(26,77,59,.3));backdrop-filter:blur(4px);"><div class="mini-bar" style="background:rgba(255,255,255,.7);width:60%;"></div><div class="mini-bar" style="background:rgba(255,255,255,.4);"></div><div class="mini-bar" style="background:rgba(255,255,255,.4);width:80%;"></div></div>
+            <div class="name">Glass</div>
+          </div>
+        </div>
+        <div class="sec-label">Language</div>
+        <div class="group">
+          <div class="row"><i class="ti ti-language" style="color:var(--tv-forest);font-size:20px;"></i><div class="body"><div class="t">Language</div></div><div class="val"><div class="v" style="color:var(--tv-text-muted);font-weight:500;">Auto (English) <i class="ti ti-chevron-down" style="font-size:14px;"></i></div></div></div>
+        </div>
+        <div class="muted" style="font-size:12px;margin:6px 4px 0;">Auto-translate the whole app to your device language.</div>
+        <div class="group" style="margin-top:10px;">
+          <div class="row"><div class="body"><div class="t">English</div></div><i class="ti ti-check" style="color:var(--tv-forest);font-size:19px;"></i></div>
+          <div class="row"><div class="body"><div class="t">Español</div></div></div>
+          <div class="row"><div class="body"><div class="t">Français</div></div></div>
+          <div class="row"><div class="body"><div class="t">Deutsch</div></div></div>
+          <div class="row"><div class="body"><div class="t">中文</div></div></div>
+          <div class="row"><div class="body"><div class="t">हिन्दी</div></div></div>
+          <div class="row"><div class="body"><div class="t">العربية</div></div></div>
+        </div>
+        <div class="sec-label">Notifications</div>
+        <div class="group">
+          <div class="row"><i class="ti ti-message" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">SMS</div></div><div class="toggle on"></div></div>
+          <div class="row"><i class="ti ti-mail" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Email</div></div><div class="toggle on"></div></div>
+          <div class="row"><i class="ti ti-bell" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Push</div></div><div class="toggle"></div></div>
+          <div class="row"><i class="ti ti-app-window" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">In-app</div></div><div class="toggle on"></div></div>
+        </div>
+        <div class="sec-label">Security</div>
+        <div class="group">
+          <div class="row"><i class="ti ti-face-id" style="color:var(--tv-forest);font-size:20px;"></i><div class="body"><div class="t">Face ID</div></div><div class="toggle on"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">15</span> Settings — Appearance & Language</div>
+</div>
+
+<!-- ===================== 16. DARK MODE SHOWCASE ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen dark">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content"><div class="scroll">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:4px 2px 14px;">
+        <div><div class="greet" style="color:#E8F0EB;">Good evening, Alex</div><div class="greet-sub" style="color:#6f857a;">Saturday, June 7</div></div>
+        <div style="width:42px;height:42px;border-radius:50%;background:var(--tv-forest-light);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">AM</div>
+      </div>
+      <div class="hero" style="background:linear-gradient(150deg,#163a2c,#0f261c);box-shadow:0 12px 30px -14px rgba(0,0,0,.7);">
+        <div class="lab">Current net worth</div>
+        <div class="big">$128,430</div>
+        <div class="delta up"><i class="ti ti-trending-up"></i> +$2,140 · 30d</div>
+        <div class="segmented hero-seg" style="margin-top:14px;background:rgba(255,255,255,.1);"><div class="seg on" style="background:var(--tv-forest-light);color:#fff;">Area</div><div class="seg">Line</div><div class="seg">Bars</div></div>
+        <svg viewBox="0 0 320 110" width="100%" height="106" style="margin-top:12px;display:block;">
+          <defs><linearGradient id="g16" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd99a" stop-opacity=".45"/><stop offset="1" stop-color="#5fd99a" stop-opacity="0"/></linearGradient></defs>
+          <line x1="0" y1="28" x2="320" y2="28" stroke="rgba(255,255,255,.1)"/>
+          <line x1="0" y1="56" x2="320" y2="56" stroke="rgba(255,255,255,.1)"/>
+          <line x1="0" y1="84" x2="320" y2="84" stroke="rgba(255,255,255,.1)"/>
+          <path d="M0,82 C30,78 50,70 80,66 C110,62 130,72 160,58 C190,46 210,52 240,40 C270,30 290,34 320,22 L320,110 L0,110 Z" fill="url(#g16)"/>
+          <path d="M0,82 C30,78 50,70 80,66 C110,62 130,72 160,58 C190,46 210,52 240,40 C270,30 290,34 320,22" fill="none" stroke="#7fe8b0" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="320" cy="22" r="4" fill="#fff"/>
+        </svg>
+        <div class="range-row"><div class="r">1H</div><div class="r">1D</div><div class="r">1W</div><div class="r">1M</div><div class="r on">3M</div><div class="r">1Y</div><div class="r">All</div></div>
+      </div>
+      <div class="kpi-grid" style="margin-top:14px;">
+        <div class="kpi"><div class="top"><div class="ic" style="background:rgba(61,138,104,.2);color:var(--tv-sage);"><i class="ti ti-cash"></i></div><i class="ti ti-chevron-right chev"></i></div><div class="lab">Cash</div><div class="v" style="color:#E8F0EB;">$24,180</div><div class="d pos">+$320</div></div>
+        <div class="kpi"><div class="top"><div class="ic" style="background:rgba(201,151,58,.2);color:var(--tv-gold-light);"><i class="ti ti-chart-candle"></i></div><i class="ti ti-chevron-right chev"></i></div><div class="lab">Investments</div><div class="v" style="color:#E8F0EB;">$86,300</div><div class="d pos">+$1,940</div></div>
+      </div>
+      <div class="sec-label">Upcoming bills</div>
+      <div class="group">
+        <div class="row"><div class="lead-ic" style="background:var(--tv-forest-light);"><i class="ti ti-home"></i></div><div class="body"><div class="t" style="color:#E8F0EB;">Mortgage</div><div class="s">Due Jun 15</div></div><div class="val"><div class="v" style="color:#E8F0EB;">$1,842</div></div></div>
+        <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-bolt"></i></div><div class="body"><div class="t" style="color:#E8F0EB;">Electricity</div><div class="s">Due Jun 17</div></div><div class="val"><div class="v" style="color:#E8F0EB;">$87.64</div></div></div>
+      </div>
+    </div></div>
+    <div class="tabbar">
+      <div class="tab active"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">16</span> Dark theme</div>
+</div>
+
+</main>
+</body>
+</html>

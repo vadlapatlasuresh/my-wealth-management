@@ -10,8 +10,10 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -26,6 +28,25 @@ public class JwtService {
 
     public String extractUsername(String token) {
         return extractClaim(token, Claims::getSubject);
+    }
+
+    /** Roles carried in the JWT (e.g. ["USER","CARE"]); empty if none/invalid. */
+    @SuppressWarnings("unchecked")
+    public List<String> extractRoles(String token) {
+        Object raw = extractClaim(token, c -> c.get("roles"));
+        if (raw instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return Collections.emptyList();
+    }
+
+    /** True if the token parses and is not expired (no UserDetails lookup needed). */
+    public boolean isTokenValid(String token) {
+        try {
+            return !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public Date extractExpiration(String token) {
@@ -56,7 +77,12 @@ public class JwtService {
     }
 
     public String generateToken(String userName) {
+        return generateToken(userName, Collections.emptyList());
+    }
+
+    public String generateToken(String userName, List<String> roles) {
         Map<String, Object> claims = new HashMap<>();
+        claims.put("roles", roles);
         return createToken(claims, userName);
     }
 

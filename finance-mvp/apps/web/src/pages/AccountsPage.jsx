@@ -236,7 +236,7 @@ export default function AccountsPage({ accounts = [], loadAll }) {
                       <button
                         className="icon-btn account-action"
                         title={`View ${account.name || 'account'} transactions`}
-                        onClick={() => navigate('/transactions')}
+                        onClick={() => navigate(`/transactions?account=${encodeURIComponent(account.id)}`)}
                       >
                         <i className="ti ti-chevron-right"></i>
                       </button>

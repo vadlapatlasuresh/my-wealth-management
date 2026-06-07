@@ -3,6 +3,7 @@ import { currency, formatDate } from "../utils/format";
 import { api } from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
 import LastRefreshed from "../components/LastRefreshed";
+import Disclaimer from "../components/Disclaimer";
 
 // Normalize a property from the API (which may use value/mortgage or currentValue/loanBalance)
 function normalize(p) {
@@ -338,6 +339,12 @@ export default function RealEstatePage({ properties = [] }) {
               <div className="form-group">
                 <label className="form-label">Current value <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(auto if blank)</span></label>
                 <input className="form-input" type="number" value={form.currentValue} onChange={onFormChange("currentValue")} placeholder="We'll estimate it" />
+                <Disclaimer
+                  keyId="realestate.valuation"
+                  variant="inline"
+                  fallbackTitle=""
+                  fallbackBody="Property values are automated estimates and may differ from market or appraised value."
+                />
               </div>
               <div className="form-group">
                 <label className="form-label">Mortgage balance</label>

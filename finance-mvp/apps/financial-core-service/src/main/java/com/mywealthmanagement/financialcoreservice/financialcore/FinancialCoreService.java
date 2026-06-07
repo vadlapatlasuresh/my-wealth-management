@@ -1,14 +1,19 @@
 package com.mywealthmanagement.financialcoreservice.financialcore;
 
 import com.mywealthmanagement.financialcoreservice.clients.AccountAggregationClient;
+import com.mywealthmanagement.financialcoreservice.clients.RealEstateClient;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.AccountDto;
+import com.mywealthmanagement.financialcoreservice.clients.dtos.PropertyDto;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.TransactionDto;
 import com.mywealthmanagement.financialcoreservice.financialcore.dto.SnapshotDto;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +23,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class FinancialCoreService {
 
+    private static final Logger log = LoggerFactory.getLogger(FinancialCoreService.class);
+
     private final AccountAggregationClient accountAggregationClient;
+    private final RealEstateClient realEstateClient;
+    private final NetWorthSnapshotRepository snapshotRepository;
+
+    private static BigDecimal nz(BigDecimal v) {
+        return v == null ? BigDecimal.ZERO : v;
+    }
 
     // Helper to get userId from authenticated context
     private Long getUserId() {
@@ -40,32 +53,88 @@ public class FinancialCoreService {
         List<AccountDto> accounts = accountAggregationClient.getAccounts(authHeader);
         List<TransactionDto> transactions = accountAggregationClient.getTransactions(authHeader);
 
-        // --- Calculate Net Worth ---
+        // --- Calculate Net Worth from REAL sources ---
+        // Assets (cash, investments) add; liabilities (credit cards, loans) subtract.
         BigDecimal cash = BigDecimal.ZERO;
-        BigDecimal investments = BigDecimal.ZERO; // Placeholder for now
+        BigDecimal investments = BigDecimal.ZERO;
         BigDecimal creditCardsDebt = BigDecimal.ZERO;
-        BigDecimal loansDebt = BigDecimal.ZERO; // Placeholder for now
-        BigDecimal realEstateValue = BigDecimal.ZERO; // Placeholder for now
-        BigDecimal realEstateEquity = BigDecimal.ZERO; // Placeholder for now
+        BigDecimal loansDebt = BigDecimal.ZERO;
 
         for (AccountDto account : accounts) {
-            if (account.getType().equals("depository")) { // Checking, Savings
-                cash = cash.add(account.getCurrentBalance());
-            } else if (account.getType().equals("credit")) { // Credit Card
-                creditCardsDebt = creditCardsDebt.add(account.getCurrentBalance());
+            String type = account.getType() == null ? "" : account.getType().trim().toLowerCase();
+            BigDecimal bal = nz(account.getCurrentBalance());
+            switch (type) {
+                case "depository":                 // checking / savings / cash
+                    cash = cash.add(bal);
+                    break;
+                case "investment":                 // brokerage / retirement / etc.
+                case "brokerage":
+                    investments = investments.add(bal);
+                    break;
+                case "credit":                     // credit card balance (liability)
+                    creditCardsDebt = creditCardsDebt.add(bal);
+                    break;
+                case "loan":                       // mortgage / student / auto (liability)
+                    loansDebt = loansDebt.add(bal);
+                    break;
+                default:
+                    // Unknown types don't affect net worth (avoid guessing).
+                    break;
             }
-            // Add logic for investment accounts when available
         }
 
-        // Mock 30-day changes (will be calculated from historical data later)
-        BigDecimal change30dNetWorth = BigDecimal.valueOf(15732);
-        BigDecimal change30dCash = BigDecimal.valueOf(2320);
-        BigDecimal change30dInvestments = BigDecimal.valueOf(10450);
-        BigDecimal change30dCreditCards = BigDecimal.valueOf(1038);
-        BigDecimal change30dRealEstateValue = BigDecimal.valueOf(8500);
-        BigDecimal change30dRealEstateEquity = BigDecimal.valueOf(1800);
+        // Real estate from the real-estate-service. Best-effort: a failure here must
+        // never break the snapshot — fall back to zero so net worth still computes.
+        BigDecimal realEstateValue = BigDecimal.ZERO;
+        BigDecimal realEstateEquity = BigDecimal.ZERO;
+        try {
+            List<PropertyDto> properties = realEstateClient.getProperties(authHeader);
+            if (properties != null) {
+                for (PropertyDto p : properties) {
+                    BigDecimal value = nz(p.getCurrentValue());
+                    BigDecimal equity = p.getEquity() != null
+                            ? p.getEquity()
+                            : value.subtract(nz(p.getMortgageBalance()));
+                    realEstateValue = realEstateValue.add(value);
+                    realEstateEquity = realEstateEquity.add(equity);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("real-estate fetch failed for snapshot ({}); treating as 0", e.getMessage());
+        }
 
-        BigDecimal netTotal = cash.add(investments).add(realEstateEquity).subtract(creditCardsDebt).subtract(loansDebt);
+        BigDecimal netTotal = cash.add(investments).add(realEstateEquity)
+                .subtract(creditCardsDebt).subtract(loansDebt);
+
+        // Persist today's datapoint so history accrues from real values (idempotent
+        // per user/day). Best-effort: persistence failure must not break the read.
+        persistDailySnapshot(userId, netTotal, cash, investments, creditCardsDebt,
+                loansDebt, realEstateValue, realEstateEquity);
+
+        // 30-day changes computed from REAL history: current − value ~30 days ago.
+        // When no ~30-day-old snapshot exists yet, the change is 0 (honest), not faked.
+        BigDecimal change30dNetWorth = BigDecimal.ZERO;
+        BigDecimal change30dCash = BigDecimal.ZERO;
+        BigDecimal change30dInvestments = BigDecimal.ZERO;
+        BigDecimal change30dCreditCards = BigDecimal.ZERO;
+        BigDecimal change30dRealEstateValue = BigDecimal.ZERO;
+        BigDecimal change30dRealEstateEquity = BigDecimal.ZERO;
+        try {
+            NetWorthSnapshot prior = snapshotRepository
+                    .findFirstByUserIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+                            userId, LocalDate.now().minusDays(30))
+                    .orElse(null);
+            if (prior != null) {
+                change30dNetWorth = netTotal.subtract(nz(prior.getTotal()));
+                change30dCash = cash.subtract(nz(prior.getCash()));
+                change30dInvestments = investments.subtract(nz(prior.getInvestments()));
+                change30dCreditCards = creditCardsDebt.subtract(nz(prior.getCreditCards()));
+                change30dRealEstateValue = realEstateValue.subtract(nz(prior.getRealEstateValue()));
+                change30dRealEstateEquity = realEstateEquity.subtract(nz(prior.getRealEstateEquity()));
+            }
+        } catch (Exception e) {
+            log.warn("30d change history lookup failed ({}); reporting 0", e.getMessage());
+        }
 
         SnapshotDto.NetWorthDto netWorthDto = new SnapshotDto.NetWorthDto(netTotal, change30dNetWorth);
         SnapshotDto.ComponentsDto componentsDto = new SnapshotDto.ComponentsDto(
@@ -77,59 +146,73 @@ public class FinancialCoreService {
                 realEstateEquity, change30dRealEstateEquity
         );
 
-        // --- Generate Time Series ---
-        List<SnapshotDto.TimeSeriesPoint> series = generateTimeSeriesPoints(netTotal, range);
+        // --- Time series from REAL persisted daily history (no synthetic curve) ---
+        List<SnapshotDto.TimeSeriesPoint> series = buildSeriesFromHistory(userId, range);
 
         return new SnapshotDto(userId, LocalDateTime.now(), netWorthDto, componentsDto, series);
     }
 
-    /**
-     * Builds a smooth, deterministic net-worth time series that ends exactly at the
-     * current value and rises toward it. Point count and span scale with the range,
-     * and the total growth is a range-scaled percentage of the current value so the
-     * curve stays realistic regardless of balance size.
-     * (Synthetic until per-day historical snapshots are persisted.)
-     */
-    private List<SnapshotDto.TimeSeriesPoint> generateTimeSeriesPoints(
-            BigDecimal baseValue, String range) {
+    /** Upsert one net-worth datapoint per user per day. Best-effort. */
+    private void persistDailySnapshot(Long userId, BigDecimal total, BigDecimal cash,
+            BigDecimal investments, BigDecimal creditCards, BigDecimal loans,
+            BigDecimal realEstateValue, BigDecimal realEstateEquity) {
+        try {
+            LocalDate today = LocalDate.now();
+            NetWorthSnapshot snap = snapshotRepository
+                    .findByUserIdAndSnapshotDate(userId, today)
+                    .orElseGet(NetWorthSnapshot::new);
+            snap.setUserId(userId);
+            snap.setSnapshotDate(today);
+            snap.setTotal(total);
+            snap.setCash(cash);
+            snap.setInvestments(investments);
+            snap.setCreditCards(creditCards);
+            snap.setLoans(loans);
+            snap.setRealEstateValue(realEstateValue);
+            snap.setRealEstateEquity(realEstateEquity);
+            snapshotRepository.save(snap);
+        } catch (Exception e) {
+            log.warn("net-worth snapshot persist failed ({}); continuing", e.getMessage());
+        }
+    }
 
+    /** How many days of history a range window covers. */
+    private static long lookbackDays(String range) {
         String r = range == null ? "3M" : range;
-        if (r.startsWith("custom")) r = "3M";
-
-        int points;
-        long totalMinutes;
-        double growthPct; // total rise across the window, as a fraction of current value
+        if (r.startsWith("custom")) return 90;
         switch (r) {
-            case "1H": points = 12; totalMinutes = 60L;        growthPct = 0.003; break;
-            case "1D": points = 24; totalMinutes = 1440L;      growthPct = 0.01;  break;
-            case "1W": points = 14; totalMinutes = 10_080L;    growthPct = 0.03;  break;
-            case "1M": points = 30; totalMinutes = 43_200L;    growthPct = 0.06;  break;
-            case "3M": points = 13; totalMinutes = 129_600L;   growthPct = 0.12;  break;
-            case "6M": points = 26; totalMinutes = 259_200L;   growthPct = 0.18;  break;
-            case "1Y": points = 12; totalMinutes = 525_600L;   growthPct = 0.25;  break;
-            case "All": points = 24; totalMinutes = 1_051_200L; growthPct = 0.45; break;
-            default:    points = 16; totalMinutes = 129_600L;  growthPct = 0.10;  break;
+            case "1H": case "1D": return 1;
+            case "1W": return 7;
+            case "1M": return 30;
+            case "3M": return 90;
+            case "6M": return 180;
+            case "1Y": return 365;
+            case "All": return 100_000; // effectively all history
+            default:   return 90;
         }
+    }
 
-        double end = baseValue.doubleValue();
-        // Start lower and grow to the current value (or flat when there's no balance).
-        double start = end > 0 ? end / (1 + growthPct) : end;
-        double amplitude = Math.abs(end - start) * 0.10 + Math.abs(end) * 0.004;
-
-        List<SnapshotDto.TimeSeriesPoint> series = new java.util.ArrayList<>(points);
-        LocalDateTime now = LocalDateTime.now();
-        for (int i = 0; i < points; i++) {
-            double t = points == 1 ? 1.0 : (double) i / (points - 1);
-            double eased = t * t * (3 - 2 * t);               // smoothstep
-            double v = start + (end - start) * eased
-                    + amplitude * Math.sin(i * 1.7);          // gentle deterministic wiggle
-            if (i == points - 1) v = end;                      // land exactly on current value
-            long minutesAgo = Math.round((1 - t) * totalMinutes);
-            series.add(new SnapshotDto.TimeSeriesPoint(
-                    now.minusMinutes(minutesAgo),
-                    BigDecimal.valueOf(Math.round(v))));
+    /**
+     * Time series built from REAL persisted daily snapshots within the range window.
+     * Returns whatever real history exists (one point per day). When there are fewer
+     * than two points the UI shows an honest "building history" state rather than a
+     * fabricated curve.
+     */
+    private List<SnapshotDto.TimeSeriesPoint> buildSeriesFromHistory(Long userId, String range) {
+        try {
+            LocalDate from = LocalDate.now().minusDays(lookbackDays(range));
+            List<NetWorthSnapshot> rows = snapshotRepository
+                    .findByUserIdAndSnapshotDateGreaterThanEqualOrderBySnapshotDateAsc(userId, from);
+            List<SnapshotDto.TimeSeriesPoint> series = new java.util.ArrayList<>(rows.size());
+            for (NetWorthSnapshot s : rows) {
+                series.add(new SnapshotDto.TimeSeriesPoint(
+                        s.getSnapshotDate().atStartOfDay(), nz(s.getTotal())));
+            }
+            return series;
+        } catch (Exception e) {
+            log.warn("net-worth series read failed ({}); returning empty", e.getMessage());
+            return java.util.Collections.emptyList();
         }
-        return series;
     }
 
     public List<AccountDto> getAccounts() {

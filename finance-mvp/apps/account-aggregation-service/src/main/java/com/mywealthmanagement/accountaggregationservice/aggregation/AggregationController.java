@@ -5,9 +5,12 @@ import com.mywealthmanagement.accountaggregationservice.account.dto.AccountDto;
 import com.mywealthmanagement.accountaggregationservice.plaid.PlaidService;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
+import com.mywealthmanagement.accountaggregationservice.security.PlaidWebhookVerifier;
 import com.mywealthmanagement.accountaggregationservice.transaction.TransactionService;
 import com.mywealthmanagement.accountaggregationservice.transaction.dto.TransactionDto;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,9 +28,12 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AggregationController {
 
+    private static final Logger log = LoggerFactory.getLogger(AggregationController.class);
+
     private final PlaidService plaidService;
     private final AccountService accountService;
     private final TransactionService transactionService;
+    private final PlaidWebhookVerifier plaidWebhookVerifier;
 
     private Long getUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -74,15 +80,17 @@ public class AggregationController {
 
     // Webhook endpoint for Plaid
     @PostMapping("/webhook")
-    @ResponseStatus(HttpStatus.OK)
-    public void receiveWebhook(@RequestBody Map<String, Object> webhook) {
-        // In a real application, you'd verify the webhook signature
-        // and process different webhook types (e.g., TRANSACTIONS_UPDATES, ITEM_ERROR)
-        System.out.println("Received Plaid Webhook: " + webhook);
-        // For now, just logging. Full implementation would involve:
-        // 1. Verify signature
-        // 2. Parse webhook type
-        // 3. Fetch updated data for affected item/user
-        // 4. Publish event to message queue for other services
+    public ResponseEntity<Void> receiveWebhook(
+            @RequestBody(required = false) String rawBody,
+            @RequestHeader(value = "Plaid-Verification", required = false) String verificationHeader) {
+        // Verify the webhook before trusting it. Never log the raw payload (it can carry
+        // account/item identifiers) — only a non-sensitive acknowledgement.
+        if (!plaidWebhookVerifier.verify(rawBody == null ? "" : rawBody, verificationHeader)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        log.info("Accepted a verified Plaid webhook.");
+        // Full implementation would: parse webhook type, fetch updated data for the
+        // affected item/user, and publish an event for downstream services.
+        return ResponseEntity.ok().build();
     }
 }

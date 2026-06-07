@@ -1,5 +1,6 @@
 package com.mywealthmanagement.accountaggregationservice.plaid;
 
+import com.mywealthmanagement.accountaggregationservice.security.AccessTokenConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -24,8 +25,9 @@ public class PlaidItem {
     @Column(name = "plaid_item_id", nullable = false, unique = true)
     private String plaidItemId;
 
+    @Convert(converter = AccessTokenConverter.class)
     @Column(name = "access_token", nullable = false)
-    private String accessToken; // Encrypted in production
+    private String accessToken; // Encrypted at rest via AccessTokenConverter (AES-256-GCM)
 
     @Column(name = "institution_id")
     private String institutionId;

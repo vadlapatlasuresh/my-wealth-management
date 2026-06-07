@@ -13,6 +13,22 @@ npm run dev -w apps/web      # web on :5173  (new terminal)
 ```
 Open **http://localhost:5173**.
 
+### The whole journey at a glance
+
+```mermaid
+flowchart LR
+    START["Start stack<br/>backend + web"] --> AUTH["Auth page"]
+    AUTH -->|Create account| HOME["Dashboard (Home)"]
+    AUTH -->|Sign in| HOME
+    HOME --> ACC["Accounts → link via Plaid"]
+    ACC --> TX["Transactions (filter by card)"]
+    HOME --> PLAN["Budgets · Debt Lab"]
+    HOME --> PAY["Bill Pay"]
+    HOME --> MORE["Real Estate · AI · My Business"]
+    HOME --> SET["Messages · Profile · Settings"]
+    HOME -. care/admin only .-> CARE["Customer Care console"]
+```
+
 Ports: gateway 8080 · auth 8081 · aggregation 8082 · financial-core 8083 · real-estate 8084 ·
 business 8085 · ai 8086 · payments 8087 · notifications 8088 · node 4000 · web 5173.
 

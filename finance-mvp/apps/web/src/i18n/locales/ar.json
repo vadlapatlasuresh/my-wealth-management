@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "اللغة",
+    "auto": "تلقائي (المتصفح)",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "accounts": "الحسابات",
+    "transactions": "المعاملات",
+    "budget": "الميزانية",
+    "billpay": "دفع الفواتير",
+    "debt": "مختبر الديون",
+    "invest": "الاستثمارات",
+    "mybusiness": "أعمالي",
+    "ai-assistant": "المساعد الذكي",
+    "realestate": "العقارات",
+    "dealroom": "غرفة الصفقات",
+    "fractional": "شركة ذات مسؤولية محدودة مجزأة",
+    "security": "الأمان",
+    "messages": "الرسائل",
+    "settings": "الإعدادات",
+    "styleguide": "دليل التصميم",
+    "flowmap": "خريطة تدفق الواجهة",
+    "guide": "كيفية الاستخدام",
+    "profile": "الملف الشخصي",
+    "learn": "تعلّم",
+    "calculators": "الآلات الحاسبة",
+    "goals": "الأهداف"
+  },
+  "section": {
+    "finance": "المالية",
+    "realestate": "العقارات",
+    "settings": "الإعدادات"
+  },
+  "brand": {
+    "tagline": "كل ثروتك · في مكان واحد"
+  },
+  "topbar": {
+    "searchPlaceholder": "البحث في المعاملات… (اضغط Enter)",
+    "notifications": "الإشعارات",
+    "noNotifications": "لا توجد إشعارات",
+    "viewAllMessages": "عرض كل الرسائل",
+    "new": "{{count}} جديدة",
+    "help": "المساعدة والتعلّم",
+    "themeTip": "السمة: {{theme}} — انقر للتبديل",
+    "toggleMenu": "تبديل قائمة التنقل",
+    "expandMenu": "توسيع القائمة",
+    "collapseMenu": "طي القائمة"
+  },
+  "theme": {
+    "light": "فاتح",
+    "dark": "داكن",
+    "glass": "زجاجي"
+  },
+  "user": {
+    "viewProfile": "عرض الملف الشخصي",
+    "signOut": "تسجيل الخروج",
+    "user": "المستخدم"
+  },
+  "common": {
+    "loading": "جارٍ التحميل…",
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "add": "إضافة",
+    "back": "رجوع",
+    "next": "التالي",
+    "done": "تم",
+    "refresh": "تحديث",
+    "search": "بحث",
+    "retry": "إعادة المحاولة",
+    "all": "الكل",
+    "none": "لا شيء",
+    "yes": "نعم",
+    "no": "لا",
+    "amount": "المبلغ",
+    "date": "التاريخ",
+    "status": "الحالة",
+    "type": "النوع",
+    "name": "الاسم",
+    "total": "الإجمالي",
+    "today": "اليوم",
+    "lastRefreshed": "آخر تحديث {{time}}",
+    "viewAll": "عرض الكل",
+    "comingSoon": "قريبًا",
+    "sessionExpired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى."
+  },
+  "disclaimer": {
+    "iUnderstand": "فهمت"
+  }
+}

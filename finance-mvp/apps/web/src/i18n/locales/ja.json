@@ -1,0 +1,103 @@
+{
+  "language": {
+    "label": "言語",
+    "auto": "自動（ブラウザ）",
+    "en": "English",
+    "es": "Español",
+    "fr": "Français",
+    "de": "Deutsch",
+    "pt": "Português",
+    "zh": "中文",
+    "hi": "हिन्दी",
+    "ja": "日本語",
+    "ar": "العربية"
+  },
+  "nav": {
+    "home": "ホーム",
+    "accounts": "口座",
+    "transactions": "取引",
+    "budget": "予算",
+    "billpay": "請求書の支払い",
+    "debt": "債務ラボ",
+    "invest": "投資",
+    "mybusiness": "マイビジネス",
+    "ai-assistant": "AIアシスタント",
+    "realestate": "物件",
+    "dealroom": "ディールルーム",
+    "fractional": "分割LLC",
+    "security": "セキュリティ",
+    "messages": "メッセージ",
+    "settings": "設定",
+    "styleguide": "スタイルガイド",
+    "flowmap": "UIフローマップ",
+    "guide": "使い方",
+    "profile": "プロフィール",
+    "learn": "学ぶ",
+    "calculators": "計算ツール",
+    "goals": "目標"
+  },
+  "section": {
+    "finance": "ファイナンス",
+    "realestate": "不動産",
+    "settings": "設定"
+  },
+  "brand": {
+    "tagline": "あなたのすべての資産 · 一つの場所に"
+  },
+  "topbar": {
+    "searchPlaceholder": "取引を検索…（Enterキーを押す）",
+    "notifications": "通知",
+    "noNotifications": "通知はありません",
+    "viewAllMessages": "すべてのメッセージを表示",
+    "new": "{{count}}件の新着",
+    "help": "ヘルプと学習",
+    "themeTip": "テーマ：{{theme}} — クリックして切り替え",
+    "toggleMenu": "ナビゲーションメニューを切り替え",
+    "expandMenu": "メニューを展開",
+    "collapseMenu": "メニューを折りたたむ"
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "glass": "グラス"
+  },
+  "user": {
+    "viewProfile": "プロフィールを表示",
+    "signOut": "サインアウト",
+    "user": "ユーザー"
+  },
+  "common": {
+    "loading": "読み込み中…",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "confirm": "確認",
+    "delete": "削除",
+    "edit": "編集",
+    "add": "追加",
+    "back": "戻る",
+    "next": "次へ",
+    "done": "完了",
+    "refresh": "更新",
+    "search": "検索",
+    "retry": "再試行",
+    "all": "すべて",
+    "none": "なし",
+    "yes": "はい",
+    "no": "いいえ",
+    "amount": "金額",
+    "date": "日付",
+    "status": "ステータス",
+    "type": "種類",
+    "name": "名前",
+    "total": "合計",
+    "today": "今日",
+    "lastRefreshed": "最終更新 {{time}}",
+    "viewAll": "すべて表示",
+    "comingSoon": "近日公開",
+    "sessionExpired": "セッションの有効期限が切れました。もう一度サインインしてください。"
+  },
+  "disclaimer": {
+    "iUnderstand": "理解しました"
+  }
+}

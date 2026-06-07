@@ -1,46 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { api } from '../api';
 
-/* Fallback messages so the inbox is never blank (empty result or API failure). */
-const MOCK_MESSAGES = [
-  {
-    id: 'mock-1',
-    type: 'BUDGET',
-    title: 'You’re close to your Dining budget',
-    body: 'You’ve spent 92% of your Dining budget for June ($460 of $500). At the current pace you’ll exceed it before month end. Consider easing off restaurants for the next two weeks.',
-    channel: 'IN_APP',
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
-  },
-  {
-    id: 'mock-2',
-    type: 'PAYMENT',
-    title: 'Bill payment scheduled',
-    body: 'Your bill payment of $250.00 to City Utilities has been scheduled and will be sent on June 8. You’ll get a confirmation once it clears.',
-    channel: 'EMAIL',
-    read: false,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
-  },
-  {
-    id: 'mock-3',
-    type: 'ACCOUNT',
-    title: 'New account linked',
-    body: 'Your Acme Bank Savings account was successfully connected. Balances and transactions will sync automatically every few hours.',
-    channel: 'IN_APP',
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 26).toISOString(),
-  },
-  {
-    id: 'mock-4',
-    type: 'SYSTEM',
-    title: 'Welcome to TerraVest',
-    body: 'Thanks for joining. Link your accounts, set a budget, and we’ll keep you posted with timely alerts and insights right here in your inbox.',
-    channel: 'IN_APP',
-    read: true,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3).toISOString(),
-  },
-];
-
 /* Icon + color treatment per notification type. */
 function typeVisual(type) {
   switch ((type || '').toUpperCase()) {
@@ -85,7 +45,6 @@ export default function MessagesPage() {
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [usingMock, setUsingMock] = useState(false);
 
   const [filter, setFilter] = useState('ALL'); // ALL | UNREAD | READ
   const [search, setSearch] = useState('');
@@ -101,17 +60,12 @@ export default function MessagesPage() {
     try {
       const res = await api.getNotifications();
       const items = Array.isArray(res?.items) ? res.items : [];
-      if (items.length === 0) {
-        setMessages(MOCK_MESSAGES);
-        setUsingMock(true);
-      } else {
-        setMessages(items);
-        setUsingMock(false);
-      }
+      // Show exactly what the API returns — an empty inbox renders an honest
+      // empty state, never fabricated sample messages.
+      setMessages(items);
     } catch (err) {
       setError(err?.message || 'Could not load your messages.');
-      setMessages(MOCK_MESSAGES);
-      setUsingMock(true);
+      setMessages([]);
     } finally {
       setLoading(false);
     }
@@ -176,30 +130,24 @@ export default function MessagesPage() {
       setMessages((prev) =>
         prev.map((m) => (m.id === msg.id ? { ...m, read: true } : m))
       );
-      // Mock items don't exist on the backend; skip the call for them.
-      if (!usingMock && !String(msg.id).startsWith('mock-')) {
-        try {
-          await api.markNotificationRead(msg.id);
-        } catch {
-          // Ignore failures; the local state already reflects the read status.
-        }
+      try {
+        await api.markNotificationRead(msg.id);
+      } catch {
+        // Ignore failures; the local state already reflects the read status.
       }
     }
   }
 
   // Toggle the read/unread state of a single message (reading-pane action).
-  // Mirrors selectMessage()'s backend rules: skip the API for mock items.
   async function toggleRead(msg, nextRead) {
     setMessages((prev) =>
       prev.map((m) => (m.id === msg.id ? { ...m, read: nextRead } : m))
     );
-    if (!usingMock && !String(msg.id).startsWith('mock-')) {
-      try {
-        // The API only exposes a "mark read" call; only invoke it when marking read.
-        if (nextRead) await api.markNotificationRead(msg.id);
-      } catch {
-        // Ignore failures; local state already reflects the change.
-      }
+    try {
+      // The API only exposes a "mark read" call; only invoke it when marking read.
+      if (nextRead) await api.markNotificationRead(msg.id);
+    } catch {
+      // Ignore failures; local state already reflects the change.
     }
   }
 
@@ -207,13 +155,9 @@ export default function MessagesPage() {
     const unread = messages.filter((m) => !m.read);
     if (unread.length === 0) return;
     setMessages((prev) => prev.map((m) => ({ ...m, read: true })));
-    if (!usingMock) {
-      await Promise.allSettled(
-        unread
-          .filter((m) => !String(m.id).startsWith('mock-'))
-          .map((m) => api.markNotificationRead(m.id))
-      );
-    }
+    await Promise.allSettled(
+      unread.map((m) => api.markNotificationRead(m.id))
+    );
   }
 
   return (
@@ -261,7 +205,7 @@ export default function MessagesPage() {
           className="badge badge-amber"
           style={{ marginBottom: 16, display: 'inline-flex' }}
         >
-          <i className="ti ti-alert-triangle"></i> {error} Showing sample messages.
+          <i className="ti ti-alert-triangle"></i> {error}
         </div>
       )}
 
