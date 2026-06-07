@@ -1,13 +1,23 @@
 import express from "express";
-import cors from "cors";
 import { z } from "zod";
 import { prisma } from "./db.js";
 import { authMiddleware, comparePassword, hashPassword, signToken } from "./auth.js";
 
+// Safety net: a single failed DB query (rejected promise in an async route)
+// must never take down the whole API process.
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection]", reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException]", err);
+});
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+// CORS is handled solely by the API Gateway (the single browser-facing entry point).
+// Enabling it here too would duplicate the Access-Control-Allow-Origin header on
+// gateway-proxied responses, which the browser rejects.
 app.use(express.json());
 
 app.get("/health", (_req, res) => {

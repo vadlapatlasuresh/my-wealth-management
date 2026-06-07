@@ -28,6 +28,7 @@ public class SecurityConfig {
         http
                 .csrf().disable()
                 .authorizeHttpRequests()
+                .requestMatchers("/error").permitAll() // Don't mask 4xx/5xx as 403 on error dispatch
                 .anyRequest().authenticated() // All requests require authentication
                 .and()
                 .sessionManagement()

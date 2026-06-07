@@ -1,0 +1,11 @@
+CREATE TABLE qbo_connections (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    connected BOOLEAN NOT NULL DEFAULT FALSE,
+    realm_id VARCHAR(255),
+    company_name VARCHAR(255),
+    last_sync_at TIMESTAMP WITHOUT TIME ZONE,
+    created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id)
+);

@@ -53,10 +53,11 @@ public class AggregationController {
     }
 
     @PostMapping("/public-token/exchange")
-    public ResponseEntity<String> exchangePublicToken(@RequestBody PublicTokenExchangeRequest request) throws IOException {
+    public ResponseEntity<Map<String, String>> exchangePublicToken(@RequestBody PublicTokenExchangeRequest request) throws IOException {
         request.setUserId(getUserId()); // Set userId from authenticated context
         plaidService.exchangePublicToken(request);
-        return ResponseEntity.ok("Public token exchanged successfully");
+        // Return JSON (not a bare string) so the web client's response.json() can parse it.
+        return ResponseEntity.ok(Collections.singletonMap("message", "Public token exchanged successfully"));
     }
 
     @GetMapping("/accounts")

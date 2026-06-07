@@ -1,9 +1,39 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { currency } from '../utils/format'; // Assuming currency formatter is available
 
+const INITIAL_DOCS = [
+  { id: 'ppm', name: 'Private Placement Memo', acknowledged: true },
+  { id: 'oa', name: 'Operating Agreement', acknowledged: true },
+  { id: 'sub', name: 'Subscription Agreement', acknowledged: false },
+  { id: 'terms', name: 'Summary of Terms', acknowledged: false },
+  { id: 'risk', name: 'Risk Factors', acknowledged: false },
+  { id: 'fin', name: 'Financial Projections', acknowledged: false },
+  { id: 'tax', name: 'Tax Disclosures', acknowledged: false },
+];
+
 export default function DealRoomPage() {
-  // For now, using static data as per the HTML mock.
-  // In a real application, this data would come from props or API calls.
+  const [docs, setDocs] = useState(INITIAL_DOCS);
+  const [watchlisted, setWatchlisted] = useState(false);
+  const [subscribed, setSubscribed] = useState(false);
+
+  const completed = docs.filter((d) => d.acknowledged).length;
+  const total = docs.length;
+  const allAcknowledged = completed === total;
+
+  const acknowledgeDoc = (id) =>
+    setDocs((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, acknowledged: true } : d))
+    );
+
+  const toggleWatchlist = () => setWatchlisted((w) => !w);
+
+  const subscribe = () => {
+    if (allAcknowledged) setSubscribed(true);
+  };
+
+  // Donut math: full circumference for r=26 is ~163.4
+  const circumference = 2 * Math.PI * 26;
+  const filled = (completed / total) * circumference;
 
   return (
     <div id="page-dealroom" className="page active">
@@ -13,8 +43,16 @@ export default function DealRoomPage() {
           <div className="page-subtitle">Willow Creek Land LLC — Opportunity detail</div>
         </div>
         <div className="page-actions">
-          <button className="btn btn-secondary btn-sm"><i className="ti ti-bookmark"></i> Watchlist</button>
-          <button className="btn btn-primary btn-sm"><i className="ti ti-arrow-left"></i> Marketplace</button>
+          <button
+            className={`btn btn-sm ${watchlisted ? 'btn-gold' : 'btn-secondary'}`}
+            onClick={toggleWatchlist}
+          >
+            <i className={watchlisted ? 'ti ti-bookmark-filled' : 'ti ti-bookmark'}></i>{' '}
+            {watchlisted ? 'On watchlist' : 'Watchlist'}
+          </button>
+          <button className="btn btn-primary btn-sm" onClick={toggleWatchlist}>
+            <i className="ti ti-arrow-left"></i> Marketplace
+          </button>
         </div>
       </div>
 
@@ -32,6 +70,7 @@ export default function DealRoomPage() {
                     <span className="badge badge-forest">Core Plus</span>
                     <span className="badge badge-gray">Real Estate</span>
                     <span className="badge badge-gray">Land Development</span>
+                    {watchlisted && <span className="badge badge-gold"><i className="ti ti-bookmark-filled"></i> Watchlisted</span>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}><i className="ti ti-map-pin"></i> Bozeman, Montana</div>
                   <div style={{ display: 'flex', gap: '24px' }}>
@@ -98,48 +137,91 @@ export default function DealRoomPage() {
             <div className="card" style={{ position: 'sticky', top: '0' }}>
               <div className="section-title">Document checklist</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
-                <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tv-border)" strokeWidth="7"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tv-forest)" strokeWidth="7" strokeDasharray="57.5 105" strokeDashoffset="35" strokeLinecap="round"/><text x="32" y="30" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--tv-text-primary)" fontFamily="var(--font-display)">2/7</text></svg>
+                <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tv-border)" strokeWidth="7"/><circle cx="32" cy="32" r="26" fill="none" stroke="var(--tv-forest)" strokeWidth="7" strokeDasharray={`${filled} ${circumference}`} strokeDashoffset={circumference / 4} strokeLinecap="round" transform="rotate(-90 32 32)"/><text x="32" y="30" textAnchor="middle" fontSize="16" fontWeight="700" fill="var(--tv-text-primary)" fontFamily="var(--font-display)">{completed}/{total}</text></svg>
                 <div>
-                  <div style={{ fontSize: '16px', fontWeight: '700' }}>2 of 7 completed</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700' }}>{completed} of {total} completed</div>
                   <div style={{ fontSize: '12px', color: 'var(--tv-text-muted)' }}>Review all docs to subscribe.</div>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'var(--tv-positive-bg)', border: '1px solid rgba(30,123,75,.2)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-check-circle" style={{ color: 'var(--tv-positive)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Private Placement Memo</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <span className="badge badge-green" style={{ fontSize: '10.5px' }}>Acknowledged</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'var(--tv-positive-bg)', border: '1px solid rgba(30,123,75,.2)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-check-circle" style={{ color: 'var(--tv-positive)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Operating Agreement</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <span className="badge badge-green" style={{ fontSize: '10.5px' }}>Acknowledged</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-file-text" style={{ color: 'var(--tv-text-muted)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Subscription Agreement</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11.5px' }}>Acknowledge</button>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-file-text" style={{ color: 'var(--tv-text-muted)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Summary of Terms</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11.5px' }}>Acknowledge</button>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-file-text" style={{ color: 'var(--tv-text-muted)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Risk Factors</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11.5px' }}>Acknowledge</button>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)' }}>
-                  <i className="ti ti-file-text" style={{ color: 'var(--tv-text-muted)', fontSize: '18px', flexShrink: 0 }}></i>
-                  <div style={{ flex: 1, fontSize: '13px' }}><div style={{ fontWeight: '500' }}>Financial Projections</div><div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div></div>
-                  <button className="btn btn-secondary btn-sm" style={{ padding: '4px 10px', fontSize: '11.5px' }}>Acknowledge</button>
-                </div>
+                {docs.map((doc) => (
+                  <div
+                    key={doc.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px',
+                      background: doc.acknowledged ? 'var(--tv-positive-bg)' : 'white',
+                      border: doc.acknowledged ? '1px solid rgba(30,123,75,.2)' : '1px solid var(--tv-border)',
+                      borderRadius: 'var(--radius-md)',
+                    }}
+                  >
+                    <i
+                      className={doc.acknowledged ? 'ti ti-circle-check' : 'ti ti-file-text'}
+                      style={{ color: doc.acknowledged ? 'var(--tv-positive)' : 'var(--tv-text-muted)', fontSize: '18px', flexShrink: 0 }}
+                    ></i>
+                    <div style={{ flex: 1, fontSize: '13px' }}>
+                      <div style={{ fontWeight: '500' }}>{doc.name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)' }}>PDF</div>
+                    </div>
+                    {doc.acknowledged ? (
+                      <span className="badge badge-green" style={{ fontSize: '10.5px' }}>Acknowledged</span>
+                    ) : (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ padding: '4px 10px', fontSize: '11.5px' }}
+                        onClick={() => acknowledgeDoc(doc.id)}
+                      >
+                        Acknowledge
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
               <hr className="divider" />
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}><i className="ti ti-lock" style={{ fontSize: '16px' }}></i> You must acknowledge all documents to subscribe.</div>
-              <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: '.5', cursor: 'not-allowed' }}>Subscribe to Opportunity</button>
-              <button className="btn btn-secondary" style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}><i className="ti ti-bookmark"></i> Add to Watchlist</button>
+              {subscribed ? (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px',
+                    background: 'var(--tv-positive-bg)',
+                    border: '1px solid rgba(30,123,75,.2)',
+                    borderRadius: 'var(--radius-md)',
+                    color: 'var(--tv-positive)',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                  }}
+                >
+                  <i className="ti ti-circle-check" style={{ fontSize: '18px' }}></i>
+                  Subscription request submitted
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}>
+                    <i className={allAcknowledged ? 'ti ti-lock-open' : 'ti ti-lock'} style={{ fontSize: '16px' }}></i>{' '}
+                    {allAcknowledged ? 'All documents acknowledged — you may subscribe.' : 'You must acknowledge all documents to subscribe.'}
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    style={{ width: '100%', justifyContent: 'center', opacity: allAcknowledged ? '1' : '.5', cursor: allAcknowledged ? 'pointer' : 'not-allowed' }}
+                    onClick={subscribe}
+                    disabled={!allAcknowledged}
+                  >
+                    Subscribe to Opportunity
+                  </button>
+                </>
+              )}
+              <button
+                className={`btn ${watchlisted ? 'btn-gold' : 'btn-secondary'}`}
+                style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}
+                onClick={toggleWatchlist}
+              >
+                <i className={watchlisted ? 'ti ti-bookmark-filled' : 'ti ti-bookmark'}></i>{' '}
+                {watchlisted ? 'Added to Watchlist' : 'Add to Watchlist'}
+              </button>
             </div>
           </div>
         </div>

@@ -33,8 +33,18 @@ public class ApiGatewayApplication {
                         .uri("http://localhost:8083")) // Route to financial-core-service for snapshot
                 .route("financial_core_service_planning_route", r -> r.path("/api/v1/planning/**")
                         .uri("http://localhost:8083")) // Route to financial-core-service for planning
+                .route("real_estate_service_route", r -> r.path("/api/v1/real-estate/**")
+                        .uri("http://localhost:8084")) // Route to real-estate-service
+                .route("business_financials_service_route", r -> r.path("/api/v1/business/**")
+                        .uri("http://localhost:8085")) // Route to business-financials-service
+                .route("ai_insights_service_route", r -> r.path("/api/v1/ai/**")
+                        .uri("http://localhost:8086")) // Route to ai-insights-service
+                .route("payment_service_route", r -> r.path("/api/v1/payments/**")
+                        .uri("http://localhost:8087")) // Route to payment-service
+                .route("notification_service_route", r -> r.path("/api/v1/notifications/**")
+                        .uri("http://localhost:8088")) // Route to notification-service
                 .route("legacy_node_api_route", r -> r.path("/v1/**")
-                        .uri("http://localhost:4000")) // Route to legacy Node.js API
+                        .uri("http://localhost:4000")) // Route to legacy Node.js API (real-estate/ai/payments mocks now superseded)
                 .build();
     }
 
@@ -53,13 +63,7 @@ public class ApiGatewayApplication {
 //        return new CorsWebFilter(source);
 //    }
 
-    // Custom WebFilter to remove duplicate Access-Control-Allow-Origin header
-    @Bean
-    public WebFilter removeDuplicateCorsHeaderFilter() {
-        return (exchange, chain) -> {
-            return chain.filter(exchange).doFinally(signalType -> {
-                exchange.getResponse().getHeaders().remove("Access-Control-Allow-Origin");
-            });
-        };
-    }
+    // Duplicate CORS headers are now collapsed by the DedupeResponseHeader default filter
+    // (see application.properties), which is the correct, response-aware approach. The old
+    // doFinally-based removal ran after the response was committed and could not work.
 }

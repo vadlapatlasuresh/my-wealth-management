@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "My Wealth Management",
+    "slug": "my-wealth-management",
+    "scheme": "mywealth",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true, "bundleIdentifier": "com.mywealthmanagement.app" },
+    "android": { "package": "com.mywealthmanagement.app" },
+    "extra": {
+      "apiBaseUrl": "http://localhost:8080"
+    }
+  }
+}

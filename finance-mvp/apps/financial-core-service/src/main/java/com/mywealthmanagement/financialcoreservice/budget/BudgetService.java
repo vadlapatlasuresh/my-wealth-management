@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -60,20 +61,18 @@ public class BudgetService {
         Budget budget = budgetRepository.findByUserIdAndMonth(userId, month)
                 .orElseGet(() -> new Budget(userId, month));
 
-        budgetRepository.save(budget); // Save to get an ID if new
-
-        // Clear existing lines and add new ones
-        if (budget.getLines() != null) {
-            budget.getLines().clear();
-        } else {
-            budget.setLines(Collections.emptyList());
+        // With orphanRemoval=true the managed collection must be mutated in place,
+        // never reassigned. Initialize it only when null (a brand-new budget).
+        if (budget.getLines() == null) {
+            budget.setLines(new ArrayList<>());
         }
+        budget.getLines().clear();
 
-        List<BudgetLine> newLines = lineDtos.stream()
+        lineDtos.stream()
                 .map(dto -> new BudgetLine(budget, dto.getCategory(), dto.getAmount()))
-                .collect(Collectors.toList());
-        budget.setLines(newLines);
-        budgetLineRepository.saveAll(newLines); // Save new lines
+                .forEach(budget.getLines()::add);
+
+        budgetRepository.save(budget); // cascade=ALL persists new lines and removes orphaned ones
 
         return getBudgetForMonth(month); // Return updated budget with spent amounts
     }

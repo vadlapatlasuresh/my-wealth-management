@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Build Java services
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - account-aggregation-service
+          - financial-core-service
+          - real-estate-service
+          - business-financials-service
+          - ai-insights-service
+          - payment-service
+          - notification-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build ${{ matrix.service }}
+        working-directory: finance-mvp
+        run: mvn -q clean package -DskipTests -f apps/${{ matrix.service }}/pom.xml
+
+  web:
+    name: Build web app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        working-directory: finance-mvp
+        run: npm install
+      - name: Build web
+        working-directory: finance-mvp
+        run: npm run build -w apps/web

@@ -1,0 +1,25 @@
+<svg width="430" height="96" viewBox="0 0 430 96" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TerraVest">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1A4D3B"/>
+      <stop offset="1" stop-color="#2D6B52"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="20" y1="72" x2="76" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#C9973A"/>
+      <stop offset="1" stop-color="#F0C878"/>
+    </linearGradient>
+  </defs>
+
+  <!-- mark -->
+  <rect width="96" height="96" rx="24" fill="url(#tile)"/>
+  <path d="M22 70 L48 50 L74 70 Z" fill="#8AB89A" opacity="0.30"/>
+  <path d="M22 68 L40 54 L54 62 L74 30" stroke="url(#gold)" stroke-width="6"
+        fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="74" cy="30" r="6.5" fill="url(#gold)"/>
+
+  <!-- wordmark -->
+  <text x="116" y="52" font-family="'DM Serif Display', Georgia, serif" font-size="40"
+        fill="#1A4D3B">Terra<tspan fill="#C9973A">Vest</tspan></text>
+  <text x="118" y="74" font-family="'DM Sans', system-ui, sans-serif" font-size="13"
+        letter-spacing="2" fill="#7A9086">ALL YOUR WEALTH · ONE PLACE</text>
+</svg>

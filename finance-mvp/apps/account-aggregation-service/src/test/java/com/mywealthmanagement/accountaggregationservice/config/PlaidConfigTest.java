@@ -11,7 +11,8 @@ class PlaidConfigTest {
     void resolvePlaidAdapter_handlesSandboxAndComments() {
         assertEquals(ApiClient.Sandbox, PlaidConfig.resolvePlaidAdapter("sandbox"));
         assertEquals(ApiClient.Sandbox, PlaidConfig.resolvePlaidAdapter("sandbox # comment"));
-        assertEquals(ApiClient.Development, PlaidConfig.resolvePlaidAdapter("development"));
+        // Plaid retired the Development environment; it now resolves to Sandbox.
+        assertEquals(ApiClient.Sandbox, PlaidConfig.resolvePlaidAdapter("development"));
         assertEquals(ApiClient.Production, PlaidConfig.resolvePlaidAdapter("production"));
     }
 }

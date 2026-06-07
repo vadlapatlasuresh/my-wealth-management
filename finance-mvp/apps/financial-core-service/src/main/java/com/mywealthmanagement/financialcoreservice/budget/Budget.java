@@ -22,7 +22,7 @@ public class Budget {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Column(nullable = false)
+    @Column(name = "`month`", nullable = false) // backtick-quoted: MONTH is a reserved word in H2
     private String month; // YYYY-MM format
 
     @OneToMany(mappedBy = "budget", cascade = CascadeType.ALL, orphanRemoval = true)

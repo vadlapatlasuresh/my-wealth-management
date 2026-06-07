@@ -19,7 +19,17 @@
     "start:account-aggregation-service": "mvn spring-boot:run -f apps/account-aggregation-service/pom.xml",
     "build:financial-core-service": "mvn clean install -f apps/financial-core-service/pom.xml",
     "start:financial-core-service": "mvn spring-boot:run -f apps/financial-core-service/pom.xml",
-    "start:backend": "npm run start:api-gateway & npm run start:auth-service & npm run start:account-aggregation-service & npm run start:financial-core-service & npm run start:api",
-    "build:backend": "npm run build:auth-service && npm run build:api-gateway && npm run build:account-aggregation-service && npm run build:financial-core-service && npm run build -w apps/api"
+    "build:real-estate-service": "mvn clean install -f apps/real-estate-service/pom.xml",
+    "start:real-estate-service": "mvn spring-boot:run -f apps/real-estate-service/pom.xml",
+    "build:business-financials-service": "mvn clean install -f apps/business-financials-service/pom.xml",
+    "start:business-financials-service": "mvn spring-boot:run -f apps/business-financials-service/pom.xml",
+    "build:ai-insights-service": "mvn clean install -f apps/ai-insights-service/pom.xml",
+    "start:ai-insights-service": "mvn spring-boot:run -f apps/ai-insights-service/pom.xml",
+    "build:payment-service": "mvn clean install -f apps/payment-service/pom.xml",
+    "start:payment-service": "mvn spring-boot:run -f apps/payment-service/pom.xml",
+    "build:notification-service": "mvn clean install -f apps/notification-service/pom.xml",
+    "start:notification-service": "mvn spring-boot:run -f apps/notification-service/pom.xml",
+    "start:backend": "npm run start:api-gateway & npm run start:auth-service & npm run start:account-aggregation-service & npm run start:financial-core-service & npm run start:real-estate-service & npm run start:business-financials-service & npm run start:ai-insights-service & npm run start:payment-service & npm run start:notification-service & npm run start:api",
+    "build:backend": "npm run build:auth-service && npm run build:api-gateway && npm run build:account-aggregation-service && npm run build:financial-core-service && npm run build:real-estate-service && npm run build:business-financials-service && npm run build:ai-insights-service && npm run build:payment-service && npm run build:notification-service && npm run prisma:generate -w apps/api"
   }
 }

@@ -1,0 +1,46 @@
+# ============================================================
+#  Local infrastructure for prod-like runs (Phase 9).
+#  Dev mode uses H2 in-memory and does NOT need this.
+#  Start Postgres:  docker compose up -d postgres
+#  Then run services with the `prod` profile pointing at it.
+# ============================================================
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wealth-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wealth}
+      POSTGRES_USER: ${POSTGRES_USER:-wealth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wealth}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wealth}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # pgAdmin is optional — handy for inspecting the DB in dev.
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: wealth-pgadmin
+    profiles: ["tools"]
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@wealth.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      - postgres
+
+# NOTE: Containerizing the 9 Java services + Node + web is documented in
+# docs/phases/PHASE_9_HARDENING.md. Each Spring Boot service builds an image with the
+# shared multi-stage Dockerfile template (Dockerfile.java-service). The gateway is the
+# only service that needs a public port (8080); the rest communicate over the compose network.
+
+volumes:
+  pgdata:

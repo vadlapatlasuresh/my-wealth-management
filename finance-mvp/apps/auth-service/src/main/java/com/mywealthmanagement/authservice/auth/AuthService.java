@@ -34,7 +34,58 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 Collections.singleton(Role.USER) // Default role
         );
+
+        // Display name: explicit name, else first+last, else email prefix.
+        String fullName = request.getName();
+        if (isBlank(fullName)) {
+            fullName = (safe(request.getFirstName()) + " " + safe(request.getLastName())).trim();
+        }
+        if (isBlank(fullName)) {
+            fullName = request.getEmail().split("@")[0];
+        }
+        newUser.setName(fullName);
+        newUser.setFirstName(request.getFirstName());
+        newUser.setLastName(request.getLastName());
+        newUser.setPhone(request.getPhone());
+
+        String accountType = isBlank(request.getAccountType()) ? "INDIVIDUAL"
+                : request.getAccountType().toUpperCase();
+        newUser.setAccountType(accountType);
+        newUser.setBusinessName(request.getBusinessName());
+
+        // Persist ONLY the last 4 digits of any SSN/EIN provided.
+        newUser.setSsnLast4(last4(request.getSsn()));
+        newUser.setEinLast4(last4(request.getEin()));
+
+        newUser.setPhoneVerified(Boolean.TRUE.equals(request.getPhoneVerified()));
+
+        // Mock identity verification: pass if the relevant identifier was supplied.
+        boolean idVerified = "BUSINESS".equals(accountType)
+                ? newUser.getEinLast4() != null
+                : newUser.getSsnLast4() != null;
+        newUser.setIdentityVerified(idVerified);
+
         return Optional.of(userRepository.save(newUser));
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private static String safe(String s) {
+        return s == null ? "" : s.trim();
+    }
+
+    /** Returns the last 4 digits of a numeric identifier, or null if none. */
+    private static String last4(String raw) {
+        if (raw == null) return null;
+        String digits = raw.replaceAll("\\D", "");
+        if (digits.length() < 4) return null;
+        return digits.substring(digits.length() - 4);
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
     }
 
     public String loginUser(LoginRequest request) {

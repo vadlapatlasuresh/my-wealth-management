@@ -1,0 +1,17 @@
+com/mywealthmanagement/aiinsightsservice/config/UserDetailsServiceImpl.class
+com/mywealthmanagement/aiinsightsservice/provider/AiProvider.class
+com/mywealthmanagement/aiinsightsservice/provider/MockAiProvider.class
+com/mywealthmanagement/aiinsightsservice/dto/ChatResponse.class
+com/mywealthmanagement/aiinsightsservice/config/JwtService.class
+com/mywealthmanagement/aiinsightsservice/provider/GeneratedInsight$GeneratedInsightBuilder.class
+com/mywealthmanagement/aiinsightsservice/repository/InsightRepository.class
+com/mywealthmanagement/aiinsightsservice/dto/ChatRequest.class
+com/mywealthmanagement/aiinsightsservice/provider/GeneratedInsight.class
+com/mywealthmanagement/aiinsightsservice/config/JwtAuthFilter.class
+com/mywealthmanagement/aiinsightsservice/entity/Insight$InsightBuilder.class
+com/mywealthmanagement/aiinsightsservice/dto/InsightDto$InsightDtoBuilder.class
+com/mywealthmanagement/aiinsightsservice/dto/InsightDto.class
+com/mywealthmanagement/aiinsightsservice/config/SecurityConfig.class
+com/mywealthmanagement/aiinsightsservice/AiInsightsServiceApplication.class
+com/mywealthmanagement/aiinsightsservice/controller/AiController.class
+com/mywealthmanagement/aiinsightsservice/entity/Insight.class

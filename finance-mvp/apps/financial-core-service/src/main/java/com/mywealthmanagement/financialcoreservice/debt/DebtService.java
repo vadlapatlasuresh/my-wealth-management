@@ -42,18 +42,30 @@ public class DebtService {
         Long userId = getUserId();
         List<Debt> debts = debtRepository.findByUserId(userId);
 
+        // Normalize inputs so a missing/blank payload never crashes the simulation.
+        String strategy = (request.getStrategy() == null || request.getStrategy().isBlank())
+                ? "AVALANCHE" : request.getStrategy().toUpperCase();
+        BigDecimal extraPayment = request.getExtraPaymentMonthly() != null
+                ? request.getExtraPaymentMonthly() : BigDecimal.ZERO;
+
         // Check if scenario already exists
         List<DebtScenario> existingScenarios = debtScenarioRepository.findByUserIdAndStrategyAndExtraPaymentMonthly(
-                userId, request.getStrategy(), request.getExtraPaymentMonthly());
+                userId, strategy, extraPayment);
 
         if (!existingScenarios.isEmpty()) {
             return convertToDto(existingScenarios.get(0));
         }
 
+        // No debts → return a trivially solved scenario instead of an empty loop.
+        if (debts.isEmpty()) {
+            DebtScenario empty = new DebtScenario(userId, strategy, extraPayment, 0,
+                    BigDecimal.ZERO, LocalDate.now(), "High");
+            return convertToDto(debtScenarioRepository.save(empty));
+        }
+
         // Simulate debt payoff logic
         int monthsToDebtFree = 0;
         BigDecimal totalInterestPaid = BigDecimal.ZERO;
-        BigDecimal extraPayment = request.getExtraPaymentMonthly();
 
         // Create mutable copies of debts for simulation
         List<Debt> simulatedDebts = debts.stream()
@@ -66,12 +78,14 @@ public class DebtService {
             BigDecimal availableForExtra = extraPayment;
 
             // Sort debts based on strategy
-            if (request.getStrategy().equalsIgnoreCase("AVALANCHE")) {
+            if (strategy.equals("AVALANCHE")) {
                 simulatedDebts.sort(Comparator.comparing(Debt::getApr).reversed()); // Highest APR first
-            } else if (request.getStrategy().equalsIgnoreCase("SNOWBALL")) {
+            } else if (strategy.equals("SNOWBALL")) {
                 simulatedDebts.sort(Comparator.comparing(Debt::getBalance)); // Smallest balance first
+            } else { // HYBRID: smallest balance among the high-APR half — quick wins + interest savings
+                simulatedDebts.sort(Comparator.comparing(Debt::getApr).reversed()
+                        .thenComparing(Debt::getBalance));
             }
-            // HYBRID could be a mix, for simplicity, let's use AVALANCHE for now
 
             for (Debt debt : simulatedDebts) {
                 if (debt.getBalance().compareTo(BigDecimal.ZERO) <= 0) continue;
@@ -105,9 +119,11 @@ public class DebtService {
         }
 
         LocalDate debtFreeDate = LocalDate.now().plusMonths(monthsToDebtFree);
-        String liquidity = "Medium"; // Placeholder
+        // More extra payment = less liquidity kept on hand.
+        String liquidity = extraPayment.compareTo(BigDecimal.valueOf(500)) >= 0 ? "Low"
+                : extraPayment.compareTo(BigDecimal.ZERO) > 0 ? "Medium" : "High";
 
-        DebtScenario newScenario = new DebtScenario(userId, request.getStrategy(), extraPayment, monthsToDebtFree, totalInterestPaid, debtFreeDate, liquidity);
+        DebtScenario newScenario = new DebtScenario(userId, strategy, extraPayment, monthsToDebtFree, totalInterestPaid, debtFreeDate, liquidity);
         return convertToDto(debtScenarioRepository.save(newScenario));
     }
 

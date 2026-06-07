@@ -75,9 +75,15 @@ body {
   font-family: var(--font-body);
   background: var(--tv-bg);
   color: var(--tv-text-primary);
-  line-height: 1.5;
+  line-height: 1.55;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "kern", "liga", "tnum";
+  letter-spacing: 0.005em;
 }
+.kpi-value, .stat-tile-value, .num, .item-amount, .tv-table td { font-variant-numeric: tabular-nums; }
 button { font-family: var(--font-body); cursor: pointer; border: none; outline: none; }
 input { font-family: var(--font-body); }
 a { text-decoration: none; color: inherit; }
@@ -143,7 +149,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tv-sage);
+  color: rgba(255,255,255,.55);
   padding: 0 8px 6px;
   margin-top: 4px;
 }
@@ -161,9 +167,9 @@ a { text-decoration: none; color: inherit; }
   gap: 10px;
   padding: 9px 10px;
   border-radius: var(--radius-md);
-  color: rgba(255,255,255,.6);
+  color: rgba(255,255,255,.86);
   font-size: 13.5px;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition: all .15s ease;
   position: relative;
@@ -171,8 +177,8 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 1px;
 }
 .nav-item:hover {
-  background: rgba(255,255,255,.07);
-  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.10);
+  color: #fff;
 }
 .nav-item.active {
   background: rgba(255,255,255,.12);
@@ -226,8 +232,18 @@ a { text-decoration: none; color: inherit; }
   font-size: 12px; font-weight: 600; color: #fff;
   flex-shrink: 0;
 }
-.user-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
-.user-role { font-size: 11px; color: var(--tv-sage); }
+.user-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.96); }
+.user-role { font-size: 11px; color: var(--tv-sage-light); }
+
+/* Collapsible sidebar (hamburger) — toggle .sidebar-collapsed on .app-shell */
+.app-shell.sidebar-collapsed .sidebar { width: 68px; }
+.app-shell.sidebar-collapsed .sidebar .nav-label,
+.app-shell.sidebar-collapsed .sidebar .brand-text,
+.app-shell.sidebar-collapsed .sidebar .sidebar-section-label,
+.app-shell.sidebar-collapsed .sidebar .nav-badge,
+.app-shell.sidebar-collapsed .sidebar .user-meta { display: none; }
+.app-shell.sidebar-collapsed .sidebar .nav-item { justify-content: center; padding: 10px 0; }
+.app-shell.sidebar-collapsed .sidebar-brand { justify-content: center; }
 
 /* =============================================
    MAIN CONTENT AREA
@@ -328,14 +344,16 @@ a { text-decoration: none; color: inherit; }
 }
 .page-title {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 29px;
   color: var(--tv-text-primary);
-  line-height: 1.2;
+  line-height: 1.18;
+  letter-spacing: -0.01em;
 }
 .page-subtitle {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--tv-text-muted);
-  margin-top: 3px;
+  margin-top: 4px;
+  letter-spacing: 0.01em;
 }
 .page-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -416,6 +434,8 @@ a { text-decoration: none; color: inherit; }
   cursor: default;
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
+.kpi-clickable { cursor: pointer; }
+.kpi-clickable:hover { box-shadow: var(--shadow-md); border-color: var(--tv-forest-light); transform: translateY(-1px); }
 .kpi-label {
   font-size: 11.5px;
   color: var(--tv-text-muted);
@@ -970,9 +990,33 @@ a { text-decoration: none; color: inherit; }
   </aside>
 
   <!-- ===================== MAIN ===================== -->
+  <!--
+    CHANGELOG — 2026-06-07 (feature release)
+    • Cross-cutting: "Updated <time ago>" LastRefreshed indicator + refresh on every screen header.
+    • Home: KPI cards are clickable (Cash→Accounts, Investments→Invest, Real Estate/RE Equity→Properties,
+      Total Debt→Debt Lab, Net Worth→Accounts); net-worth range filter expanded to 1H/1D/1W/1M/3M/1Y/All + Custom range.
+    • Transactions: added date-range (1D/1W/1M/3M/1Y + custom) and min/max amount filters, plus Clear.
+    • Budget: customizable rule (50/30/20 default + presets + custom split) and period selector
+      (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
+    • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
+    • Investments: sub-tabs — Stocks & ETFs, Brokers (link multiple brokerages), Alternatives (LLCs/land/apartments/PE/crypto), Marketplace.
+    • My Business: multi-business switcher, manual + QuickBooks linking, accounts, revenue trend, activity timeline.
+    • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
+
+    CHANGELOG — 2026-06-07 (auth + brokers + polish)
+    • Signup: account type (Individual/Business), first/last name, email, phone with SMS OTP confirmation
+      (Send code → Verify), password strength meter + confirm, SSN (individual) / EIN + business name (business,
+      only last-4 stored), Terms agreement. Backend: auth-service /sms/send + /sms/verify (mock OTP), richer register.
+    • Brokers: now config-driven (src/config/brokers.js) — add a broker by appending one entry, no code changes;
+      dynamic OAuth vs credentials connect flow rendered from config; credentials never stored.
+    • Messages: proper master–detail split (fixed-width inbox with independent scroll + sticky reading pane,
+      hover/selection, auto-select first, mark read/unread).
+    • Visual polish: antialiased font rendering, tabular numerals for figures, larger/tighter display headings.
+  -->
   <div class="main-area">
     <!-- Top bar -->
     <div class="topbar">
+      <button class="icon-btn hamburger" title="Collapse menu" aria-label="Toggle navigation menu"><i class="ti ti-menu-2"></i></button>
       <div class="topbar-search">
         <i class="ti ti-search"></i>
         <input type="text" placeholder="Search accounts, transactions, categories…">
@@ -1010,41 +1054,42 @@ a { text-decoration: none; color: inherit; }
             <div class="page-title">Good morning, Alex</div>
             <div class="page-subtitle">Tuesday, June 2, 2026 &mdash; Here's your financial picture</div>
           </div>
-          <div class="page-actions">
+          <div class="page-actions" style="align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button>
             <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add Account</button>
           </div>
         </div>
 
-        <!-- KPI Row -->
+        <!-- KPI Row — cards are clickable and navigate to their detail screen -->
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-trending-up" style="font-size:13px;color:var(--tv-forest-light)"></i> Net Worth</div>
+          <div class="kpi-card kpi-clickable" title="View accounts">
+            <div class="kpi-label"><i class="ti ti-trending-up" style="font-size:13px;color:var(--tv-forest-light)"></i> Net Worth<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$263,820</div>
             <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$15,732 (6.3%) 30d</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-wallet" style="font-size:13px;color:#1E5FAD"></i> Cash</div>
+          <div class="kpi-card kpi-clickable" title="View accounts">
+            <div class="kpi-label"><i class="ti ti-wallet" style="font-size:13px;color:#1E5FAD"></i> Cash<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$38,420</div>
             <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$2,320 (6.4%) 30d</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-chart-line" style="font-size:13px;color:#6B46C1"></i> Investments</div>
+          <div class="kpi-card kpi-clickable" title="View investments">
+            <div class="kpi-label"><i class="ti ti-chart-line" style="font-size:13px;color:#6B46C1"></i> Investments<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$181,029</div>
             <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$10,450 (6.1%) 30d</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-building-estate" style="font-size:13px;color:var(--tv-gold)"></i> Real Estate</div>
+          <div class="kpi-card kpi-clickable" title="View properties">
+            <div class="kpi-label"><i class="ti ti-building-estate" style="font-size:13px;color:var(--tv-gold)"></i> Real Estate<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$312,000</div>
             <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$8,500 (2.8%) 30d</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-home-dollar" style="font-size:13px;color:var(--tv-forest-light)"></i> RE Equity</div>
+          <div class="kpi-card kpi-clickable" title="View properties">
+            <div class="kpi-label"><i class="ti ti-home-dollar" style="font-size:13px;color:var(--tv-forest-light)"></i> RE Equity<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$112,000</div>
             <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$1,800 (1.6%) 30d</div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-credit-card" style="font-size:13px;color:var(--tv-negative)"></i> Total Debt</div>
+          <div class="kpi-card kpi-clickable" title="Go to Debt Lab">
+            <div class="kpi-label"><i class="ti ti-credit-card" style="font-size:13px;color:var(--tv-negative)"></i> Total Debt<i class="ti ti-chevron-right" style="margin-left:auto;font-size:13px;color:var(--tv-text-muted)"></i></div>
             <div class="kpi-value">$45,629</div>
             <div class="kpi-delta neg"><i class="ti ti-arrow-up-right"></i> +$1,038 (2.2%) 30d</div>
           </div>
@@ -1056,11 +1101,15 @@ a { text-decoration: none; color: inherit; }
           <div class="card col-span-2">
             <div class="section-header">
               <div class="section-title">Net worth over time</div>
-              <div style="display:flex;gap:6px;">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1H</button>
+                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1D</button>
+                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1W</button>
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1M</button>
                 <button class="btn btn-primary btn-sm" style="padding:4px 10px;background:var(--tv-forest);">3M</button>
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1Y</button>
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">All</button>
+                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;"><i class="ti ti-calendar-event"></i> Custom</button>
               </div>
             </div>
             <div class="chart-wrap">
@@ -1238,16 +1287,39 @@ a { text-decoration: none; color: inherit; }
       <div id="page-budget" class="page">
         <div class="page-header">
           <div>
-            <div class="page-title">Monthly Budget</div>
-            <div class="page-subtitle">12 days left in month</div>
+            <div class="page-title">Budget</div>
+            <div class="page-subtitle">12 days left in June 2026</div>
           </div>
-          <div class="page-actions">
+          <div class="page-actions" style="align-items:center;flex-wrap:wrap;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
+            <!-- Period selector: single month / year-to-date / last 12 months -->
+            <div class="seg-control">
+              <button class="seg-btn active">Month</button>
+              <button class="seg-btn">YTD</button>
+              <button class="seg-btn">12 mo</button>
+            </div>
             <div style="display:flex;align-items:center;gap:6px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:5px 12px;">
               <button class="btn-secondary" style="background:none;border:none;font-size:18px;color:var(--tv-text-muted);cursor:pointer;padding:0;">&lsaquo;</button>
               <span style="font-family:var(--font-display);font-size:16px;color:var(--tv-forest);min-width:90px;text-align:center;">June 2026</span>
               <button class="btn-secondary" style="background:none;border:none;font-size:18px;color:var(--tv-text-muted);cursor:pointer;padding:0;">&rsaquo;</button>
             </div>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export CSV</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-device-floppy"></i> Save budget</button>
+          </div>
+        </div>
+
+        <!-- Customizable budgeting rule (default 50/30/20; presets + custom split) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title"><i class="ti ti-scale" style="color:var(--tv-forest-light);margin-right:6px;"></i>50/30/20 Method <span style="font-size:11.5px;font-weight:400;color:var(--tv-text-muted);margin-left:8px;">default</span></div>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-adjustments"></i> Customize rule</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-primary btn-sm">50/30/20 · Balanced</button>
+            <button class="btn btn-secondary btn-sm">50/20/30 · Aggressive saver</button>
+            <button class="btn btn-secondary btn-sm">50/40/10 · Lifestyle-first</button>
+            <button class="btn btn-secondary btn-sm">60/20/20 · Higher COL</button>
+            <button class="btn btn-secondary btn-sm">40/20/40 · FIRE</button>
           </div>
         </div>
 
@@ -1453,6 +1525,24 @@ a { text-decoration: none; color: inherit; }
       <div id="page-debt" class="page">
         <div class="page-header">
           <div><div class="page-title">Debt Payoff Lab</div><div class="page-subtitle">Compare strategies and build your plan</div></div>
+          <div class="page-actions" style="align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
+          </div>
+        </div>
+
+        <!-- Debt summary KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-credit-card" style="color:var(--tv-negative)"></i> Total Debt</div><div class="kpi-value">$49,300</div><div class="kpi-delta neg"><i class="ti ti-list"></i> 4 accounts</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-percentage" style="color:var(--tv-warning)"></i> Weighted Avg APR</div><div class="kpi-value">8.9%</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-calendar-dollar" style="color:var(--tv-forest-light)"></i> Min Payments / mo</div><div class="kpi-value">$900</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flame" style="color:var(--tv-negative)"></i> Highest APR</div><div class="kpi-value">18.2%</div><div class="kpi-delta neg"><i class="ti ti-target"></i> Visa Card</div></div>
+        </div>
+
+        <!-- Recommended-strategy callout (after comparing strategies) -->
+        <div class="card" style="margin-bottom:20px;border-left:4px solid var(--tv-forest);display:flex;align-items:center;gap:12px;">
+          <i class="ti ti-bulb" style="color:var(--tv-forest);font-size:22px;"></i>
+          <div style="font-size:13.5px;">Recommended: <strong>AVALANCHE</strong> — debt-free by <strong>Mar 2029</strong>, saving the most interest.
+            <button class="btn btn-secondary btn-sm" style="margin-left:12px;">Use this plan</button></div>
         </div>
 
         <!-- Debt inputs -->
@@ -1975,14 +2065,208 @@ a { text-decoration: none; color: inherit; }
         </div>
       </div>
 
-      <!-- =================== PLACEHOLDER PAGES =================== -->
+      <!-- =================== ACCOUNTS =================== -->
+      <style>
+        /* Accounts screen helpers (mirror terravest-theme.css) */
+        .info-tip { display:inline-flex; align-items:center; color:var(--tv-text-muted); font-size:13px; margin-left:2px; cursor:help; transition:color .15s; }
+        .info-tip:hover { color:var(--tv-forest-light); }
+        .account-row .account-action { width:28px; height:28px; font-size:16px; color:var(--tv-text-muted); flex-shrink:0; margin-left:4px; }
+        .account-row .account-action:hover { color:var(--tv-forest); background:var(--tv-sage-pale); }
+        .account-row:hover { background:var(--tv-bg); }
+      </style>
       <div id="page-accounts" class="page">
-        <div class="page-header"><div><div class="page-title">Accounts</div><div class="page-subtitle">All linked financial accounts</div></div><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Link Account</button></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-wallet"></i><p>Accounts page — full mockup in Home KPI cards and linked institutions widget.</p></div></div>
+        <div class="page-header">
+          <div>
+            <div class="page-title">Accounts</div>
+            <div class="page-subtitle">All linked financial accounts in one place</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm" title="Re-sync balances from your institutions"><i class="ti ti-refresh"></i> Refresh</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Link Account</button>
+          </div>
+        </div>
+
+        <!-- Summary KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label"><i class="ti ti-scale" style="font-size:13px;color:var(--tv-forest-light)"></i> Net Position <span class="info-tip" title="Total assets minus total debt across all linked accounts."><i class="ti ti-info-circle"></i></span></div>
+            <div class="kpi-value">$173,780.52</div>
+            <div class="kpi-delta pos"><i class="ti ti-wallet"></i> 6 accounts linked</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><i class="ti ti-coins" style="font-size:13px;color:var(--tv-forest-light)"></i> Total Assets <span class="info-tip" title="Sum of all cash, banking, and investment balances."><i class="ti ti-info-circle"></i></span></div>
+            <div class="kpi-value">$194,390.97</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><i class="ti ti-building-bank" style="font-size:13px;color:#1E5FAD"></i> Cash <span class="info-tip" title="Balances held in checking and savings accounts."><i class="ti ti-info-circle"></i></span></div>
+            <div class="kpi-value">$33,130.32</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><i class="ti ti-chart-line" style="font-size:13px;color:#6B46C1"></i> Investments <span class="info-tip" title="Balances in brokerage and retirement accounts."><i class="ti ti-info-circle"></i></span></div>
+            <div class="kpi-value">$161,260.65</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label"><i class="ti ti-credit-card" style="font-size:13px;color:var(--tv-negative)"></i> Total Debt <span class="info-tip" title="Outstanding balances on credit cards and loans."><i class="ti ti-info-circle"></i></span></div>
+            <div class="kpi-value">$20,610.45</div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <!-- Cash & Banking -->
+          <div class="card">
+            <div class="section-header">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div>
+                <div><div class="section-title" style="margin-bottom:0">Cash &amp; Banking</div><div style="font-size:12px;color:var(--tv-text-muted)">2 accounts</div></div>
+              </div>
+              <div style="text-align:right"><div class="item-amount">$33,130.32</div><div style="font-size:11.5px;color:var(--tv-text-muted)">Balance</div></div>
+            </div>
+            <div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div>
+                <div class="item-main"><div class="item-name">Primary Checking</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Chase Total Checking</span><span class="badge badge-forest">Checking</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount">$8,450.32</div><div class="item-meta">$8,200.00 available</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div>
+                <div class="item-main"><div class="item-name">High-Yield Savings</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Ally Online Savings</span><span class="badge badge-forest">Savings</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount">$24,680.00</div><div class="item-meta">$24,680.00 available</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Investments -->
+          <div class="card">
+            <div class="section-header">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="item-icon icon-purple"><i class="ti ti-chart-line"></i></div>
+                <div><div class="section-title" style="margin-bottom:0">Investments</div><div style="font-size:12px;color:var(--tv-text-muted)">2 accounts</div></div>
+              </div>
+              <div style="text-align:right"><div class="item-amount">$161,260.65</div><div style="font-size:11.5px;color:var(--tv-text-muted)">Balance</div></div>
+            </div>
+            <div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-purple"><i class="ti ti-chart-line"></i></div>
+                <div class="item-main"><div class="item-name">Individual Brokerage</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Fidelity Investments</span><span class="badge badge-forest">Brokerage</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount">$112,340.55</div><div class="item-meta">USD</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-purple"><i class="ti ti-chart-line"></i></div>
+                <div class="item-main"><div class="item-name">Roth IRA</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Vanguard</span><span class="badge badge-forest">Retirement</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount">$48,920.10</div><div class="item-meta">USD</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Credit Cards -->
+          <div class="card">
+            <div class="section-header">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="item-icon icon-red"><i class="ti ti-credit-card"></i></div>
+                <div><div class="section-title" style="margin-bottom:0">Credit Cards</div><div style="font-size:12px;color:var(--tv-text-muted)">1 account</div></div>
+              </div>
+              <div style="text-align:right"><div class="item-amount" style="color:var(--tv-negative)">−$2,210.45</div><div style="font-size:11.5px;color:var(--tv-text-muted)">Owed</div></div>
+            </div>
+            <div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-red"><i class="ti ti-credit-card"></i></div>
+                <div class="item-main"><div class="item-name">Sapphire Reserve</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Chase</span><span class="badge badge-red">Credit Card</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount" style="color:var(--tv-negative)">−$2,210.45</div><div class="item-meta">$9,789.55 available credit</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Loans -->
+          <div class="card">
+            <div class="section-header">
+              <div style="display:flex;align-items:center;gap:10px">
+                <div class="item-icon icon-amber"><i class="ti ti-businessplan"></i></div>
+                <div><div class="section-title" style="margin-bottom:0">Loans</div><div style="font-size:12px;color:var(--tv-text-muted)">1 account</div></div>
+              </div>
+              <div style="text-align:right"><div class="item-amount" style="color:var(--tv-negative)">−$18,400.00</div><div style="font-size:11.5px;color:var(--tv-text-muted)">Owed</div></div>
+            </div>
+            <div>
+              <div class="list-item account-row">
+                <div class="item-icon icon-amber"><i class="ti ti-businessplan"></i></div>
+                <div class="item-main"><div class="item-name">Auto Loan</div><div class="item-sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span>Toyota Financial Services</span><span class="badge badge-red">Auto</span><span class="badge badge-gray"><i class="ti ti-lock" style="font-size:10px"></i> Plaid</span></div></div>
+                <div class="item-right"><div class="item-amount" style="color:var(--tv-negative)">−$18,400.00</div><div class="item-meta">USD</div></div>
+                <button class="icon-btn account-action" title="View transactions"><i class="ti ti-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center;font-size:12px;color:var(--tv-text-muted);padding:4px 0 8px">
+            <i class="ti ti-shield-check" style="color:var(--tv-forest-light)"></i> Connections are read-only and secured by Plaid. We never store your bank credentials.
+          </div>
+        </div>
       </div>
+      <style>
+        /* Transactions / shared table helpers (mirror terravest-theme.css) */
+        .filter-bar { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+        .filter-search { position:relative; flex:1; min-width:220px; }
+        .filter-search i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:var(--tv-text-muted); font-size:15px; }
+        .filter-search input { width:100%; height:38px; border:1px solid var(--tv-border); border-radius:var(--radius-md); padding:0 14px 0 34px; font-size:13.5px; background:#fff; }
+        .filter-select { width:auto; min-width:160px; height:38px; border:1px solid var(--tv-border); border-radius:var(--radius-md); padding:0 12px; background:#fff; font-size:13.5px; }
+        .seg-control { display:inline-flex; background:var(--tv-bg); border:1px solid var(--tv-border); border-radius:var(--radius-md); padding:2px; gap:2px; }
+        .seg-btn { padding:6px 14px; font-size:12.5px; font-weight:500; border-radius:var(--radius-sm); color:var(--tv-text-muted); background:transparent; }
+        .seg-btn.active { background:#fff; color:var(--tv-forest); box-shadow:var(--shadow-sm); }
+        .table-scroll { width:100%; overflow-x:auto; }
+      </style>
       <div id="page-transactions" class="page">
-        <div class="page-header"><div><div class="page-title">Transactions</div><div class="page-subtitle">All activity across accounts</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-arrows-exchange-2"></i><p>Transactions page — see Home → Recent Transactions list for component reference.</p></div></div>
+        <div class="page-header">
+          <div><div class="page-title">Transactions</div><div class="page-subtitle">All activity across your linked accounts</div></div>
+          <div class="page-actions"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button></div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down-left" style="color:var(--tv-positive)"></i> Money In</div><div class="kpi-value">$4,500.00</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-up-right" style="color:var(--tv-negative)"></i> Money Out</div><div class="kpi-value">$1,730.49</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-equal" style="color:var(--tv-forest-light)"></i> Net</div><div class="kpi-value">$2,769.51</div><div class="kpi-delta pos"><i class="ti ti-list"></i> 4 transactions</div></div>
+        </div>
+
+        <div class="card">
+          <div class="filter-bar">
+            <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search by description or category…"></div>
+            <select class="filter-select"><option>All categories</option><option>Groceries</option><option>Housing</option><option>Income</option></select>
+            <div class="seg-control"><button class="seg-btn active">All</button><button class="seg-btn">Income</button><button class="seg-btn">Spending</button></div>
+          </div>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Description</th><th>Category</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-green" style="width:32px;height:32px;font-size:15px"><i class="ti ti-building-bank"></i></div><span style="font-weight:500">Paycheck — Acme Corp</span></div></td>
+                  <td><span class="badge badge-gray">Income</span></td>
+                  <td style="color:var(--tv-text-muted)">May 15, 2026</td>
+                  <td style="text-align:right"><span class="item-amount amount-pos">+$4,500.00</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-forest" style="width:32px;height:32px;font-size:15px"><i class="ti ti-home"></i></div><span style="font-weight:500">Rent — Maple Apartments</span></div></td>
+                  <td><span class="badge badge-gray">Housing</span></td>
+                  <td style="color:var(--tv-text-muted)">May 1, 2026</td>
+                  <td style="text-align:right"><span class="item-amount amount-neg">-$1,600.00</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-amber" style="width:32px;height:32px;font-size:15px"><i class="ti ti-shopping-cart"></i></div><span style="font-weight:500">Whole Foods Market</span></div></td>
+                  <td><span class="badge badge-gray">Groceries</span></td>
+                  <td style="color:var(--tv-text-muted)">May 20, 2026</td>
+                  <td style="text-align:right"><span class="item-amount amount-neg">-$120.50</span></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-purple" style="width:32px;height:32px;font-size:15px"><i class="ti ti-device-tv"></i></div><span style="font-weight:500">Spotify Premium</span></div></td>
+                  <td><span class="badge badge-gray">Subscriptions</span></td>
+                  <td style="color:var(--tv-text-muted)">May 18, 2026</td>
+                  <td style="text-align:right"><span class="item-amount amount-neg">-$9.99</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
       <div id="page-invest" class="page">
         <div class="page-header"><div><div class="page-title">Investments</div><div class="page-subtitle">Portfolio overview</div></div></div>

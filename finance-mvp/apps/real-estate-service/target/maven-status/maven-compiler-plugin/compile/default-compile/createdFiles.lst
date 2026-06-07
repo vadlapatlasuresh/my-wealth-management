@@ -1,0 +1,14 @@
+com/mywealthmanagement/realestateservice/RealEstateServiceApplication.class
+com/mywealthmanagement/realestateservice/property/Property.class
+com/mywealthmanagement/realestateservice/property/PropertyValuationProvider.class
+com/mywealthmanagement/realestateservice/property/PropertyEstimate.class
+com/mywealthmanagement/realestateservice/config/JwtService.class
+com/mywealthmanagement/realestateservice/property/PropertyRepository.class
+com/mywealthmanagement/realestateservice/property/dto/PropertyDto.class
+com/mywealthmanagement/realestateservice/config/JwtAuthFilter.class
+com/mywealthmanagement/realestateservice/property/PropertyService.class
+com/mywealthmanagement/realestateservice/config/SecurityConfig.class
+com/mywealthmanagement/realestateservice/property/PropertyDataSeeder.class
+com/mywealthmanagement/realestateservice/property/MockPropertyValuationProvider.class
+com/mywealthmanagement/realestateservice/config/UserDetailsServiceImpl.class
+com/mywealthmanagement/realestateservice/property/RealEstateController.class

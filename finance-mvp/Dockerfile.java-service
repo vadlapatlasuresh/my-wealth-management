@@ -1,0 +1,23 @@
+# Shared multi-stage Dockerfile template for any Spring Boot service (Phase 9).
+# Build (from the finance-mvp dir), e.g. for the gateway:
+#   docker build -f Dockerfile.java-service --build-arg SERVICE=api-gateway -t wealth/api-gateway .
+# Repeat with SERVICE = auth-service | account-aggregation-service | financial-core-service |
+#   real-estate-service | business-financials-service | ai-insights-service |
+#   payment-service | notification-service
+
+# ---- build stage ----
+FROM maven:3.9-eclipse-temurin-17 AS build
+ARG SERVICE
+WORKDIR /workspace
+COPY apps/${SERVICE} apps/${SERVICE}
+WORKDIR /workspace/apps/${SERVICE}
+RUN mvn -q clean package -DskipTests
+
+# ---- run stage ----
+FROM eclipse-temurin:17-jre-alpine
+ARG SERVICE
+WORKDIR /app
+COPY --from=build /workspace/apps/${SERVICE}/target/*.jar app.jar
+# Default to the prod profile in containers (expects Postgres + env-provided secrets)
+ENV SPRING_PROFILES_ACTIVE=prod
+ENTRYPOINT ["java", "-jar", "app.jar"]

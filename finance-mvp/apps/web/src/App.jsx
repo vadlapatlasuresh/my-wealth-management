@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { api, setAuthToken, getStoredEmail } from "./api";
+import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
 import AppLayout from "./components/AppLayout";
 import { formatDate } from "./utils/format";
@@ -21,14 +21,20 @@ export default function App() {
   const [billPayStep, setBillPayStep] = useState(0);
   const [authMode, setAuthMode] = useState("login");
   const [authForm, setAuthForm] = useState({
-    email: "demo@finance.app",
-    password: "Demo@1234"
+    email: "",
+    password: "",
+    name: ""
   });
   const [user, setUser] = useState(null);
   const [billPayForm, setBillPayForm] = useState({
+    payee_kind: "card", // "card" = pay one of your cards, "external" = pay a biller
     card_account_id: "",
     funding_account_id: "",
-    amount: 250
+    payee_name: "",
+    payee_type: "UTILITY",
+    amount: 250,
+    scheduled_date: "", // "" = pay now
+    memo: ""
   });
   const [billPaySubmitting, setBillPaySubmitting] = useState(false);
   const [lastBillPayIntent, setLastBillPayIntent] = useState(null);
@@ -82,13 +88,15 @@ export default function App() {
         setTransactions(txRes.value ?? []);
       }
       if (insightsRes.status === "fulfilled") {
-        setInsights(insightsRes.value?.insights ?? []);
+        const v = insightsRes.value;
+        setInsights(Array.isArray(v) ? v : (v?.insights ?? []));
       }
       if (intentsRes.status === "fulfilled") {
         setPaymentIntents(intentsRes.value?.items ?? []);
       }
       if (propertiesRes.status === "fulfilled") {
-        setProperties(propertiesRes.value?.items ?? []);
+        const v = propertiesRes.value;
+        setProperties(Array.isArray(v) ? v : (v?.items ?? []));
       }
 
       const failed = results.filter((r) => r.status === "rejected");
@@ -131,7 +139,7 @@ export default function App() {
   useEffect(() => {
     async function init() {
       if (api.getToken()) {
-        setUser({ email: getStoredEmail() || authForm.email });
+        setUser({ email: getStoredEmail() || authForm.email, name: getStoredName() });
         return loadAll();
       }
     }
@@ -146,8 +154,10 @@ export default function App() {
         authMode === "login" ? await api.login(authForm) : await api.register(authForm);
       
       if (response && response.token) {
-        setAuthToken(response.token, authForm.email);
-        setUser({ email: authForm.email });
+        const email = response.email || authForm.email;
+        const name = response.name || authForm.name || "";
+        setAuthToken(response.token, email, name);
+        setUser({ email, name });
         await loadAll();
       } else {
         throw new Error(response.message || "Authentication failed");
@@ -161,10 +171,28 @@ export default function App() {
     setBillPaySubmitting(true);
     try {
       setError("");
+      const isCard = billPayForm.payee_kind === "card";
+      const card = accounts.find((a) => a.id === billPayForm.card_account_id);
+      const payeeName = isCard
+        ? `${card?.institution || card?.name || "Card"} ····${String(card?.account_number || card?.mask || "").slice(-4)}`
+        : billPayForm.payee_name;
+
+      // A stable idempotency key for this attempt prevents accidental double charges
+      // if the user double-clicks or the network retries.
+      const idempotencyKey =
+        billPayForm._idempotencyKey ||
+        `bp-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+
       const resp = await api.createBillPayIntent({
-        ...billPayForm,
         amount: Number(billPayForm.amount),
-        currency: "USD"
+        currency: "USD",
+        payee: payeeName,
+        payeeType: isCard ? "CREDIT_CARD" : billPayForm.payee_type,
+        fromAccountId: billPayForm.funding_account_id,
+        toAccountId: isCard ? billPayForm.card_account_id : null,
+        scheduledDate: billPayForm.scheduled_date || null,
+        memo: billPayForm.memo || null,
+        idempotencyKey
       });
       setLastBillPayIntent(resp);
       await loadAll();
@@ -173,6 +201,17 @@ export default function App() {
       setError(err.message);
     } finally {
       setBillPaySubmitting(false);
+    }
+  }
+
+  async function cancelPaymentIntent(id) {
+    try {
+      setError("");
+      await api.cancelBillPayIntent(id);
+      const res = await api.getPaymentIntents();
+      setPaymentIntents(res?.items ?? []);
+    } catch (err) {
+      setError(err.message);
     }
   }
 
@@ -210,7 +249,33 @@ export default function App() {
     setPage("home");
   }
 
+  // When any API call reports the token is expired/invalid (401/403), drop to the
+  // login screen so a stale token doesn't leave every page stuck on errors.
+  useEffect(() => {
+    function onUnauthorized() {
+      setAuthToken("");
+      setUser(null);
+      setError("Your session expired. Please sign in again.");
+    }
+    window.addEventListener("auth:unauthorized", onUnauthorized);
+    return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
+  }, []);
+
   function openBillPay() {
+    const firstCard = accounts.find((a) => a.type === "CREDIT_CARD");
+    const firstFunding = accounts.find((a) => a.type === "CHECKING" || a.type === "SAVINGS");
+    setBillPayForm((prev) => ({
+      ...prev,
+      payee_kind: "card",
+      card_account_id: firstCard?.id || "",
+      funding_account_id: firstFunding?.id || prev.funding_account_id || "",
+      payee_name: "",
+      payee_type: "UTILITY",
+      amount: "",
+      scheduled_date: "",
+      memo: ""
+    }));
+    setLastBillPayIntent(null);
     setBillPayStep(0);
   }
 
@@ -274,6 +339,7 @@ export default function App() {
       syncWithIntegrator={syncWithIntegrator}
       submitAuth={submitAuth}
       submitBillPay={submitBillPay}
+      cancelPaymentIntent={cancelPaymentIntent}
       runAllDebtScenarios={runAllDebtScenarios}
       handleLogout={handleLogout}
       openBillPay={openBillPay}

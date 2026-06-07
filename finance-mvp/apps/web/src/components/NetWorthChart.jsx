@@ -1,123 +1,180 @@
-import React from "react";
-import { api } from "../api";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 
-function seriesToPoints(series = [], width = 360, height = 80) {
-  if (!series || series.length === 0) return null;
-  const values = series.map((s) => (typeof s === 'number' ? s : Number(s.value ?? s.v ?? s)));
-  const max = Math.max(...values);
-  const min = Math.min(...values);
-  const range = Math.max(1, max - min);
-  return values
-    .map((v, i) => {
-      const x = Math.round((i / (values.length - 1)) * width);
-      const y = Math.round(height - ((v - min) / range) * height);
-      return `${x},${y}`;
-    })
-    .join(" ");
+/*
+ * Presentational net-worth area chart. The parent (HomePage) owns the range
+ * selector and fetches the series, then passes { total, change30d, series }.
+ *
+ * Features: smooth curve, gradient fill, baseline gridlines, animated draw,
+ * a glowing last-point marker, and an interactive hover crosshair + tooltip.
+ */
+
+const W = 720, H = 260, PADX = 16, PAD_TOP = 36, PAD_BOTTOM = 26;
+const PLOT_W = W - PADX * 2;
+const PLOT_H = H - PAD_TOP - PAD_BOTTOM;
+
+const money0 = (v) =>
+  v == null || Number.isNaN(Number(v)) ? "—"
+    : Number(v).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+
+/* Catmull-Rom → cubic-bezier smoothing for a premium curve. */
+function smoothPath(pts) {
+  if (pts.length < 2) return pts.length ? `M ${pts[0].x},${pts[0].y}` : "";
+  let d = `M ${pts[0].x},${pts[0].y}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2] || p2;
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    d += ` C ${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;
+  }
+  return d;
 }
 
-export default function NetWorthChart({ total, change30d, series: initialSeries }) {
-  const defaultPoints = "0,80 40,65 80,70 120,45 160,50 200,35 240,28 280,20 320,15 360,8";
-  const [range, setRange] = React.useState("3M");
-  const [displaySeries, setDisplaySeries] = React.useState(initialSeries || []);
-  const [loading, setLoading] = React.useState(false);
-  const polyRef = React.useRef(null);
+export default function NetWorthChart({ total, change30d, series = [] }) {
+  const wrapRef = useRef(null);
+  const lineRef = useRef(null);
+  const [hover, setHover] = useState(null); // { idx, leftPct }
 
-  React.useEffect(() => {
-    if (!initialSeries || initialSeries.length === 0) return;
-    setDisplaySeries(initialSeries);
-  }, [initialSeries]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    async function fetchRange(r) {
-      setLoading(true);
-      try {
-        const snap = await api.getSnapshot(r);
-        if (!cancelled) setDisplaySeries(snap.series || []);
-      } catch (e) {
-        // on error, keep existing
-        console.warn('snapshot range fetch failed', e.message || e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    // if we already have a dense initial series and range is All, skip fetch
-    if (initialSeries && initialSeries.length > 6 && range === 'All') return;
-    fetchRange(range);
-    return () => { cancelled = true; };
-  }, [range]);
-
-  const calculated = seriesToPoints(displaySeries);
-  const points = calculated || defaultPoints;
   const positive = (change30d ?? 0) >= 0;
+  const accent = positive ? "var(--tv-forest-light)" : "var(--tv-negative)";
 
-  // animate polyline when points change
-  React.useEffect(() => {
-    const el = polyRef.current;
-    if (!el) return;
+  const values = useMemo(
+    () => (series || []).map((s) => (typeof s === "number" ? s : Number(s?.value ?? s?.v ?? s))).filter((n) => !Number.isNaN(n)),
+    [series]
+  );
+
+  const { pts, areaPath, linePath, min, max } = useMemo(() => {
+    if (values.length < 2) return { pts: [], areaPath: "", linePath: "", min: 0, max: 0 };
+    const mn = Math.min(...values), mx = Math.max(...values);
+    const range = Math.max(1, mx - mn);
+    const n = values.length;
+    const p = values.map((v, i) => ({
+      x: PADX + (i / (n - 1)) * PLOT_W,
+      y: PAD_TOP + (1 - (v - mn) / range) * PLOT_H,
+      v,
+    }));
+    const line = smoothPath(p);
+    const area = `${line} L ${p[n - 1].x},${PAD_TOP + PLOT_H} L ${p[0].x},${PAD_TOP + PLOT_H} Z`;
+    return { pts: p, areaPath: area, linePath: line, min: mn, max: mx };
+  }, [values]);
+
+  // Animated line draw whenever the path changes.
+  useEffect(() => {
+    const el = lineRef.current;
+    if (!el || !linePath) return;
     try {
       const len = el.getTotalLength();
       el.style.transition = "none";
       el.style.strokeDasharray = `${len}`;
       el.style.strokeDashoffset = `${len}`;
-      // trigger layout then animate
       void el.getBoundingClientRect();
-      el.style.transition = "stroke-dashoffset 700ms cubic-bezier(.2,.8,.2,1)";
+      el.style.transition = "stroke-dashoffset 800ms cubic-bezier(.2,.8,.2,1)";
       el.style.strokeDashoffset = "0";
-    } catch (e) {
-      // getTotalLength may fail in some envs; ignore animation
-    }
-  }, [points]);
+    } catch { /* getTotalLength unsupported — skip animation */ }
+  }, [linePath]);
 
-  const formatCurrency = (value) => {
-    if (value == null || Number.isNaN(Number(value))) return "—";
-    return Number(value).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-  };
+  function onMove(e) {
+    if (!pts.length || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    const idx = Math.round(ratio * (pts.length - 1));
+    setHover({ idx, leftPct: (pts[idx].x / W) * 100 });
+  }
+
+  const hoverPt = hover ? pts[hover.idx] : null;
+  const last = pts[pts.length - 1];
+
+  if (values.length < 2) {
+    return (
+      <div style={{ padding: "40px 12px", textAlign: "center", color: "var(--tv-text-muted)" }}>
+        <i className="ti ti-chart-line" style={{ fontSize: 28, opacity: 0.5 }}></i>
+        <p style={{ marginTop: 8, fontSize: 13 }}>Not enough history yet to chart your net worth.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="chart-card">
-      <div className="chart-header">
-        <h3>Net worth over time</h3>
-        <div className="range-chips" role="tablist" aria-label="Chart ranges">
-          {["1M", "3M", "1Y", "All"].map((r) => (
-            <button
-              key={r}
-              type="button"
-              role="tab"
-              aria-selected={range === r}
-              className={`chip ${range === r ? "active" : ""}`}
-              onClick={() => setRange(r)}
-              disabled={loading}
-            >
-              {r}
-            </button>
-          ))}
+    <div ref={wrapRef} style={{ position: "relative", width: "100%" }}
+      onMouseMove={onMove} onMouseLeave={() => setHover(null)}>
+      {/* In-chart value overlay */}
+      <div style={{ position: "absolute", top: 4, left: 4, pointerEvents: "none" }}>
+        <div style={{ fontSize: 11, color: "var(--tv-text-muted)", letterSpacing: ".04em", textTransform: "uppercase" }}>
+          {hoverPt ? "Selected" : "Current net worth"}
+        </div>
+        <div style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--tv-text-primary)", lineHeight: 1.1 }}>
+          {money0(hoverPt ? hoverPt.v : total)}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: positive ? "var(--tv-positive)" : "var(--tv-negative)", marginTop: 2 }}>
+          <i className={`ti ${positive ? "ti-arrow-up-right" : "ti-arrow-down-right"}`}></i>{" "}
+          {positive ? "+" : ""}{money0(change30d)} · 30d
         </div>
       </div>
-      {loading ? (
-        <div style={{ padding: 24 }} className="muted">Loading chart…</div>
-      ) : (
-        <svg viewBox="0 0 360 90" className="line-chart" aria-hidden={false} role="img" aria-label={`Net worth chart over ${range}`}>
-          <title>Net worth over time</title>
-          <desc>Simple line chart showing net worth trend for the selected range.</desc>
-          <defs>
-            <linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="currentColor" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-          <polyline ref={polyRef} fill="none" stroke="currentColor" strokeWidth="2.5" points={points} />
-          <polygon fill="url(#fill)" points={`${points} 360,90 0,90`} />
-        </svg>
+
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ display: "block", overflow: "visible" }}
+        role="img" aria-label="Net worth over time" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="nw-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={accent} stopOpacity="0.28" />
+            <stop offset="60%" stopColor={accent} stopOpacity="0.08" />
+            <stop offset="100%" stopColor={accent} stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="nw-line" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="var(--tv-forest)" />
+            <stop offset="100%" stopColor={accent} />
+          </linearGradient>
+          <filter id="nw-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" result="b" />
+            <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          </filter>
+        </defs>
+
+        {/* Horizontal gridlines + right-edge value labels */}
+        {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
+          const y = PAD_TOP + t * PLOT_H;
+          const val = max - t * (max - min);
+          return (
+            <g key={i}>
+              <line x1={PADX} y1={y} x2={W - PADX} y2={y} stroke="var(--tv-border-light)" strokeWidth="1" strokeDasharray="2 4" />
+              <text x={W - PADX} y={y - 3} textAnchor="end" fontSize="10" fill="var(--tv-text-muted)">{money0(val)}</text>
+            </g>
+          );
+        })}
+
+        <path d={areaPath} fill="url(#nw-fill)" />
+        <path ref={lineRef} d={linePath} fill="none" stroke="url(#nw-line)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* Last-point glowing marker */}
+        {last && (
+          <>
+            <circle cx={last.x} cy={last.y} r="5.5" fill={accent} filter="url(#nw-glow)" />
+            <circle cx={last.x} cy={last.y} r="3" fill="var(--tv-card)" stroke={accent} strokeWidth="2" />
+          </>
+        )}
+
+        {/* Hover crosshair + dot */}
+        {hoverPt && (
+          <>
+            <line x1={hoverPt.x} y1={PAD_TOP} x2={hoverPt.x} y2={PAD_TOP + PLOT_H} stroke="var(--tv-text-muted)" strokeWidth="1" strokeDasharray="3 3" opacity="0.6" />
+            <circle cx={hoverPt.x} cy={hoverPt.y} r="5" fill="var(--tv-card)" stroke={accent} strokeWidth="2.5" />
+          </>
+        )}
+      </svg>
+
+      {/* HTML tooltip following the hovered point */}
+      {hoverPt && (
+        <div style={{
+          position: "absolute", top: 30, left: `${hover.leftPct}%`, transform: "translateX(-50%)",
+          background: "var(--tv-text-primary)", color: "var(--tv-text-inverse)", padding: "5px 9px",
+          borderRadius: 8, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap", pointerEvents: "none",
+          boxShadow: "var(--shadow-md)", zIndex: 5,
+        }}>
+          {money0(hoverPt.v)}
+        </div>
       )}
-      <p className="chart-foot">
-        Current {formatCurrency(total)} · 30d change{' '}
-        <span className={positive ? "positive" : "negative"}>
-          {positive ? "+" : ""}
-          {change30d == null ? "—" : Number(change30d).toLocaleString("en-US", { style: "currency", currency: "USD" })}
-        </span>
-      </p>
     </div>
   );
 }

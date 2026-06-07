@@ -24,7 +24,8 @@ public class AuthController {
         Optional<User> registeredUser = authService.registerUser(request);
         if (registeredUser.isPresent()) {
             String token = authService.loginUser(new LoginRequest(request.getEmail(), request.getPassword()));
-            return ResponseEntity.ok(new AuthResponse(token, "User registered successfully"));
+            User u = registeredUser.get();
+            return ResponseEntity.ok(new AuthResponse(token, "User registered successfully", u.getEmail(), u.getName()));
         }
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new AuthResponse(null, "User with this email already exists"));
     }
@@ -33,7 +34,9 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         try {
             String token = authService.loginUser(request);
-            return ResponseEntity.ok(new AuthResponse(token, "Login successful"));
+            String email = request.getEmail();
+            String name = authService.findByEmail(email).map(User::getName).orElse(null);
+            return ResponseEntity.ok(new AuthResponse(token, "Login successful", email, name));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new AuthResponse(null, "Invalid credentials"));
         }

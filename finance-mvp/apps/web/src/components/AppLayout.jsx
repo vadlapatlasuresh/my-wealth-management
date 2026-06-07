@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   NavLink,
-  useLocation
+  useLocation,
+  useNavigate
 } from 'react-router-dom';
+import { api } from "../api";
 
 // Import actual page components
 import HomePage from "../pages/HomePage";
 import AccountsPage from "../pages/AccountsPage";
 import TransactionsPage from "../pages/TransactionsPage"; // Import actual TransactionsPage
-import CashPage from "../pages/CashPage";
 import InvestPage from "../pages/InvestPage";
 import PlanPage from "../pages/PlanPage";
 import BillPayPage from "../pages/BillPayPage";
@@ -23,12 +24,10 @@ import StyleGuidePage from "../pages/StyleGuidePage";
 import UIFlowMapPage from "../pages/UIFlowMapPage";
 import MyBusinessPage from "../pages/MyBusinessPage";
 import AIAssistantPage from "../pages/AIAssistantPage";
-
-// Placeholder for pages not yet fully implemented or mapped
-const FractionalLLCPage = (props) => <div id="page-fractional" className="page active">Fractional LLC Page Content</div>;
-const SecurityPage = (props) => <div id="page-security" className="page active">Security Page Content</div>;
-const MessagesPage = (props) => <div id="page-messages" className="page active">Messages Page Content</div>;
-const SettingsPage = (props) => <div id="page-settings" className="page active">Settings Page Content</div>;
+import FractionalLLCPage from "../pages/FractionalLLCPage";
+import SecurityPage from "../pages/SecurityPage";
+import MessagesPage from "../pages/MessagesPage";
+import SettingsPage from "../pages/SettingsPage";
 
 
 const navLabels = {
@@ -52,98 +51,105 @@ const navLabels = {
   '/profile': 'Profile',
 };
 
+/* Sidebar navigation is config-driven so it's generic and easy to extend:
+   add an item to a section's `items` (or a whole new section) — no markup changes. */
+const NAV_SECTIONS = [
+  {
+    label: 'Finance',
+    items: [
+      { to: '/', icon: 'ti ti-layout-dashboard', label: 'Home' },
+      { to: '/accounts', icon: 'ti ti-wallet', label: 'Accounts' },
+      { to: '/transactions', icon: 'ti ti-arrows-exchange-2', label: 'Transactions' },
+      { to: '/budget', icon: 'ti ti-chart-pie', label: 'Budgets' },
+      { to: '/billpay', icon: 'ti ti-receipt', label: 'Pay Bills', badge: 'billpay' },
+      { to: '/debt', icon: 'ti ti-trending-down', label: 'Debt Lab' },
+      { to: '/invest', icon: 'ti ti-chart-line', label: 'Investments' },
+      { to: '/mybusiness', icon: 'ti ti-briefcase', label: 'My Business' },
+      { to: '/ai-assistant', icon: 'ti ti-sparkles', label: 'AI Assistant' },
+    ],
+  },
+  {
+    label: 'Real Estate',
+    items: [
+      { to: '/realestate', icon: 'ti ti-building-estate', label: 'Properties' },
+      { to: '/dealroom', icon: 'ti ti-briefcase', label: 'Deal Room' },
+      { to: '/fractional', icon: 'ti ti-brand-stackshare', label: 'Fractional LLC' },
+    ],
+  },
+  {
+    label: 'Settings',
+    items: [
+      { to: '/security', icon: 'ti ti-shield-lock', label: 'Security' },
+      { to: '/messages', icon: 'ti ti-message-2', label: 'Messages', badge: 2 },
+      { to: '/settings', icon: 'ti ti-settings', label: 'Settings' },
+    ],
+  },
+];
+
 function Sidebar({ user, handleLogout, paymentIntents }) {
   const location = useLocation();
   const getNavLinkClass = (path) =>
     `nav-item ${location.pathname === path ? 'active' : ''}`;
 
   const billPayBadge = paymentIntents.filter(p => p.status === 'PENDING').length;
+  const badgeValue = (b) => (b === 'billpay' ? billPayBadge : b);
 
   return (
     <aside className="sidebar">
       <div className="sidebar-brand">
         <div className="brand-mark">
-          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2L3 9v13h7v-7h4v7h7V9L12 2z"/>
+          <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-label="TerraVest">
+            <defs>
+              <linearGradient id="tvTile" x1="0" y1="0" x2="96" y2="96" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#1A4D3B"/><stop offset="1" stopColor="#2D6B52"/>
+              </linearGradient>
+              <linearGradient id="tvGold" x1="20" y1="72" x2="76" y2="22" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#C9973A"/><stop offset="1" stopColor="#F0C878"/>
+              </linearGradient>
+            </defs>
+            <rect width="96" height="96" rx="24" fill="url(#tvTile)"/>
+            <path d="M22 70 L48 50 L74 70 Z" fill="#8AB89A" opacity="0.30"/>
+            <path d="M22 68 L40 54 L54 62 L74 30" stroke="url(#tvGold)" strokeWidth="6"
+                  fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            <circle cx="74" cy="30" r="6.5" fill="url(#tvGold)"/>
           </svg>
         </div>
-        <div>
+        <div className="brand-text">
           <div className="brand-name">TerraVest</div>
-          <div className="brand-tagline">Finance &amp; Land</div>
+          <div className="brand-tagline">All your wealth · One place</div>
         </div>
       </div>
 
       <ul className="sidebar-nav" style={{paddingTop:'12px'}}>
-        <div className="sidebar-section">
-          <div className="sidebar-section-label">Finance</div>
-        </div>
-        <NavLink to="/" className={getNavLinkClass('/')}>
-          <i className="ti ti-layout-dashboard"></i> Home
-        </NavLink>
-        <NavLink to="/accounts" className={getNavLinkClass('/accounts')}>
-          <i className="ti ti-wallet"></i> Accounts
-        </NavLink>
-        <NavLink to="/transactions" className={getNavLinkClass('/transactions')}>
-          <i className="ti ti-arrows-exchange-2"></i> Transactions
-        </NavLink>
-        <NavLink to="/budget" className={getNavLinkClass('/budget')}>
-          <i className="ti ti-chart-pie"></i> Budgets
-        </NavLink>
-        <NavLink to="/billpay" className={getNavLinkClass('/billpay')}>
-          <i className="ti ti-receipt"></i> Pay Bills
-          {billPayBadge > 0 && <span className="nav-badge">{billPayBadge}</span>}
-        </NavLink>
-        <NavLink to="/debt" className={getNavLinkClass('/debt')}>
-          <i className="ti ti-trending-down"></i> Debt Lab
-        </NavLink>
-        <NavLink to="/invest" className={getNavLinkClass('/invest')}>
-          <i className="ti ti-chart-line"></i> Investments
-        </NavLink>
-        <NavLink to="/mybusiness" className={getNavLinkClass('/mybusiness')}>
-          <i className="ti ti-briefcase"></i> My Business
-        </NavLink>
-        <NavLink to="/ai-assistant" className={getNavLinkClass('/ai-assistant')}>
-          <i className="ti ti-sparkles"></i> AI Assistant
-        </NavLink>
-
-        <div className="sidebar-section" style={{marginTop:'16px'}}>
-          <div className="sidebar-section-label">Real Estate</div>
-        </div>
-        <NavLink to="/realestate" className={getNavLinkClass('/realestate')}>
-          <i className="ti ti-building-estate"></i> Properties
-        </NavLink>
-        <NavLink to="/dealroom" className={getNavLinkClass('/dealroom')}>
-          <i className="ti ti-briefcase"></i> Deal Room
-        </NavLink>
-        <NavLink to="/fractional" className={getNavLinkClass('/fractional')}>
-          <i className="ti ti-brand-stackshare"></i> Fractional LLC
-        </NavLink>
-
-        <div className="sidebar-section" style={{marginTop:'16px'}}>
-          <div className="sidebar-section-label">Settings</div>
-        </div>
-        <NavLink to="/security" className={getNavLinkClass('/security')}>
-          <i className="ti ti-shield-lock"></i> Security
-        </NavLink>
-        <NavLink to="/messages" className={getNavLinkClass('/messages')}>
-          <i className="ti ti-message-2"></i> Messages
-          <span className="nav-badge">2</span>
-        </NavLink>
-        <NavLink to="/settings" className={getNavLinkClass('/settings')}>
-          <i className="ti ti-settings"></i> Settings
-        </NavLink>
+        {NAV_SECTIONS.map((section) => (
+          <React.Fragment key={section.label}>
+            <div className="sidebar-section" style={{ marginTop: 4 }}>
+              <div className="sidebar-section-label">{section.label}</div>
+            </div>
+            {section.items.map((item) => {
+              const val = badgeValue(item.badge);
+              return (
+                <NavLink key={item.to} to={item.to} title={item.label} className={getNavLinkClass(item.to)}>
+                  <i className={item.icon}></i>
+                  <span className="nav-label">{item.label}</span>
+                  {val > 0 && <span className="nav-badge">{val}</span>}
+                </NavLink>
+              );
+            })}
+          </React.Fragment>
+        ))}
       </ul>
 
       <div className="sidebar-footer">
-        <NavLink to="/profile" className="sidebar-user" style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="user-avatar">{user?.email ? user.email[0].toUpperCase() : 'U'}</div>
-          <div>
-            <div className="user-name">{user?.email ? user.email.split('@')[0] : 'User'}</div>
+        <NavLink to="/profile" className="sidebar-user" title="Profile" style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="user-avatar">{(user?.name || user?.email || 'U')[0].toUpperCase()}</div>
+          <div className="user-meta">
+            <div className="user-name">{user?.name || (user?.email ? user.email.split('@')[0] : 'User')}</div>
             <div className="user-role">View profile</div>
           </div>
           <i
             className="ti ti-logout"
-            style={{ marginLeft: 'auto', color: 'rgba(255,255,255,.4)', fontSize: '16px' }}
+            style={{ marginLeft: 'auto', color: 'rgba(255,255,255,.55)', fontSize: '16px' }}
             title="Sign out"
             onClick={(e) => {
               e.preventDefault();
@@ -157,19 +163,111 @@ function Sidebar({ user, handleLogout, paymentIntents }) {
   );
 }
 
-function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate }) {
+function Topbar({ snapshot, syncWithIntegrator, loadAll, error, formatDate, onToggleSidebar, collapsed }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPageLabel = navLabels[location.pathname] || 'TerraVest';
+
+  const [notifs, setNotifs] = useState([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [search, setSearch] = useState('');
+  const bellRef = useRef(null);
+
+  useEffect(() => {
+    let active = true;
+    api.getNotifications()
+      .then((res) => { if (active) setNotifs(res?.items ?? []); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  // Close the dropdown when clicking outside it.
+  useEffect(() => {
+    function onDocClick(e) {
+      if (bellRef.current && !bellRef.current.contains(e.target)) setShowNotifs(false);
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const unread = notifs.filter((n) => !n.read).length;
+
+  function onSearchKey(e) {
+    if (e.key === 'Enter') navigate('/transactions');
+  }
+
+  const typeIcon = (t) => ({
+    BUDGET: 'ti ti-chart-pie', PAYMENT: 'ti ti-receipt',
+    ACCOUNT: 'ti ti-building-bank', SYSTEM: 'ti ti-bell',
+  }[t] || 'ti ti-bell');
 
   return (
     <div className="topbar">
+      <button
+        className="icon-btn hamburger"
+        onClick={onToggleSidebar}
+        title={collapsed ? 'Expand menu' : 'Collapse menu'}
+        aria-label="Toggle navigation menu"
+      >
+        <i className="ti ti-menu-2"></i>
+      </button>
       <div className="topbar-search">
         <i className="ti ti-search"></i>
-        <input type="text" placeholder="Search accounts, transactions, categories…"/>
+        <input
+          type="text"
+          placeholder="Search transactions… (press Enter)"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={onSearchKey}
+        />
       </div>
       <div className="topbar-right">
-        <button className="icon-btn"><i className="ti ti-bell"></i><span className="dot"></span></button>
-        <button className="icon-btn"><i className="ti ti-help-circle"></i></button>
+        <div ref={bellRef} style={{ position: 'relative' }}>
+          <button className="icon-btn" onClick={() => setShowNotifs((s) => !s)} title="Notifications">
+            <i className="ti ti-bell"></i>
+            {unread > 0 && <span className="dot"></span>}
+          </button>
+          {showNotifs && (
+            <div style={{
+              position: 'absolute', right: 0, top: 40, width: 340, background: 'var(--tv-white)',
+              border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-lg)',
+              boxShadow: 'var(--shadow-lg)', zIndex: 50, overflow: 'hidden'
+            }}>
+              <div className="section-header" style={{ padding: '12px 14px', marginBottom: 0, borderBottom: '1px solid var(--tv-border-light)' }}>
+                <div className="section-title" style={{ marginBottom: 0 }}>Notifications</div>
+                {unread > 0 && <span className="badge badge-forest">{unread} new</span>}
+              </div>
+              <div style={{ maxHeight: 320, overflowY: 'auto', padding: '4px 14px' }}>
+                {notifs.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '24px 8px' }}>
+                    <i className="ti ti-bell-off"></i>
+                    <p>No notifications</p>
+                  </div>
+                ) : notifs.slice(0, 6).map((n) => (
+                  <div className="list-item" key={n.id}>
+                    <div className="item-icon icon-forest" style={{ width: 32, height: 32, fontSize: 15 }}>
+                      <i className={typeIcon(n.type)}></i>
+                    </div>
+                    <div className="item-main">
+                      <div className="item-name" style={{ fontWeight: n.read ? 400 : 600 }}>{n.title}</div>
+                      <div className="item-sub" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{n.body}</div>
+                    </div>
+                    {!n.read && <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--tv-forest-light)', flexShrink: 0 }}></span>}
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding: '10px 14px', borderTop: '1px solid var(--tv-border-light)' }}>
+                <button className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}
+                  onClick={() => { setShowNotifs(false); navigate('/messages'); }}>
+                  View all messages
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        <button className="icon-btn" title="Help & learning" onClick={() => navigate('/learn')}>
+          <i className="ti ti-help-circle"></i>
+        </button>
         <div style={{width:'1px',height:'22px',background:'var(--tv-border)',margin:'0 4px'}}></div>
         <span id="topbar-label" className="topbar-page-label">{currentPageLabel}</span>
       </div>
@@ -208,12 +306,24 @@ export default function AppLayout(props) {
     setBillPayStep, setUser, setBillPayForm, setBillPaySubmitting,
     setLastBillPayIntent, setProperties, setError, setLoading,
     loadAll, syncWithIntegrator, submitAuth, submitBillPay,
+    cancelPaymentIntent,
     runAllDebtScenarios, handleLogout, openBillPay, formatDate
   } = props;
 
+  // Collapsible sidebar (icon rail) — persisted so it survives reloads.
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('tv_sidebar_collapsed') === '1'
+  );
+  const toggleSidebar = () =>
+    setCollapsed((c) => {
+      const next = !c;
+      localStorage.setItem('tv_sidebar_collapsed', next ? '1' : '0');
+      return next;
+    });
+
   return (
     <Router>
-      <div className="app-shell">
+      <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
         <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} />
         <div className="main-area">
           <Topbar
@@ -222,6 +332,8 @@ export default function AppLayout(props) {
             loadAll={loadAll}
             error={error}
             formatDate={formatDate}
+            onToggleSidebar={toggleSidebar}
+            collapsed={collapsed}
           />
           <OuterTabs />
           <div className="page-content">
@@ -236,13 +348,14 @@ export default function AppLayout(props) {
                   creditCards={creditCards}
                   properties={properties}
                   onPay={openBillPay}
+                  loadAll={loadAll}
                   user={user}
                   insights={insights}
                   formatDate={formatDate}
                 />
               } />
               <Route path="/accounts" element={<AccountsPage accounts={accounts} loadAll={loadAll} />} />
-              <Route path="/transactions" element={<TransactionsPage transactions={transactions} />} />
+              <Route path="/transactions" element={<TransactionsPage transactions={transactions} loadAll={loadAll} />} />
               <Route path="/budget" element={
                 <PlanPage
                   planTab={planTab}
@@ -267,7 +380,8 @@ export default function AppLayout(props) {
                   setBillPayForm={setBillPayForm}
                   paymentIntents={paymentIntents}
                   onSubmit={submitBillPay}
-                  onBack={() => { /* Implement navigation back if needed */ }}
+                  onStartOver={openBillPay}
+                  onCancelIntent={cancelPaymentIntent}
                   submitting={billPaySubmitting}
                   lastIntent={lastBillPayIntent}
                   formatDate={formatDate}
@@ -300,6 +414,7 @@ export default function AppLayout(props) {
                 path="/profile"
                 element={<ProfilePage user={user} accounts={accounts} onLogout={handleLogout} />}
               />
+              <Route path="/learn" element={<LearnPage />} />
               <Route path="/styleguide" element={<StyleGuidePage />} />
               <Route path="/flowmap" element={<UIFlowMapPage />} />
             </Routes>

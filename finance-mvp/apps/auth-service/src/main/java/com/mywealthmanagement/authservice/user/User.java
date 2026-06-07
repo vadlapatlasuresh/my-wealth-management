@@ -22,6 +22,37 @@ public class User {
     @Column(unique = true, nullable = false)
     private String email;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "first_name")
+    private String firstName;
+
+    @Column(name = "last_name")
+    private String lastName;
+
+    @Column(name = "phone")
+    private String phone;
+
+    @Column(name = "account_type")
+    private String accountType; // INDIVIDUAL | BUSINESS
+
+    @Column(name = "business_name")
+    private String businessName;
+
+    // Only the last 4 digits are ever stored — never the full SSN/EIN.
+    @Column(name = "ssn_last4", length = 4)
+    private String ssnLast4;
+
+    @Column(name = "ein_last4", length = 4)
+    private String einLast4;
+
+    @Column(name = "phone_verified")
+    private Boolean phoneVerified = false;
+
+    @Column(name = "identity_verified")
+    private Boolean identityVerified = false;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 

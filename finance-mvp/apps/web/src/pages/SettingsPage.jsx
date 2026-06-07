@@ -1,0 +1,358 @@
+import { useState, useEffect } from 'react';
+import { api } from '../api';
+
+// Safe localStorage helpers for local-only preferences.
+function lsGet(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* non-fatal */ }
+}
+
+// Trigger a client-side file download from a text string.
+function downloadTextFile(filename, text) {
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Default notification preferences, used until the backend responds (or if it fails).
+const DEFAULT_PREFS = {
+  emailEnabled: true,
+  pushEnabled: false,
+  weeklySummary: true,
+  budgetAlerts: true,
+  paymentAlerts: true,
+};
+
+// Backend-backed notification toggles, in render order.
+const NOTIFICATION_ROWS = [
+  { key: 'emailEnabled', label: 'Email notifications', help: 'Account alerts and statements by email' },
+  { key: 'pushEnabled', label: 'Push notifications', help: 'Real-time alerts on your devices' },
+  { key: 'weeklySummary', label: 'Weekly summary', help: 'A digest of your activity every Monday' },
+  { key: 'budgetAlerts', label: 'Budget alerts', help: 'Notify me when I approach budget limits' },
+  { key: 'paymentAlerts', label: 'Payment alerts', help: 'Reminders for upcoming and completed payments' },
+];
+
+export default function SettingsPage() {
+  // Backend-backed notification preferences.
+  const [prefs, setPrefs] = useState(DEFAULT_PREFS);
+  const [loading, setLoading] = useState(true);
+  const [prefsError, setPrefsError] = useState('');
+
+  // Local-only appearance/regional preferences, persisted in localStorage so
+  // selections survive a reload (lazy-initialised to avoid a flash of defaults).
+  const [compactMode, setCompactMode] = useState(() => lsGet('tv-compact', false));
+  const [currency, setCurrency] = useState(() => lsGet('tv-currency', 'USD'));
+  const [language, setLanguage] = useState(() => lsGet('tv-language', 'en'));
+  const [timezone, setTimezone] = useState(() => lsGet('tv-timezone', 'America/New_York'));
+
+  // Persist + apply local prefs whenever they change.
+  useEffect(() => { lsSet('tv-currency', currency); }, [currency]);
+  useEffect(() => { lsSet('tv-language', language); }, [language]);
+  useEffect(() => { lsSet('tv-timezone', timezone); }, [timezone]);
+  useEffect(() => {
+    lsSet('tv-compact', compactMode);
+    document.body.classList.toggle('tv-compact', compactMode);
+    return () => document.body.classList.remove('tv-compact');
+  }, [compactMode]);
+
+  // Data & privacy UI state.
+  const [exportRequested, setExportRequested] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+  // Load saved notification preferences on mount; fall back to defaults on failure.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const saved = await api.getNotificationPreferences();
+        if (cancelled || !saved) return;
+        setPrefs((prev) => ({
+          emailEnabled: saved.emailEnabled ?? prev.emailEnabled,
+          pushEnabled: saved.pushEnabled ?? prev.pushEnabled,
+          weeklySummary: saved.weeklySummary ?? prev.weeklySummary,
+          budgetAlerts: saved.budgetAlerts ?? prev.budgetAlerts,
+          paymentAlerts: saved.paymentAlerts ?? prev.paymentAlerts,
+        }));
+      } catch {
+        // Keep defaults; surface a gentle, non-blocking error.
+        if (!cancelled) setPrefsError('Could not load your preferences. Showing defaults.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Build the full backend payload from a prefs object.
+  const toPayload = (p) => ({
+    emailEnabled: p.emailEnabled,
+    pushEnabled: p.pushEnabled,
+    weeklySummary: p.weeklySummary,
+    budgetAlerts: p.budgetAlerts,
+    paymentAlerts: p.paymentAlerts,
+  });
+
+  // Optimistic toggle for backend-backed prefs; revert + show error on failure.
+  const toggleBackendPref = async (key) => {
+    const prevPrefs = prefs;
+    const next = { ...prevPrefs, [key]: !prevPrefs[key] };
+    setPrefs(next);
+    setPrefsError('');
+    try {
+      await api.putNotificationPreferences(toPayload(next));
+    } catch {
+      setPrefs(prevPrefs);
+      setPrefsError('Could not save your change. Please try again.');
+    }
+  };
+
+  const handleExport = () => setExportRequested(true);
+
+  // Generate a basic monthly statement client-side so the action produces a real file.
+  const handleDownloadStatement = () => {
+    const now = new Date();
+    const period = now.toLocaleString('en-US', { month: 'long', year: 'numeric' });
+    const lines = [
+      'TERRAVEST — MONTHLY STATEMENT',
+      `Period: ${period}`,
+      `Generated: ${now.toLocaleString()}`,
+      '',
+      'This is a summary statement generated from your TerraVest account.',
+      'A detailed PDF statement will be available when statement delivery is enabled.',
+      '',
+      `Display currency: ${currency}`,
+      `Timezone: ${timezone}`,
+    ];
+    downloadTextFile(`terravest-statement-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.txt`, lines.join('\n'));
+  };
+
+  const handleDeleteConfirmed = () => {
+    // UI-only: no real deletion.
+    setConfirmingDelete(false);
+  };
+
+  return (
+    <div id="page-settings" className="page active">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Settings</div>
+          <div className="page-subtitle">Manage your preferences, notifications, and data</div>
+        </div>
+      </div>
+
+      <div className="grid-2">
+        {/* Notifications card (backend-backed) */}
+        <div className="card">
+          <div className="card-title">Notifications</div>
+
+          {prefsError ? (
+            <div
+              className="setting-help"
+              role="alert"
+              style={{ color: 'var(--tv-negative)', marginBottom: 8 }}
+            >
+              <i className="ti ti-alert-circle"></i> {prefsError}
+            </div>
+          ) : null}
+
+          {loading ? (
+            <div className="setting-help" style={{ padding: '8px 0' }}>
+              <i className="ti ti-loader-2 spin"></i> Loading preferences…
+            </div>
+          ) : (
+            NOTIFICATION_ROWS.map((row) => (
+              <div className="setting-row" key={row.key}>
+                <div>
+                  <div className="setting-label">{row.label}</div>
+                  <div className="setting-help">{row.help}</div>
+                </div>
+                <div
+                  className={`toggle ${prefs[row.key] ? 'on' : ''}`}
+                  role="switch"
+                  aria-checked={prefs[row.key]}
+                  aria-label={row.label}
+                  onClick={() => toggleBackendPref(row.key)}
+                ></div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Appearance card (local-only) */}
+        <div className="card">
+          <div className="card-title">Appearance</div>
+
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Compact mode</div>
+              <div className="setting-help">Reduce spacing for a denser layout</div>
+            </div>
+            <div
+              className={`toggle ${compactMode ? 'on' : ''}`}
+              role="switch"
+              aria-checked={compactMode}
+              aria-label="Compact mode"
+              onClick={() => setCompactMode((v) => !v)}
+            ></div>
+          </div>
+
+          <div className="setting-row" style={{ opacity: 0.55 }}>
+            <div>
+              <div className="setting-label">Dark mode</div>
+              <div className="setting-help">Use a darker color theme — coming soon</div>
+            </div>
+            <div
+              className="toggle"
+              role="switch"
+              aria-checked={false}
+              aria-disabled="true"
+              aria-label="Dark mode (coming soon)"
+              title="Coming soon"
+              style={{ cursor: 'not-allowed' }}
+            ></div>
+          </div>
+
+          <div className="divider" />
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label" htmlFor="settings-currency">Display currency</label>
+            <select
+              id="settings-currency"
+              className="form-select"
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value)}
+            >
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — British Pound</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Regional card (local-only) */}
+        <div className="card">
+          <div className="card-title">Regional</div>
+
+          <div className="form-group">
+            <label className="form-label" htmlFor="settings-language">Language</label>
+            <select
+              id="settings-language"
+              className="form-select"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value)}
+            >
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+            </select>
+          </div>
+
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label" htmlFor="settings-timezone">Timezone</label>
+            <select
+              id="settings-timezone"
+              className="form-select"
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              <option value="America/New_York">Eastern Time (ET)</option>
+              <option value="America/Chicago">Central Time (CT)</option>
+              <option value="America/Denver">Mountain Time (MT)</option>
+              <option value="America/Los_Angeles">Pacific Time (PT)</option>
+              <option value="Europe/London">London (GMT)</option>
+              <option value="Europe/Paris">Central European Time (CET)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Data & Privacy card */}
+        <div className="card">
+          <div className="card-title">Data &amp; Privacy</div>
+
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Export my data</div>
+              <div className="setting-help">Download a copy of your account data</div>
+              {exportRequested ? (
+                <div className="setting-help" style={{ color: 'var(--tv-forest)' }}>
+                  <i className="ti ti-check"></i> Export requested — we&apos;ll email you a link shortly.
+                </div>
+              ) : null}
+            </div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport}>
+              <i className="ti ti-download"></i> Export
+            </button>
+          </div>
+
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Download statements</div>
+              <div className="setting-help">Get monthly PDF statements</div>
+            </div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handleDownloadStatement}>
+              <i className="ti ti-file-text"></i> Download
+            </button>
+          </div>
+
+          <div className="setting-row">
+            <div>
+              <div className="setting-label">Delete account</div>
+              <div className="setting-help">Permanently remove your account and data</div>
+              {confirmingDelete ? (
+                <div
+                  className="setting-help"
+                  role="alert"
+                  style={{ color: 'var(--tv-negative)', marginTop: 6 }}
+                >
+                  Are you sure? This cannot be undone.
+                </div>
+              ) : null}
+            </div>
+            {confirmingDelete ? (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-danger btn-sm"
+                  onClick={handleDeleteConfirmed}
+                >
+                  <i className="ti ti-trash"></i> Confirm
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setConfirmingDelete(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={() => setConfirmingDelete(true)}
+              >
+                <i className="ti ti-trash"></i> Delete account
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

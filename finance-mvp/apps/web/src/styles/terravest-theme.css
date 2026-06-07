@@ -39,8 +39,9 @@
   --tv-text-inverse:   #FFFFFF;
 
   /* Typography */
-  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-display: 'Fraunces', 'DM Serif Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
+  --display-weight: 560; /* Fraunces is variable — tuned for an elegant, confident headline */
 
   /* Spacing */
   --sidebar-w: 228px;
@@ -59,17 +60,60 @@
    RESET & BASE
    ============================================= */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { font-size: 15px; }
+html { font-size: 15px; -webkit-text-size-adjust: 100%; }
 body {
   font-family: var(--font-body);
   background: var(--tv-bg);
   color: var(--tv-text-primary);
-  line-height: 1.5;
+  line-height: 1.55;
   min-height: 100vh;
+  /* Crisper, more elegant type rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-optical-sizing: auto;
+  font-feature-settings: "kern", "liga", "tnum";
+  letter-spacing: 0.002em;
 }
+/* Display face (Fraunces) — optical sizing + a confident, even weight everywhere it's used */
+.brand-name, .page-title, .kpi-value, .item-amount, .property-stat-value,
+.stat-tile-value, .auth-headline, .auth-card-title,
+h1, h2, h3 {
+  font-optical-sizing: auto;
+  font-weight: var(--display-weight);
+  font-synthesis: none;
+}
+/* Tabular figures for all numeric/display values so columns align elegantly */
+.kpi-value, .stat-tile-value, .num, .item-amount, .tv-table td { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
 button { font-family: var(--font-body); cursor: pointer; border: none; outline: none; }
 input { font-family: var(--font-body); }
 a { text-decoration: none; color: inherit; }
+
+/* =============================================
+   GLOBAL POLISH — feel & finish (applies app-wide)
+   ============================================= */
+/* Elegant, accessible focus ring (replaces the removed default outline) */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--tv-forest-light);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+/* Branded text selection */
+::selection { background: var(--tv-sage-light); color: var(--tv-text-primary); }
+/* Smooth, consistent micro-interactions */
+button, a, .card, .stat-tile, .nav-item, .kpi-card {
+  transition: background-color .16s ease, border-color .16s ease,
+              box-shadow .2s ease, transform .16s ease, color .16s ease;
+}
+/* Refined slim scrollbars */
+* { scrollbar-width: thin; scrollbar-color: var(--tv-sage) transparent; }
+*::-webkit-scrollbar { width: 9px; height: 9px; }
+*::-webkit-scrollbar-thumb { background: var(--tv-border); border-radius: 8px; border: 2px solid transparent; background-clip: content-box; }
+*::-webkit-scrollbar-thumb:hover { background: var(--tv-sage); background-clip: content-box; }
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
 
 /* =============================================
    LAYOUT: APP SHELL
@@ -92,6 +136,7 @@ a { text-decoration: none; color: inherit; }
   padding: 0;
   position: relative;
   z-index: 10;
+  transition: width .18s ease;
 }
 .sidebar-brand {
   padding: 24px 20px 20px;
@@ -101,16 +146,16 @@ a { text-decoration: none; color: inherit; }
   gap: 10px;
 }
 .brand-mark {
-  width: 32px;
-  height: 32px;
-  background: var(--tv-gold);
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
-.brand-mark svg { width: 18px; height: 18px; fill: var(--tv-forest); }
+.brand-mark svg { width: 34px; height: 34px; display: block; }
 .brand-name {
   font-family: var(--font-display);
   font-size: 18px;
@@ -120,7 +165,7 @@ a { text-decoration: none; color: inherit; }
 }
 .brand-tagline {
   font-size: 10px;
-  color: var(--tv-sage);
+  color: var(--tv-sage-light);
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -132,7 +177,7 @@ a { text-decoration: none; color: inherit; }
   font-size: 10px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--tv-sage);
+  color: rgba(255,255,255,.55);
   padding: 0 8px 6px;
   margin-top: 4px;
 }
@@ -150,9 +195,9 @@ a { text-decoration: none; color: inherit; }
   gap: 10px;
   padding: 9px 10px;
   border-radius: var(--radius-md);
-  color: rgba(255,255,255,.6);
+  color: rgba(255,255,255,.86);
   font-size: 13.5px;
-  font-weight: 400;
+  font-weight: 500;
   cursor: pointer;
   transition: all .15s ease;
   position: relative;
@@ -160,8 +205,8 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 1px;
 }
 .nav-item:hover {
-  background: rgba(255,255,255,.07);
-  color: rgba(255,255,255,.9);
+  background: rgba(255,255,255,.10);
+  color: #fff;
 }
 .nav-item.active {
   background: rgba(255,255,255,.12);
@@ -215,8 +260,32 @@ a { text-decoration: none; color: inherit; }
   font-size: 12px; font-weight: 600; color: #fff;
   flex-shrink: 0;
 }
-.user-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,.85); }
-.user-role { font-size: 11px; color: var(--tv-sage); }
+.user-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.96); }
+.user-role { font-size: 11px; color: var(--tv-sage-light); }
+
+/* =============================================
+   COLLAPSIBLE SIDEBAR (hamburger toggle)
+   Generic: toggling `.sidebar-collapsed` on .app-shell turns the
+   sidebar into an icon-only rail. Labels carry a title= tooltip.
+   ============================================= */
+.app-shell.sidebar-collapsed .sidebar { width: 68px; }
+.app-shell.sidebar-collapsed .sidebar .nav-label,
+.app-shell.sidebar-collapsed .sidebar .brand-text,
+.app-shell.sidebar-collapsed .sidebar .sidebar-section-label,
+.app-shell.sidebar-collapsed .sidebar .nav-badge,
+.app-shell.sidebar-collapsed .sidebar .user-meta,
+.app-shell.sidebar-collapsed .sidebar .sidebar-user .ti-logout {
+  display: none;
+}
+.app-shell.sidebar-collapsed .sidebar .nav-item { justify-content: center; padding: 10px 0; }
+.app-shell.sidebar-collapsed .sidebar .nav-item i { font-size: 18px; }
+.app-shell.sidebar-collapsed .sidebar-brand { justify-content: center; padding: 22px 0 18px; }
+.app-shell.sidebar-collapsed .sidebar-section { padding: 10px 0 0; }
+.app-shell.sidebar-collapsed .sidebar-section-label { padding: 0; height: 8px; }
+.app-shell.sidebar-collapsed .sidebar-user { justify-content: center; padding: 8px 0; }
+
+/* Hamburger button in the topbar */
+.hamburger { flex-shrink: 0; }
 
 /* =============================================
    MAIN CONTENT AREA
@@ -317,14 +386,17 @@ a { text-decoration: none; color: inherit; }
 }
 .page-title {
   font-family: var(--font-display);
-  font-size: 26px;
+  font-size: 30px;
   color: var(--tv-text-primary);
-  line-height: 1.2;
+  line-height: 1.16;
+  letter-spacing: -0.018em;
 }
 .page-subtitle {
-  font-size: 13px;
+  font-size: 13.5px;
   color: var(--tv-text-muted);
-  margin-top: 3px;
+  margin-top: 5px;
+  letter-spacing: 0.005em;
+  line-height: 1.5;
 }
 .page-actions { display: flex; gap: 10px; align-items: center; }
 
@@ -405,6 +477,12 @@ a { text-decoration: none; color: inherit; }
   cursor: default;
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
+.kpi-clickable { cursor: pointer; }
+.kpi-clickable:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--tv-forest-light);
+  transform: translateY(-1px);
+}
 .kpi-label {
   font-size: 11.5px;
   color: var(--tv-text-muted);
@@ -823,6 +901,166 @@ a { text-decoration: none; color: inherit; }
 .property-stat-label { font-size: 11px; color: var(--tv-text-muted); font-weight: 500; margin-bottom: 2px; }
 .property-stat-value { font-family: var(--font-display); font-size: 16px; color: var(--tv-text-primary); }
 
+/* =============================================
+   INFO TOOLTIP ( "i" affordance )
+   ============================================= */
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tv-text-muted);
+  font-size: 12px;
+  cursor: help;
+  margin-left: 2px;
+  line-height: 1;
+  transition: color .15s;
+}
+.info-tip:hover, .info-tip:focus-visible { color: var(--tv-forest-light); outline: none; }
+.info-tip i { font-size: 13px; }
+
+/* =============================================
+   ACCOUNTS PAGE
+   ============================================= */
+.account-row .account-action {
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  color: var(--tv-text-muted);
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+.account-row .account-action:hover { color: var(--tv-forest); background: var(--tv-sage-pale); }
+.account-row:hover { background: var(--tv-bg); }
+
+/* Refresh spinner */
+@keyframes tv-spin { to { transform: rotate(360deg); } }
+.spin { display: inline-block; animation: tv-spin .8s linear infinite; }
+
+/* =============================================
+   FILTER BAR (tables / lists)
+   ============================================= */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.filter-search {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+.filter-search i {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--tv-text-muted);
+  font-size: 15px;
+}
+.filter-search input {
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--tv-border);
+  border-radius: var(--radius-md);
+  padding: 0 14px 0 34px;
+  font-size: 13.5px;
+  color: var(--tv-text-primary);
+  background: var(--tv-white);
+  transition: border-color .15s, box-shadow .15s;
+}
+.filter-search input:focus {
+  outline: none;
+  border-color: var(--tv-forest-light);
+  box-shadow: 0 0 0 3px rgba(61,138,104,.12);
+}
+.filter-select { width: auto; min-width: 160px; height: 38px; }
+
+/* Segmented control */
+.seg-control {
+  display: inline-flex;
+  background: var(--tv-bg);
+  border: 1px solid var(--tv-border);
+  border-radius: var(--radius-md);
+  padding: 2px;
+  gap: 2px;
+}
+.seg-btn {
+  padding: 6px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  color: var(--tv-text-muted);
+  background: transparent;
+  transition: all .15s;
+}
+.seg-btn:hover { color: var(--tv-text-primary); }
+.seg-btn.active {
+  background: var(--tv-white);
+  color: var(--tv-forest);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Horizontal scroll wrapper for tables on narrow screens */
+.table-scroll { width: 100%; overflow-x: auto; }
+.tv-table .num, .tv-table td.num, .tv-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* =============================================
+   TOGGLE SWITCH (settings / profile)
+   ============================================= */
+.toggle {
+  width: 40px; height: 22px;
+  border-radius: 22px;
+  background: var(--tv-border);
+  position: relative;
+  cursor: pointer;
+  transition: background .2s;
+  flex-shrink: 0;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s;
+}
+.toggle.on { background: var(--tv-forest); }
+.toggle.on::after { transform: translateX(18px); }
+
+/* Settings / definition rows */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--tv-border-light);
+}
+.setting-row:last-child { border-bottom: none; }
+.setting-row:first-child { padding-top: 0; }
+.setting-label { font-size: 13.5px; font-weight: 500; color: var(--tv-text-primary); }
+.setting-help { font-size: 12px; color: var(--tv-text-muted); margin-top: 2px; }
+
+/* Stat tile (compact KPI used inside cards) */
+.stat-tile {
+  background: var(--tv-bg);
+  border: 1px solid var(--tv-border-light);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.stat-tile-label { font-size: 11.5px; color: var(--tv-text-muted); font-weight: 500; margin-bottom: 4px; }
+.stat-tile-value { font-family: var(--font-display); font-size: 20px; color: var(--tv-text-primary); }
+
+/* Card grid for marketplace/learn/offering cards */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
 /* Responsive for narrower displays */
 @media (max-width: 1200px) {
   :root { --sidebar-w: 200px; }
@@ -861,3 +1099,105 @@ a { text-decoration: none; color: inherit; }
   border-bottom-color: var(--tv-forest);
 }
 .outer-tab i { font-size: 16px; }
+
+/* =============================================
+   AUTH (split-screen sign in / sign up)
+   ============================================= */
+.auth-screen {
+  min-height: 100vh;
+  display: flex;
+  background: var(--tv-bg);
+}
+.auth-brand-panel {
+  flex: 1.1;
+  position: relative;
+  padding: 56px 56px;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 500px at 15% -10%, var(--tv-forest-mid) 0%, transparent 55%),
+    linear-gradient(150deg, var(--tv-forest) 0%, #0E3326 100%);
+}
+.auth-brand-panel::after {
+  content: '';
+  position: absolute;
+  right: -120px; bottom: -120px;
+  width: 360px; height: 360px;
+  border-radius: 50%;
+  background: rgba(201,151,58,.12);
+}
+.auth-brand-logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.auth-brand-logo .mark {
+  width: 44px; height: 44px; border-radius: 12px;
+  background: var(--tv-gold); color: var(--tv-forest);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-size: 20px;
+}
+.auth-headline {
+  font-family: var(--font-display);
+  font-size: 42px;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  max-width: 460px;
+}
+.auth-sub { color: var(--tv-sage-light); font-size: 15px; line-height: 1.6; margin-top: 16px; max-width: 420px; }
+.auth-features { display: flex; flex-direction: column; gap: 16px; margin-top: 28px; position: relative; z-index: 1; }
+.auth-feature { display: flex; align-items: flex-start; gap: 12px; }
+.auth-feature .fi {
+  width: 34px; height: 34px; border-radius: 9px; flex-shrink: 0;
+  background: rgba(255,255,255,.1); color: var(--tv-gold-light);
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
+}
+.auth-feature-title { font-weight: 600; font-size: 14px; }
+.auth-feature-sub { font-size: 12.5px; color: var(--tv-sage-light); margin-top: 1px; }
+.auth-brand-foot { font-size: 12px; color: rgba(255,255,255,.5); position: relative; z-index: 1; }
+
+.auth-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+.auth-card { width: 100%; max-width: 400px; }
+.auth-card-title { font-family: var(--font-display); font-size: 28px; letter-spacing: -0.015em; color: var(--tv-text-primary); }
+.auth-pwd-wrap { position: relative; }
+.auth-pwd-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; color: var(--tv-text-muted); font-size: 17px;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+}
+.auth-pwd-toggle:hover { color: var(--tv-forest); }
+.auth-segmented {
+  display: flex; background: var(--tv-bg); border: 1px solid var(--tv-border);
+  border-radius: var(--radius-md); padding: 3px; margin-bottom: 22px;
+}
+.auth-segmented button {
+  flex: 1; padding: 9px; font-size: 13.5px; font-weight: 600;
+  border-radius: var(--radius-sm); color: var(--tv-text-muted); background: transparent;
+}
+.auth-segmented button.active { background: var(--tv-white); color: var(--tv-forest); box-shadow: var(--shadow-sm); }
+
+/* Hide the brand panel on narrow screens — form stays full-width and centered */
+@media (max-width: 860px) {
+  .auth-brand-panel { display: none; }
+}
+
+/* =============================================
+   COMPACT MODE (Settings → Appearance)
+   Toggling `.tv-compact` on <body> tightens the layout for a denser view.
+   ============================================= */
+body.tv-compact .page-content { padding: 18px 22px; }
+body.tv-compact .card { padding: 14px 16px; }
+body.tv-compact .page-header { margin-bottom: 16px; }
+body.tv-compact .kpi-grid,
+body.tv-compact .card-grid { gap: 12px; }
+body.tv-compact .setting-row { padding: 9px 0; }
+body.tv-compact .tv-table td,
+body.tv-compact .tv-table th { padding-top: 7px; padding-bottom: 7px; }
+body.tv-compact .page-title { font-size: 26px; }

@@ -1,0 +1,14 @@
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/config/SecurityConfig.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/config/JwtAuthFilter.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/PropertyDataSeeder.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/config/UserDetailsServiceImpl.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/config/JwtService.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/PropertyService.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/dto/PropertyDto.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/Property.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/RealEstateController.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/RealEstateServiceApplication.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/PropertyValuationProvider.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/PropertyRepository.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/PropertyEstimate.java
+/Users/suresh/Desktop/projects/my-wealth-management/finance-mvp/apps/real-estate-service/src/main/java/com/mywealthmanagement/realestateservice/property/MockPropertyValuationProvider.java

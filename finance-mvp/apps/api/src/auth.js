@@ -39,7 +39,11 @@ export function authMiddleware(req, res, next) {
     return res.status(401).json({ error_code: "UNAUTHORIZED", message: "Invalid or expired token" });
   }
 
-  req.user = decoded;
+  // Java auth-service tokens carry the user id in `sub`; node-issued tokens carry `id`.
+  // Keep it a String — the Prisma User.id column is a String (cuid), so a numeric
+  // id would fail Prisma validation ("Expected String, provided Int").
+  const id = decoded.id ?? (decoded.sub != null ? String(decoded.sub) : undefined);
+  req.user = { ...decoded, id };
   next();
 }
 

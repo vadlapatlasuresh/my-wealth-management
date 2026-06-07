@@ -40,7 +40,7 @@ public class PlaidConfig {
         String normalized = env.trim().split("#")[0].trim().toLowerCase();
         return switch (normalized) {
             case "production", "prod" -> ApiClient.Production;
-            case "development", "dev" -> ApiClient.Development;
+            // Plaid retired the standalone Development environment; map it to Sandbox.
             default -> ApiClient.Sandbox;
         };
     }
