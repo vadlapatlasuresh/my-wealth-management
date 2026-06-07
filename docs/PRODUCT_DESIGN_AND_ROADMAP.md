@@ -10,6 +10,14 @@ It assumes the strategic wedge already in the codebase: **self-employed people a
 small-business owners who also hold real estate** — a segment Mint-clones serve poorly
 and that has real willingness to pay.
 
+> **Shipped since first draft — the Deal Room** (full two-sided investment marketplace):
+> deal registration with a category/subcategory + return-structure taxonomy, a
+> filterable/sortable/paginated marketplace, investor interest with accreditation gating and
+> indicative commitments, sponsor lead management, track records, link-based documents, an
+> investor watchlist, and in-app sponsor notifications. See **[DEAL_ROOM.md](DEAL_ROOM.md)**.
+> This directly advances the GROW area and the P2 "differentiation & moat" items below.
+> Still outstanding from this doc's P0: **first-run onboarding** and **real net-worth history**.
+
 ---
 
 ## 1. Design principles (the lens for every decision)
