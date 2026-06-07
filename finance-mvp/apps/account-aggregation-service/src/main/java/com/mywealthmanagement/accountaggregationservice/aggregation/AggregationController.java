@@ -78,6 +78,15 @@ public class AggregationController {
         return ResponseEntity.ok(transactions);
     }
 
+    /** Update a transaction's spending category (used by the Cash page's inline editor). */
+    @PatchMapping("/transactions/{id}/category")
+    public ResponseEntity<TransactionDto> updateTransactionCategory(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String category = body == null ? null : body.get("category");
+        return ResponseEntity.ok(transactionService.updateCategory(getUserId(), id, category));
+    }
+
     // Webhook endpoint for Plaid
     @PostMapping("/webhook")
     public ResponseEntity<Void> receiveWebhook(

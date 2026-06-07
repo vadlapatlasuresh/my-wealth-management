@@ -2,6 +2,7 @@ package com.mywealthmanagement.authservice.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -28,6 +29,8 @@ public class SecurityConfig {
         http
                 .csrf().disable()
                 .authorizeHttpRequests()
+                // Account self-deletion must be authenticated (matched before the broad permitAll below).
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/auth/me").authenticated()
                 .requestMatchers("/api/v1/auth/**").permitAll() // Allow public access to auth endpoints
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
                 .requestMatchers("/actuator/**").permitAll()

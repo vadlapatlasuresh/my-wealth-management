@@ -85,7 +85,7 @@ const PATH_TO_NAVID = {
    resolveNav). If the remote config is unavailable, resolveNav falls back to
    the bundled DEFAULT, which reproduces exactly the previous hardcoded nav. */
 
-function Sidebar({ user, handleLogout, paymentIntents, navSections }) {
+function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }) {
   const location = useLocation();
   const { t } = useTranslation();
   const getNavLinkClass = (path) =>
@@ -94,8 +94,13 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections }) {
   const billPayBadge = paymentIntents.filter(p => p.status === 'PENDING').length;
   const badgeValue = (b) => (b === 'billpay' ? billPayBadge : b);
 
+  // On mobile (drawer mode) clicking any link should close the drawer.
+  const handleNavClick = (e) => {
+    if (onNavigate && e.target.closest('a')) onNavigate();
+  };
+
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" onClick={handleNavClick}>
       <div className="sidebar-brand">
         <div className="brand-mark">
           <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-label="TerraVest">
@@ -358,12 +363,22 @@ export default function AppLayout(props) {
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('tv_sidebar_collapsed') === '1'
   );
-  const toggleSidebar = () =>
+  // On mobile the sidebar is an off-canvas drawer toggled by the hamburger.
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const isMobile = () =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches;
+  const toggleSidebar = () => {
+    if (isMobile()) {
+      setMobileNavOpen((o) => !o);
+      return;
+    }
     setCollapsed((c) => {
       const next = !c;
       localStorage.setItem('tv_sidebar_collapsed', next ? '1' : '0');
       return next;
     });
+  };
+  const closeMobileNav = () => setMobileNavOpen(false);
 
   // Config-driven nav: resolves from remote config + module registry, with a
   // built-in fallback to the default (current) nav when config is unavailable.
@@ -373,8 +388,9 @@ export default function AppLayout(props) {
   return (
     <Router>
       <AutoTranslate />
-      <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''}`}>
-        <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} />
+      <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
+        <div className="mobile-nav-backdrop" onClick={closeMobileNav} aria-hidden="true"></div>
+        <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} onNavigate={closeMobileNav} />
         <div className="main-area">
           <Topbar
             snapshot={snapshot}

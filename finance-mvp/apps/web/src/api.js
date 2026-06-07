@@ -75,7 +75,11 @@ async function request(path, options = {}) {
       `Request failed (${response.status})`;
     throw new Error(message);
   }
-  return response.json();
+  // 204 No Content (and other empty bodies, e.g. DELETEs) have nothing to parse —
+  // calling response.json() on them throws "Unexpected end of JSON input".
+  if (response.status === 204) return null;
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export const api = {
@@ -90,6 +94,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  // Permanently delete the signed-in user's account (identity/credentials).
+  deleteAccount: () => request("/api/v1/auth/me", { method: "DELETE" }),
+  // GDPR/CCPA data export — the user's full data bundle as JSON.
+  exportMyData: () => request("/api/v1/me/export"),
   // SMS phone confirmation (signup). sendSmsCode returns { sent, devCode } in dev.
   sendSmsCode: (phone) =>
     request("/api/v1/auth/sms/send", {
@@ -113,6 +121,12 @@ export const api = {
     }),
   getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
+  // Persist a transaction's category (ownership-scoped on the backend).
+  categorizeTransaction: (txId, category) =>
+    request(`/api/v1/aggregation/transactions/${txId}/category`, {
+      method: "PATCH",
+      body: JSON.stringify({ category })
+    }),
 
   // Financial Core Service Endpoints
   // The service returns camelCase (netWorth.total, components.creditCards, …) but the web pages
@@ -293,9 +307,4 @@ export const api = {
   getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"),
   createAggregationLinkSession: () => request("/v1/aggregation/link-sessions", { method: "POST" }),
   getAggregationItems: () => request("/v1/aggregation/items"),
-  categorizeTransaction: (txId, category) =>
-    request(`/v1/transactions/${txId}/category`, {
-      method: "PATCH",
-      body: JSON.stringify({ category })
-    }),
 };

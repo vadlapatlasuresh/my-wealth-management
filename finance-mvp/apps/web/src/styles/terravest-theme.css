@@ -1189,6 +1189,75 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 }
 
 /* =============================================
+   RESPONSIVE / MOBILE
+   The app is a desktop flex shell (sidebar + main). Below 900px we turn the
+   sidebar into an off-canvas drawer (toggled by the topbar hamburger) so the
+   content gets the full width, and stack multi-column grids.
+   ============================================= */
+/* The backdrop only exists for the mobile drawer; hidden on desktop. */
+.mobile-nav-backdrop { display: none; }
+
+@media (max-width: 900px) {
+  /* Sidebar → off-canvas drawer */
+  .app-shell .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: 264px;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    z-index: 60;
+  }
+  .app-shell.mobile-nav-open .sidebar {
+    transform: translateX(0);
+    box-shadow: var(--shadow-lg);
+  }
+  /* Always show full labels in the drawer, even if the desktop rail was collapsed. */
+  .app-shell.sidebar-collapsed .sidebar { width: 264px; }
+  .app-shell.sidebar-collapsed .sidebar .nav-label,
+  .app-shell.sidebar-collapsed .sidebar .brand-text,
+  .app-shell.sidebar-collapsed .sidebar .sidebar-section-label,
+  .app-shell.sidebar-collapsed .sidebar .user-meta { display: block; }
+
+  /* Dimming backdrop behind the open drawer */
+  .mobile-nav-backdrop {
+    display: block;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 55;
+    opacity: 0; pointer-events: none;
+    transition: opacity .22s ease;
+  }
+  .app-shell.mobile-nav-open .mobile-nav-backdrop { opacity: 1; pointer-events: auto; }
+
+  /* Tighter chrome + content on phones/tablets */
+  .topbar { padding: 0 14px; gap: 10px; }
+  .topbar-page-label { display: none; } /* the page title is already in the page header */
+  .page-content { padding: 16px 14px; }
+  .page-title { font-size: 26px; }
+  .page-header { flex-wrap: wrap; gap: 10px; }
+  .page-actions { flex-wrap: wrap; }
+
+  /* Horizontal-scroll the quick tabs instead of letting them overflow/wrap awkwardly */
+  .outer-tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+  .outer-tabs::-webkit-scrollbar { height: 0; }
+  .outer-tab { white-space: nowrap; flex-shrink: 0; }
+
+  /* Stack the wider grids */
+  .grid-3 { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 600px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .kpi-grid { grid-template-columns: 1fr 1fr; }
+  .topbar-search { display: none; } /* free up room; search is reachable on the Transactions page */
+  .topbar-right { margin-left: auto; } /* keep icons right-aligned without the search spacer */
+  .page-content { padding: 14px 12px; }
+  .page-title { font-size: 23px; }
+  /* Make wide tables scroll horizontally rather than blow out the layout */
+  .tv-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
+/* =============================================
    COMPACT MODE (Settings → Appearance)
    Toggling `.tv-compact` on <body> tightens the layout for a denser view.
    ============================================= */

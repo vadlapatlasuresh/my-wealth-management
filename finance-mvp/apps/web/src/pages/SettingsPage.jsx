@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { api, setAuthToken, getStoredEmail, getStoredName } from '../api';
+import { getTheme, applyTheme } from '../theme';
 
 // Safe localStorage helpers for local-only preferences.
 function lsGet(key, fallback) {
@@ -54,6 +55,9 @@ export default function SettingsPage() {
   // Local-only appearance/regional preferences, persisted in localStorage so
   // selections survive a reload (lazy-initialised to avoid a flash of defaults).
   const [compactMode, setCompactMode] = useState(() => lsGet('tv-compact', false));
+  // Dark mode is backed by the shared theme module (same `tv_theme` key the topbar
+  // switcher uses), so the two stay in sync. We track a local mirror for the toggle.
+  const [darkMode, setDarkMode] = useState(() => getTheme() === 'dark');
   const [currency, setCurrency] = useState(() => lsGet('tv-currency', 'USD'));
   const [language, setLanguage] = useState(() => lsGet('tv-language', 'en'));
   const [timezone, setTimezone] = useState(() => lsGet('tv-timezone', 'America/New_York'));
@@ -67,10 +71,18 @@ export default function SettingsPage() {
     document.body.classList.toggle('tv-compact', compactMode);
     return () => document.body.classList.remove('tv-compact');
   }, [compactMode]);
+  // Apply the theme app-wide whenever the toggle changes (persisted by applyTheme).
+  // Preserves a non-dark custom theme (e.g. "glass") by only switching the dark axis.
+  useEffect(() => {
+    applyTheme(darkMode ? 'dark' : (getTheme() === 'dark' ? 'light' : getTheme()));
+  }, [darkMode]);
 
   // Data & privacy UI state.
   const [exportRequested, setExportRequested] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Load saved notification preferences on mount; fall back to defaults on failure.
   useEffect(() => {
@@ -121,7 +133,45 @@ export default function SettingsPage() {
     }
   };
 
-  const handleExport = () => setExportRequested(true);
+  // Gather the user's data across services and download it as a real JSON file.
+  // Each source is best-effort so one failing endpoint doesn't abort the whole export.
+  const handleExport = async () => {
+    setExporting(true);
+    setExportRequested(false);
+    const safe = async (fn) => { try { return await fn(); } catch { return null; } };
+    try {
+      const [profile, snapshot, accounts, transactions, goals, debts, properties, notifications] = await Promise.all([
+        safe(() => ({ email: getStoredEmail(), name: getStoredName() })),
+        safe(() => api.getSnapshot('All')),
+        safe(() => api.getAccounts()),
+        safe(() => api.getTransactions()),
+        safe(() => api.getGoals()),
+        safe(() => api.getDebts()),
+        safe(() => api.getRealEstate()),
+        safe(() => api.getNotifications()),
+      ]);
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        app: 'TerraVest',
+        profile,
+        netWorthSnapshot: snapshot,
+        accounts,
+        transactions,
+        goals,
+        debts,
+        properties,
+        notifications,
+        preferences: { prefs, currency, language, timezone, compactMode, darkMode },
+      };
+      downloadTextFile(
+        `terravest-data-export-${new Date().toISOString().slice(0, 10)}.json`,
+        JSON.stringify(payload, null, 2),
+      );
+      setExportRequested(true);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   // Generate a basic monthly statement client-side so the action produces a real file.
   const handleDownloadStatement = () => {
@@ -141,9 +191,19 @@ export default function SettingsPage() {
     downloadTextFile(`terravest-statement-${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}.txt`, lines.join('\n'));
   };
 
-  const handleDeleteConfirmed = () => {
-    // UI-only: no real deletion.
-    setConfirmingDelete(false);
+  // Permanently delete the account on the backend, then clear the local session
+  // and reload so the app returns to the sign-in screen.
+  const handleDeleteConfirmed = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await api.deleteAccount();
+      setAuthToken(null);
+      window.location.reload();
+    } catch {
+      setDeleting(false);
+      setDeleteError('Could not delete your account. Please try again.');
+    }
   };
 
   return (
@@ -211,19 +271,17 @@ export default function SettingsPage() {
             ></div>
           </div>
 
-          <div className="setting-row" style={{ opacity: 0.55 }}>
+          <div className="setting-row">
             <div>
               <div className="setting-label">Dark mode</div>
-              <div className="setting-help">Use a darker color theme — coming soon</div>
+              <div className="setting-help">Use a darker color theme across the app</div>
             </div>
             <div
-              className="toggle"
+              className={`toggle ${darkMode ? 'on' : ''}`}
               role="switch"
-              aria-checked={false}
-              aria-disabled="true"
-              aria-label="Dark mode (coming soon)"
-              title="Coming soon"
-              style={{ cursor: 'not-allowed' }}
+              aria-checked={darkMode}
+              aria-label="Dark mode"
+              onClick={() => setDarkMode((v) => !v)}
             ></div>
           </div>
 
@@ -291,12 +349,12 @@ export default function SettingsPage() {
               <div className="setting-help">Download a copy of your account data</div>
               {exportRequested ? (
                 <div className="setting-help" style={{ color: 'var(--tv-forest)' }}>
-                  <i className="ti ti-check"></i> Export requested — we&apos;ll email you a link shortly.
+                  <i className="ti ti-check"></i> Your data file has been downloaded.
                 </div>
               ) : null}
             </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport}>
-              <i className="ti ti-download"></i> Export
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handleExport} disabled={exporting}>
+              <i className={`ti ${exporting ? 'ti-loader-2 spin' : 'ti-download'}`}></i> {exporting ? 'Preparing…' : 'Export'}
             </button>
           </div>
 
@@ -320,7 +378,12 @@ export default function SettingsPage() {
                   role="alert"
                   style={{ color: 'var(--tv-negative)', marginTop: 6 }}
                 >
-                  Are you sure? This cannot be undone.
+                  Are you sure? This permanently deletes your account and cannot be undone.
+                </div>
+              ) : null}
+              {deleteError ? (
+                <div className="setting-help" role="alert" style={{ color: 'var(--tv-negative)', marginTop: 6 }}>
+                  <i className="ti ti-alert-circle"></i> {deleteError}
                 </div>
               ) : null}
             </div>
@@ -330,13 +393,15 @@ export default function SettingsPage() {
                   type="button"
                   className="btn btn-danger btn-sm"
                   onClick={handleDeleteConfirmed}
+                  disabled={deleting}
                 >
-                  <i className="ti ti-trash"></i> Confirm
+                  <i className={`ti ${deleting ? 'ti-loader-2 spin' : 'ti-trash'}`}></i> {deleting ? 'Deleting…' : 'Confirm'}
                 </button>
                 <button
                   type="button"
                   className="btn btn-secondary btn-sm"
                   onClick={() => setConfirmingDelete(false)}
+                  disabled={deleting}
                 >
                   Cancel
                 </button>

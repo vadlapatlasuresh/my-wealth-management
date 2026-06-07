@@ -18,6 +18,29 @@ and that has real willingness to pay.
 > This directly advances the GROW area and the P2 "differentiation & moat" items below.
 > Still outstanding from this doc's P0: **first-run onboarding** and **real net-worth history**.
 
+> **Shipped since — platform hardening & QA pass:**
+> - **Verified end-to-end on Postgres.** The full 11-service stack now runs against a
+>   persistent local Postgres (`deploy/start-local.sh`); register → login → every read
+>   endpoint → the complete Deal Room lifecycle (create → marketplace → investor interest
+>   with contact-share → leads → documents → watchlist) and budgets/goals/properties/
+>   bill-pay all verified green, with data persisting across restarts.
+> - **Account deletion is real.** `DELETE /api/v1/auth/me` (authenticated) permanently
+>   removes the user's identity; the Settings action now performs it and signs the user out.
+> - **Data export is real.** Settings → "Export my data" downloads an actual JSON file
+>   gathered across services (profile, net-worth snapshot, accounts, transactions, goals,
+>   notifications, preferences) instead of a stubbed "we'll email you."
+> - **Transaction categorization now persists.** The Cash page category editor was wired to
+>   a dead legacy Node route; it now calls a real ownership-scoped
+>   `PATCH /api/v1/aggregation/transactions/{id}/category`.
+> - **Dark mode** is reachable from Settings (was a stale "coming soon" toggle) and stays in
+>   sync with the existing topbar theme switcher.
+> - **Mobile navigation works.** Below 900px the sidebar is now an off-canvas drawer toggled
+>   by the hamburger (with a dimming backdrop), wide grids stack, and the chrome tightens —
+>   previously the desktop layout just got cramped and most pages were hard to reach.
+> - **No more blocking `alert()`s.** Budget/Debt/Cash error paths use inline, dismissible
+>   banners. A latent bug where every 204-returning API call (all DELETEs) threw on an empty
+>   body was also fixed.
+
 ---
 
 ## 1. Design principles (the lens for every decision)
