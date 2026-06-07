@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # One-click deploy: Actions tab → "CI" → "Run workflow". Pick the image tag to ship.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to deploy (a git SHA from a green main build, or 'latest')"
+        required: false
+        default: latest
 
 # Allow pushing images to GHCR (GitHub Container Registry)
 permissions:
@@ -34,6 +41,7 @@ jobs:
           - payment-service
           - notification-service
           - platform-config-service
+          - audit-service
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -82,6 +90,9 @@ jobs:
           print("locale parity OK" if ok else "LOCALE PARITY FAILED")
           sys.exit(0 if ok else 1)
           PY
+      - name: Run web unit tests
+        working-directory: finance-mvp
+        run: npm run test -w apps/web
       - name: Build web
         working-directory: finance-mvp
         run: npm run build -w apps/web
@@ -110,6 +121,7 @@ jobs:
           - payment-service
           - notification-service
           - platform-config-service
+          - audit-service
     steps:
       - uses: actions/checkout@v4
       - name: Log in to GHCR
@@ -121,6 +133,8 @@ jobs:
       - name: Compute lowercase owner
         id: owner
         run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU (enables arm64 cross-build)
+        uses: docker/setup-qemu-action@v3
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
       - name: Build & push ${{ matrix.service }}
@@ -128,6 +142,9 @@ jobs:
         with:
           context: finance-mvp
           file: finance-mvp/Dockerfile.java-service
+          # arm64 = Oracle Always Free / Hetzner ARM hosts; amd64 = laptops/CI/AWS-GCP.
+          # Multi-arch so the SAME image SHA runs on whichever host you deploy to.
+          platforms: linux/amd64,linux/arm64
           build-args: |
             SERVICE=${{ matrix.service }}
           push: true
@@ -139,6 +156,50 @@ jobs:
 
   # ---------------------------------------------------------------
   # 4) (Day 3) deploy-qa: SSH to QA VM, pull <sha>, compose up, run Playwright.
-  # 5) (Day 5) deploy-prod: manual-approval GitHub Environment, promote <sha>.
-  #    Stubs intentionally left for the next phases.
+  #    Stub intentionally left for the next phase.
   # ---------------------------------------------------------------
+
+  # ---------------------------------------------------------------
+  # 5) deploy-prod — ONE-CLICK manual deploy to the Oracle Always Free VM.
+  #    Trigger: Actions tab → "CI" → "Run workflow" → choose tag → Run.
+  #    It SSHes to the VM and runs deploy/deploy.sh (pull images + compose up
+  #    + wait-for-healthy). The web app deploys separately via Cloudflare Pages.
+  #
+  #    Required repo secrets (Settings → Secrets and variables → Actions):
+  #      DEPLOY_HOST     public IP / hostname of the VM
+  #      DEPLOY_USER     the deploy user created by bootstrap-vm.sh (e.g. "deploy")
+  #      DEPLOY_SSH_KEY  PRIVATE key whose public half is in the VM's authorized_keys
+  #      DEPLOY_PATH     (optional) repo path on the VM; defaults to ~/my-wealth-management
+  #
+  #    Tip: add a required reviewer to the "production" Environment for a
+  #    manual approval gate before each deploy.
+  # ---------------------------------------------------------------
+  deploy-prod:
+    name: Deploy to production (one-click)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEPLOY_HOST:-}" ] || [ -z "${DEPLOY_USER:-}" ] || [ -z "${DEPLOY_SSH_KEY:-}" ]; then
+            echo "::error::Missing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets. See SETUP.md." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          REPO="${DEPLOY_PATH:-\$HOME/my-wealth-management}"
+          echo "==> Deploying TAG='${TAG:-latest}' to $DEPLOY_USER@$DEPLOY_HOST ($REPO)"
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -euo pipefail; \
+             cd $REPO && git pull --ff-only && \
+             cd finance-mvp && TAG='${TAG:-latest}' ./deploy/deploy.sh"
