@@ -6,7 +6,10 @@
 #   payment-service | notification-service
 
 # ---- build stage ----
-FROM maven:3.9-eclipse-temurin-17 AS build
+# Pinned to $BUILDPLATFORM (the native runner arch) so Maven compiles natively and
+# fast. The resulting JAR is architecture-neutral, so we don't pay for emulated
+# (QEMU) compilation when targeting arm64.
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-17 AS build
 ARG SERVICE
 WORKDIR /workspace
 COPY apps/${SERVICE} apps/${SERVICE}
@@ -14,9 +17,14 @@ WORKDIR /workspace/apps/${SERVICE}
 RUN mvn -q clean package -DskipTests
 
 # ---- run stage ----
-FROM eclipse-temurin:17-jre-alpine
+# jammy (Ubuntu) is published for BOTH linux/amd64 and linux/arm64; the previous
+# jre-alpine tag is amd64-only, which broke the arm64 (Oracle/Hetzner) image build.
+FROM eclipse-temurin:17-jre-jammy
 ARG SERVICE
 WORKDIR /app
+# wget backs the container healthcheck in docker-compose.prod.yml (hits /actuator/health).
+RUN apt-get update && apt-get install -y --no-install-recommends wget \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=build /workspace/apps/${SERVICE}/target/*.jar app.jar
 # Default to the prod profile in containers (expects Postgres + env-provided secrets)
 ENV SPRING_PROFILES_ACTIVE=prod
