@@ -5,10 +5,27 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # One-click deploy: Actions tab → "CI" → "Run workflow". Pick the image tag to ship.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to deploy (a git SHA from a green main build, or 'latest')"
+        required: false
+        default: latest
+
+# Allow pushing images to GHCR (GitHub Container Registry)
+permissions:
+  contents: read
+  packages: write
 
 jobs:
+  # ---------------------------------------------------------------
+  # 1) Build + test every Java service (PRs and main).
+  #    NOTE: tests now RUN (no -DskipTests). If a service has failing/flaky
+  #    tests today, this surfaces it — triage as part of Day 3 (test gates).
+  # ---------------------------------------------------------------
   backend:
-    name: Build Java services
+    name: Build & test Java services
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -23,6 +40,8 @@ jobs:
           - ai-insights-service
           - payment-service
           - notification-service
+          - platform-config-service
+          - audit-service
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -30,10 +49,13 @@ jobs:
           distribution: temurin
           java-version: "17"
           cache: maven
-      - name: Build ${{ matrix.service }}
+      - name: Build & test ${{ matrix.service }}
         working-directory: finance-mvp
-        run: mvn -q clean package -DskipTests -f apps/${{ matrix.service }}/pom.xml
+        run: mvn -q clean verify -f apps/${{ matrix.service }}/pom.xml
 
+  # ---------------------------------------------------------------
+  # 2) Build the web app (PRs and main).
+  # ---------------------------------------------------------------
   web:
     name: Build web app
     runs-on: ubuntu-latest
@@ -45,6 +67,139 @@ jobs:
       - name: Install
         working-directory: finance-mvp
         run: npm install
+      - name: Verify i18n locale key parity
+        working-directory: finance-mvp/apps/web/src/i18n/locales
+        run: |
+          python3 - <<'PY'
+          import json, glob, sys
+          def flat(d, p=""):
+              ks=set()
+              for k,v in d.items():
+                  nk=f"{p}.{k}" if p else k
+                  ks |= flat(v, nk) if isinstance(v, dict) else {nk}
+              return ks
+          en = flat(json.load(open("en.json")))
+          ok = True
+          for f in sorted(glob.glob("*.json")):
+              if f == "en.json": continue
+              k = flat(json.load(open(f)))
+              miss, extra = en - k, k - en
+              if miss or extra:
+                  ok = False
+                  print(f"{f}: missing={sorted(miss)} extra={sorted(extra)}")
+          print("locale parity OK" if ok else "LOCALE PARITY FAILED")
+          sys.exit(0 if ok else 1)
+          PY
+      - name: Run web unit tests
+        working-directory: finance-mvp
+        run: npm run test -w apps/web
       - name: Build web
         working-directory: finance-mvp
         run: npm run build -w apps/web
+
+  # ---------------------------------------------------------------
+  # 3) Build & push Docker images to GHCR (main only, after build+test pass).
+  #    Tags each image with the commit SHA (immutable, promotable) and `latest`.
+  #    Deploy = pull these exact SHA tags onto the VM (build once, promote).
+  # ---------------------------------------------------------------
+  images:
+    name: Build & push images
+    needs: [backend, web]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - account-aggregation-service
+          - financial-core-service
+          - real-estate-service
+          - business-financials-service
+          - ai-insights-service
+          - payment-service
+          - notification-service
+          - platform-config-service
+          - audit-service
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Compute lowercase owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+      - name: Set up QEMU (enables arm64 cross-build)
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: finance-mvp
+          file: finance-mvp/Dockerfile.java-service
+          # arm64 = Oracle Always Free / Hetzner ARM hosts; amd64 = laptops/CI/AWS-GCP.
+          # Multi-arch so the SAME image SHA runs on whichever host you deploy to.
+          platforms: linux/amd64,linux/arm64
+          build-args: |
+            SERVICE=${{ matrix.service }}
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------
+  # 4) (Day 3) deploy-qa: SSH to QA VM, pull <sha>, compose up, run Playwright.
+  #    Stub intentionally left for the next phase.
+  # ---------------------------------------------------------------
+
+  # ---------------------------------------------------------------
+  # 5) deploy-prod — ONE-CLICK manual deploy to the Oracle Always Free VM.
+  #    Trigger: Actions tab → "CI" → "Run workflow" → choose tag → Run.
+  #    It SSHes to the VM and runs deploy/deploy.sh (pull images + compose up
+  #    + wait-for-healthy). The web app deploys separately via Cloudflare Pages.
+  #
+  #    Required repo secrets (Settings → Secrets and variables → Actions):
+  #      DEPLOY_HOST     public IP / hostname of the VM
+  #      DEPLOY_USER     the deploy user created by bootstrap-vm.sh (e.g. "deploy")
+  #      DEPLOY_SSH_KEY  PRIVATE key whose public half is in the VM's authorized_keys
+  #      DEPLOY_PATH     (optional) repo path on the VM; defaults to ~/my-wealth-management
+  #
+  #    Tip: add a required reviewer to the "production" Environment for a
+  #    manual approval gate before each deploy.
+  # ---------------------------------------------------------------
+  deploy-prod:
+    name: Deploy to production (one-click)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ -z "${DEPLOY_HOST:-}" ] || [ -z "${DEPLOY_USER:-}" ] || [ -z "${DEPLOY_SSH_KEY:-}" ]; then
+            echo "::error::Missing DEPLOY_HOST / DEPLOY_USER / DEPLOY_SSH_KEY secrets. See SETUP.md." >&2
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$DEPLOY_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          REPO="${DEPLOY_PATH:-\$HOME/my-wealth-management}"
+          echo "==> Deploying TAG='${TAG:-latest}' to $DEPLOY_USER@$DEPLOY_HOST ($REPO)"
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "set -euo pipefail; \
+             cd $REPO && git pull --ff-only && \
+             cd finance-mvp && TAG='${TAG:-latest}' ./deploy/deploy.sh"
