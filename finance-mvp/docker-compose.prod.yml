@@ -65,6 +65,9 @@ services:
       - "443:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Built web SPA (apps/web/dist) staged here; Caddy serves it at /. Populated by
+      # the web-build step in deploy/deploy.sh. (All-in-one: web + API on one VM.)
+      - ./web-dist:/srv:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:

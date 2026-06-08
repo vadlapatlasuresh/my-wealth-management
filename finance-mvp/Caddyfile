@@ -26,11 +26,20 @@
         -Server
     }
 
-    # Health check passthrough (uptime monitors hit https://api.<domain>/actuator/health)
-    reverse_proxy api-gateway:8080 {
-        health_uri /actuator/health
-        health_interval 15s
-        health_timeout 5s
+    # API + actuator -> the gateway. `handle` blocks are mutually exclusive and
+    # evaluated in order, so these win for their paths and the SPA fallback below
+    # (with try_files) never rewrites API requests.
+    handle /api/* {
+        reverse_proxy api-gateway:8080
+    }
+    handle /actuator/* {
+        reverse_proxy api-gateway:8080
+    }
+    # Everything else -> the web single-page app (mounted at /srv from apps/web/dist)
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        file_server
     }
 }
 
