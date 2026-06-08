@@ -5,6 +5,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 6.0"
     }
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.12"
+    }
   }
 }
 
@@ -18,10 +22,24 @@ locals {
   name = "terravest-${var.environment}"
 }
 
+# Enable the Compute Engine API via Terraform (uses ADC), so no separate
+# `gcloud services enable` / gcloud CLI login is needed. Everything below waits on it.
+resource "google_project_service" "compute" {
+  service            = "compute.googleapis.com"
+  disable_on_destroy = false
+}
+
+# Give the freshly-enabled API time to propagate before creating resources.
+resource "time_sleep" "wait_api" {
+  depends_on      = [google_project_service.compute]
+  create_duration = "60s"
+}
+
 # Reserved static external IP so the public IP never changes (survives stop/start).
 resource "google_compute_address" "ip" {
-  name   = "${local.name}-ip"
-  region = var.region
+  name       = "${local.name}-ip"
+  region     = var.region
+  depends_on = [time_sleep.wait_api]
 }
 
 # Firewall: allow SSH (22) + HTTP (80) + HTTPS (443) to instances tagged with our name.
@@ -36,6 +54,7 @@ resource "google_compute_firewall" "allow_web_ssh" {
 
   source_ranges = ["0.0.0.0/0"]
   target_tags   = [local.name]
+  depends_on    = [time_sleep.wait_api]
 }
 
 # The VM. A startup script installs Docker + compose and adds the deploy user to the
@@ -45,6 +64,11 @@ resource "google_compute_instance" "vm" {
   machine_type = var.machine_type
   zone         = var.zone
   tags         = [local.name, "http-server", "https-server"]
+  depends_on   = [time_sleep.wait_api]
+
+  # Allow Terraform to stop the VM to apply changes that require it (e.g. resizing
+  # machine_type). The static IP and boot disk persist across the stop/start.
+  allow_stopping_for_update = true
 
   boot_disk {
     initialize_params {
