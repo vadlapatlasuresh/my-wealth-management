@@ -1,0 +1,11 @@
+# Copy to terraform.tfvars and fill in. (terraform.tfvars is gitignored.)
+project_id = "your-gcp-project-id"
+
+# Optional overrides (defaults shown):
+# region          = "us-east1"
+# zone            = "us-east1-b"
+# environment     = "prod"
+# machine_type    = "e2-standard-2"
+# boot_disk_gb    = 30
+# ssh_user        = "deploy"
+# ssh_pubkey_path = "~/.ssh/terravest_deploy.pub"
