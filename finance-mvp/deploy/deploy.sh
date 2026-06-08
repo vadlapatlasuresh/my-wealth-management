@@ -38,6 +38,20 @@ $COMPOSE config >/dev/null
 echo "==> Pulling images"
 $COMPOSE pull
 
+# Build the web SPA into ./web-dist (Caddy serves it at /). Runs in a Node container
+# so the VM needs no Node install. WEB_API_BASE (in .env.prod) is the public origin the
+# browser calls; same-origin here, so the app hits /api on this same domain.
+if grep -q "^WEB_API_BASE=" .env.prod; then
+  WEB_API_BASE=$(grep "^WEB_API_BASE=" .env.prod | cut -d= -f2-)
+  echo "==> Building web SPA (VITE_API_BASE=$WEB_API_BASE)"
+  docker run --rm -v "$PWD":/work -w /work/apps/web -e VITE_API_BASE="$WEB_API_BASE" node:20-alpine \
+    sh -c "npm install --no-audit --no-fund --silent && npm run build" >/dev/null
+  rm -rf web-dist && cp -r apps/web/dist web-dist
+  echo "    web built -> web-dist ($(ls web-dist | wc -l) entries)"
+else
+  echo "==> Skipping web build (no WEB_API_BASE in .env.prod; serving existing web-dist if present)"
+fi
+
 echo "==> Starting stack (rolling)"
 $COMPOSE up -d --remove-orphans
 
