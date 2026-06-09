@@ -46,7 +46,13 @@ if grep -q "^WEB_API_BASE=" .env.prod; then
   echo "==> Building web SPA (VITE_API_BASE=$WEB_API_BASE)"
   docker run --rm -v "$PWD":/work -w /work/apps/web -e VITE_API_BASE="$WEB_API_BASE" node:20-alpine \
     sh -c "npm install --no-audit --no-fund --silent && npm run build" >/dev/null
-  rm -rf web-dist && cp -r apps/web/dist web-dist
+  # Refill web-dist IN PLACE (keep the directory's inode). Caddy bind-mounts
+  # ./web-dist:/srv; if we `rm -rf web-dist` the running container keeps pointing
+  # at the old (unlinked) inode and serves an empty /srv -> 404 on every page.
+  # Clearing contents but keeping the dir preserves the mount.
+  mkdir -p web-dist
+  find web-dist -mindepth 1 -delete
+  cp -r apps/web/dist/. web-dist/
   echo "    web built -> web-dist ($(ls web-dist | wc -l) entries)"
 else
   echo "==> Skipping web build (no WEB_API_BASE in .env.prod; serving existing web-dist if present)"
@@ -54,6 +60,12 @@ fi
 
 echo "==> Starting stack (rolling)"
 $COMPOSE up -d --remove-orphans
+
+# Force-recreate Caddy so it re-binds the freshly built web-dist. (up -d above
+# won't recreate it when only the static files changed, which would leave it
+# serving a stale/empty /srv after a rebuild.)
+echo "==> Recreating Caddy to pick up the new web build"
+$COMPOSE up -d --force-recreate --no-deps caddy
 
 echo "==> Waiting for services to report healthy (up to ~7 min; slow on a 1-OCPU box)"
 deadline=$(( $(date +%s) + 420 ))
