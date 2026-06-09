@@ -289,6 +289,15 @@ automatically on first start.
 
 ## 11. Gotchas burned in (don't relearn the hard way)
 
+- **NEVER edit a Flyway migration that has already been applied.** Migrations are immutable.
+  Editing an applied file changes its checksum, and on the next deploy Flyway fails validation
+  and the service **crash-loops on startup** (every endpoint then 500s). To change schema later,
+  always add a **new** migration (`V8__…`), never touch an old one. (This bit real-estate-service:
+  `V5` was edited to rename a column `year`→`project_year` for the H2 test DB *after* prod had
+  already run it; prod then had the old column name + old checksum. Recovery was a one-time DB
+  correction on `real_estate_db`: `ALTER TABLE sponsor_projects RENAME COLUMN "year" TO
+  project_year;` + `UPDATE flyway_schema_history SET checksum=<new> WHERE version='5';`. If you
+  ever see "Migration checksum mismatch" in a service's logs, that's this.)
 - **Container health = TCP check on :8080**, *not* `/actuator/health` — most services secure
   actuator and return 403, which would falsely look "unhealthy."
 - **One database per service.** We tried schema-per-service; Postgres `currentSchema` was
