@@ -11,6 +11,9 @@ Central documentation for API contracts, mock data, and product delivery waves.
 | [api-sample-responses.md](./api-sample-responses.md) | Full REST API reference with request/response JSON |
 | [mocks/seed-data.json](./mocks/seed-data.json) | Demo user, accounts, transactions, insights (canonical mocks) |
 | [roadmap-waves.md](./roadmap-waves.md) | Wave 1–6 scope, timeline, dependencies |
+| [E2E_TEST_SCENARIOS.md](./E2E_TEST_SCENARIOS.md) | End-to-end flow test catalog (working / mock / pending) + how to run smoke + Playwright |
+| [architecture/SECRET_MANAGEMENT_DESIGN.md](./architecture/SECRET_MANAGEMENT_DESIGN.md) | Centralized secret-management design & phased build plan (no secrets in git/env) |
+| [SECRETS_HOWTO.md](./SECRETS_HOWTO.md) | Step-by-step runbook: build/run secrets-service, read/rotate secrets, grants, prod deploy |
 
 ---
 
