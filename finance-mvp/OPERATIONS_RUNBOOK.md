@@ -313,15 +313,56 @@ automatically on first start.
 
 ---
 
+## 11b. Real-user readiness — verified end-to-end (2026-06-09)
+
+Every user journey was exercised against **live production** (real signup → JWT →
+write data → read it back), plus the Playwright browser suite. Results:
+
+**✅ Works end-to-end for real users right now (no keys needed):**
+- **Onboarding**: email OTP → SMS OTP → KYC register → dashboard (browser test passes)
+- **Returning login**: password → MFA challenge → verify → dashboard (browser test passes)
+- **Profile** update + read-back, **account deletion**
+- **Real estate**: add property → appears in list → revalue
+- **Planning**: goals CRUD, debt add + payoff scenario, budgets
+- **Investments**: link broker, add alternative investments
+- **Deal Room**: create deal → marketplace, watch, express interest, sponsor track-record
+- **Business**: manual business + accounts (create → list)
+- **Notifications**: preferences update, test notification
+- **AI**: chat + insights refresh (mock responses)
+- **Audit**: read my activity
+
+These cover all manual data-entry flows — a real user can sign up and use the
+whole app meaningfully without any third-party keys.
+
+**🔑 Gated on keys (expected — these need a provider account):**
+- **Bank linking (Plaid)**: `POST /aggregation/link-token/create` calls the real
+  Plaid API and 502s until `PLAID_CLIENT_ID`/`PLAID_SECRET` are set (even free
+  *sandbox* keys work). We deliberately do NOT mock bank data. Knock-on effect:
+  **bill-pay** needs a funding account, which needs a linked account — so bill-pay
+  is also effectively Plaid-gated for a brand-new user.
+- **Real email/SMS delivery**: OTP codes only reach users once SendGrid/Twilio keys
+  are set (see the security gate below).
+- **Real AI / card charges**: Anthropic / Stripe keys.
+
+**🔴 SECURITY GATE before real users (do NOT skip):**
+- OTP **dev codes are currently returned in API responses** in production
+  (`otp.expose-dev-code=true`) — that's the only reason signup/MFA work without
+  email/SMS keys. **Anyone can read the code and bypass MFA.** Before real users:
+  set SendGrid/Twilio keys (so codes actually deliver) **and** turn off dev-code
+  exposure (`otp.expose-dev-code=false`). These two go together.
+
+**Minor robustness note (not user-facing):** `POST /planning/debt-scenarios/add`
+returns 500 (DB not-null) instead of 400 if `apr` is omitted. The UI always sends
+`apr`, so real users don't hit it; tighten validation when convenient.
+
 ## 12. Cost & "what's next" checklist
 
 - **Today: ~$0.** VM is on the GCP $300 / 90-day free trial; Neon free tier; all paid APIs mocked.
 - **When you onboard real users, in rough priority:**
-  - [ ] Plaid production keys (real bank linking) — the headline feature.
-  - [ ] SendGrid (so emails/OTP actually send) + a verified sender domain.
+  - [ ] **SECURITY: set SendGrid/Twilio keys + `otp.expose-dev-code=false`** (close the MFA-bypass gate — see §11b). Do this first.
+  - [ ] Plaid keys (sandbox is free) — unlocks bank linking + bill-pay funding.
   - [ ] Stripe (if charging).
   - [ ] AI: `AI_PROVIDER=anthropic` + key (real insights instead of canned).
-  - [ ] Deploy the §7 disclaimers fix.
   - [ ] Decide host after the trial: keep GCP (downsize the VM) or move to Hetzner (cheapest).
 - **Before taking real financial data:** review security headers/CSP in the `Caddyfile`, rotate
   all secrets, and confirm Neon backups are on.
