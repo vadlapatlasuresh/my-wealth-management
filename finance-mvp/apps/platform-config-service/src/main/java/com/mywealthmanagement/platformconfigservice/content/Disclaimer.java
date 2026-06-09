@@ -31,8 +31,11 @@ public class Disclaimer {
     @Column(name = "title")
     private String title;
 
-    @Lob
-    @Column(name = "body_markdown")
+    // Column is Postgres TEXT (see V1 migration). Do NOT use @Lob here: on Postgres
+    // Hibernate maps @Lob String to a Large Object (oid) and reads the column via the
+    // large-object API, which fails against a plain TEXT column (500 on every read).
+    // columnDefinition = "text" keeps it an unbounded text column (matches the migration).
+    @Column(name = "body_markdown", columnDefinition = "text")
     private String bodyMarkdown;
 
     @Column(name = "requires_acceptance")

@@ -189,10 +189,14 @@ services:
       DATABASE_USER: ${AI_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # AI provider: mock (default) | anthropic | gemini
       AI_PROVIDER: ${AI_PROVIDER:-mock}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-claude-opus-4-8}
+      # Google Gemini (used when AI_PROVIDER=gemini)
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
 
   payment-service:
     <<: *java-defaults
