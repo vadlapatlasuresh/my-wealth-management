@@ -28,6 +28,15 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    /** Roles from the JWT "roles" claim (upper-cased), e.g. ["USER","CARE"]. */
+    public java.util.List<String> extractRoles(String token) {
+        Object roles = extractClaim(token, c -> c.get("roles"));
+        if (roles instanceof java.util.List<?> list) {
+            return list.stream().map(String::valueOf).map(String::toUpperCase).toList();
+        }
+        return java.util.List.of();
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }

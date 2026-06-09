@@ -152,6 +152,9 @@ services:
       DATABASE_USER: ${RE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Valuation provider: mock (default) | rentcast. Set both flag + key to go live.
+      REALESTATE_PROVIDER: ${REALESTATE_PROVIDER:-mock}
+      REALESTATE_PROVIDER_BASE_URL: ${REALESTATE_PROVIDER_BASE_URL:-https://api.rentcast.io/v1}
       REALESTATE_PROVIDER_API_KEY: ${REALESTATE_PROVIDER_API_KEY:-}
       # Deal Room lead notifications -> notification-service (best-effort, shared key)
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
@@ -167,9 +170,14 @@ services:
       DATABASE_USER: ${BIZ_DATABASE_USER:?}
       DATABASE_PASSWORD: ${BIZ_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Business data provider: mock (default) | quickbooks. Set flag + QBO app creds to go live.
+      BUSINESS_PROVIDER: ${BUSINESS_PROVIDER:-mock}
       QBO_CLIENT_ID: ${QBO_CLIENT_ID:-}
       QBO_CLIENT_SECRET: ${QBO_CLIENT_SECRET:-}
       QBO_ENVIRONMENT: ${QBO_ENVIRONMENT:-sandbox}
+      QBO_API_BASE_URL: ${QBO_API_BASE_URL:-https://quickbooks.api.intuit.com}
+      QBO_REDIRECT_URI: ${QBO_REDIRECT_URI:-}
+      APP_WEB_URL: ${APP_WEB_URL:-}
 
   ai-insights-service:
     <<: *java-defaults

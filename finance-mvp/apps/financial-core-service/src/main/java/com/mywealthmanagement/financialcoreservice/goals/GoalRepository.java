@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface GoalRepository extends JpaRepository<Goal, Long> {
     List<Goal> findByUserIdOrderByCreatedAtAsc(Long userId);
     Optional<Goal> findByIdAndUserId(Long id, Long userId);
+
+    void deleteByUserId(Long userId);
 }

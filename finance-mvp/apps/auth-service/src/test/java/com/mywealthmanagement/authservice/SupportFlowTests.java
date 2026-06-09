@@ -26,7 +26,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * End-to-end customer-care flow against the real security chain (H2 dev profile):
  * login → JWT roles → role-gated support access → 360 view → ADMIN-only role grant.
  */
-@SpringBootTest
+// MFA is on by default; this test exercises role-gated support access, so it logs in
+// directly with MFA disabled. The MFA step-up flow is covered separately.
+@SpringBootTest(properties = "mfa.enabled=false")
 @AutoConfigureMockMvc
 class SupportFlowTests {
 

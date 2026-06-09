@@ -49,6 +49,25 @@ export function isCareAgent() {
   return roles.includes("CARE") || roles.includes("ADMIN");
 }
 
+// True if the signed-in user is an admin (can grant/revoke roles).
+export function isAdmin() {
+  return getUserRoles().includes("ADMIN");
+}
+
+// The signed-in user's id (JWT subject), or null. Used by the Ops portal to show
+// the agent their own audited session activity.
+export function getCurrentUserId() {
+  try {
+    const token = authToken || localStorage.getItem("terravet_token") || "";
+    const payload = token.split(".")[1];
+    if (!payload) return null;
+    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    return json.sub || null;
+  } catch {
+    return null;
+  }
+}
+
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
@@ -109,6 +128,27 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ phone, code })
     }),
+  // MFA step 2: exchange the emailed/texted login code for a JWT.
+  verifyMfa: (email, code) =>
+    request("/api/v1/auth/mfa/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code })
+    }),
+  // Email verification (signup + profile). sendEmailCode returns { sent, devCode } in dev.
+  sendEmailCode: (email) =>
+    request("/api/v1/auth/email/send", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    }),
+  verifyEmailCode: (email, code) =>
+    request("/api/v1/auth/email/verify", {
+      method: "POST",
+      body: JSON.stringify({ email, code })
+    }),
+  // Full profile (SSN/EIN masked) + update.
+  getProfile: () => request("/api/v1/auth/me"),
+  updateProfile: (payload) =>
+    request("/api/v1/auth/me", { method: "PUT", body: JSON.stringify(payload) }),
   // Plaid Aggregation Endpoints
   createPlaidLinkToken: () =>
     request("/api/v1/aggregation/link-token/create", {
@@ -166,6 +206,22 @@ export const api = {
     request(`/api/v1/planning/goals/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteGoal: (id) =>
     request(`/api/v1/planning/goals/${id}`, { method: "DELETE" }),
+
+  // Invest holdings (financial-core): linked brokers + alternative investments
+  getBrokerAccounts: () => request("/api/v1/invest/brokers"),
+  linkBrokerAccount: (payload) =>
+    request("/api/v1/invest/brokers", { method: "POST", body: JSON.stringify(payload) }),
+  syncBrokerAccount: (id) =>
+    request(`/api/v1/invest/brokers/${id}/sync`, { method: "POST" }),
+  deleteBrokerAccount: (id) =>
+    request(`/api/v1/invest/brokers/${id}`, { method: "DELETE" }),
+  getAltInvestments: () => request("/api/v1/invest/alts"),
+  createAltInvestment: (payload) =>
+    request("/api/v1/invest/alts", { method: "POST", body: JSON.stringify(payload) }),
+  updateAltInvestment: (id, payload) =>
+    request(`/api/v1/invest/alts/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteAltInvestment: (id) =>
+    request(`/api/v1/invest/alts/${id}`, { method: "DELETE" }),
 
   getDebts: () => request("/api/v1/planning/debt-scenarios"), // NEW
   addDebt: (payload) =>
@@ -263,6 +319,24 @@ export const api = {
   connectBusiness: () => request("/api/v1/business/connect", { method: "POST" }),
   syncBusiness: () => request("/api/v1/business/sync", { method: "POST" }),
 
+  // Manually-entered businesses + accounts (persisted server-side).
+  getManualBusinesses: () => request("/api/v1/business/manual/businesses"),
+  createManualBusiness: (payload) =>
+    request("/api/v1/business/manual/businesses", { method: "POST", body: JSON.stringify(payload) }),
+  updateManualBusiness: (id, payload) =>
+    request(`/api/v1/business/manual/businesses/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteManualBusiness: (id) =>
+    request(`/api/v1/business/manual/businesses/${id}`, { method: "DELETE" }),
+  getBusinessAccounts: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/accounts`),
+  createBusinessAccount: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/accounts`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  deleteBusinessAccount: (id) =>
+    request(`/api/v1/business/manual/accounts/${id}`, { method: "DELETE" }),
+
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
@@ -292,8 +366,18 @@ export const api = {
   markNotificationRead: (id) => request(`/api/v1/notifications/${id}/read`, { method: "POST" }),
 
   // Customer Care / Support (role-gated: CARE or ADMIN)
-  supportSearchUsers: (query = "", page = 0, size = 25) =>
-    request(`/api/v1/support/users?query=${encodeURIComponent(query)}&page=${page}&size=${size}`),
+  // Accepts either a string (free-text query) or an object with any of
+  // {query, first, last, email, phone, page, size} for the multi-field help-desk search.
+  supportSearchUsers: (params = "", page = 0, size = 25) => {
+    const p = typeof params === "string" ? { query: params, page, size } : { page, size, ...params };
+    const qs = new URLSearchParams();
+    ["query", "first", "last", "email", "phone"].forEach((k) => {
+      if (p[k] != null && String(p[k]).trim() !== "") qs.set(k, String(p[k]).trim());
+    });
+    qs.set("page", p.page ?? 0);
+    qs.set("size", p.size ?? 25);
+    return request(`/api/v1/support/users?${qs.toString()}`);
+  },
   supportGetUser: (id) => request(`/api/v1/support/users/${id}`),
   supportGetUserActivity: (id, onlyIssues = false, limit = 100) =>
     request(`/api/v1/support/users/${id}/activity?onlyIssues=${onlyIssues}&limit=${limit}`),
@@ -302,6 +386,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ role, action })
     }),
+  // Customer-care READ-ONLY views of a member's data (CARE/ADMIN, audited).
+  supportGetAccounts: (id) => request(`/api/v1/aggregation/support/${id}/accounts`),
+  supportGetTransactions: (id) => request(`/api/v1/aggregation/support/${id}/transactions`),
+  supportGetPayments: (id) => request(`/api/v1/payments/support/${id}/bill-pay-intents`),
+  supportGetDeals: (id) => request(`/api/v1/deals/support/${id}`),
 
   // Legacy / internal (Node API — being retired)
   getAggregatorAccounts: () => request("/internal/fetch-aggregator-accounts"),

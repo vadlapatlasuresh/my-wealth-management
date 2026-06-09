@@ -30,15 +30,25 @@ flowchart LR
 | **account-aggregation** | 🟢 **Real Plaid data**: `accounts` (balances, type, names), `transactions` (name, amount, date, category, `plaid_transaction_id`), `plaid_items` | 🔑 **YES** — `plaid_items.access_token` (see risk below) |
 | **business-financials** | 🟡 QBO **connection metadata** only: `qbo_connections` (realm_id, company_name, last_sync_at) — mock | No OAuth token stored in entity |
 | **ai-insights** | 🟡 Generated `insights` (title, reason, suggested_action) — mock LLM output, not raw responses | No |
-| **real-estate** | 🟡 `properties` incl. `current_value`, `last_valued_at` (mock valuation) | No |
+| **real-estate** | 🟡 `properties` incl. `current_value`, `last_valued_at` (mock valuation); **Deal Room** tables (`deals`, `deal_interests`, `deal_documents`, `deal_watches`, `sponsor_projects`) — all user-entered | No |
 | **payment** | 🟡 `bill_pay_intents` incl. `provider_ref`, `confirmation_number`, `idempotency_key` — mock | No |
 | **notification** | `notifications`, `notification_preferences`, `message_template` (app-generated) | No |
-| **auth** | `users` — only **`ssn_last4` / `ein_last4`** (never full), password **hash**, verification flags | Password is hashed (not a token) |
-| **financial-core** | `budgets`, `budget_lines`, `debts`, `debt_scenarios` (user-entered/derived) | No |
+| **auth** | `users` — only **`ssn_last4` / `ein_last4`** (never full), password **hash**, verification flags, `mfa_channel`, `user_roles` | Password is hashed (not a token) |
+| **financial-core** | `budgets`, `budget_lines`, `debts`, `debt_scenarios`, **`goals`** (user-entered/derived) | No |
 | **platform-config** | `app_module/section/setting`, `feature_flag`, `disclaimer`, **`disclaimer_acceptance`** | No |
+| **audit** | `audit_events` (every request + auth domain events) — see [10-audit-service](components/10-audit-service.md) | No |
 
 > **We do NOT store raw external API response payloads** — services normalize to their own
 > entities. So today there is no "raw response cache" for replay/forensics.
+
+### Member-data tooling (reference/export)
+- **Data export (GDPR/CCPA):** `GET /api/v1/me/export` (financial-core) returns the signed-in user's
+  full data bundle as a downloadable `terravest-my-data.json` (Settings → "Export my data").
+- **Account deletion:** `DELETE /api/v1/auth/me` permanently removes the identity/credentials
+  (Settings → "Delete account"). This is a **hard delete** today — see the soft-delete gap below.
+- **Deal-interest consent:** when an investor clicks "I'm interested" they **consent to share their
+  contact details** with the deal owner; that consent + contact data is stored in `deal_interests`
+  (a genuine, if feature-specific, consent record).
 
 ---
 

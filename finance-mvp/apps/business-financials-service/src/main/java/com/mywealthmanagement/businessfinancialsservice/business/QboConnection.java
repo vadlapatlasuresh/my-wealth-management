@@ -30,6 +30,18 @@ public class QboConnection {
     @Column(name = "company_name")
     private String companyName;
 
+    /** QBO OAuth2 access token (short-lived, ~1h). Null in mock mode. */
+    @Column(name = "access_token", length = 2048)
+    private String accessToken;
+
+    /** QBO OAuth2 refresh token (long-lived, ~100 days). Null in mock mode. */
+    @Column(name = "refresh_token", length = 2048)
+    private String refreshToken;
+
+    /** When the current access token expires; used to decide when to refresh. */
+    @Column(name = "token_expires_at")
+    private LocalDateTime tokenExpiresAt;
+
     @Column(name = "last_sync_at")
     private LocalDateTime lastSyncAt;
 

@@ -30,6 +30,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests()
                 .requestMatchers("/api/v1/payments/webhook").permitAll() // Public webhook endpoint
                 .requestMatchers("/error").permitAll() // Allow error dispatch so 4xx aren't masked as 403
+                .requestMatchers("/internal/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 .anyRequest().authenticated() // All requests require authentication
                 .and()
                 .sessionManagement()

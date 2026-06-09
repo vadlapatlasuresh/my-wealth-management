@@ -2,7 +2,9 @@ package com.mywealthmanagement.authservice.auth;
 
 import com.mywealthmanagement.authservice.audit.AuditClient;
 import com.mywealthmanagement.authservice.auth.dto.LoginRequest;
+import com.mywealthmanagement.authservice.auth.dto.ProfileResponse;
 import com.mywealthmanagement.authservice.auth.dto.RegisterRequest;
+import com.mywealthmanagement.authservice.auth.dto.UpdateProfileRequest;
 import com.mywealthmanagement.authservice.user.Role;
 import com.mywealthmanagement.authservice.user.User;
 import com.mywealthmanagement.authservice.user.UserRepository;
@@ -25,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final AuditClient auditClient;
+    private final UserDataPurgeClient userDataPurgeClient;
 
     public Optional<User> registerUser(RegisterRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
@@ -55,11 +58,28 @@ public class AuthService {
         newUser.setAccountType(accountType);
         newUser.setBusinessName(request.getBusinessName());
 
-        // Persist ONLY the last 4 digits of any SSN/EIN provided.
-        newUser.setSsnLast4(last4(request.getSsn()));
-        newUser.setEinLast4(last4(request.getEin()));
+        // Store the FULL SSN/EIN encrypted at rest (AES-256-GCM) + the last 4 for display.
+        if (!isBlank(request.getSsn())) {
+            newUser.setSsnEncrypted(request.getSsn().replaceAll("\\D", ""));
+            newUser.setSsnLast4(last4(request.getSsn()));
+        }
+        if (!isBlank(request.getEin())) {
+            newUser.setEinEncrypted(request.getEin().replaceAll("\\D", ""));
+            newUser.setEinLast4(last4(request.getEin()));
+        }
+
+        // KYC / contact details.
+        newUser.setDateOfBirth(parseDate(request.getDateOfBirth()));
+        newUser.setAddressLine1(request.getAddressLine1());
+        newUser.setAddressLine2(request.getAddressLine2());
+        newUser.setCity(request.getCity());
+        newUser.setState(request.getState());
+        newUser.setPostalCode(request.getPostalCode());
+        newUser.setCountry(request.getCountry());
+        newUser.setMfaChannel(normalizeChannel(request.getMfaChannel()));
 
         newUser.setPhoneVerified(Boolean.TRUE.equals(request.getPhoneVerified()));
+        newUser.setEmailVerified(Boolean.TRUE.equals(request.getEmailVerified()));
 
         // Mock identity verification: pass if the relevant identifier was supplied.
         boolean idVerified = "BUSINESS".equals(accountType)
@@ -88,13 +108,111 @@ public class AuthService {
         return digits.substring(digits.length() - 4);
     }
 
+    private static java.time.LocalDate parseDate(String iso) {
+        if (isBlank(iso)) return null;
+        try { return java.time.LocalDate.parse(iso.trim()); } catch (Exception e) { return null; }
+    }
+
+    static String normalizeChannel(String c) {
+        return "SMS".equalsIgnoreCase(c) ? "SMS" : "EMAIL";
+    }
+
+    /**
+     * Validate credentials WITHOUT issuing a token (step 1 of MFA login). Returns the
+     * user on success; throws on bad credentials (recorded as a failed attempt).
+     */
+    public User authenticate(LoginRequest request) {
+        try {
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+        } catch (RuntimeException ex) {
+            auditClient.record(null, "auth.login.failure", "FAILURE", "email=" + request.getEmail());
+            throw ex;
+        }
+        return userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    /** Issue a JWT for an already-authenticated user (step 2 of MFA login). */
+    public String issueToken(User user) {
+        auditClient.record(String.valueOf(user.getId()), "auth.login.success", "SUCCESS", "mfa");
+        return jwtService.generateToken(String.valueOf(user.getId()), roleNames(user));
+    }
+
+    /** Mark a user's email as verified (after an email OTP succeeds). */
+    public void markEmailVerified(String email) {
+        userRepository.findByEmail(email).ifPresent(u -> {
+            u.setEmailVerified(true);
+            userRepository.save(u);
+        });
+    }
+
+    public java.util.Optional<User> findById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    public ProfileResponse getProfile(Long userId) {
+        return toProfile(userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found")));
+    }
+
+    public ProfileResponse updateProfile(Long userId, UpdateProfileRequest r) {
+        User u = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!isBlank(r.getName())) u.setName(r.getName());
+        if (r.getFirstName() != null) u.setFirstName(r.getFirstName());
+        if (r.getLastName() != null) u.setLastName(r.getLastName());
+        if (r.getPhone() != null) u.setPhone(r.getPhone());
+        if (r.getDateOfBirth() != null) u.setDateOfBirth(parseDate(r.getDateOfBirth()));
+        if (r.getAddressLine1() != null) u.setAddressLine1(r.getAddressLine1());
+        if (r.getAddressLine2() != null) u.setAddressLine2(r.getAddressLine2());
+        if (r.getCity() != null) u.setCity(r.getCity());
+        if (r.getState() != null) u.setState(r.getState());
+        if (r.getPostalCode() != null) u.setPostalCode(r.getPostalCode());
+        if (r.getCountry() != null) u.setCountry(r.getCountry());
+        if (!isBlank(r.getMfaChannel())) u.setMfaChannel(normalizeChannel(r.getMfaChannel()));
+        return toProfile(userRepository.save(u));
+    }
+
+    private static ProfileResponse toProfile(User u) {
+        ProfileResponse p = new ProfileResponse();
+        p.setId(u.getId());
+        p.setEmail(u.getEmail());
+        p.setName(u.getName());
+        p.setFirstName(u.getFirstName());
+        p.setLastName(u.getLastName());
+        p.setPhone(u.getPhone());
+        p.setAccountType(u.getAccountType());
+        p.setBusinessName(u.getBusinessName());
+        p.setDateOfBirth(u.getDateOfBirth() != null ? u.getDateOfBirth().toString() : null);
+        p.setAddressLine1(u.getAddressLine1());
+        p.setAddressLine2(u.getAddressLine2());
+        p.setCity(u.getCity());
+        p.setState(u.getState());
+        p.setPostalCode(u.getPostalCode());
+        p.setCountry(u.getCountry());
+        p.setSsnMasked(u.getSsnLast4() != null ? "•••-••-" + u.getSsnLast4() : null);
+        p.setEinMasked(u.getEinLast4() != null ? "••-•••" + u.getEinLast4() : null);
+        p.setPhoneVerified(u.getPhoneVerified());
+        p.setEmailVerified(u.getEmailVerified());
+        p.setIdentityVerified(u.getIdentityVerified());
+        p.setMfaChannel(u.getMfaChannel());
+        return p;
+    }
+
     public Optional<User> findByEmail(String email) {
         return userRepository.findByEmail(email);
     }
 
-    /** Permanently remove a user's identity. Idempotent: a missing id is a no-op. */
+    /**
+     * Permanently remove a user: first purge all downstream financial data across
+     * services (best-effort), then delete the identity. Idempotent. Audit logs are
+     * retained for compliance.
+     */
     public void deleteUser(Long userId) {
+        userDataPurgeClient.purgeUser(userId);
         userRepository.deleteById(userId);
+        auditClient.record(String.valueOf(userId), "account.delete", "SUCCESS", "user-initiated");
     }
 
     /** Role names (e.g. ["USER","CARE"]) for the JWT roles claim. */

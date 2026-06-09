@@ -1,0 +1,12 @@
+# OS noise
+.DS_Store
+**/.DS_Store
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Agent/session artifacts
+agent-transcripts/
+*.jsonl

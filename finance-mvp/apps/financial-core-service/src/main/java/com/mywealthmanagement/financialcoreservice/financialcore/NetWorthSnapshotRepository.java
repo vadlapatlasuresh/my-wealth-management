@@ -18,4 +18,6 @@ public interface NetWorthSnapshotRepository extends JpaRepository<NetWorthSnapsh
     // Most recent snapshot on or before a given date (for "value ~30 days ago").
     Optional<NetWorthSnapshot> findFirstByUserIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
             Long userId, LocalDate date);
+
+    void deleteByUserId(Long userId);
 }

@@ -1197,6 +1197,45 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 /* The backdrop only exists for the mobile drawer; hidden on desktop. */
 .mobile-nav-backdrop { display: none; }
 
+/* =============================================
+   OPS / HELP-DESK PORTAL  (separate shell, /ops)
+   The single home for all CARE/ADMIN tooling.
+   ============================================= */
+.ops-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; background: var(--tv-bg); }
+.ops-topbar {
+  height: 56px; flex-shrink: 0; display: flex; align-items: center; gap: 14px;
+  padding: 0 18px; background: var(--tv-forest); color: #fff;
+}
+.ops-brand { display: flex; align-items: center; gap: 10px; }
+.ops-mark { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.10); display: flex; align-items: center; justify-content: center; }
+.ops-mark i { color: var(--tv-gold-light); font-size: 18px; }
+.ops-brand-name { font-family: var(--font-display); font-size: 18px; }
+.ops-brand-tag { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--tv-gold-light); }
+.ops-audit-pill { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,255,255,.12); color: #fff; border-radius: 20px; padding: 4px 11px; font-size: 12px; font-weight: 600; }
+.ops-spacer { flex: 1; }
+.ops-agent { display: flex; align-items: center; gap: 9px; }
+.ops-agent-av { width: 32px; height: 32px; border-radius: 50%; background: var(--tv-gold); color: var(--tv-forest); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; }
+.ops-agent-name { font-size: 13px; font-weight: 600; line-height: 1.1; }
+.ops-agent-role { font-size: 11px; color: var(--tv-sage-light); }
+.ops-topbar .btn-secondary { background: rgba(255,255,255,.10); color: #fff; border-color: rgba(255,255,255,.18); }
+.ops-topbar .btn-secondary:hover { background: rgba(255,255,255,.18); }
+
+.ops-body { flex: 1; display: flex; overflow: hidden; }
+.ops-nav { width: 210px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--tv-border); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+.ops-nav-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--tv-text-secondary); }
+.ops-nav-item:hover { background: var(--tv-bg); color: var(--tv-text-primary); }
+.ops-nav-item.active { background: var(--tv-sage-pale); color: var(--tv-forest); font-weight: 600; }
+.ops-nav-item i { font-size: 18px; }
+.ops-nav-foot { margin-top: auto; padding: 12px 0 4px; }
+.ops-main { flex: 1; overflow: auto; padding: 20px 22px; }
+
+@media (max-width: 900px) {
+  .ops-nav { width: 56px; }
+  .ops-nav-item span { display: none; }
+  .ops-agent { display: none; }
+  .ops-main { padding: 14px 12px; }
+}
+
 @media (max-width: 900px) {
   /* Sidebar → off-canvas drawer */
   .app-shell .sidebar {

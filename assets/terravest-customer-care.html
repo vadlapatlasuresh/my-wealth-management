@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraVest — Customer Care / Help Desk (Design)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+/* ============================================================
+   TerraVest — Customer Care / Help Desk flow (design mockup)
+   Standalone, on-brand. Mirrors the live CustomerCarePage:
+   search members → open an ISSUE-FIRST profile → manage roles.
+   ============================================================ */
+:root{
+  --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68;
+  --tv-sage:#8AB89A; --tv-sage-light:#C4DDD0; --tv-sage-pale:#EAF3EE;
+  --tv-gold:#C9973A; --tv-gold-light:#F0C878; --tv-gold-pale:#FDF5E4;
+  --tv-positive:#1E7B4B; --tv-positive-bg:#E6F4EC;
+  --tv-negative:#C0392B; --tv-negative-bg:#FDECEA;
+  --tv-warning:#B07D1C; --tv-warning-bg:#FEF6E0;
+  --tv-white:#fff; --tv-bg:#F4F6F5; --tv-card:#fff;
+  --tv-border:#DDE5E1; --tv-border-light:#EEF3F0;
+  --tv-text-primary:#111D17; --tv-text-secondary:#4A5E54; --tv-text-muted:#7A9086;
+  --font-display:'DM Serif Display',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px;
+  --shadow-sm:0 1px 3px rgba(26,77,59,.06),0 1px 2px rgba(26,77,59,.04);
+  --shadow-md:0 4px 12px rgba(26,77,59,.08),0 2px 4px rgba(26,77,59,.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--tv-bg);color:var(--tv-text-primary);line-height:1.5;-webkit-font-smoothing:antialiased}
+.app-shell{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:228px;background:var(--tv-forest);color:#fff;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,#1A4D3B,#2D6B52);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.15)}
+.brand-mark i{color:var(--tv-gold-light)}
+.brand-name{font-family:var(--font-display);font-size:19px}
+.brand-tag{font-size:11px;color:var(--tv-sage-light)}
+.sidebar-section-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tv-sage);padding:14px 18px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 18px;color:var(--tv-sage-light);font-size:14px;cursor:pointer;border-left:3px solid transparent}
+.nav-item:hover{background:rgba(255,255,255,.05);color:#fff}
+.nav-item.active{background:rgba(255,255,255,.08);color:#fff;border-left-color:var(--tv-gold)}
+.sidebar-foot{margin-top:auto;padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--tv-gold);color:var(--tv-forest);display:flex;align-items:center;justify-content:center;font-weight:700}
+.who{font-size:13px;font-weight:600}
+.role{font-size:11px;color:var(--tv-sage-light)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:56px;background:#fff;border-bottom:1px solid var(--tv-border);display:flex;align-items:center;gap:14px;padding:0 24px;flex-shrink:0}
+.topbar .pill{margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--tv-sage-pale);color:var(--tv-forest);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600}
+.content{padding:22px 24px;overflow:auto}
+.page-title{font-family:var(--font-display);font-size:30px}
+.page-sub{color:var(--tv-text-muted);font-size:13px}
+
+/* Cards & bits */
+.card{background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow-sm)}
+.section-title{font-weight:600;font-size:14px;margin-bottom:10px}
+.muted{color:var(--tv-text-muted)}
+.help{font-size:12.5px;color:var(--tv-text-muted)}
+.search{display:flex;align-items:center;gap:8px;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:9px 12px}
+.search input{border:none;background:none;outline:none;font-family:inherit;font-size:14px;flex:1;color:inherit}
+.btn{font-family:inherit;border:none;cursor:pointer;border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:.15s}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+.btn-primary{background:var(--tv-forest);color:#fff}.btn-primary:hover{background:var(--tv-forest-mid)}
+.btn-secondary{background:var(--tv-bg);color:var(--tv-text-primary);border:1px solid var(--tv-border)}.btn-secondary:hover{border-color:var(--tv-forest-light)}
+.btn-danger{background:var(--tv-negative);color:#fff}.btn-danger:hover{filter:brightness(1.08)}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+.badge-gray{background:var(--tv-neutral-bg,#F0F4F8);color:var(--tv-text-secondary)}
+.badge-forest{background:var(--tv-sage-pale);color:var(--tv-forest)}
+.badge-red{background:var(--tv-negative-bg);color:var(--tv-negative)}
+.badge-amber{background:var(--tv-gold-pale);color:var(--tv-warning)}
+.list-item{display:flex;align-items:center;gap:11px;padding:10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.list-item:hover{background:var(--tv-bg)}
+.list-item.active{background:var(--tv-sage-pale);border-color:var(--tv-sage-light)}
+.item-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icon-forest{background:var(--tv-sage-pale);color:var(--tv-forest)}
+.icon-red{background:var(--tv-negative-bg);color:var(--tv-negative)}
+.icon-green{background:var(--tv-positive-bg);color:var(--tv-positive)}
+.item-main{flex:1;min-width:0}
+.item-name{font-weight:600;font-size:14px}
+.item-sub{font-size:12.5px;color:var(--tv-text-muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.chev{color:var(--tv-text-muted)}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.kpi{background:var(--tv-bg);border:1px solid var(--tv-border-light);border-radius:var(--radius-md);padding:12px}
+.kpi-label{font-size:11px;color:var(--tv-text-muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi-val{font-size:18px;font-weight:600;margin-top:2px}
+.kpi-delta{font-size:12px;margin-top:3px}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--tv-border-light)}
+.row:last-child{border-bottom:none}
+.seg{display:inline-flex;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:10px;padding:3px;gap:3px;margin-bottom:12px}
+.seg button{border:none;background:none;font-family:inherit;font-size:13px;font-weight:600;padding:6px 13px;border-radius:7px;cursor:pointer;color:var(--tv-text-secondary)}
+.seg button.active{background:#fff;color:var(--tv-forest);box-shadow:var(--shadow-sm)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tv-text-muted);padding:8px 10px;border-bottom:1px solid var(--tv-border)}
+td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
+.spotlight{border:1px solid var(--tv-negative);border-radius:var(--radius-lg);background:#fff;padding:16px;box-shadow:var(--shadow-sm)}
+.spotlight.ok{border-color:var(--tv-positive);background:var(--tv-positive-bg)}
+.grid-2{display:grid;grid-template-columns:minmax(300px,360px) 1fr;gap:16px;align-items:start}
+.flow{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:14px 0 4px}
+.flow .step{display:inline-flex;align-items:center;gap:7px;background:var(--tv-sage-pale);border:1px solid var(--tv-border-light);color:var(--tv-text-secondary);border-radius:20px;padding:6px 13px;font-size:12.5px;font-weight:600}
+.flow i.sep{color:var(--tv-text-muted)}
+.hidden{display:none}
+@media(max-width:900px){.sidebar{display:none}.grid-2{grid-template-columns:1fr}.kpi-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <!-- Sidebar (support context) -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark"><i class="ti ti-mountain"></i></div>
+      <div><div class="brand-name">TerraVest</div><div class="brand-tag">Support Console</div></div>
+    </div>
+    <div class="sidebar-section-label">Support</div>
+    <div class="nav-item active"><i class="ti ti-headset"></i> Customer Care</div>
+    <div class="nav-item"><i class="ti ti-chart-dots"></i> Admin · Analytics</div>
+    <div class="sidebar-section-label">Member app</div>
+    <div class="nav-item"><i class="ti ti-layout-dashboard"></i> Home</div>
+    <div class="nav-item"><i class="ti ti-briefcase"></i> Deal Room</div>
+    <div class="sidebar-foot">
+      <div class="avatar">S</div>
+      <div><div class="who">Support Admin</div><div class="role">ADMIN · CARE</div></div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <i class="ti ti-menu-2" style="color:var(--tv-text-muted)"></i>
+      <div class="search" style="max-width:340px;flex:1">
+        <i class="ti ti-search muted"></i><input value="alex" oninput="filterUsers(this.value)" placeholder="Search members…">
+      </div>
+      <span class="pill"><i class="ti ti-shield-lock"></i> Role-gated: CARE / ADMIN</span>
+    </div>
+
+    <div class="content">
+      <div class="page-title">Customer Care</div>
+      <div class="page-sub">A caller has an issue → pull up their profile, see what they hit, and help. Every action here is audited.</div>
+
+      <!-- The flow this screen implements -->
+      <div class="flow">
+        <span class="step"><i class="ti ti-phone"></i> Customer calls</span><i class="ti ti-arrow-right sep"></i>
+        <span class="step"><i class="ti ti-search"></i> Search member</span><i class="ti ti-arrow-right sep"></i>
+        <span class="step"><i class="ti ti-id-badge-2"></i> Open profile</span><i class="ti ti-arrow-right sep"></i>
+        <span class="step"><i class="ti ti-alert-triangle"></i> See the issue</span><i class="ti ti-arrow-right sep"></i>
+        <span class="step"><i class="ti ti-shield-check"></i> Help / grant access</span>
+      </div>
+
+      <div class="grid-2" style="margin-top:14px">
+        <!-- LEFT: search results -->
+        <div class="card">
+          <div class="section-title">Members <span class="badge badge-gray" id="resultCount">3</span></div>
+          <div id="userList"></div>
+        </div>
+
+        <!-- RIGHT: selected member, ISSUE-FIRST -->
+        <div id="detail"></div>
+      </div>
+
+      <p class="help" style="margin-top:16px">
+        <i class="ti ti-info-circle"></i> Design reference for the live <code>CustomerCarePage</code>.
+        Backend: <code>GET /api/v1/support/users</code> (search), <code>GET /api/v1/support/users/{id}</code> (360 profile + activity + issues),
+        <code>POST /api/v1/support/users/{id}/roles</code> (grant/revoke — ADMIN only). Issues come from audit-service (failed/denied actions).
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* Sample data mirroring SupportUserDetailDto + audit activity. */
+const USERS = {
+  1042: {
+    id:1042, name:'Alex Kumar', email:'alex.kumar@example.com', accountType:'INDIVIDUAL', business:null,
+    phone:'+1 (512) 555-0192', phoneVerified:true, idLabel:'SSN ••4417', identityVerified:false,
+    since:'Mar 2026', roles:['USER'],
+    activity:[
+      {t:'Jun 7, 09:14', action:'Bill pay submission', service:'payment', status:402, fail:true, ip:'73.12.x.x', note:'Insufficient funds on funding account'},
+      {t:'Jun 7, 09:13', action:'Link account (Plaid)', service:'aggregation', status:400, fail:true, ip:'73.12.x.x', note:'Institution returned ITEM_LOGIN_REQUIRED'},
+      {t:'Jun 7, 09:10', action:'Login success', service:'auth', status:'SUCCESS', fail:false, ip:'73.12.x.x'},
+      {t:'Jun 6, 20:02', action:'Login success', service:'auth', status:'SUCCESS', fail:false, ip:'iOS app'},
+    ],
+  },
+  1043: {
+    id:1043, name:'Alexa Romero', email:'alexa.r@example.com', accountType:'BUSINESS', business:'Romero Holdings LLC',
+    phone:'+1 (415) 555-0046', phoneVerified:true, idLabel:'EIN ••8830', identityVerified:true,
+    since:'Jan 2026', roles:['USER','CARE'],
+    activity:[
+      {t:'Jun 7, 08:40', action:'Login success', service:'auth', status:'SUCCESS', fail:false, ip:'Chrome · macOS'},
+      {t:'Jun 6, 17:21', action:'Deal interest expressed', service:'real-estate', status:'SUCCESS', fail:false},
+    ],
+  },
+  1044: {
+    id:1044, name:'Alexander Pike', email:'a.pike@example.com', accountType:'INDIVIDUAL', business:null,
+    phone:'+1 (212) 555-7781', phoneVerified:false, idLabel:'—', identityVerified:false,
+    since:'Jun 2026', roles:['USER'],
+    activity:[
+      {t:'Jun 7, 07:58', action:'SMS code verify', service:'auth', status:401, fail:true, ip:'98.4.x.x', note:'Code expired — 3 attempts'},
+      {t:'Jun 7, 07:55', action:'Register', service:'auth', status:'SUCCESS', fail:false},
+    ],
+  },
+};
+const ORDER=[1042,1043,1044];
+let selectedId=1042, tab='issues';
+
+function issues(u){return u.activity.filter(a=>a.fail)}
+function esc(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+
+function renderList(filter=''){
+  const f=filter.trim().toLowerCase();
+  const ids=ORDER.filter(id=>{const u=USERS[id];return !f||u.name.toLowerCase().includes(f)||u.email.toLowerCase().includes(f)});
+  document.getElementById('resultCount').textContent=ids.length;
+  document.getElementById('userList').innerHTML = ids.map(id=>{const u=USERS[id];return `
+    <div class="list-item ${id===selectedId?'active':''}" onclick="select(${id})">
+      <div class="item-icon icon-forest"><i class="ti ti-user"></i></div>
+      <div class="item-main">
+        <div class="item-name">${esc(u.name)}</div>
+        <div class="item-sub"><span>${esc(u.email)}</span>${u.roles.filter(r=>r!=='USER').map(r=>`<span class="badge badge-amber">${r}</span>`).join('')}</div>
+      </div>
+      <i class="ti ti-chevron-right chev"></i>
+    </div>`}).join('') || '<div class="help" style="padding:14px 4px">No members match.</div>';
+}
+function filterUsers(v){renderList(v)}
+function select(id){selectedId=id;tab='issues';renderList(document.querySelector('.search input').value);renderDetail()}
+function setTab(t){tab=t;renderDetail()}
+function grant(role,action){
+  const u=USERS[selectedId];
+  if(action==='GRANT'&&!u.roles.includes(role))u.roles.push(role);
+  if(action==='REVOKE')u.roles=u.roles.filter(r=>r!==role);
+  renderList(document.querySelector('.search input').value);renderDetail();
+}
+
+function badge(ok,yes,no){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?yes:no}</span>`}
+
+function renderDetail(){
+  const u=USERS[selectedId], iss=issues(u), latest=iss[0];
+  const rows = (tab==='issues'?iss:u.activity);
+  document.getElementById('detail').innerHTML = `
+    <!-- profile -->
+    <div class="card" style="margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="item-icon icon-forest" style="width:48px;height:48px;font-size:22px"><i class="ti ti-user"></i></div>
+        <div style="flex:1"><div style="font-weight:700;font-size:18px">${esc(u.name)}</div>
+          <div class="muted">${esc(u.email)} · ID ${u.id}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${u.roles.map(r=>`<span class="badge badge-gray">${r}</span>`).join('')}</div>
+      </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="kpi-label">Account</div><div class="kpi-val">${u.accountType}</div>${u.business?`<div class="kpi-delta muted">${esc(u.business)}</div>`:''}</div>
+        <div class="kpi"><div class="kpi-label">Phone</div><div class="kpi-val">${esc(u.phone)}</div><div class="kpi-delta">${badge(u.phoneVerified,'Verified','Unverified')}</div></div>
+        <div class="kpi"><div class="kpi-label">Identity</div><div class="kpi-val">${esc(u.idLabel)}</div><div class="kpi-delta">${badge(u.identityVerified,'Verified','Unverified')}</div></div>
+        <div class="kpi"><div class="kpi-label">Member since</div><div class="kpi-val">${u.since}</div><div class="kpi-delta" style="color:${iss.length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${iss.length} issue${iss.length===1?'':'s'}</div></div>
+      </div>
+
+      <!-- Roles & access (ADMIN only) -->
+      <div style="margin-top:16px;border-top:1px solid var(--tv-border-light);padding-top:14px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><i class="ti ti-shield-lock" style="color:var(--tv-forest)"></i><span style="font-weight:600">Roles &amp; access</span></div>
+        ${[['CARE','Customer Care','Look up members and view their activity & issues'],['ADMIN','Administrator','Full access, including granting roles']].map(([k,label,help])=>{
+          const has=u.roles.includes(k);
+          return `<div class="row"><div><div style="font-weight:600">${label} ${has?'<span class="badge badge-forest" style="margin-left:4px">Active</span>':''}</div><div class="help">${help}</div></div>
+            ${has?`<button class="btn btn-secondary btn-sm" onclick="grant('${k}','REVOKE')"><i class="ti ti-user-minus"></i> Revoke</button>`
+                 :`<button class="btn ${k==='ADMIN'?'btn-danger':'btn-primary'} btn-sm" onclick="grant('${k}','GRANT')"><i class="ti ti-user-plus"></i> Grant</button>`}</div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- ISSUE SPOTLIGHT -->
+    ${latest?`
+    <div class="spotlight" style="margin-bottom:16px">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="item-icon icon-red" style="width:40px;height:40px;font-size:18px"><i class="ti ti-alert-triangle"></i></div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px"><span style="font-weight:700">Most recent issue</span><span class="muted" style="font-size:12px">${latest.t}</span></div>
+          <div style="margin-top:4px;font-size:15px"><span style="font-weight:600">${esc(latest.action)}</span>
+            <span class="badge badge-gray" style="margin-left:8px">${latest.service}</span>
+            <span class="badge badge-red" style="margin-left:6px">${latest.status}</span></div>
+          <div class="help" style="margin-top:6px">${latest.note?esc(latest.note)+' · ':''}${iss.length>1?`This member hit ${iss.length} issues recently — review the list below.`:'Review the activity below to help with their call.'}${latest.ip?' · from '+latest.ip:''}</div>
+        </div>
+      </div>
+    </div>`:`
+    <div class="spotlight ok" style="margin-bottom:16px"><div style="display:flex;align-items:center;gap:10px"><i class="ti ti-shield-check" style="font-size:20px;color:var(--tv-positive)"></i><div><div style="font-weight:600">No recent issues</div><div class="help">This member's account looks healthy.</div></div></div></div>`}
+
+    <!-- Activity / issues -->
+    <div class="card">
+      <div class="seg">
+        <button class="${tab==='issues'?'active':''}" onclick="setTab('issues')">Issues encountered (${iss.length})</button>
+        <button class="${tab==='activity'?'active':''}" onclick="setTab('activity')">Recent activity (${u.activity.length})</button>
+      </div>
+      ${rows.length===0?`<div class="help" style="padding:16px 4px"><i class="ti ti-mood-smile"></i> ${tab==='issues'?'No issues encountered.':'No recorded activity.'}</div>`:`
+      <table><thead><tr><th>When</th><th>Action</th><th>Service</th><th style="text-align:center">Status</th><th>IP</th></tr></thead>
+      <tbody>${rows.map(e=>`<tr><td class="muted" style="white-space:nowrap">${e.t}</td><td style="font-weight:500">${esc(e.action)}${e.note?`<div class="help">${esc(e.note)}</div>`:''}</td><td><span class="badge badge-gray">${e.service}</span></td><td style="text-align:center"><span class="badge ${e.fail?'badge-red':'badge-forest'}">${e.status}</span></td><td class="muted" style="font-size:12px">${e.ip||''}</td></tr>`).join('')}</tbody></table>`}
+    </div>`;
+}
+renderList('alex'); renderDetail();
+</script>
+</body>
+</html>

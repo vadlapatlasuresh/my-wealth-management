@@ -42,12 +42,16 @@ public class ApiGatewayApplication {
         return builder.routes()
                 .route("auth_service_route", r -> r.path("/api/v1/auth/**")
                         .uri(authUri)) // Route to auth-service
+                .route("support_service_route", r -> r.path("/api/v1/support/**")
+                        .uri(authUri)) // Route to auth-service (customer-care / role management)
                 .route("account_aggregation_service_route", r -> r.path("/api/v1/aggregation/**")
                         .uri(aggregationUri)) // Route to account-aggregation-service
                 .route("financial_core_service_me_route", r -> r.path("/api/v1/me/**")
                         .uri(financialCoreUri)) // Route to financial-core-service for snapshot
                 .route("financial_core_service_planning_route", r -> r.path("/api/v1/planning/**")
                         .uri(financialCoreUri)) // Route to financial-core-service for planning
+                .route("financial_core_service_invest_route", r -> r.path("/api/v1/invest/**")
+                        .uri(financialCoreUri)) // Route to financial-core-service for invest holdings
                 .route("real_estate_service_route", r -> r.path("/api/v1/real-estate/**")
                         .uri(realEstateUri)) // Route to real-estate-service
                 .route("deals_service_route", r -> r.path("/api/v1/deals/**")

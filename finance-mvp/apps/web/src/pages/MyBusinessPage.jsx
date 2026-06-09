@@ -4,12 +4,9 @@ import { api } from '../api';
 import LastRefreshed from '../components/LastRefreshed';
 
 /* ------------------------------------------------------------------ */
-/* localStorage keys                                                   */
+/* Local UI preference key (selection only; data is server-persisted)  */
 /* ------------------------------------------------------------------ */
-const LS_BUSINESSES = 'tv_businesses';
 const LS_SELECTED = 'tv_business_selected';
-const accountsKey = (businessId) => `tv_business_accounts_${businessId}`;
-const manualFiguresKey = (businessId) => `tv_business_figures_${businessId}`;
 
 /* Entity types offered when adding a business. */
 const ENTITY_TYPES = ['LLC', 'S-Corp', 'C-Corp', 'Sole Prop', 'Partnership'];
@@ -20,11 +17,6 @@ const ACCOUNT_TYPES = ['CHECKING', 'SAVINGS', 'CREDIT_CARD', 'LOAN'];
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                       */
 /* ------------------------------------------------------------------ */
-
-/* Generate a reasonably-unique id without relying on crypto. */
-function makeId() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
 
 /* Renders a date like "May 20, 2026" (business records use ISO date strings). */
 function bizDate(iso) {
@@ -124,17 +116,13 @@ export default function MyBusinessPage({ user, formatDate }) {
   const [invoices, setInvoices] = useState([]);
   const [expenses, setExpenses] = useState([]);
 
-  /* ---- Local multi-business state (localStorage-backed) ----
+  /* ---- Server-persisted multi-business state ----
    * Start empty; the user adds their own business or connects QuickBooks. */
-  const [businesses, setBusinesses] = useState(() => {
-    const stored = readLS(LS_BUSINESSES, null);
-    return Array.isArray(stored) ? stored : [];
-  });
+  const [businesses, setBusinesses] = useState([]);
   const [selectedId, setSelectedId] = useState(() => readLS(LS_SELECTED, null));
 
-  /* Accounts + manual figures for the currently-selected business. */
+  /* Accounts for the currently-selected business (server-persisted). */
   const [accounts, setAccounts] = useState([]);
-  const [manualFigures, setManualFigures] = useState(null);
 
   /* ---- Inline-form UI state ---- */
   const [showAddBusiness, setShowAddBusiness] = useState(false);
@@ -179,12 +167,21 @@ export default function MyBusinessPage({ user, formatDate }) {
     loadAll();
   }, [loadAll]);
 
-  /* Persist businesses whenever the list changes. */
-  useEffect(() => {
-    writeLS(LS_BUSINESSES, businesses);
-  }, [businesses]);
+  /* Load the user's businesses from the backend on mount. */
+  const loadBusinesses = useCallback(async () => {
+    try {
+      const list = await api.getManualBusinesses();
+      setBusinesses(Array.isArray(list) ? list : []);
+    } catch {
+      /* leave empty; the API error is non-fatal for the QBO path */
+    }
+  }, []);
 
-  /* Ensure a valid selection exists, and persist it. */
+  useEffect(() => {
+    loadBusinesses();
+  }, [loadBusinesses]);
+
+  /* Keep the (UI-only) selection valid and persisted. */
   useEffect(() => {
     if (!businesses.length) return;
     const stillValid = businesses.some((b) => b.id === selectedId);
@@ -195,36 +192,31 @@ export default function MyBusinessPage({ user, formatDate }) {
     writeLS(LS_SELECTED, selectedId);
   }, [selectedId, businesses]);
 
-  /* Load per-business accounts + manual figures when selection changes. */
+  /* Load per-business accounts from the backend when selection changes. */
   useEffect(() => {
+    let cancelled = false;
     if (!selectedBusiness) {
       setAccounts([]);
-      setManualFigures(null);
-      return;
+      return undefined;
     }
-    // Load accounts; start empty — the user adds real accounts themselves.
-    let acc = readLS(accountsKey(selectedBusiness.id), null);
-    if (!Array.isArray(acc)) {
-      acc = [];
-      writeLS(accountsKey(selectedBusiness.id), acc);
-    }
-    setAccounts(acc);
-
-    // Manual KPI figures (used when not connected to QuickBooks).
-    const figs = readLS(manualFiguresKey(selectedBusiness.id), {
-      revenueMtd: 0,
-      expensesMtd: 0,
-      cashBalance: 0,
-      outstandingInvoices: 0,
-    });
-    setManualFigures(figs);
+    (async () => {
+      try {
+        const acc = await api.getBusinessAccounts(selectedBusiness.id);
+        if (!cancelled) setAccounts(Array.isArray(acc) ? acc : []);
+      } catch {
+        if (!cancelled) setAccounts([]);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [selectedBusiness]);
 
-  /* Persist accounts for the selected business. */
-  const saveAccounts = useCallback((next) => {
-    setAccounts(next);
-    if (selectedBusiness) writeLS(accountsKey(selectedBusiness.id), next);
-  }, [selectedBusiness]);
+  /* Manual KPI figures live on the business record (used when not connected to QuickBooks). */
+  const manualFigures = useMemo(() => ({
+    revenueMtd: Number(selectedBusiness?.revenueMtd) || 0,
+    expensesMtd: Number(selectedBusiness?.expensesMtd) || 0,
+    cashBalance: 0,
+    outstandingInvoices: Number(selectedBusiness?.outstandingInvoices) || 0,
+  }), [selectedBusiness]);
 
   /* ------------------------------------------------------------------ */
   /* API actions (existing behavior, preserved)                         */
@@ -244,7 +236,13 @@ export default function MyBusinessPage({ user, formatDate }) {
   async function handleConnect() {
     setConnecting(true);
     try {
-      await api.connectBusiness();
+      const res = await api.connectBusiness();
+      // When a real QuickBooks app is configured the backend returns an Intuit
+      // consent URL to redirect into; otherwise it connects the demo directly.
+      if (res?.authorizeUrl) {
+        window.location.href = res.authorizeUrl;
+        return;
+      }
       await loadAll();
     } catch (e) {
       setError(e?.message || 'Could not connect QuickBooks.');
@@ -256,55 +254,64 @@ export default function MyBusinessPage({ user, formatDate }) {
   /* ------------------------------------------------------------------ */
   /* Business CRUD                                                       */
   /* ------------------------------------------------------------------ */
-  function handleAddBusiness(e) {
+  async function handleAddBusiness(e) {
     e.preventDefault();
     const name = bizForm.name.trim();
     if (!name) return;
-    const next = {
-      id: makeId(),
-      name,
-      industry: bizForm.industry.trim(),
-      entityType: bizForm.entityType,
-      ein: bizForm.ein.trim(),
-      createdAt: new Date().toISOString(),
-    };
-    setBusinesses((prev) => [...prev, next]);
-    setSelectedId(next.id);
-    setBizForm({ name: '', industry: '', entityType: 'LLC', ein: '' });
-    setShowAddBusiness(false);
+    try {
+      const created = await api.createManualBusiness({
+        name,
+        industry: bizForm.industry.trim(),
+        entityType: bizForm.entityType,
+        ein: bizForm.ein.trim(),
+      });
+      setBusinesses((prev) => [...prev, created]);
+      setSelectedId(created.id);
+      setBizForm({ name: '', industry: '', entityType: 'LLC', ein: '' });
+      setShowAddBusiness(false);
+    } catch (err) {
+      setError(err?.message || 'Could not add business.');
+    }
   }
 
-  function handleDeleteBusiness(id) {
-    // Clean up the per-business stores too.
+  async function handleDeleteBusiness(id) {
     try {
-      localStorage.removeItem(accountsKey(id));
-      localStorage.removeItem(manualFiguresKey(id));
-    } catch { /* ignore */ }
-    setBusinesses((prev) => prev.filter((b) => b.id !== id));
+      await api.deleteManualBusiness(id);
+      setBusinesses((prev) => prev.filter((b) => b.id !== id));
+    } catch (err) {
+      setError(err?.message || 'Could not delete business.');
+    }
   }
 
   /* ------------------------------------------------------------------ */
   /* Account CRUD                                                        */
   /* ------------------------------------------------------------------ */
-  function handleAddAccount(e) {
+  async function handleAddAccount(e) {
     e.preventDefault();
     const name = acctForm.name.trim();
-    if (!name) return;
-    const next = {
-      id: makeId(),
-      name,
-      institution: acctForm.institution.trim(),
-      type: acctForm.type,
-      balance: Number(acctForm.balance) || 0,
-      createdAt: new Date().toISOString(),
-    };
-    saveAccounts([...accounts, next]);
-    setAcctForm({ name: '', institution: '', type: 'CHECKING', balance: '' });
-    setShowAddAccount(false);
+    if (!name || !selectedBusiness) return;
+    try {
+      const created = await api.createBusinessAccount(selectedBusiness.id, {
+        name,
+        institution: acctForm.institution.trim(),
+        type: acctForm.type,
+        balance: Number(acctForm.balance) || 0,
+      });
+      setAccounts((prev) => [...prev, created]);
+      setAcctForm({ name: '', institution: '', type: 'CHECKING', balance: '' });
+      setShowAddAccount(false);
+    } catch (err) {
+      setError(err?.message || 'Could not add account.');
+    }
   }
 
-  function handleDeleteAccount(id) {
-    saveAccounts(accounts.filter((a) => a.id !== id));
+  async function handleDeleteAccount(id) {
+    try {
+      await api.deleteBusinessAccount(id);
+      setAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      setError(err?.message || 'Could not delete account.');
+    }
   }
 
   /* ------------------------------------------------------------------ */

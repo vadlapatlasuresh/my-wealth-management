@@ -34,6 +34,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests()
                 .requestMatchers("/api/v1/aggregation/webhook").permitAll() // Allow public access to Plaid webhooks
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
+                .requestMatchers("/internal/**").permitAll() // server-to-server purge, guarded by X-Internal-Key
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()
                 .sessionManagement()

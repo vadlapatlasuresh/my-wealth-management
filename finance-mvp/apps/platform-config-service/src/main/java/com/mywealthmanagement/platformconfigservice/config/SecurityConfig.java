@@ -32,6 +32,7 @@ public class SecurityConfig {
                 // /error must be permitted so genuine 4xx/5xx responses are not masked as 403.
                 // (Known issue in this codebase where the error dispatch is otherwise blocked.)
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 // Public, non-sensitive config and disclaimer reads.
                 .requestMatchers(HttpMethod.GET, "/api/v1/config/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/content/disclaimers").permitAll()

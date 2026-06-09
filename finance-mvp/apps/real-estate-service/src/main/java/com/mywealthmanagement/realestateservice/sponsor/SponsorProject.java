@@ -38,7 +38,8 @@ public class SponsorProject {
     @Column(length = 200)
     private String location;
 
-    @Column
+    // Column is "project_year" because YEAR is a reserved word in H2.
+    @Column(name = "project_year")
     private Integer year;
 
     @Column(length = 200)

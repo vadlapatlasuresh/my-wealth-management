@@ -10,7 +10,7 @@ import {
 } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
 import { api, isCareAgent } from "../api";
-import CustomerCarePage from "../pages/CustomerCarePage";
+import OpsPortal from "./OpsPortal";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
@@ -35,7 +35,6 @@ const MyBusinessPage  = MODULE_REGISTRY.mybusiness.component;
 const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
 const CalculatorsPage = MODULE_REGISTRY.calculators.component;
 const GoalsPage       = MODULE_REGISTRY.goals.component;
-const AdminDashboardPage = MODULE_REGISTRY.admin.component;
 const FractionalLLCPage = MODULE_REGISTRY.fractional.component;
 const SecurityPage    = MODULE_REGISTRY.security.component;
 const MessagesPage    = MODULE_REGISTRY.messages.component;
@@ -145,15 +144,16 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }
           </React.Fragment>
         ))}
 
-        {/* Customer-care console — only shown to support agents / admins. */}
+        {/* Single launcher into the dedicated Ops Portal — only for support agents / admins.
+            All customer-care + admin tooling now lives there (separate /ops shell). */}
         {isCareAgent() && (
           <React.Fragment>
             <div className="sidebar-section" style={{ marginTop: 4 }}>
-              <div className="sidebar-section-label">Support</div>
+              <div className="sidebar-section-label">Staff</div>
             </div>
-            <NavLink to="/customer-care" title="Customer Care" className={getNavLinkClass('/customer-care')}>
+            <NavLink to="/ops" title="Ops Portal" className={getNavLinkClass('/ops')}>
               <i className="ti ti-headset"></i>
-              <span className="nav-label">Customer Care</span>
+              <span className="nav-label">Ops Portal</span>
             </NavLink>
           </React.Fragment>
         )}
@@ -385,9 +385,7 @@ export default function AppLayout(props) {
   const { config, flags } = useRemoteConfig();
   const navSections = resolveNav(config, MODULE_REGISTRY, flags);
 
-  return (
-    <Router>
-      <AutoTranslate />
+  const memberShell = (
       <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
         <div className="mobile-nav-backdrop" onClick={closeMobileNav} aria-hidden="true"></div>
         <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} onNavigate={closeMobileNav} />
@@ -474,13 +472,11 @@ export default function AppLayout(props) {
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/calculators" element={<CalculatorsPage />} />
               <Route path="/goals" element={<GoalsPage />} />
-              <Route path="/admin" element={<AdminDashboardPage />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/messages" element={<MessagesPage />} />
-              <Route path="/customer-care" element={isCareAgent() ? <CustomerCarePage /> : <Navigate to="/" replace />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route
                 path="/profile"
@@ -495,6 +491,22 @@ export default function AppLayout(props) {
           </div>
         </div>
       </div>
+  );
+
+  // /ops/* renders the dedicated Ops Portal (CARE/ADMIN only); everything else is the member app.
+  return (
+    <Router>
+      <AutoTranslate />
+      <ShellSwitch
+        memberShell={memberShell}
+        opsElement={isCareAgent() ? <OpsPortal handleLogout={handleLogout} /> : <Navigate to="/" replace />}
+      />
     </Router>
   );
+}
+
+/** Routes /ops/* to the Ops Portal shell; all other paths render the member shell. */
+function ShellSwitch({ memberShell, opsElement }) {
+  const location = useLocation();
+  return location.pathname.startsWith('/ops') ? opsElement : memberShell;
 }

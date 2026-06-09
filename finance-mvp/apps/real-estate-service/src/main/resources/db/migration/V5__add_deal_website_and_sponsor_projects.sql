@@ -9,7 +9,7 @@ CREATE TABLE sponsor_projects (
     description VARCHAR(2000),
     url VARCHAR(500),
     location VARCHAR(200),
-    year INTEGER,
+    project_year INTEGER,                  -- "year" is a reserved word in H2; use project_year
     outcome VARCHAR(200),                  -- e.g. "Sold 2023 · 21% IRR" or current status
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL

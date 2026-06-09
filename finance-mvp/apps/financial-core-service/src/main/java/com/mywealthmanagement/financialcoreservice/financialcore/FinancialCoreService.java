@@ -6,6 +6,8 @@ import com.mywealthmanagement.financialcoreservice.clients.dtos.AccountDto;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.PropertyDto;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.TransactionDto;
 import com.mywealthmanagement.financialcoreservice.financialcore.dto.SnapshotDto;
+import com.mywealthmanagement.financialcoreservice.goals.GoalRepository;
+import com.mywealthmanagement.financialcoreservice.debt.DebtRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +31,8 @@ public class FinancialCoreService {
     private final AccountAggregationClient accountAggregationClient;
     private final RealEstateClient realEstateClient;
     private final NetWorthSnapshotRepository snapshotRepository;
+    private final GoalRepository goalRepository;
+    private final DebtRepository debtRepository;
 
     private static BigDecimal nz(BigDecimal v) {
         return v == null ? BigDecimal.ZERO : v;
@@ -223,5 +228,31 @@ public class FinancialCoreService {
     public List<TransactionDto> getTransactions() {
         String authHeader = getAuthorizationHeader();
         return accountAggregationClient.getTransactions(authHeader);
+    }
+
+    /**
+     * GDPR/CCPA "right to access": assemble a complete export of the user's data
+     * reachable from financial-core (net worth + components + history, linked
+     * accounts/transactions, properties, goals, debts). Each external source is
+     * best-effort so a single failure never blocks the export.
+     */
+    public Map<String, Object> exportData() {
+        Long userId = getUserId();
+        String auth = getAuthorizationHeader();
+        Map<String, Object> bundle = new LinkedHashMap<>();
+        bundle.put("exportedAt", LocalDateTime.now().toString());
+        bundle.put("userId", userId);
+        bundle.put("netWorth", safe(() -> getSnapshot("All")));
+        bundle.put("accounts", safe(() -> accountAggregationClient.getAccounts(auth)));
+        bundle.put("transactions", safe(() -> accountAggregationClient.getTransactions(auth)));
+        bundle.put("properties", safe(() -> realEstateClient.getProperties(auth)));
+        bundle.put("goals", safe(() -> goalRepository.findByUserIdOrderByCreatedAtAsc(userId)));
+        bundle.put("debts", safe(() -> debtRepository.findByUserId(userId)));
+        return bundle;
+    }
+
+    private Object safe(java.util.function.Supplier<Object> s) {
+        try { return s.get(); }
+        catch (Exception e) { log.warn("export section failed: {}", e.getMessage()); return null; }
     }
 }

@@ -5,6 +5,7 @@ import com.mywealthmanagement.businessfinancialsservice.business.dto.ExpenseDto;
 import com.mywealthmanagement.businessfinancialsservice.business.dto.InvoiceDto;
 import com.mywealthmanagement.businessfinancialsservice.business.dto.PnlDto;
 import com.mywealthmanagement.businessfinancialsservice.business.provider.BusinessDataProvider;
+import com.mywealthmanagement.businessfinancialsservice.business.provider.QboOAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -20,9 +21,29 @@ public class BusinessService {
 
     private final QboConnectionRepository connectionRepository;
     private final BusinessDataProvider dataProvider;
+    private final QboOAuthService oauthService;
 
     private Long currentUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
+    }
+
+    /**
+     * Whether a live QuickBooks OAuth connection is possible (real provider configured).
+     * When false the service runs in mock mode and {@link #connect()} returns the demo connection.
+     */
+    public boolean qboConfigured() {
+        return oauthService.isConfigured();
+    }
+
+    /** Intuit consent URL for the current user to authorize QuickBooks. */
+    public String authorizeUrl() {
+        return oauthService.buildAuthorizationUrl(currentUserId());
+    }
+
+    /** Completes the QBO OAuth handshake (called from the public callback; userId comes from {@code state}). */
+    public void completeOAuth(String code, String realmId, String state) {
+        Long userId = Long.valueOf(state);
+        oauthService.exchangeCode(userId, code, realmId);
     }
 
     /**

@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Captures EVERY request that flows through the gateway as a user-activity audit event and
@@ -28,6 +29,9 @@ import java.util.Map;
 public class AuditLoggingFilter implements GlobalFilter, Ordered {
 
     private static final Logger log = LoggerFactory.getLogger(AuditLoggingFilter.class);
+
+    /** Correlation id: ties the gateway, downstream services, logs and audit row together. */
+    static final String REQUEST_ID_HEADER = "X-Request-Id";
 
     @Value("${audit.enabled:true}")
     private boolean enabled;
@@ -45,19 +49,30 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-        if (!enabled) return chain.filter(exchange);
+        // Always assign a correlation id (reuse an inbound one if a proxy set it),
+        // propagate it downstream, and echo it back on the response — so a single
+        // request can be traced across the gateway, services, logs and audit log.
+        String inbound = exchange.getRequest().getHeaders().getFirst(REQUEST_ID_HEADER);
+        final String requestId = (inbound != null && !inbound.isBlank())
+                ? inbound : UUID.randomUUID().toString();
+        exchange.getResponse().getHeaders().set(REQUEST_ID_HEADER, requestId);
+        ServerWebExchange ex = exchange.mutate()
+                .request(r -> r.headers(h -> h.set(REQUEST_ID_HEADER, requestId)))
+                .build();
+
+        if (!enabled) return chain.filter(ex);
 
         final long start = System.currentTimeMillis();
-        return chain.filter(exchange).then(Mono.fromRunnable(() -> {
+        return chain.filter(ex).then(Mono.fromRunnable(() -> {
             try {
-                send(exchange, start);
+                send(ex, start, requestId);
             } catch (Exception e) {
                 log.debug("audit emit skipped: {}", e.getMessage());
             }
         }));
     }
 
-    private void send(ServerWebExchange exchange, long start) {
+    private void send(ServerWebExchange exchange, long start, String requestId) {
         ServerHttpRequest req = exchange.getRequest();
         String path = req.getPath().value();
         String method = req.getMethod() != null ? req.getMethod().name() : "";
@@ -83,6 +98,7 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         body.put("userAgent", req.getHeaders().getFirst("User-Agent"));
         body.put("latencyMs", (int) (System.currentTimeMillis() - start));
         body.put("outcome", (status != null && status >= 400) ? "FAILURE" : "SUCCESS");
+        body.put("metadata", "{\"requestId\":\"" + requestId + "\"}");
 
         webClient.post()
                 .uri(auditUri + "/api/v1/audit/events")
@@ -118,7 +134,7 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
     private String serviceFor(String path) {
         if (path.startsWith("/api/v1/auth")) return "auth";
         if (path.startsWith("/api/v1/aggregation")) return "account-aggregation";
-        if (path.startsWith("/api/v1/me") || path.startsWith("/api/v1/planning")) return "financial-core";
+        if (path.startsWith("/api/v1/me") || path.startsWith("/api/v1/planning") || path.startsWith("/api/v1/invest")) return "financial-core";
         if (path.startsWith("/api/v1/real-estate")) return "real-estate";
         if (path.startsWith("/api/v1/business")) return "business-financials";
         if (path.startsWith("/api/v1/ai")) return "ai-insights";

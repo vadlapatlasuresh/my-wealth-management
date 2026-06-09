@@ -6,4 +6,6 @@ import java.util.Optional;
 
 public interface QboConnectionRepository extends JpaRepository<QboConnection, Long> {
     Optional<QboConnection> findByUserId(Long userId);
+
+    void deleteByUserId(Long userId);
 }

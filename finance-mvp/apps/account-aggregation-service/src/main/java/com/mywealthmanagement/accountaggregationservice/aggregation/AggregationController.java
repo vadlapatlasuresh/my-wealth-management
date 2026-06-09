@@ -5,6 +5,7 @@ import com.mywealthmanagement.accountaggregationservice.account.dto.AccountDto;
 import com.mywealthmanagement.accountaggregationservice.plaid.PlaidService;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
+import com.mywealthmanagement.accountaggregationservice.config.JwtService;
 import com.mywealthmanagement.accountaggregationservice.security.PlaidWebhookVerifier;
 import com.mywealthmanagement.accountaggregationservice.transaction.TransactionService;
 import com.mywealthmanagement.accountaggregationservice.transaction.dto.TransactionDto;
@@ -34,6 +35,22 @@ public class AggregationController {
     private final AccountService accountService;
     private final TransactionService transactionService;
     private final PlaidWebhookVerifier plaidWebhookVerifier;
+    private final JwtService jwtService;
+
+    /**
+     * Authorize a customer-care read: the caller must carry a CARE/ADMIN role in their JWT.
+     * Read-only support endpoints reuse this so an agent can view (not change) a member's data.
+     * The access itself is audited by the gateway (actor + path + status).
+     */
+    private void requireSupportRole(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+        }
+        java.util.List<String> roles = jwtService.extractRoles(authHeader.substring(7));
+        if (!roles.contains("CARE") && !roles.contains("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Customer-care access required");
+        }
+    }
 
     private Long getUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -74,8 +91,25 @@ public class AggregationController {
 
     @GetMapping("/transactions")
     public ResponseEntity<List<TransactionDto>> getTransactions() {
-        List<TransactionDto> transactions = transactionService.getTransactionsByUserId(getUserId());
+        Long userId = getUserId();
+        List<TransactionDto> transactions = transactionService.getTransactionsByUserId(userId);
+        // Lazy first-load: if nothing has synced yet (common right after linking, since
+        // Plaid's webhook can't reach localhost), pull on demand via /transactions/sync.
+        if (transactions.isEmpty()) {
+            try {
+                if (plaidService.syncTransactions(userId) > 0) {
+                    transactions = transactionService.getTransactionsByUserId(userId);
+                }
+            } catch (Exception ignored) { /* best-effort; return what we have */ }
+        }
         return ResponseEntity.ok(transactions);
+    }
+
+    /** Explicit pull-based sync (e.g. a "Refresh" button). Returns how many changed. */
+    @PostMapping("/transactions/sync")
+    public ResponseEntity<Map<String, Integer>> syncTransactions() {
+        int changed = plaidService.syncTransactions(getUserId());
+        return ResponseEntity.ok(Map.of("synced", changed));
     }
 
     /** Update a transaction's spending category (used by the Cash page's inline editor). */
@@ -85,6 +119,23 @@ public class AggregationController {
             @RequestBody Map<String, String> body) {
         String category = body == null ? null : body.get("category");
         return ResponseEntity.ok(transactionService.updateCategory(getUserId(), id, category));
+    }
+
+    // ---- Customer-care (CARE/ADMIN) read-only views of a member's data ----
+    @GetMapping("/support/{userId}/accounts")
+    public ResponseEntity<List<AccountDto>> supportAccounts(
+            @PathVariable Long userId,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        requireSupportRole(auth);
+        return ResponseEntity.ok(accountService.getAccountsByUserId(userId));
+    }
+
+    @GetMapping("/support/{userId}/transactions")
+    public ResponseEntity<List<TransactionDto>> supportTransactions(
+            @PathVariable Long userId,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        requireSupportRole(auth);
+        return ResponseEntity.ok(transactionService.getTransactionsByUserId(userId));
     }
 
     // Webhook endpoint for Plaid

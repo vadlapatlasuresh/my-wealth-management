@@ -18,6 +18,9 @@ import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.Products;
 import com.plaid.client.model.TransactionsGetRequest;
 import com.plaid.client.model.TransactionsGetResponse;
+import com.plaid.client.model.TransactionsSyncRequest;
+import com.plaid.client.model.TransactionsSyncResponse;
+import com.plaid.client.model.RemovedTransaction;
 import com.plaid.client.request.PlaidApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +36,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class PlaidService {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(PlaidService.class);
 
     private final PlaidApi plaidApi;
     private final PlaidItemRepository plaidItemRepository;
@@ -86,7 +91,15 @@ public class PlaidService {
         plaidItemRepository.save(plaidItem);
 
         fetchAccounts(request.getUserId(), plaidItem);
-        fetchTransactions(request.getUserId(), plaidItem);
+        // Transactions are frequently PRODUCT_NOT_READY right after linking — Plaid
+        // fires a TRANSACTIONS webhook when they're available, and the next sync/read
+        // picks them up. Don't fail the whole link if they're not ready yet.
+        try {
+            fetchTransactions(request.getUserId(), plaidItem);
+        } catch (Exception e) {
+            log.warn("Initial transactions fetch deferred for item {} (will sync on webhook/next read): {}",
+                    plaidItem.getPlaidItemId(), e.getMessage());
+        }
     }
 
     public List<Account> fetchAccounts(Long userId, PlaidItem plaidItem) throws IOException {
@@ -124,6 +137,61 @@ public class PlaidService {
                 .collect(Collectors.toList());
 
         return transactionRepository.saveAll(transactions);
+    }
+
+    /**
+     * Pull-based transaction sync via Plaid /transactions/sync (no webhook needed).
+     * Walks every linked item from its stored cursor, upserts added/modified, removes
+     * deleted, and persists the new cursor so subsequent syncs are incremental.
+     * Best-effort per item — one failing item never aborts the others. Returns the
+     * number of transactions added/updated.
+     */
+    public int syncTransactions(Long userId) {
+        int changed = 0;
+        for (PlaidItem item : plaidItemRepository.findByUserId(userId)) {
+            try {
+                String cursor = item.getTransactionCursor();
+                boolean hasMore = true;
+                while (hasMore) {
+                    TransactionsSyncRequest req = new TransactionsSyncRequest().accessToken(item.getAccessToken());
+                    if (cursor != null && !cursor.isBlank()) req.cursor(cursor);
+                    Response<TransactionsSyncResponse> resp = plaidApi.transactionsSync(req).execute();
+                    if (!resp.isSuccessful() || resp.body() == null) {
+                        log.warn("transactionsSync not ready for item {}: {}", item.getPlaidItemId(), errorBody(resp));
+                        break;
+                    }
+                    TransactionsSyncResponse body = resp.body();
+                    for (com.plaid.client.model.Transaction t : body.getAdded()) {
+                        if (saveSynced(userId, t)) changed++;
+                    }
+                    for (com.plaid.client.model.Transaction t : body.getModified()) {
+                        if (saveSynced(userId, t)) changed++;
+                    }
+                    for (RemovedTransaction r : body.getRemoved()) {
+                        transactionRepository.findByPlaidTransactionId(r.getTransactionId())
+                                .ifPresent(transactionRepository::delete);
+                    }
+                    cursor = body.getNextCursor();
+                    hasMore = Boolean.TRUE.equals(body.getHasMore());
+                }
+                item.setTransactionCursor(cursor);
+                plaidItemRepository.save(item);
+            } catch (Exception e) {
+                log.warn("transactionsSync failed for item {}: {}", item.getPlaidItemId(), e.getMessage());
+            }
+        }
+        return changed;
+    }
+
+    /** Upsert one synced transaction; skips it (logs) if its account isn't linked. */
+    private boolean saveSynced(Long userId, com.plaid.client.model.Transaction t) {
+        try {
+            transactionRepository.save(mapTransaction(userId, t));
+            return true;
+        } catch (Exception e) {
+            log.debug("skip txn {}: {}", t.getTransactionId(), e.getMessage());
+            return false;
+        }
     }
 
     private Account mapAccount(Long userId, PlaidItem plaidItem, AccountBase plaidAccount) {
@@ -165,15 +233,38 @@ public class PlaidService {
                 plaidTxn.getIsoCurrencyCode() != null ? plaidTxn.getIsoCurrencyCode() : "USD"
         );
         transaction.setDate(plaidTxn.getDate());
-        transaction.setCategory(resolveCategory(plaidTxn.getCategory()));
+        transaction.setCategory(resolveCategory(plaidTxn));
         return transaction;
     }
 
-    private static String resolveCategory(List<String> categories) {
-        if (categories == null || categories.isEmpty()) {
-            return "Uncategorized";
+    /**
+     * Category for a transaction. Prefers Plaid's modern personal_finance_category
+     * (primary, e.g. FOOD_AND_DRINK -> "Food & Drink"); falls back to the legacy
+     * category list; else "Uncategorized". The legacy `category` field is empty on
+     * newer Plaid API versions, which is why everything used to be uncategorized.
+     */
+    private static String resolveCategory(com.plaid.client.model.Transaction txn) {
+        var pfc = txn.getPersonalFinanceCategory();
+        if (pfc != null && pfc.getPrimary() != null && !pfc.getPrimary().isBlank()) {
+            return prettifyCategory(pfc.getPrimary());
         }
-        return categories.get(0);
+        List<String> legacy = txn.getCategory();
+        if (legacy != null && !legacy.isEmpty()) {
+            return legacy.get(0);
+        }
+        return "Uncategorized";
+    }
+
+    /** FOOD_AND_DRINK -> "Food & Drink", RENT_AND_UTILITIES -> "Rent & Utilities". */
+    private static String prettifyCategory(String raw) {
+        String s = raw.replace("_AND_", " & ").replace('_', ' ').toLowerCase();
+        StringBuilder out = new StringBuilder();
+        for (String w : s.split(" ")) {
+            if (w.isEmpty()) continue;
+            if (w.equals("&")) { out.append("& "); continue; }
+            out.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(' ');
+        }
+        return out.toString().trim();
     }
 
     private static BigDecimal toBigDecimal(Double value) {

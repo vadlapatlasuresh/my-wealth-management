@@ -11,6 +11,9 @@ tokens, fetches and **persists** accounts & transactions. **Stores the Plaid acc
 | POST | `/api/v1/aggregation/public-token/exchange` | exchange public→access token, sync data |
 | GET | `/api/v1/aggregation/accounts` | list persisted accounts |
 | GET | `/api/v1/aggregation/transactions` | list persisted transactions |
+| PATCH | `/api/v1/aggregation/transactions/{id}/category` | re-categorize a transaction (ownership-scoped; used by Cash screen inline edit) |
+| GET | `/api/v1/aggregation/support/{userId}/accounts` | Customer Care read-only view of a member's accounts (CARE/ADMIN, audited) |
+| GET | `/api/v1/aggregation/support/{userId}/transactions` | Customer Care read-only view of a member's transactions (CARE/ADMIN, audited) |
 | POST | `/api/v1/aggregation/webhook` | Plaid webhook (⚠️ **no signature verify**, payload discarded) |
 
 ## Data model

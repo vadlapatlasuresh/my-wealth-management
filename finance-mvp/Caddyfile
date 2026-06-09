@@ -43,6 +43,12 @@
     }
 }
 
+# Canonical redirect: the bare domain + www -> the single app origin (app.terravest.app).
+# Caddy auto-issues certs for these too. (Keeps one canonical URL; good for SEO/cookies.)
+terravest.app, www.terravest.app {
+    redir https://app.terravest.app{uri} permanent
+}
+
 # ------------------------------------------------------------
 # Plain-HTTP fallback for local prod-like runs without a domain.
 # Uncomment and comment the block above. Then hit http://localhost.

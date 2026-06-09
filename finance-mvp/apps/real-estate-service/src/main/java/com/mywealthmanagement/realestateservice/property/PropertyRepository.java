@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface PropertyRepository extends JpaRepository<Property, Long> {
     List<Property> findByUserId(Long userId);
+
+    void deleteByUserId(Long userId);
 }

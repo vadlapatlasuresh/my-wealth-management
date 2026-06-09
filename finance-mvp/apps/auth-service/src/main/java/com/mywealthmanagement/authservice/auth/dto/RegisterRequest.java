@@ -29,10 +29,23 @@ public class RegisterRequest {
     private String accountType;   // INDIVIDUAL | BUSINESS
     private String businessName;  // required for BUSINESS accounts (validated client-side)
 
-    // Sensitive identifiers — only the last 4 digits are persisted server-side.
+    // Sensitive identifiers — stored encrypted (AES-256-GCM); only last-4 ever shown.
     private String ssn;
     private String ein;
 
-    // Whether the phone was verified via SMS OTP before submitting.
+    // KYC / contact details.
+    private String dateOfBirth;   // ISO yyyy-MM-dd
+    private String addressLine1;
+    private String addressLine2;
+    private String city;
+    private String state;
+    private String postalCode;
+    private String country;
+
+    // Preferred MFA channel for future logins: EMAIL | SMS.
+    private String mfaChannel;
+
+    // Whether phone/email were verified via OTP before submitting.
     private Boolean phoneVerified;
+    private Boolean emailVerified;
 }

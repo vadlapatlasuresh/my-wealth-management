@@ -19,6 +19,13 @@ JAVA="${JAVA:-/opt/homebrew/opt/openjdk@17/bin/java}"
 [ -x "$JAVA" ] || JAVA="java"
 PGHOST="localhost:5432"; PGUSER="wealth"; PGPASS="wealth"
 
+# Load local provider secrets (gitignored), e.g. PLAID_CLIENT_ID/PLAID_SECRET,
+# so services pick them up instead of falling back to mock providers.
+if [ -f "$ROOT/.env.local" ]; then
+  set -a; . "$ROOT/.env.local"; set +a
+  echo "loaded .env.local (PLAID_ENV=${PLAID_ENV:-unset})"
+fi
+
 pgargs() { # $1 = db name
   # Cap the Hikari pool: 10 services * 5 = 50 connections, well under Postgres'
   # default max_connections (100). Default (10 each) would exhaust the server.

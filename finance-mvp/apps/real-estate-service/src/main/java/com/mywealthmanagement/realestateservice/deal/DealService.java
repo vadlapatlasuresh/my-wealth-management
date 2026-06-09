@@ -45,7 +45,12 @@ public class DealService {
 
     /** The owner's own deals, each annotated with how many investors are interested. */
     public List<DealDto> getDeals() {
-        return dealRepository.findByUserIdOrderByCreatedAtDesc(getUserId()).stream()
+        return getDeals(getUserId());
+    }
+
+    /** Same, for an explicit user — used by the customer-care read-only view. */
+    public List<DealDto> getDeals(Long userId) {
+        return dealRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(deal -> {
                     DealDto dto = toDto(deal);
                     dto.setInterestCount((int) interestRepository.countByDealId(deal.getId()));
