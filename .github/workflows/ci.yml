@@ -201,5 +201,5 @@ jobs:
           echo "==> Deploying TAG='${TAG:-latest}' to $DEPLOY_USER@$DEPLOY_HOST ($REPO)"
           ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" \
             "set -euo pipefail; \
-             cd $REPO && git pull --ff-only && \
+             cd $REPO && git fetch origin main && git reset --hard origin/main && \
              cd finance-mvp && TAG='${TAG:-latest}' ./deploy/deploy.sh"
