@@ -1,5 +1,15 @@
 # Backend Architecture Design Plan: Java Microservices for Wealth Management
 
+> **📐 This is the original design plan (aspirational), not the as-built reference.** Some elements
+> here (e.g. a message-queue bus, a separate User Management service) were not built as drawn. For the
+> **current, code-accurate architecture** see:
+> [docs/architecture/system-architecture.md](docs/architecture/system-architecture.md),
+> [docs/architecture/api-reference.md](docs/architecture/api-reference.md), and the leveled
+> [docs/workflows/](docs/workflows/README.md) set. As built, there are **11 services** behind the
+> gateway (auth, account-aggregation, financial-core, real-estate, business-financials, ai-insights,
+> payment, notification, platform-config, audit) — with User Management folded into auth-service and
+> inter-service calls done synchronously (Feign via the gateway), not via a message queue.
+
 ## 1. Introduction & Goals
 
 This document outlines a detailed backend architecture design for the "My Wealth Management" application. The architecture is based on a Java-driven microservices approach, emphasizing modularity, scalability, security, and ease of maintenance and reuse. The primary goal is to create a robust and extensible backend capable of integrating with various external financial services and providing secure, real-time financial insights.

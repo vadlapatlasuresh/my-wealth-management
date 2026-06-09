@@ -33,7 +33,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         String username = null; // This will be the userId
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtService.extractUsername(token);
+            try {
+                username = jwtService.extractUsername(token);
+            } catch (Exception ignored) {
+                // malformed/expired token -> leave unauthenticated (401 via entry point), never 500
+            }
         }
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {

@@ -50,6 +50,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- Micrometer Prometheus registry: exposes /actuator/prometheus (system-wide
+             request latency/throughput/error metrics — the gateway sees all traffic). -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
 
         <!-- JWT: decode the user (subject) from the bearer token for audit logging -->
         <dependency>

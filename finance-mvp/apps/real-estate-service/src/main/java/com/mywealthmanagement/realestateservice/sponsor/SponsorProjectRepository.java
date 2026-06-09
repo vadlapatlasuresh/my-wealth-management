@@ -7,4 +7,6 @@ import java.util.List;
 public interface SponsorProjectRepository extends JpaRepository<SponsorProject, Long> {
 
     List<SponsorProject> findByUserIdOrderByYearDescCreatedAtDesc(Long userId);
+
+    void deleteByUserId(Long userId);
 }

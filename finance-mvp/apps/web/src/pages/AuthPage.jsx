@@ -59,7 +59,7 @@ function maskPhone(v) {
   return "";
 }
 
-export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, onSubmit }) {
+export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, setError, onSubmit, onAuthenticated }) {
   const isLogin = authMode === "login";
 
   // Local UI-only state (not part of the submitted form).
@@ -67,13 +67,30 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
   const [showConfirm, setShowConfirm] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState("");
 
-  // SMS verification flow state.
+  // SMS verification flow state (signup phone).
   const [otpSending, setOtpSending] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [otpError, setOtpError] = useState("");
   const [devCode, setDevCode] = useState(""); // dev-only OTP hint
+
+  // Email verification flow state (signup email — mirrors the SMS block).
+  const [emailSending, setEmailSending] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailCode, setEmailCode] = useState("");
+  const [emailVerifying, setEmailVerifying] = useState(false);
+  const [emailOtpError, setEmailOtpError] = useState("");
+  const [emailDevCode, setEmailDevCode] = useState("");
+
+  // ── Login MFA second-step state ──────────────────────────────────────────
+  // When the backend answers a login with { mfaRequired: true, ... } we switch
+  // the login view into a code-entry step instead of the email/password form.
+  const [mfaChallenge, setMfaChallenge] = useState(null); // { email, channel, destination }
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaDevCode, setMfaDevCode] = useState("");
+  const [mfaError, setMfaError] = useState("");
+  const [mfaBusy, setMfaBusy] = useState(false); // login/verify/resend in flight
 
   const setField = (k, v) => setAuthForm((p) => ({ ...p, [k]: v }));
 
@@ -136,6 +153,130 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     }
   };
 
+  const emailVerified = !!authForm.emailVerified;
+  const mfaChannel = authForm.mfaChannel || "EMAIL";
+
+  // When the email changes, any prior verification is no longer valid.
+  const handleEmailChange = (raw) => {
+    setField("email", raw);
+    if (emailVerified) setField("emailVerified", false);
+    setEmailSent(false);
+    setEmailCode("");
+    setEmailOtpError("");
+    setEmailDevCode("");
+  };
+
+  const handleSendEmailCode = async () => {
+    setEmailOtpError("");
+    setEmailSending(true);
+    try {
+      const res = await api.sendEmailCode((authForm.email || "").trim());
+      setEmailSent(true);
+      if (res && res.devCode) setEmailDevCode(String(res.devCode));
+    } catch (err) {
+      setEmailOtpError(err?.message || "Could not send code. Try again.");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  const handleVerifyEmailCode = async () => {
+    setEmailOtpError("");
+    setEmailVerifying(true);
+    try {
+      const res = await api.verifyEmailCode((authForm.email || "").trim(), emailCode.trim());
+      if (res && res.verified) {
+        setField("emailVerified", true);
+      } else {
+        setEmailOtpError("That code didn't match. Please try again.");
+      }
+    } catch (err) {
+      setEmailOtpError(err?.message || "Verification failed. Try again.");
+    } finally {
+      setEmailVerifying(false);
+    }
+  };
+
+  // ── Login + MFA flow ─────────────────────────────────────────────────────
+  // The form's submit goes here for LOGIN (registration is still delegated to the
+  // parent's onSubmit). We call api.login ourselves so we can branch on MFA.
+  const runLogin = async () => {
+    setMfaError("");
+    if (setError) setError("");
+    setMfaBusy(true);
+    try {
+      const res = await api.login({ email: (authForm.email || "").trim(), password: authForm.password });
+      if (res && res.token) {
+        // No MFA — straight to the shared success path.
+        await onAuthenticated(res);
+      } else if (res && res.mfaRequired) {
+        // Switch the view into the code-entry step.
+        setMfaChallenge({ email: res.email || authForm.email, channel: res.channel, destination: res.destination });
+        setMfaCode("");
+        setMfaError("");
+        setMfaDevCode(res.devCode ? String(res.devCode) : "");
+      } else {
+        throw new Error((res && res.message) || "Authentication failed");
+      }
+    } catch (err) {
+      if (setError) setError(err.message);
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  const handleVerifyMfa = async () => {
+    setMfaError("");
+    setMfaBusy(true);
+    try {
+      const v = await api.verifyMfa(mfaChallenge.email, mfaCode.trim());
+      await onAuthenticated(v);
+    } catch (err) {
+      setMfaError(err?.message || "That code is invalid or expired. Try again.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  // Resend re-issues the challenge by calling login again.
+  const handleResendMfa = async () => {
+    setMfaError("");
+    setMfaBusy(true);
+    try {
+      const res = await api.login({ email: (authForm.email || "").trim(), password: authForm.password });
+      if (res && res.token) {
+        // Edge case: MFA got disabled between attempts.
+        await onAuthenticated(res);
+      } else if (res && res.mfaRequired) {
+        setMfaChallenge({ email: res.email || authForm.email, channel: res.channel, destination: res.destination });
+        setMfaDevCode(res.devCode ? String(res.devCode) : "");
+        setMfaCode("");
+      }
+    } catch (err) {
+      setMfaError(err?.message || "Could not resend the code. Try again.");
+    } finally {
+      setMfaBusy(false);
+    }
+  };
+
+  // Cancel the MFA step and return to the email/password form.
+  const cancelMfa = () => {
+    setMfaChallenge(null);
+    setMfaCode("");
+    setMfaError("");
+    setMfaDevCode("");
+  };
+
+  // Form submit dispatcher: login is handled here; register goes to the parent.
+  const handleFormSubmit = (event) => {
+    if (isLogin) {
+      event.preventDefault();
+      runLogin();
+    } else {
+      onSubmit(event);
+    }
+  };
+
   // ── Submit gating ──────────────────────────────────────────────────────────
   // Login only needs a valid email + a password.
   const loginValid = isEmail(authForm.email) && !!authForm.password;
@@ -149,7 +290,16 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     confirmPwd === authForm.password &&
     !!authForm.agreedToTerms &&
     phoneVerified && // phone verification is REQUIRED in this flow
-    (isBusiness ? !!(authForm.businessName || "").trim() : true);
+    emailVerified && // email verification is REQUIRED in this flow
+    !!(authForm.dateOfBirth || "").trim() &&
+    !!(authForm.addressLine1 || "").trim() &&
+    !!(authForm.city || "").trim() &&
+    !!(authForm.state || "").trim() &&
+    !!(authForm.postalCode || "").trim() &&
+    !!(authForm.country || "").trim() &&
+    (isBusiness
+      ? !!(authForm.businessName || "").trim() && !!(authForm.ein || "").trim()
+      : !!(authForm.ssn || "").trim());
 
   const canSubmit = isLogin ? loginValid : signupValid;
 
@@ -209,6 +359,79 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
       {/* Right form panel */}
       <div className="auth-form-panel">
         <div className="auth-card">
+          {/* ───────────────────────── LOGIN MFA CODE-ENTRY STEP ───────────────────────── */}
+          {isLogin && mfaChallenge ? (
+            <>
+              <div className="auth-card-title">Verify it's you</div>
+              <div className="page-subtitle" style={{ marginBottom: 22 }}>
+                Enter the 6-digit code we sent to{" "}
+                <strong>{mfaChallenge.destination || "your registered contact"}</strong>
+                {mfaChallenge.channel ? ` via ${String(mfaChallenge.channel).toLowerCase()}` : ""}.
+              </div>
+
+              {error && (
+                <div className="badge badge-red" style={{ display: "flex", width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", marginBottom: 16 }}>
+                  <i className="ti ti-alert-circle"></i> {error}
+                </div>
+              )}
+
+              <div className="form-group">
+                <label className="form-label">Verification code</label>
+                <input
+                  className="form-input"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(digits(e.target.value).slice(0, 6))}
+                  style={{ letterSpacing: "0.2em" }}
+                />
+                {mfaDevCode && (
+                  <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 6 }}>
+                    Dev code: {mfaDevCode}
+                  </div>
+                )}
+                {mfaError && (
+                  <div style={{ fontSize: 11.5, color: "var(--tv-negative)", marginTop: 6 }}>{mfaError}</div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={handleVerifyMfa}
+                disabled={mfaCode.length < 4 || mfaBusy}
+                style={{ width: "100%", justifyContent: "center", marginTop: 4, opacity: mfaCode.length < 4 || mfaBusy ? 0.55 : 1 }}
+              >
+                <i className="ti ti-shield-check"></i>
+                {mfaBusy ? "Verifying…" : "Verify & sign in"}
+              </button>
+
+              <div style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: "var(--tv-text-muted)" }}>
+                Didn't get a code?{" "}
+                <button
+                  type="button"
+                  onClick={handleResendMfa}
+                  disabled={mfaBusy}
+                  style={{ background: "none", color: "var(--tv-forest-light)", fontWeight: 600, fontSize: 13, cursor: mfaBusy ? "default" : "pointer" }}
+                >
+                  Resend
+                </button>
+              </div>
+              <div style={{ textAlign: "center", marginTop: 10, fontSize: 12.5 }}>
+                <button
+                  type="button"
+                  onClick={cancelMfa}
+                  style={{ background: "none", color: "var(--tv-text-muted)", fontSize: 12.5, cursor: "pointer" }}
+                >
+                  <i className="ti ti-arrow-left"></i> Back to sign in
+                </button>
+              </div>
+            </>
+          ) : (
+          <>
           <div className="auth-card-title">{isLogin ? "Welcome back" : "Create your account"}</div>
           <div className="page-subtitle" style={{ marginBottom: 22 }}>
             {isLogin ? "Sign in to continue to your dashboard." : "Start tracking your wealth in minutes."}
@@ -226,7 +449,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
             </div>
           )}
 
-          <form onSubmit={onSubmit}>
+          <form onSubmit={handleFormSubmit}>
             {/* ───────────────────────── SIGNUP-ONLY FIELDS ───────────────────────── */}
             {!isLogin && (
               <>
@@ -301,20 +524,99 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
 
             {/* ───────────────────────── EMAIL (both modes) ───────────────────────── */}
             <div className="form-group">
-              <label className="form-label">Email</label>
-              <input
-                className="form-input"
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                value={authForm.email}
-                onChange={(e) => setField("email", e.target.value)}
-                required
-              />
-              {!isLogin && authForm.email && !isEmail(authForm.email) && (
-                <div style={{ fontSize: 11.5, color: "var(--tv-negative)", marginTop: 6 }}>
-                  Enter a valid email address.
-                </div>
+              <label className="form-label">
+                Email
+                {!isLogin && emailVerified && (
+                  <span className="badge badge-green" style={{ marginLeft: 8 }}>
+                    <i className="ti ti-shield-check"></i> Email verified
+                  </span>
+                )}
+              </label>
+              {isLogin ? (
+                <input
+                  className="form-input"
+                  type="email"
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  value={authForm.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  required
+                />
+              ) : (
+                <>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <input
+                      className="form-input"
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      value={authForm.email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      disabled={emailVerified}
+                      required
+                      style={{ flex: 1 }}
+                    />
+                    {!emailVerified && (
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={handleSendEmailCode}
+                        disabled={!isEmail(authForm.email) || emailSending}
+                        style={{ whiteSpace: "nowrap" }}
+                      >
+                        <i className="ti ti-send"></i>
+                        {emailSending ? "Sending…" : emailSent ? "Resend" : "Verify email"}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Email OTP entry — mirrors the SMS verification block. */}
+                  {emailSent && !emailVerified && (
+                    <div style={{ marginTop: 10 }}>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          className="form-input"
+                          type="text"
+                          inputMode="numeric"
+                          autoComplete="one-time-code"
+                          placeholder="Enter 6-digit code"
+                          value={emailCode}
+                          onChange={(e) => setEmailCode(digits(e.target.value).slice(0, 6))}
+                          style={{ flex: 1, letterSpacing: "0.2em" }}
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary btn-sm"
+                          onClick={handleVerifyEmailCode}
+                          disabled={emailCode.length < 4 || emailVerifying}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
+                          <i className="ti ti-shield-check"></i>
+                          {emailVerifying ? "Verifying…" : "Verify"}
+                        </button>
+                      </div>
+                      {emailDevCode && (
+                        <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 6 }}>
+                          Dev code: {emailDevCode}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {emailOtpError && (
+                    <div style={{ fontSize: 11.5, color: "var(--tv-negative)", marginTop: 6 }}>{emailOtpError}</div>
+                  )}
+                  {authForm.email && !isEmail(authForm.email) && (
+                    <div style={{ fontSize: 11.5, color: "var(--tv-negative)", marginTop: 6 }}>
+                      Enter a valid email address.
+                    </div>
+                  )}
+                  {!emailVerified && !emailSent && isEmail(authForm.email) && (
+                    <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 6 }}>
+                      We'll email a one-time code to confirm your address. Verification is required.
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -523,6 +825,143 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
               </>
             )}
 
+            {/* ───────────────────────── DATE OF BIRTH (signup) ───────────────────────── */}
+            {!isLogin && (
+              <div className="form-group">
+                <label className="form-label">Date of birth</label>
+                <input
+                  className="form-input"
+                  type="date"
+                  autoComplete="bday"
+                  value={authForm.dateOfBirth || ""}
+                  onChange={(e) => setField("dateOfBirth", e.target.value)}
+                  required
+                />
+              </div>
+            )}
+
+            {/* ───────────────────────── ADDRESS (signup) ───────────────────────── */}
+            {!isLogin && (
+              <>
+                <div className="form-group">
+                  <label className="form-label">Address line 1</label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    autoComplete="address-line1"
+                    placeholder="123 Main St"
+                    value={authForm.addressLine1 || ""}
+                    onChange={(e) => setField("addressLine1", e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Address line 2 <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(optional)</span></label>
+                  <input
+                    className="form-input"
+                    type="text"
+                    autoComplete="address-line2"
+                    placeholder="Apt, suite, etc."
+                    value={authForm.addressLine2 || ""}
+                    onChange={(e) => setField("addressLine2", e.target.value)}
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">City</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      autoComplete="address-level2"
+                      placeholder="San Francisco"
+                      value={authForm.city || ""}
+                      onChange={(e) => setField("city", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">State / Region</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      autoComplete="address-level1"
+                      placeholder="CA"
+                      value={authForm.state || ""}
+                      onChange={(e) => setField("state", e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Postal code</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      autoComplete="postal-code"
+                      placeholder="94105"
+                      value={authForm.postalCode || ""}
+                      onChange={(e) => setField("postalCode", e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Country</label>
+                    <input
+                      className="form-input"
+                      type="text"
+                      autoComplete="country-name"
+                      placeholder="United States"
+                      value={authForm.country || ""}
+                      onChange={(e) => setField("country", e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* ───────────────────────── PREFERRED MFA CHANNEL (signup) ───────────────────────── */}
+            {!isLogin && (
+              <div className="form-group">
+                <label className="form-label">Preferred sign-in verification</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  {[
+                    { key: "EMAIL", icon: "ti ti-mail", title: "Email", sub: "Code sent to your inbox" },
+                    { key: "SMS", icon: "ti ti-device-mobile", title: "SMS", sub: "Code texted to your phone" },
+                  ].map((opt) => {
+                    const active = mfaChannel === opt.key;
+                    return (
+                      <button
+                        type="button"
+                        key={opt.key}
+                        onClick={() => setField("mfaChannel", opt.key)}
+                        className="card"
+                        style={{
+                          textAlign: "left",
+                          padding: "12px 14px",
+                          cursor: "pointer",
+                          border: `1.5px solid ${active ? "var(--tv-forest)" : "var(--tv-border)"}`,
+                          background: active ? "var(--tv-sage-pale)" : "var(--tv-white)",
+                          display: "flex",
+                          gap: 10,
+                          alignItems: "center",
+                        }}
+                      >
+                        <div className="item-icon" style={{ color: active ? "var(--tv-forest)" : "var(--tv-text-muted)" }}>
+                          <i className={opt.icon}></i>
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--tv-text-primary)" }}>{opt.title}</div>
+                          <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)" }}>{opt.sub}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* ───────────────────────── TERMS AGREEMENT (signup) ───────────────────────── */}
             {!isLogin && (
               <div className="form-group">
@@ -546,11 +985,11 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!canSubmit}
-              style={{ width: "100%", justifyContent: "center", marginTop: 4, opacity: canSubmit ? 1 : 0.55, cursor: canSubmit ? "pointer" : "not-allowed" }}
+              disabled={!canSubmit || (isLogin && mfaBusy)}
+              style={{ width: "100%", justifyContent: "center", marginTop: 4, opacity: !canSubmit || (isLogin && mfaBusy) ? 0.55 : 1, cursor: !canSubmit || (isLogin && mfaBusy) ? "not-allowed" : "pointer" }}
             >
               <i className={isLogin ? "ti ti-login" : "ti ti-user-plus"}></i>
-              {isLogin ? "Sign in" : "Create account"}
+              {isLogin ? (mfaBusy ? "Signing in…" : "Sign in") : "Create account"}
             </button>
           </form>
 
@@ -568,6 +1007,8 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
           <div style={{ textAlign: "center", marginTop: 22, fontSize: 11.5, color: "var(--tv-text-muted)" }}>
             <i className="ti ti-shield-lock"></i> Protected by bank-grade encryption · Powered by Plaid
           </div>
+          </>
+          )}
         </div>
       </div>
     </div>

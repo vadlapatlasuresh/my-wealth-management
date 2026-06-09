@@ -5,10 +5,13 @@ import com.mywealthmanagement.realestateservice.deal.dto.DealDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
 import com.mywealthmanagement.realestateservice.deal.dto.MyInterestDto;
+import com.mywealthmanagement.realestateservice.config.JwtService;
 import com.mywealthmanagement.realestateservice.sponsor.dto.SponsorProjectDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -23,10 +26,30 @@ import java.util.Map;
 public class DealController {
 
     private final DealService dealService;
+    private final JwtService jwtService;
 
     @GetMapping
     public ResponseEntity<List<DealDto>> getDeals() {
         return ResponseEntity.ok(dealService.getDeals());
+    }
+
+    /** Customer-care (CARE/ADMIN) read-only view of a member's deals. Audited by the gateway. */
+    @GetMapping("/support/{userId}")
+    public ResponseEntity<List<DealDto>> supportDeals(
+            @PathVariable Long userId,
+            @RequestHeader(value = "Authorization", required = false) String auth) {
+        requireSupportRole(auth);
+        return ResponseEntity.ok(dealService.getDeals(userId));
+    }
+
+    private void requireSupportRole(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
+        }
+        List<String> roles = jwtService.extractRoles(authHeader.substring(7));
+        if (!roles.contains("CARE") && !roles.contains("ADMIN")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Customer-care access required");
+        }
     }
 
     /** Public marketplace of OPEN deals, optionally filtered/sorted/paged. Literal paths before /{id}. */

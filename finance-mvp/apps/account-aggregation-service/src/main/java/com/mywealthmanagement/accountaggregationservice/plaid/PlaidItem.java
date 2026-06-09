@@ -32,6 +32,9 @@ public class PlaidItem {
     @Column(name = "institution_id")
     private String institutionId;
 
+    @Column(name = "transaction_cursor", columnDefinition = "TEXT")
+    private String transactionCursor; // Plaid /transactions/sync position
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface PlaidItemRepository extends JpaRepository<PlaidItem, Long> {
     Optional<PlaidItem> findByUserIdAndPlaidItemId(Long userId, String plaidItemId);
     List<PlaidItem> findByUserId(Long userId);
+
+    void deleteByUserId(Long userId);
 }

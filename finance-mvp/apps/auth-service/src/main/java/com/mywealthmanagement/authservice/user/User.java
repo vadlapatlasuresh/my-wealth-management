@@ -1,11 +1,13 @@
 package com.mywealthmanagement.authservice.user;
 
+import com.mywealthmanagement.authservice.security.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
 
@@ -40,15 +42,52 @@ public class User {
     @Column(name = "business_name")
     private String businessName;
 
-    // Only the last 4 digits are ever stored — never the full SSN/EIN.
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
+
+    // --- Address ---
+    @Column(name = "address_line1")
+    private String addressLine1;
+
+    @Column(name = "address_line2")
+    private String addressLine2;
+
+    @Column(name = "city")
+    private String city;
+
+    @Column(name = "state")
+    private String state;
+
+    @Column(name = "postal_code")
+    private String postalCode;
+
+    @Column(name = "country")
+    private String country;
+
+    // Full SSN/EIN encrypted at rest (AES-256-GCM); UI only ever shows the last 4.
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "ssn_encrypted")
+    private String ssnEncrypted;
+
     @Column(name = "ssn_last4", length = 4)
     private String ssnLast4;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "ein_encrypted")
+    private String einEncrypted;
 
     @Column(name = "ein_last4", length = 4)
     private String einLast4;
 
     @Column(name = "phone_verified")
     private Boolean phoneVerified = false;
+
+    @Column(name = "email_verified")
+    private Boolean emailVerified = false;
+
+    // Preferred MFA delivery channel: EMAIL | SMS
+    @Column(name = "mfa_channel", length = 10)
+    private String mfaChannel = "EMAIL";
 
     @Column(name = "identity_verified")
     private Boolean identityVerified = false;

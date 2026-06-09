@@ -1,10 +1,12 @@
 package com.mywealthmanagement.authservice.auth;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -19,6 +21,10 @@ import java.util.Map;
 public class SmsController {
 
     private final OtpService otpService;
+    private final NotificationClient notificationClient;
+
+    @Value("${otp.expose-dev-code:true}")
+    private boolean exposeDevCode;
 
     @PostMapping("/send")
     public ResponseEntity<Map<String, Object>> send(@RequestBody Map<String, String> body) {
@@ -28,12 +34,12 @@ public class SmsController {
                     .body(Map.of("sent", false, "message", "Enter a valid phone number"));
         }
         String code = otpService.generate(phone);
-        // NOTE: devCode is returned only because this is a mock provider. Remove in prod.
-        return ResponseEntity.ok(Map.of(
-                "sent", true,
-                "message", "Verification code sent",
-                "devCode", code
-        ));
+        notificationClient.sendOtp("SMS", phone, code, "phone-verify");
+        Map<String, Object> resp = new HashMap<>();
+        resp.put("sent", true);
+        resp.put("message", "Verification code sent");
+        if (exposeDevCode) resp.put("devCode", code); // dev only; false in prod
+        return ResponseEntity.ok(resp);
     }
 
     @PostMapping("/verify")

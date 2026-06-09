@@ -35,16 +35,39 @@ public class SupportController {
     private final UserRepository userRepository;
     private final AuditClient auditClient;
 
-    /** Search users by email or name (blank query = most recent users). */
+    /**
+     * Help-desk customer search. Supports either:
+     *  - a single free-text {@code query} (matches email OR name), or
+     *  - structured multi-field {@code first}/{@code last}/{@code email}/{@code phone} (AND-ed).
+     * Blank everything = most recent users. Phone is matched on digits only.
+     */
     @GetMapping("/users")
     public Page<SupportUserDto> searchUsers(@RequestParam(required = false) String query,
+                                            @RequestParam(required = false) String first,
+                                            @RequestParam(required = false) String last,
+                                            @RequestParam(required = false) String email,
+                                            @RequestParam(required = false) String phone,
                                             @RequestParam(defaultValue = "0") int page,
                                             @RequestParam(defaultValue = "25") int size) {
         PageRequest pageable = PageRequest.of(page, clampSize(size), Sort.by(Sort.Direction.DESC, "createdAt"));
-        Page<User> users = StringUtils.hasText(query)
-                ? userRepository.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(query, query, pageable)
-                : userRepository.findAll(pageable);
+        boolean structured = StringUtils.hasText(first) || StringUtils.hasText(last)
+                || StringUtils.hasText(email) || StringUtils.hasText(phone);
+        Page<User> users;
+        if (structured) {
+            // Empty string (not null) for absent fields — see searchAdvanced javadoc.
+            String phoneDigits = StringUtils.hasText(phone) ? phone.replaceAll("\\D", "") : "";
+            users = userRepository.searchAdvanced(
+                    blankToEmpty(first), blankToEmpty(last), blankToEmpty(email), phoneDigits, pageable);
+        } else if (StringUtils.hasText(query)) {
+            users = userRepository.findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(query, query, pageable);
+        } else {
+            users = userRepository.findAll(pageable);
+        }
         return users.map(this::toSummary);
+    }
+
+    private static String blankToEmpty(String s) {
+        return StringUtils.hasText(s) ? s.trim() : "";
     }
 
     /** Full 360 view: profile + recent activity + issues (failed/denied actions) from audit. */

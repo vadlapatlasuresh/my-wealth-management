@@ -937,6 +937,12 @@ a { text-decoration: none; color: inherit; }
       <li class="nav-item" data-page="invest" onclick="navigate('invest',this)">
         <i class="ti ti-chart-line"></i> Investments
       </li>
+      <li class="nav-item" data-page="calculators" onclick="navigate('calculators',this)">
+        <i class="ti ti-calculator"></i> Calculators
+      </li>
+      <li class="nav-item" data-page="goals" onclick="navigate('goals',this)">
+        <i class="ti ti-target"></i> Goals
+      </li>
 
       <div class="sidebar-section" style="margin-top:16px;">
         <div class="sidebar-section-label">Real Estate</div>
@@ -974,6 +980,21 @@ a { text-decoration: none; color: inherit; }
       </li>
       <li class="nav-item" data-page="settings" onclick="navigate('settings',this)">
         <i class="ti ti-settings"></i> Settings
+      </li>
+      <li class="nav-item" data-page="profile" onclick="navigate('profile',this)">
+        <i class="ti ti-user-circle"></i> Profile
+      </li>
+      <li class="nav-item" data-page="auth" onclick="navigate('auth',this)">
+        <i class="ti ti-shield-lock"></i> Auth / KYC
+      </li>
+
+      <!-- Staff: customer care + admin analytics + role management now live in the dedicated
+           Ops Portal (separate shell / URL). See assets/terravest-ops-portal.html. -->
+      <div class="sidebar-section" style="margin-top:16px;">
+        <div class="sidebar-section-label">Staff</div>
+      </div>
+      <li class="nav-item" data-page="ops" onclick="window.open('terravest-ops-portal.html','_blank')">
+        <i class="ti ti-headset"></i> Ops Portal
       </li>
     </ul>
 
@@ -1071,6 +1092,13 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Guided-tour banner -->
+        <div class="card" style="margin-bottom:16px;background:var(--tv-sage-pale);border:1px solid var(--tv-sage-light);display:flex;align-items:center;gap:12px;">
+          <i class="ti ti-compass" style="color:var(--tv-forest);font-size:22px;"></i>
+          <div style="flex:1;font-size:13.5px;">New to TerraVest? Take the guided tour.</div>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-help-circle"></i> How to use</button>
+        </div>
+
         <!-- KPI Row — cards are clickable and navigate to their detail screen -->
         <div class="kpi-grid">
           <div class="kpi-card kpi-clickable" title="View accounts">
@@ -1111,6 +1139,13 @@ a { text-decoration: none; color: inherit; }
           <div class="card col-span-2">
             <div class="section-header">
               <div class="section-title">Net worth over time</div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+                <!-- Chart-type segmented toggle (connected buttons) -->
+                <div style="display:inline-flex;border:1px solid var(--tv-border);border-radius:var(--radius-sm);overflow:hidden;">
+                  <button class="btn-sm" style="padding:4px 12px;background:var(--tv-forest);color:#fff;border-radius:0;font-weight:500;">Area</button>
+                  <button class="btn-sm" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Line</button>
+                  <button class="btn-sm" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Bars</button>
+                </div>
               <div style="display:flex;gap:6px;flex-wrap:wrap;">
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1H</button>
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1D</button>
@@ -1121,7 +1156,15 @@ a { text-decoration: none; color: inherit; }
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">All</button>
                 <button class="btn btn-secondary btn-sm" style="padding:4px 10px;"><i class="ti ti-calendar-event"></i> Custom</button>
               </div>
+              </div>
             </div>
+
+            <!-- Downfall alert banner — only appears when net worth drops >15% in the period (example state shown) -->
+            <div style="display:flex;align-items:flex-start;gap:8px;background:var(--tv-negative-bg);border-left:3px solid var(--tv-negative);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--tv-text-primary);">
+              <span style="color:var(--tv-negative);font-weight:600;">⚠</span>
+              <span>Net worth fell <strong>18.2%</strong> this period. Biggest drag: Credit cards (<span style="color:var(--tv-negative);font-weight:600;">−$1,038</span>).</span>
+            </div>
+
             <div class="chart-wrap">
               <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
                 <!-- Grid lines -->
@@ -1157,6 +1200,17 @@ a { text-decoration: none; color: inherit; }
                 <text x="600" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
                 <text x="760" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Now</text>
               </svg>
+            </div>
+
+            <!-- What moved it · 30d -->
+            <div style="margin-top:16px;">
+              <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--tv-text-muted);margin-bottom:8px;">What moved it · 30d</div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <span class="badge badge-green"><i class="ti ti-arrow-up-right"></i> Cash +$2,320</span>
+                <span class="badge badge-green"><i class="ti ti-arrow-up-right"></i> Investments +$10,450</span>
+                <span class="badge badge-green"><i class="ti ti-arrow-up-right"></i> Real estate +$1,800</span>
+                <span class="badge badge-red" style="font-weight:600;"><i class="ti ti-arrow-down-right"></i> Credit cards −$1,038</span>
+              </div>
             </div>
           </div>
         </div>
@@ -1324,13 +1378,63 @@ a { text-decoration: none; color: inherit; }
             <div class="section-title"><i class="ti ti-scale" style="color:var(--tv-forest-light);margin-right:6px;"></i>50/30/20 Method <span style="font-size:11.5px;font-weight:400;color:var(--tv-text-muted);margin-left:8px;">default</span></div>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-adjustments"></i> Customize rule</button>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-primary btn-sm">50/30/20 · Balanced</button>
+          <!-- Preset segmented control -->
+          <div class="seg-control" style="margin-bottom:14px;">
+            <button class="seg-btn active">50/30/20</button>
+            <button class="seg-btn">50/20/30</button>
+            <button class="seg-btn">50/40/10</button>
+            <button class="seg-btn">Custom</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+            <button class="btn btn-primary btn-sm">50/30/20 · Balanced (classic)</button>
             <button class="btn btn-secondary btn-sm">50/20/30 · Aggressive saver</button>
             <button class="btn btn-secondary btn-sm">50/40/10 · Lifestyle-first</button>
-            <button class="btn btn-secondary btn-sm">60/20/20 · Higher COL</button>
-            <button class="btn btn-secondary btn-sm">40/20/40 · FIRE</button>
+            <button class="btn btn-secondary btn-sm">60/20/20 · Higher cost of living</button>
+            <button class="btn btn-secondary btn-sm">70/20/10 · Tight budget</button>
+            <button class="btn btn-secondary btn-sm">40/20/40 · FIRE / wealth-build</button>
           </div>
+          <!-- Custom split inputs + monthly take-home -->
+          <div class="grid-3" style="gap:12px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Needs %</label><input class="form-input" value="50"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Wants %</label><input class="form-input" value="30"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Savings %</label><input class="form-input" value="20"></div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;">
+            <div style="display:flex;align-items:end;gap:12px;flex-wrap:wrap;">
+              <div class="form-group" style="margin-bottom:0;max-width:200px;"><label class="form-label">Monthly take-home</label><input class="form-input" value="$5,000"></div>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-template"></i> Apply template</button>
+              <button class="btn btn-primary btn-sm"><i class="ti ti-device-floppy"></i> Save rule</button>
+            </div>
+            <span class="badge badge-green"><i class="ti ti-check"></i> Total = 100%</span>
+          </div>
+        </div>
+
+        <!-- Needs / Wants / Savings group tiles -->
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span class="badge badge-forest">Needs · 50%</span><span style="font-size:12px;color:var(--tv-text-muted);">target $2,500</span></div>
+            <div class="kpi-value" style="font-size:20px;">$2,410</div>
+            <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" style="width:96%;background:var(--tv-forest);"></div></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:5px;">96% of target</div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span class="badge badge-amber">Wants · 30%</span><span style="font-size:12px;color:var(--tv-text-muted);">target $1,500</span></div>
+            <div class="kpi-value" style="font-size:20px;color:var(--tv-negative);">$1,610</div>
+            <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" style="width:100%;background:var(--tv-negative);"></div></div>
+            <div style="font-size:12px;color:var(--tv-negative);margin-top:5px;">107% of target — over budget</div>
+          </div>
+          <div class="card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;"><span class="badge badge-gold">Savings · 20%</span><span style="font-size:12px;color:var(--tv-text-muted);">target $1,000</span></div>
+            <div class="kpi-value" style="font-size:20px;">$900</div>
+            <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" style="width:90%;background:var(--tv-gold);"></div></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:5px;">90% of target</div>
+          </div>
+        </div>
+
+        <!-- Over-budget alert state -->
+        <div style="display:flex;align-items:flex-start;gap:8px;background:var(--tv-negative-bg);border-left:3px solid var(--tv-negative);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:20px;font-size:13px;color:var(--tv-text-primary);">
+          <i class="ti ti-alert-triangle" style="color:var(--tv-negative);"></i>
+          <span>You're projected to finish <strong>$60 over budget</strong> this month. <strong>Dining</strong> and <strong>Transportation</strong> are over their limits.</span>
         </div>
 
         <!-- Summary cards -->
@@ -1526,7 +1630,23 @@ a { text-decoration: none; color: inherit; }
             </div>
             <button class="btn btn-primary" style="width:100%;justify-content:center;padding:13px;font-size:15px;border-radius:var(--radius-md);"><i class="ti ti-lock"></i> Confirm Payment</button>
             <button class="btn btn-secondary" style="width:100%;justify-content:center;padding:12px;font-size:14px;margin-top:8px;border-radius:var(--radius-md);">Cancel</button>
-            <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-shield-check" style="color:var(--tv-positive);vertical-align:middle;margin-right:4px;"></i>Your security is our priority. <a style="color:var(--tv-forest-light);cursor:pointer;">Learn more</a></div>
+            <div style="text-align:center;margin-top:12px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-shield-check" style="color:var(--tv-positive);vertical-align:middle;margin-right:4px;"></i>256-bit encrypted · idempotency-protected. <a style="color:var(--tv-forest-light);cursor:pointer;">Learn more</a></div>
+          </div>
+        </div>
+
+        <!-- Recent payments -->
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title">Recent payments</div>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Payee</th><th>Amount</th><th>Status</th><th>Date</th><th>Confirmation</th><th></th></tr></thead>
+              <tbody>
+                <tr><td>Visa ···· 4242</td><td>$1,250.42</td><td><span class="badge badge-amber">Scheduled</span></td><td>Jun 6, 2026</td><td>TV-9F3A21</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;">Cancel</button></td></tr>
+                <tr><td>City Power &amp; Light</td><td>$87.64</td><td><span class="badge badge-green">Completed</span></td><td>May 28, 2026</td><td>TV-7C1B08</td><td></td></tr>
+                <tr><td>Sapphire Reserve</td><td>$600.00</td><td><span class="badge badge-gray">Processing</span></td><td>May 25, 2026</td><td>TV-4D9E55</td><td></td></tr>
+                <tr><td>Toyota Financial</td><td>$420.00</td><td><span class="badge badge-red">Failed</span></td><td>May 20, 2026</td><td>TV-2A6F17</td><td></td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1571,19 +1691,58 @@ a { text-decoration: none; color: inherit; }
               <tr style="background:var(--tv-bg);font-weight:600;"><td>Total</td><td>$49,300.00</td><td></td><td>$900.00</td><td></td></tr>
             </tbody>
           </table>
+          <hr class="divider">
+          <!-- Extra monthly payment + compare -->
+          <div style="display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap;">
+            <div class="form-group" style="margin-bottom:0;max-width:240px;flex:1;">
+              <label class="form-label">Extra monthly payment</label>
+              <input class="form-input" value="$300">
+            </div>
+            <button class="btn btn-primary"><i class="ti ti-calculator"></i> Compare strategies</button>
+            <span style="font-size:12px;color:var(--tv-text-muted);">Applies on top of the $900 minimums above.</span>
+          </div>
         </div>
 
-        <!-- Strategy cards -->
+        <!-- Strategy explainer cards -->
+        <div class="section-title">How each strategy works</div>
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card" style="background:var(--tv-bg);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><i class="ti ti-mountain" style="color:var(--tv-forest);font-size:18px;"></i><div style="font-size:14px;font-weight:600;">Avalanche</div></div>
+            <div style="font-size:12.5px;font-weight:600;color:var(--tv-forest-mid);margin-bottom:4px;">Highest interest rate first</div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);">Mathematically cheapest — pays the least total interest.</div>
+          </div>
+          <div class="card" style="background:var(--tv-bg);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><i class="ti ti-snowman" style="color:#1E5FAD;font-size:18px;"></i><div style="font-size:14px;font-weight:600;">Snowball</div></div>
+            <div style="font-size:12.5px;font-weight:600;color:var(--tv-forest-mid);margin-bottom:4px;">Smallest balance first</div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);">Quick wins build momentum and motivation.</div>
+          </div>
+          <div class="card" style="background:var(--tv-bg);">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><i class="ti ti-scale" style="color:var(--tv-gold);font-size:18px;"></i><div style="font-size:14px;font-weight:600;">Hybrid</div></div>
+            <div style="font-size:12.5px;font-weight:600;color:var(--tv-forest-mid);margin-bottom:4px;">Balanced approach</div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);">Clears small balances among your highest-rate debts.</div>
+          </div>
+        </div>
+
+        <!-- Strategy comparison cards (with Cheapest / Fastest badges + cost bars) -->
+        <div class="section-title">Compare your payoff strategies</div>
         <div class="grid-3">
           <!-- Avalanche -->
           <div class="card" style="border-left:4px solid var(--tv-forest);">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
               <div style="width:36px;height:36px;background:var(--tv-sage-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tv-forest);font-size:15px;">1</div>
               <div style="font-size:15px;font-weight:600;">Avalanche</div>
+              <span class="badge badge-gold" style="margin-left:auto;"><i class="ti ti-coin"></i> Cheapest</span>
+              <span class="badge badge-forest"><i class="ti ti-bolt"></i> Fastest</span>
+            </div>
+            <!-- Total interest + relative cost bar -->
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-positive);text-transform:none;">$4,120</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:90%;background:var(--tv-positive);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-positive);margin-top:4px;">Saves $460 vs the costliest option.</div>
             </div>
             <div class="grid-3" style="gap:8px;margin-bottom:14px;">
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-forest);">Mar 2028</div></div>
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total int.</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-positive);">$4,120</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Time</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">3y 10m</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">Mar 2028</div></div>
               <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Liquidity</div><div style="font-size:14px;color:var(--tv-warning);font-weight:600;">Medium</div></div>
             </div>
             <svg viewBox="0 0 260 100" width="100%">
@@ -1601,18 +1760,23 @@ a { text-decoration: none; color: inherit; }
               <text x="126" y="100" font-size="8" fill="#7A9086" font-family="DM Sans,sans-serif">May'26</text>
               <text x="214" y="100" font-size="8" fill="#7A9086" font-family="DM Sans,sans-serif">Mar'28</text>
             </svg>
-            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;">Set as plan</button>
+            <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;"><i class="ti ti-check"></i> Current plan</button>
           </div>
           <!-- Snowball -->
           <div class="card">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
               <div style="width:36px;height:36px;background:var(--tv-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tv-text-secondary);font-size:15px;">2</div>
               <div style="font-size:15px;font-weight:600;">Snowball</div>
             </div>
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-negative);text-transform:none;">$4,580</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--tv-negative);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-negative);margin-top:4px;">Most expensive of the three.</div>
+            </div>
             <div class="grid-3" style="gap:8px;margin-bottom:14px;">
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-forest);">Jun 2028</div></div>
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total int.</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-warning);">$4,580</div></div>
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Liquidity</div><div style="font-size:14px;color:var(--tv-warning);font-weight:600;">Med-High</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Time</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">4y 1m</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">Jun 2028</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Liquidity</div><div style="font-size:14px;color:var(--tv-positive);font-weight:600;">High</div></div>
             </div>
             <svg viewBox="0 0 260 100" width="100%">
               <rect x="0"  y="16" width="22" height="74" rx="3" fill="#8AB89A" opacity=".7"/>
@@ -1632,13 +1796,18 @@ a { text-decoration: none; color: inherit; }
           </div>
           <!-- Hybrid -->
           <div class="card">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
               <div style="width:36px;height:36px;background:var(--tv-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tv-text-secondary);font-size:15px;">3</div>
-              <div style="font-size:15px;font-weight:600;">Hybrid $2k</div>
+              <div style="font-size:15px;font-weight:600;">Hybrid</div>
+            </div>
+            <div style="margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-warning);text-transform:none;">$4,310</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:94%;background:var(--tv-warning);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">Saves $270 vs the costliest option.</div>
             </div>
             <div class="grid-3" style="gap:8px;margin-bottom:14px;">
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-forest);">Apr 2028</div></div>
-              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Total int.</div><div style="font-family:var(--font-display);font-size:16px;color:var(--tv-warning);">$4,310</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Time</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">3y 11m</div></div>
+              <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Debt-free</div><div style="font-family:var(--font-display);font-size:15px;color:var(--tv-forest);">Apr 2028</div></div>
               <div><div style="font-size:10.5px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;">Liquidity</div><div style="font-size:14px;color:var(--tv-positive);font-weight:600;">High</div></div>
             </div>
             <svg viewBox="0 0 260 100" width="100%">
@@ -1664,11 +1833,66 @@ a { text-decoration: none; color: inherit; }
       <!-- =================== DEAL ROOM =================== -->
       <div id="page-dealroom" class="page">
         <div class="page-header">
-          <div><div class="page-title">Deal Room</div><div class="page-subtitle">Willow Creek Land LLC — Opportunity detail</div></div>
+          <div><div class="page-title">Deal Room</div><div class="page-subtitle">Register deals, browse the marketplace, and connect with interested investors</div></div>
           <div class="page-actions">
-            <button class="btn btn-secondary btn-sm"><i class="ti ti-bookmark"></i> Watchlist</button>
-            <button class="btn btn-primary btn-sm"><i class="ti ti-arrow-left"></i> Marketplace</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Register a deal</button>
           </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="seg-control" style="margin-bottom:16px;">
+          <button class="seg-btn">My Deals</button>
+          <button class="seg-btn active">Marketplace</button>
+          <button class="seg-btn">Saved</button>
+          <button class="seg-btn">My Interests</button>
+          <button class="seg-btn">Track Record</button>
+        </div>
+
+        <!-- Marketplace filter bar -->
+        <div class="filter-bar">
+          <select class="filter-select"><option>All categories</option><option>Real Estate</option><option>Business</option><option>Private Equity</option><option>Startup</option></select>
+          <select class="filter-select"><option>All subcategories</option><option>Multifamily</option><option>Land</option><option>Commercial</option></select>
+          <select class="filter-select"><option>All return types</option><option>Fixed</option><option>Equity (IRR)</option><option>Hybrid</option></select>
+          <select class="filter-select"><option>Sort: Newest</option><option>Highest return</option><option>Lowest minimum</option><option>Largest raise</option></select>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-x"></i> Clear</button>
+        </div>
+
+        <!-- Marketplace deal cards -->
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Willow Creek Land LLC</div><span class="badge badge-green">Open</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Real Estate</span><span class="badge badge-gray">Land</span><span class="badge badge-forest">Equity (IRR)</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Bozeman, MT</div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$1.2M</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$25,000</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Target IRR</span><span style="font-weight:600;color:var(--tv-positive);">18–22%</span></div>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Maple Ridge Apartments</div><span class="badge badge-green">Open</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Real Estate</span><span class="badge badge-gray">Multifamily</span><span class="badge badge-forest">Hybrid</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Round Rock, TX</div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$3.5M</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$50,000</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Target IRR</span><span style="font-weight:600;color:var(--tv-positive);">12–15%</span></div>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Cedar Coffee Roasters</div><span class="badge badge-gray">Funded</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Business</span><span class="badge badge-gray">Franchise</span><span class="badge badge-forest">Fixed</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Denver, CO</div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$450K</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$10,000</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Annual return</span><span style="font-weight:600;color:var(--tv-positive);">9%</span></div>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+          </div>
+        </div>
+
+        <!-- Deal detail (drill-in) with Express interest panel -->
+        <div class="section-title">Deal detail — Willow Creek Land LLC</div>
+        <div class="page-actions" style="margin-bottom:14px;">
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-arrow-left"></i> Back to marketplace</button>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-bookmark"></i> Save deal</button>
         </div>
 
         <div class="grid-2">
@@ -1733,6 +1957,27 @@ a { text-decoration: none; color: inherit; }
                     <div style="font-size:11.5px;color:var(--tv-text-muted);">above 8% pref. return</div>
                   </div>
                 </div>
+              </div>
+
+              <!-- Interest-committed progress -->
+              <div class="card" style="margin-bottom:16px;">
+                <div class="section-title">Interest committed</div>
+                <div class="progress-bar" style="height:8px;"><div class="progress-fill" style="width:48%;background:var(--tv-forest);"></div></div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$576,000 of $1,200,000 · 48%</span><span style="color:var(--tv-text-muted);">Indicative interest, not binding</span></div>
+              </div>
+
+              <!-- Express interest panel -->
+              <div class="card" style="margin-bottom:16px;border-left:4px solid var(--tv-forest);">
+                <div class="section-title">Express interest</div>
+                <div class="grid-2" style="gap:12px;">
+                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Full name *</label><input class="form-input" placeholder="Alex Kim"></div>
+                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Email *</label><input class="form-input" placeholder="alex@example.com"></div>
+                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Phone</label><input class="form-input"></div>
+                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Amount you'd consider</label><input class="form-input" placeholder="$25,000"></div>
+                  <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Message</label><input class="form-input" placeholder="Optional note to the sponsor"></div>
+                </div>
+                <div style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;"><div class="tv-checkbox checked"><i class="ti ti-check"></i></div><p style="font-size:12.5px;color:var(--tv-text-muted);">I confirm I am an accredited investor.</p></div>
+                <button class="btn btn-primary" style="margin-top:12px;"><i class="ti ti-send"></i> Send interest</button>
               </div>
 
               <!-- Risk Factors -->
@@ -2230,7 +2475,14 @@ a { text-decoration: none; color: inherit; }
       <div id="page-transactions" class="page">
         <div class="page-header">
           <div><div class="page-title">Transactions</div><div class="page-subtitle">All activity across your linked accounts</div></div>
-          <div class="page-actions"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button></div>
+          <div class="page-actions" style="align-items:center;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button></div>
+        </div>
+
+        <!-- Card chip row -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+          <button class="btn btn-primary btn-sm">All accounts</button>
+          <button class="btn btn-secondary btn-sm">Sapphire Reserve · −$2,210 <span class="badge badge-gray" style="margin-left:4px;font-size:10px;">38</span></button>
+          <button class="btn btn-secondary btn-sm">Primary Checking · $8,450 <span class="badge badge-gray" style="margin-left:4px;font-size:10px;">112</span></button>
         </div>
 
         <div class="kpi-grid">
@@ -2240,35 +2492,48 @@ a { text-decoration: none; color: inherit; }
         </div>
 
         <div class="card">
+          <!-- Filter row 1 -->
           <div class="filter-bar">
             <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search by description or category…"></div>
+            <select class="filter-select"><option>All accounts</option><optgroup label="Cards"><option>Sapphire Reserve</option></optgroup><optgroup label="Bank accounts"><option>Primary Checking</option></optgroup></select>
             <select class="filter-select"><option>All categories</option><option>Groceries</option><option>Housing</option><option>Income</option></select>
             <div class="seg-control"><button class="seg-btn active">All</button><button class="seg-btn">Income</button><button class="seg-btn">Spending</button></div>
           </div>
+          <!-- Filter row 2 -->
+          <div class="filter-bar">
+            <select class="filter-select"><option>All time</option><option>Last 1 day</option><option>1 week</option><option>1 month</option><option>3 months</option><option>1 year</option><option>Custom range…</option></select>
+            <input class="filter-select" style="min-width:110px;" placeholder="Min $">
+            <input class="filter-select" style="min-width:110px;" placeholder="Max $">
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-x"></i> Clear</button>
+          </div>
           <div class="table-scroll">
             <table class="tv-table">
-              <thead><tr><th>Description</th><th>Category</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
+              <thead><tr><th>Description ▾</th><th>Account</th><th>Category</th><th>Date</th><th style="text-align:right">Amount</th></tr></thead>
               <tbody>
                 <tr>
                   <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-green" style="width:32px;height:32px;font-size:15px"><i class="ti ti-building-bank"></i></div><span style="font-weight:500">Paycheck — Acme Corp</span></div></td>
+                  <td><span class="badge badge-forest" style="cursor:pointer;">Primary Checking</span></td>
                   <td><span class="badge badge-gray">Income</span></td>
                   <td style="color:var(--tv-text-muted)">May 15, 2026</td>
                   <td style="text-align:right"><span class="item-amount amount-pos">+$4,500.00</span></td>
                 </tr>
                 <tr>
                   <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-forest" style="width:32px;height:32px;font-size:15px"><i class="ti ti-home"></i></div><span style="font-weight:500">Rent — Maple Apartments</span></div></td>
+                  <td><span class="badge badge-forest" style="cursor:pointer;">Primary Checking</span></td>
                   <td><span class="badge badge-gray">Housing</span></td>
                   <td style="color:var(--tv-text-muted)">May 1, 2026</td>
                   <td style="text-align:right"><span class="item-amount amount-neg">-$1,600.00</span></td>
                 </tr>
                 <tr>
                   <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-amber" style="width:32px;height:32px;font-size:15px"><i class="ti ti-shopping-cart"></i></div><span style="font-weight:500">Whole Foods Market</span></div></td>
+                  <td><span class="badge badge-red" style="cursor:pointer;">Sapphire Reserve</span></td>
                   <td><span class="badge badge-gray">Groceries</span></td>
                   <td style="color:var(--tv-text-muted)">May 20, 2026</td>
                   <td style="text-align:right"><span class="item-amount amount-neg">-$120.50</span></td>
                 </tr>
                 <tr>
                   <td><div style="display:flex;align-items:center;gap:10px"><div class="item-icon icon-purple" style="width:32px;height:32px;font-size:15px"><i class="ti ti-device-tv"></i></div><span style="font-weight:500">Spotify Premium</span></div></td>
+                  <td><span class="badge badge-red" style="cursor:pointer;">Sapphire Reserve</span></td>
                   <td><span class="badge badge-gray">Subscriptions</span></td>
                   <td style="color:var(--tv-text-muted)">May 18, 2026</td>
                   <td style="text-align:right"><span class="item-amount amount-neg">-$9.99</span></td>
@@ -2279,11 +2544,177 @@ a { text-decoration: none; color: inherit; }
         </div>
       </div>
       <div id="page-invest" class="page">
-        <div class="page-header"><div><div class="page-title">Investments</div><div class="page-subtitle">Portfolio overview</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-chart-line"></i><p>Investments page — portfolio chart, holdings table, and allocation donut.</p></div></div>
+        <div class="page-header">
+          <div><div class="page-title">Invest</div><div class="page-subtitle">Holdings, linked brokers, alternatives, and the TerraVest marketplace</div></div>
+          <div class="page-actions" style="align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export CSV</button>
+          </div>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="seg-control" style="margin-bottom:20px;">
+          <button class="seg-btn active">Stocks &amp; ETFs</button>
+          <button class="seg-btn">Brokers</button>
+          <button class="seg-btn">Alternatives</button>
+          <button class="seg-btn">Marketplace</button>
+        </div>
+
+        <!-- ===== Tab 1: Stocks & ETFs ===== -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-coins" style="color:var(--tv-forest-light)"></i> Total Invested</div><div class="kpi-value">$161,260</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Day Change</div><div class="kpi-value" style="color:var(--tv-positive);">+$1,284</div><div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +0.80% today</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-list" style="color:#6B46C1"></i> Holdings</div><div class="kpi-value">7</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-donut" style="color:var(--tv-gold)"></i> Allocations</div><div class="kpi-value" style="font-size:18px;">Diversified</div></div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="section-title">Allocation</div>
+            <div style="display:flex;flex-direction:column;gap:12px;margin-top:6px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>US Equity</span><span style="font-weight:600;">58%</span></div><div class="progress-bar"><div class="progress-fill" style="width:58%;background:var(--tv-forest);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>International</span><span style="font-weight:600;">22%</span></div><div class="progress-bar"><div class="progress-fill" style="width:22%;background:var(--tv-forest-light);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>Bonds</span><span style="font-weight:600;">12%</span></div><div class="progress-bar"><div class="progress-fill" style="width:12%;background:var(--tv-gold);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;"><span>Cash</span><span style="font-weight:600;">8%</span></div><div class="progress-bar"><div class="progress-fill" style="width:8%;background:var(--tv-sage);"></div></div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title">Portfolio snapshot</div>
+            <div class="grid-2" style="gap:12px;">
+              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Total Invested</div><div class="kpi-value" style="font-size:18px;">$161,260</div></div>
+              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Day Change</div><div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">+$1,284</div></div>
+              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Positions</div><div class="kpi-value" style="font-size:18px;">7</div></div>
+              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Cash</div><div class="kpi-value" style="font-size:18px;">$12,900</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Portfolio holdings</div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <select class="filter-select"><option>All brokers</option><option>Fidelity</option><option>Vanguard</option></select>
+              <span class="badge badge-gray">7 positions</span>
+            </div>
+          </div>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Symbol</th><th>Name</th><th>Broker</th><th>Qty</th><th>Price</th><th>Mkt Value</th><th>Day Chg</th></tr></thead>
+              <tbody>
+                <tr><td style="font-weight:600;">VTI</td><td>Vanguard Total Stock Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>180</td><td>$268.40</td><td>$48,312</td><td><span style="color:var(--tv-positive);">+0.9%</span></td></tr>
+                <tr><td style="font-weight:600;">VXUS</td><td>Vanguard Total Int'l Stock</td><td><span class="badge badge-gray">Vanguard</span></td><td>410</td><td>$64.10</td><td>$26,281</td><td><span style="color:var(--tv-positive);">+0.4%</span></td></tr>
+                <tr><td style="font-weight:600;">AAPL</td><td>Apple Inc.</td><td><span class="badge badge-gray">Fidelity</span></td><td>120</td><td>$214.80</td><td>$25,776</td><td><span style="color:var(--tv-positive);">+1.2%</span></td></tr>
+                <tr><td style="font-weight:600;">MSFT</td><td>Microsoft Corp.</td><td><span class="badge badge-gray">Fidelity</span></td><td>60</td><td>$432.10</td><td>$25,926</td><td><span style="color:var(--tv-negative);">-0.3%</span></td></tr>
+                <tr><td style="font-weight:600;">BND</td><td>Vanguard Total Bond Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>240</td><td>$72.65</td><td>$17,436</td><td><span style="color:var(--tv-positive);">+0.1%</span></td></tr>
+                <tr><td style="font-weight:600;">SCHD</td><td>Schwab US Dividend Equity</td><td><span class="badge badge-gray">Fidelity</span></td><td>110</td><td>$82.30</td><td>$9,053</td><td><span style="color:var(--tv-positive);">+0.6%</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== Tab 2: Brokers ===== -->
+        <div class="section-title">Brokers</div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(2,minmax(160px,260px));">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-plug" style="color:var(--tv-forest-light)"></i> Brokers Linked</div><div class="kpi-value">2</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-coins" style="color:#6B46C1"></i> Total Brokerage Value</div><div class="kpi-value">$161,260</div></div>
+        </div>
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="section-header"><div class="section-title">Available brokers</div><span class="badge badge-gray">6 supported</span></div>
+            <div class="grid-2" style="gap:10px;">
+              <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;display:flex;align-items:center;gap:10px;"><div class="item-icon icon-forest" style="width:32px;height:32px;"><i class="ti ti-building-bank"></i></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">Charles Schwab</div><span class="badge badge-forest" style="font-size:10px;">OAuth</span></div><button class="btn btn-secondary btn-sm">Connect</button></div>
+              <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;display:flex;align-items:center;gap:10px;"><div class="item-icon icon-blue" style="width:32px;height:32px;"><i class="ti ti-building-bank"></i></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">Robinhood</div><span class="badge badge-gray" style="font-size:10px;">Credentials</span></div><button class="btn btn-secondary btn-sm">Connect</button></div>
+              <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;display:flex;align-items:center;gap:10px;"><div class="item-icon icon-purple" style="width:32px;height:32px;"><i class="ti ti-building-bank"></i></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">E*TRADE</div><span class="badge badge-forest" style="font-size:10px;">OAuth</span></div><button class="btn btn-secondary btn-sm">Connect</button></div>
+              <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;display:flex;align-items:center;gap:10px;"><div class="item-icon icon-amber" style="width:32px;height:32px;"><i class="ti ti-building-bank"></i></div><div style="flex:1;"><div style="font-weight:600;font-size:13px;">Interactive Brokers</div><span class="badge badge-gray" style="font-size:10px;">Credentials</span></div><button class="btn btn-secondary btn-sm">Connect</button></div>
+            </div>
+            <!-- Inline connect panel (OAuth demo) -->
+            <div style="border:1px dashed var(--tv-border);border-radius:var(--radius-md);padding:14px;margin-top:12px;background:var(--tv-bg);">
+              <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Connect Charles Schwab</div>
+              <button class="btn btn-primary btn-sm" style="margin-bottom:6px;"><i class="ti ti-external-link"></i> Continue to Charles Schwab</button>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);">Demo mode — no real redirect. 256-bit encrypted · read-only · credentials never stored.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-header"><div class="section-title">Connected brokers</div><span class="badge badge-gray">2 linked</span></div>
+            <div class="list-item">
+              <div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div>
+              <div class="item-main"><div class="item-name">Fidelity Investments <span class="badge badge-forest" style="font-size:10px;">Brokerage</span></div><div class="item-sub">Connected · Last synced 4m ago</div></div>
+              <div class="item-right"><div class="item-amount">$60,755</div><div style="display:flex;gap:4px;margin-top:4px;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-refresh"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></div></div>
+            </div>
+            <div class="list-item">
+              <div class="item-icon icon-purple"><i class="ti ti-building-bank"></i></div>
+              <div class="item-main"><div class="item-name">Vanguard <span class="badge badge-forest" style="font-size:10px;">Brokerage</span></div><div class="item-sub">Connected · Last synced 4m ago</div></div>
+              <div class="item-right"><div class="item-amount">$100,505</div><div style="display:flex;gap:4px;margin-top:4px;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-refresh"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== Tab 3: Alternatives ===== -->
+        <div class="section-title">Alternatives</div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-diamond" style="color:var(--tv-gold)"></i> Total Alt Value</div><div class="kpi-value">$84,500</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-list" style="color:var(--tv-forest-light)"></i> Holdings</div><div class="kpi-value">3</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-category" style="color:#6B46C1"></i> Categories</div><div class="kpi-value">3</div></div>
+        </div>
+        <div class="grid-3" style="margin-bottom:16px;">
+          <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Land</div><div class="kpi-value" style="font-size:18px;">$45,000</div><div style="font-size:12px;color:var(--tv-text-muted);">1 holding · 53%</div></div>
+          <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Private Equity</div><div class="kpi-value" style="font-size:18px;">$25,000</div><div style="font-size:12px;color:var(--tv-text-muted);">1 holding · 30%</div></div>
+          <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Crypto</div><div class="kpi-value" style="font-size:18px;">$14,500</div><div style="font-size:12px;color:var(--tv-text-muted);">1 holding · 17%</div></div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Alternative holdings</div>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add alternative</button>
+          </div>
+          <!-- Add/edit form -->
+          <div class="grid-3" style="gap:12px;margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option>LLC</option><option>Land</option><option>Apartments</option><option>Syndication</option><option>Private Equity</option><option>Crypto</option><option>Collectibles</option><option>Other</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Name</label><input class="form-input" placeholder="e.g. Willow Creek Land"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Value</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Ownership %</label><input class="form-input" placeholder="100"></div>
+            <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Notes</label><input class="form-input" placeholder="Optional"></div>
+          </div>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Type</th><th>Name</th><th>Value</th><th>Ownership</th><th>Notes</th><th></th></tr></thead>
+              <tbody>
+                <tr><td><span class="badge badge-forest">Land</span></td><td>Willow Creek Land LLC</td><td>$45,000</td><td>15%</td><td>Bozeman, MT</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-pencil"></i></button> <button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
+                <tr><td><span class="badge badge-gray">Private Equity</span></td><td>Cedar Fund II</td><td>$25,000</td><td>—</td><td>Committed 2024</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-pencil"></i></button> <button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
+                <tr><td><span class="badge badge-amber">Crypto</span></td><td>BTC / ETH</td><td>$14,500</td><td>100%</td><td>Cold storage</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-pencil"></i></button> <button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ===== Tab 4: Marketplace ===== -->
+        <div class="section-title">Marketplace</div>
+        <div class="card">
+          <div class="empty-state">
+            <i class="ti ti-building-store"></i>
+            <p style="font-weight:600;color:var(--tv-text-secondary);">No live offerings yet</p>
+            <p>Curated alternative-investment deals will appear here once a marketplace provider is connected.</p>
+            <p style="margin-top:8px;font-size:12px;"><span class="badge badge-gray">Example offerings — not live</span></p>
+          </div>
+        </div>
       </div>
       <div id="page-realestate" class="page">
-        <div class="page-header"><div><div class="page-title">Properties</div><div class="page-subtitle">Your real estate portfolio</div></div><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add Property</button></div>
+        <div class="page-header"><div><div class="page-title">Properties</div><div class="page-subtitle">Your real estate portfolio</div></div><div class="page-actions" style="align-items:center;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add property</button></div></div>
+
+        <!-- Add-property form -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title">Add a property</div><button class="btn btn-secondary btn-sm"><i class="ti ti-wand"></i> Auto-fill</button></div>
+          <div class="grid-3" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Address (only the address is required)</label><input class="form-input" placeholder="Start typing an address…"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option>Primary residence</option><option>Rental property</option><option>Land</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Purchase price</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Current value (auto if blank)</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Mortgage balance</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Est. monthly rent</label><input class="form-input" placeholder="$0"></div>
+            <div style="display:flex;align-items:end;"><button class="btn btn-primary" style="width:100%;justify-content:center;"><i class="ti ti-device-floppy"></i> Save property</button></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:10px;"><i class="ti ti-info-circle"></i> Estimated values are for informational purposes and may not reflect market price.</div>
+        </div>
+
         <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
           <div class="kpi-card"><div class="kpi-label">Total Value</div><div class="kpi-value">$312,000</div><div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +2.8% 30d</div></div>
           <div class="kpi-card"><div class="kpi-label">Total Equity</div><div class="kpi-value">$112,000</div><div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +1.6% 30d</div></div>
@@ -2309,33 +2740,843 @@ a { text-decoration: none; color: inherit; }
               <div class="property-icon">🏠</div>
               <div>
                 <div class="property-address">903 Ridge View Ln, Round Rock TX</div>
-                <div style="font-size:12px;color:var(--tv-text-muted);margin-top:3px;">Purchased: Jan 2022 &nbsp;·&nbsp; <span class="badge badge-gold" style="font-size:10.5px;">Rental</span></div>
+                <div style="font-size:12px;color:var(--tv-text-muted);margin-top:3px;">Purchased: Jan 2022 &nbsp;·&nbsp; <span class="badge badge-gold" style="font-size:10.5px;">Rental</span> &nbsp;<span class="badge badge-green" style="font-size:10.5px;">+19% vs purchase</span></div>
               </div>
+              <div style="margin-left:auto;display:flex;gap:4px;"><button class="btn btn-secondary btn-sm" style="padding:4px 8px;"><i class="ti ti-refresh"></i> Revalue</button><button class="btn btn-secondary btn-sm" style="padding:4px 8px;"><i class="ti ti-trash"></i></button></div>
             </div>
             <div class="property-meta-row">
               <div class="property-stat"><div class="property-stat-label">Current Value</div><div class="property-stat-value">$125,000</div></div>
               <div class="property-stat"><div class="property-stat-label">Equity</div><div class="property-stat-value" style="color:var(--tv-positive);">$45,000</div></div>
               <div class="property-stat"><div class="property-stat-label">Mortgage</div><div class="property-stat-value">$80,000</div></div>
             </div>
+            <div style="margin:0 18px 16px;padding:12px;background:var(--tv-sage-pale);border-radius:var(--radius-md);display:flex;justify-content:space-between;font-size:13px;">
+              <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:600;">Est. rent / mo</div><div style="font-weight:600;">$1,650</div></div>
+              <div style="text-align:right;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:600;">Cap rate</div><div style="font-weight:600;color:var(--tv-positive);">6.8%</div></div>
+            </div>
           </div>
         </div>
       </div>
       <div id="page-fractional" class="page">
-        <div class="page-header"><div><div class="page-title">Fractional LLC</div><div class="page-subtitle">Automated formation and management</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-brand-stackshare"></i><p>Fractional LLC wizard — automated entity formation, operating agreement generation, investor onboarding, and K-1 distribution flow.</p></div></div>
+        <div class="page-header">
+          <div>
+            <div class="page-title">Fractional LLC <span class="badge badge-gray" style="vertical-align:middle;">Example offerings — not live</span></div>
+            <div class="page-subtitle">Co-invest in land &amp; property through fractional ownership</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-help-circle"></i> How it works</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-building-store"></i> Browse deals</button>
+          </div>
+        </div>
+
+        <!-- How it works panel -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title">How it works</div>
+          <div class="grid-2" style="gap:14px;">
+            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">1</div><div><div style="font-weight:600;font-size:13.5px;">Pick a deal</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Browse curated land &amp; property offerings.</div></div></div>
+            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">2</div><div><div style="font-weight:600;font-size:13.5px;">Buy fractional shares</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Invest from a low minimum and own a slice.</div></div></div>
+            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">3</div><div><div style="font-weight:600;font-size:13.5px;">Earn passively</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Receive distributions as the asset performs.</div></div></div>
+            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">4</div><div><div style="font-weight:600;font-size:13.5px;">Exit when eligible</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Sell your shares at a liquidity window.</div></div></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;"><i class="ti ti-info-circle"></i> Illustrative only — not investment advice.</div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-coins" style="color:var(--tv-forest-light)"></i> Total Invested</div><div class="kpi-value">$0</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-cash" style="color:#6B46C1"></i> Current Value</div><div class="kpi-value">$0</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Total Return</div><div class="kpi-value">+0%</div><div class="kpi-delta pos">all-time</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-list" style="color:var(--tv-gold)"></i> Active Holdings</div><div class="kpi-value">0</div></div>
+        </div>
+
+        <div class="seg-control" style="margin-bottom:16px;">
+          <button class="seg-btn active">My Holdings</button>
+          <button class="seg-btn">Marketplace</button>
+        </div>
+
+        <!-- My Holdings (honest empty) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title">My holdings</div>
+          <div class="empty-state"><i class="ti ti-brand-stackshare"></i><p>You don't own any fractional LLC positions yet.</p></div>
+        </div>
+
+        <!-- Marketplace (example offerings) -->
+        <div class="card">
+          <div class="section-header"><div class="section-title">Marketplace</div><span class="badge badge-gray">Example offerings — not live</span></div>
+          <div class="grid-2">
+            <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Willow Creek Land</div><span class="badge badge-amber">Medium risk</span></div>
+              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Bozeman, MT · <span class="badge badge-green" style="font-size:10px;">Target 14–18%</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--tv-text-muted);">Minimum</span><span style="font-weight:600;">$500</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--tv-text-muted);">Total raise</span><span style="font-weight:600;">$1,200,000</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:62%;background:var(--tv-forest);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">$744,000 raised · 62% funded</div>
+              <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">Invest</button>
+            </div>
+            <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:16px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Maple Ridge Apartments</div><span class="badge badge-green">Lower risk</span></div>
+              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Round Rock, TX · <span class="badge badge-green" style="font-size:10px;">Target 9–12%</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--tv-text-muted);">Minimum</span><span style="font-weight:600;">$1,000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--tv-text-muted);">Total raise</span><span style="font-weight:600;">$3,500,000</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:38%;background:var(--tv-forest);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">$1,330,000 raised · 38% funded</div>
+              <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">Invest</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="page-security" class="page">
-        <div class="page-header"><div><div class="page-title">Security</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-shield-lock"></i><p>Security page — 2FA setup, biometrics, session management, and login history.</p></div></div>
+        <div class="page-header">
+          <div><div class="page-title">Security</div><div class="page-subtitle">Protect your account and review activity</div></div>
+          <div class="page-actions"><span class="badge badge-green"><i class="ti ti-shield-check"></i> Security score: Good</span></div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-shield-lock" style="color:var(--tv-forest-light)"></i> Security score</div><div class="kpi-value" style="font-size:18px;">Good</div><div class="kpi-delta pos">2 of 3 protections enabled</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-lock" style="color:var(--tv-positive)"></i> Two-factor</div><div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">On</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-bell" style="color:var(--tv-warning)"></i> Login alerts</div><div class="kpi-value" style="font-size:18px;color:var(--tv-negative);">Off</div></div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <!-- Two-factor -->
+          <div class="card">
+            <div class="section-header"><div class="section-title">Two-factor authentication</div><span class="badge badge-green">Enabled</span></div>
+            <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:14px;">Add a second step using an authenticator app.</p>
+            <div style="display:flex;gap:16px;align-items:center;background:var(--tv-bg);border-radius:var(--radius-md);padding:14px;">
+              <div style="width:90px;height:90px;background:#fff;border:1px solid var(--tv-border);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ti ti-qrcode" style="font-size:48px;color:var(--tv-forest);"></i></div>
+              <div>
+                <div class="form-group" style="margin-bottom:8px;"><label class="form-label">6-digit code</label><input class="form-input" placeholder="123 456" style="max-width:160px;"></div>
+                <div style="font-size:11.5px;color:var(--tv-text-muted);">Setup is mocked for this demo.</div>
+              </div>
+            </div>
+          </div>
+          <!-- Password -->
+          <div class="card">
+            <div class="section-title">Password</div>
+            <div class="form-group"><label class="form-label">Current password</label><input type="password" class="form-input" value="········"></div>
+            <div class="form-group"><label class="form-label">New password</label><input type="password" class="form-input"></div>
+            <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Confirm new password</label><input type="password" class="form-input"></div>
+            <button class="btn btn-primary"><i class="ti ti-key"></i> Update password</button>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Active sessions -->
+          <div class="card">
+            <div class="section-header"><div class="section-title">Active sessions</div><span class="badge badge-gray">1 active</span></div>
+            <div class="table-scroll">
+              <table class="tv-table">
+                <thead><tr><th>Device</th><th>Location</th><th>Last active</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Chrome · macOS <span class="badge badge-green" style="font-size:10px;">This device</span></td><td>Austin, TX</td><td>Now</td><td><button class="btn btn-secondary btn-sm" style="opacity:.5;cursor:not-allowed;">Revoke</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Login history -->
+          <div class="card">
+            <div class="section-title">Login history</div>
+            <div class="list-item">
+              <div class="item-icon icon-green"><i class="ti ti-login"></i></div>
+              <div class="item-main"><div class="item-name">Sign in</div><div class="item-sub">Jun 7, 09:14 · 73.12.x.x</div></div>
+              <div class="item-right"><span class="badge badge-green">Success</span></div>
+            </div>
+            <div class="list-item">
+              <div class="item-icon icon-red"><i class="ti ti-lock-x"></i></div>
+              <div class="item-main"><div class="item-name">Sign in attempt</div><div class="item-sub">Jun 7, 09:13 · 73.12.x.x</div></div>
+              <div class="item-right"><span class="badge badge-red">Failure</span></div>
+            </div>
+            <div class="list-item">
+              <div class="item-icon icon-green"><i class="ti ti-login"></i></div>
+              <div class="item-main"><div class="item-name">Sign in</div><div class="item-sub">Jun 6, 20:02 · 73.12.x.x</div></div>
+              <div class="item-right"><span class="badge badge-green">Success</span></div>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="page-messages" class="page">
-        <div class="page-header"><div><div class="page-title">Messages</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-message-2"></i><p>Messages page — secure inbox with 2 unread notifications.</p></div></div>
+        <div class="page-header">
+          <div><div class="page-title">Messages</div><div class="page-subtitle">Notifications, alerts, and updates <span class="badge badge-gold">2 unread</span></div></div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Refresh</button>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-send"></i> Send test</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-checks"></i> Mark all read</button>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search messages…"></div>
+          <div class="seg-control"><button class="seg-btn active">All</button><button class="seg-btn">Unread</button><button class="seg-btn">Read</button></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:320px 1fr;gap:16px;">
+          <!-- Inbox -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:14px 16px;border-bottom:1px solid var(--tv-border);"><div class="section-title" style="margin-bottom:0;">Inbox <span class="badge badge-gray">4</span></div></div>
+            <div>
+              <div class="list-item" style="padding:12px 16px;background:var(--tv-sage-pale);border-bottom:1px solid var(--tv-border-light);">
+                <div class="item-icon icon-amber" style="width:32px;height:32px;"><i class="ti ti-chart-pie"></i></div>
+                <div class="item-main"><div class="item-name" style="font-weight:700;">Budget alert: Dining over limit</div><div class="item-sub">You're $112 over your dining budget…</div></div>
+                <span style="width:8px;height:8px;background:var(--tv-gold);border-radius:50%;flex-shrink:0;"></span>
+              </div>
+              <div class="list-item" style="padding:12px 16px;border-bottom:1px solid var(--tv-border-light);">
+                <div class="item-icon icon-forest" style="width:32px;height:32px;"><i class="ti ti-receipt"></i></div>
+                <div class="item-main"><div class="item-name" style="font-weight:700;">Payment scheduled</div><div class="item-sub">Mortgage of $1,842 for Jun 15…</div></div>
+                <span style="width:8px;height:8px;background:var(--tv-gold);border-radius:50%;flex-shrink:0;"></span>
+              </div>
+              <div class="list-item" style="padding:12px 16px;border-bottom:1px solid var(--tv-border-light);">
+                <div class="item-icon icon-blue" style="width:32px;height:32px;"><i class="ti ti-wallet"></i></div>
+                <div class="item-main"><div class="item-name">Account synced</div><div class="item-sub">Chase Checking balance updated.</div></div>
+                <div class="item-meta">2d</div>
+              </div>
+              <div class="list-item" style="padding:12px 16px;">
+                <div class="item-icon icon-purple" style="width:32px;height:32px;"><i class="ti ti-settings"></i></div>
+                <div class="item-main"><div class="item-name">Welcome to TerraVest</div><div class="item-sub">Take the guided tour to get started.</div></div>
+                <div class="item-meta">5d</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reading pane -->
+          <div class="card">
+            <div class="section-header">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="item-icon icon-amber"><i class="ti ti-chart-pie"></i></div>
+                <div><div class="section-title" style="margin-bottom:0;">Budget alert: Dining over limit</div><div style="font-size:12px;color:var(--tv-text-muted);">Jun 7, 2026 · 8:02 AM</div></div>
+              </div>
+              <button class="btn btn-secondary btn-sm">Mark as unread</button>
+            </div>
+            <div style="display:flex;gap:6px;margin-bottom:14px;"><span class="badge badge-amber">Budget</span><span class="badge badge-gray">Read</span><span class="badge badge-gray">Push</span></div>
+            <p style="font-size:13.5px;color:var(--tv-text-secondary);line-height:1.7;">Heads up — you've spent $612 on Dining this month, which is $112 over your $500 budget. Most of the increase came from weekend delivery orders. Consider adjusting your Wants allocation or trimming this category for the rest of June.</p>
+          </div>
+        </div>
       </div>
+      <style>
+        .tv-toggle { width:40px; height:22px; border-radius:20px; background:var(--tv-border); position:relative; flex-shrink:0; cursor:pointer; transition:background .15s; }
+        .tv-toggle::after { content:''; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:var(--shadow-sm); transition:left .15s; }
+        .tv-toggle.on { background:var(--tv-forest); }
+        .tv-toggle.on::after { left:20px; }
+        .toggle-row { display:flex; align-items:center; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--tv-border-light); }
+        .toggle-row:last-child { border-bottom:none; }
+      </style>
       <div id="page-settings" class="page">
-        <div class="page-header"><div><div class="page-title">Settings</div></div></div>
-        <div class="card"><div class="empty-state"><i class="ti ti-settings"></i><p>Settings page — profile, notifications, linked accounts, data export, and privacy controls.</p></div></div>
+        <div class="page-header"><div><div class="page-title">Settings</div><div class="page-subtitle">Manage your preferences, notifications, and data</div></div></div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <!-- Notifications -->
+          <div class="card">
+            <div class="section-title">Notifications</div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Email notifications</div></div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Push notifications</div></div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Weekly summary</div></div><div class="tv-toggle"></div></div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Budget alerts</div></div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Payment alerts</div></div><div class="tv-toggle on"></div></div>
+          </div>
+          <!-- Appearance -->
+          <div class="card">
+            <div class="section-title">Appearance</div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Compact mode</div><div class="tv-toggle"></div></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Dark mode</div><div class="tv-toggle"></div></div>
+            <div class="form-group" style="margin-top:14px;margin-bottom:0;"><label class="form-label">Display currency</label><select class="form-select"><option>USD ($)</option><option>EUR (€)</option><option>GBP (£)</option></select></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Regional -->
+          <div class="card">
+            <div class="section-title">Regional</div>
+            <div class="form-group"><label class="form-label">Language</label><select class="form-select"><option>English</option><option>Español</option><option>Français</option><option>Deutsch</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Timezone</label><select class="form-select"><option>Eastern (ET)</option><option>Central (CT)</option><option>Mountain (MT)</option><option>Pacific (PT)</option><option>London</option><option>CET</option></select></div>
+          </div>
+          <!-- Data & Privacy -->
+          <div class="card">
+            <div class="section-title">Data &amp; privacy</div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+              <button class="btn btn-secondary" style="justify-content:flex-start;"><i class="ti ti-download"></i> Export my data</button>
+              <button class="btn btn-secondary" style="justify-content:flex-start;"><i class="ti ti-file-text"></i> Download statements</button>
+              <button class="btn btn-danger" style="justify-content:flex-start;"><i class="ti ti-trash"></i> Delete account</button>
+            </div>
+            <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;"><i class="ti ti-info-circle"></i> Export downloads a JSON across all your linked services.</div>
+          </div>
+        </div>
       </div>
+
+      <!-- ============================= PROFILE ============================= -->
+      <div id="page-profile" class="page">
+        <div class="page-header"><div><div class="page-title">Profile</div><div class="page-subtitle">Manage your account, security, and preferences</div></div></div>
+
+        <!-- Profile header card -->
+        <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;">
+          <div class="user-avatar" style="width:56px;height:56px;font-size:20px;background:var(--tv-forest);">AK</div>
+          <div style="flex:1;">
+            <div style="font-family:var(--font-display);font-size:20px;">alex.kim@example.com</div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);">6 linked accounts</div>
+          </div>
+          <span class="badge badge-gold"><i class="ti ti-crown"></i> Member</span>
+        </div>
+
+        <!-- Personal details (KYC) card -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Personal details</div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span class="badge badge-green"><i class="ti ti-shield-check"></i> Identity verified</span>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-edit"></i> Edit profile</button>
+            </div>
+          </div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">First name</div><div style="font-weight:500;">Alex</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Last name</div><div style="font-weight:500;">Kim</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Date of birth</div><div style="font-weight:500;">Mar 14, 1989</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Email</div><div style="font-weight:500;display:flex;align-items:center;gap:6px;">alex.kim@example.com <span class="badge badge-green"><i class="ti ti-check"></i> Verified</span></div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Phone</div><div style="font-weight:500;display:flex;align-items:center;gap:6px;">(415) 555-0142 <span class="badge badge-green"><i class="ti ti-check"></i> Verified</span></div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Account type</div><div style="font-weight:500;">Individual</div></div>
+          </div>
+          <div class="form-label" style="margin-bottom:6px;">Address</div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="stat-tile card" style="grid-column:span 2;"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Line 1</div><div style="font-weight:500;">820 Marina Blvd, Apt 4</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">City</div><div style="font-weight:500;">San Francisco</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">State</div><div style="font-weight:500;">CA</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Postal code</div><div style="font-weight:500;">94123</div></div>
+            <div class="stat-tile card"><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;">Country</div><div style="font-weight:500;">United States</div></div>
+          </div>
+          <hr class="divider">
+          <!-- SSN: masked, Show reveals last-4 only; full SSN never shown -->
+          <div class="toggle-row">
+            <div>
+              <div style="font-size:13.5px;font-weight:500;">Social Security Number</div>
+              <div style="font-size:12px;color:var(--tv-text-muted);">Encrypted at rest — only the last 4 are ever shown.</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span id="ssn-mask" class="num" style="font-weight:600;letter-spacing:1px;">•••-••-••••</span>
+              <button class="btn btn-secondary btn-sm" onclick="toggleSsn(this)"><i class="ti ti-eye"></i> Show</button>
+            </div>
+          </div>
+          <hr class="divider">
+          <!-- MFA channel selector (Email / SMS segmented) -->
+          <div class="toggle-row">
+            <div>
+              <div style="font-size:13.5px;font-weight:500;">MFA channel</div>
+              <div style="font-size:12px;color:var(--tv-text-muted);">Where we send your login verification code.</div>
+            </div>
+            <div class="seg-control">
+              <button class="seg-btn active"><i class="ti ti-mail"></i> Email</button>
+              <button class="seg-btn"><i class="ti ti-device-mobile-message"></i> SMS</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="section-title">Account</div>
+            <div class="toggle-row"><span style="font-size:13.5px;color:var(--tv-text-muted);">Email</span><span style="font-weight:500;">alex.kim@example.com</span></div>
+            <div class="toggle-row"><span style="font-size:13.5px;color:var(--tv-text-muted);">Linked accounts</span><span class="badge badge-gray">6</span></div>
+            <div class="toggle-row"><span style="font-size:13.5px;color:var(--tv-text-muted);">Plan tier</span><span class="badge badge-gold"><i class="ti ti-crown"></i> TerraVest Premium</span></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Preferences</div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Email notifications</div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Push notifications</div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Weekly summary</div><div class="tv-toggle"></div></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Budget alerts</div><div class="tv-toggle on"></div></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Dark mode</div><div class="tv-toggle"></div></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">Security</div>
+            <div class="toggle-row"><div><div style="font-size:13.5px;font-weight:500;">Two-factor</div><div style="font-size:12px;color:var(--tv-text-muted);">Not enabled</div></div><button class="btn btn-secondary btn-sm" onclick="navigate('security',document.querySelector('[data-page=security].nav-item'))">Enable</button></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Password</div><button class="btn btn-secondary btn-sm" onclick="navigate('security',document.querySelector('[data-page=security].nav-item'))">Change</button></div>
+            <div class="toggle-row"><div style="font-size:13.5px;font-weight:500;">Active sessions</div><button class="btn btn-secondary btn-sm" onclick="navigate('security',document.querySelector('[data-page=security].nav-item'))">Manage</button></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Staff tools</div>
+            <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:14px;">Customer care, operator analytics, and role management — in the dedicated Ops Portal (audited).</p>
+            <button class="btn btn-secondary" onclick="window.open('terravest-ops-portal.html','_blank')"><i class="ti ti-headset"></i> Open Ops Portal</button>
+            <hr class="divider">
+            <button class="btn btn-danger"><i class="ti ti-logout"></i> Sign out</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================= AUTH / KYC ============================= -->
+      <div id="page-auth" class="page">
+        <div class="page-header"><div><div class="page-title">Auth / KYC</div><div class="page-subtitle">Two-step login and identity-verified signup &mdash; mockup</div></div></div>
+
+        <!-- ===== LOGIN (two steps) ===== -->
+        <div class="section-header"><div class="section-title">Sign in</div><span class="badge badge-gray">MFA on every login</span></div>
+        <div class="grid-2" style="margin-bottom:20px;">
+          <!-- Step 1: email + password -->
+          <div class="card">
+            <div class="section-title">Welcome back</div>
+            <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:14px;">Step 1 &mdash; enter your credentials.</p>
+            <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="alex.kim@example.com"></div>
+            <div class="form-group"><label class="form-label">Password</label><input class="form-input" type="password" value="password123"></div>
+            <a style="font-size:12px;color:var(--tv-forest-light);cursor:pointer;display:block;margin-bottom:14px;">Forgot password?</a>
+            <button class="btn btn-primary" style="width:100%;"><i class="ti ti-login-2"></i> Sign in</button>
+          </div>
+          <!-- Step 2: MFA code -->
+          <div class="card">
+            <div class="section-title">Verify it's you</div>
+            <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:14px;">Step 2 &mdash; enter the 6-digit code sent to <strong>d•••@gmail.com</strong> via Email.</p>
+            <div style="display:flex;gap:8px;margin-bottom:14px;">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;" value="4">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;" value="2">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;" value="9">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;" value="1">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;">
+              <input class="form-input" maxlength="1" style="width:44px;text-align:center;font-size:18px;font-weight:600;">
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button class="btn btn-primary"><i class="ti ti-shield-check"></i> Verify</button>
+              <a style="font-size:12.5px;color:var(--tv-forest-light);cursor:pointer;">Resend code</a>
+              <a style="font-size:12.5px;color:var(--tv-text-muted);cursor:pointer;margin-left:auto;">Back to sign in</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SIGNUP (KYC) ===== -->
+        <div class="section-header"><div class="section-title">Create your account</div><span class="badge badge-gray">Identity verified</span></div>
+        <div class="card">
+          <div class="seg-control" style="margin-bottom:16px;">
+            <button class="seg-btn active"><i class="ti ti-user"></i> Individual</button>
+            <button class="seg-btn"><i class="ti ti-building"></i> Business</button>
+          </div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">First name *</label><input class="form-input" placeholder="Alex"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Last name *</label><input class="form-input" placeholder="Kim"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Date of birth *</label><input class="form-input" type="date"></div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Email *</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="form-input" placeholder="alex@example.com" style="flex:1;">
+                <button class="btn btn-secondary btn-sm">Verify email</button>
+                <span class="badge badge-green"><i class="ti ti-check"></i> Verified</span>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Phone *</label>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input class="form-input" placeholder="(415) 555-0142" style="flex:1;">
+                <button class="btn btn-secondary btn-sm">Verify</button>
+                <span class="badge badge-gray">Unverified</span>
+              </div>
+            </div>
+          </div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Address line 1 *</label><input class="form-input" placeholder="820 Marina Blvd"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Line 2</label><input class="form-input" placeholder="Apt 4"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">City *</label><input class="form-input" placeholder="San Francisco"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">State *</label><input class="form-input" placeholder="CA"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Postal code *</label><input class="form-input" placeholder="94123"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Country *</label><select class="form-select"><option>United States</option><option>Canada</option></select></div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px;align-items:end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Social Security Number *</label>
+              <input class="form-input" placeholder="123-45-6789">
+              <div style="font-size:12px;color:var(--tv-text-muted);margin-top:5px;">Encrypted at rest &mdash; only the last 4 are ever shown.</div>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Preferred MFA channel *</label>
+              <div class="seg-control">
+                <button class="seg-btn active"><i class="ti ti-mail"></i> Email</button>
+                <button class="seg-btn"><i class="ti ti-device-mobile-message"></i> SMS</button>
+              </div>
+            </div>
+          </div>
+          <hr class="divider">
+          <button class="btn btn-primary"><i class="ti ti-user-plus"></i> Create account</button>
+          <p style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;">Protected by bank-grade encryption &middot; Powered by Plaid</p>
+        </div>
+      </div>
+
+      <!-- ============================= MY BUSINESS ============================= -->
+      <div id="page-business" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Business</div>
+            <div class="page-subtitle">Acme Studio LLC <span class="badge badge-gray">Not connected</span> <span class="badge badge-forest">LLC</span></div>
+          </div>
+          <div class="page-actions" style="align-items:center;">
+            <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add business</button>
+          </div>
+        </div>
+
+        <!-- Businesses switcher -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title">Your businesses</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add business</button></div>
+          <div class="seg-control" style="margin-bottom:10px;">
+            <button class="seg-btn active">Acme Studio LLC</button>
+            <button class="seg-btn">Cedar Holdings</button>
+          </div>
+          <div style="font-size:12.5px;color:var(--tv-text-muted);">Creative services · LLC · EIN ••3491 · Added Mar 2024</div>
+          <!-- Inline add-business form -->
+          <div class="grid-3" style="gap:12px;margin-top:14px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Business name *</label><input class="form-input" placeholder="e.g. Cedar Holdings"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Industry</label><input class="form-input" placeholder="e.g. Real Estate"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Entity type</label><select class="form-select"><option>LLC</option><option>S-Corp</option><option>C-Corp</option><option>Sole Prop</option><option>Partnership</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">EIN (optional)</label><input class="form-input" placeholder="12-3456789"></div>
+          </div>
+        </div>
+
+        <!-- QuickBooks connect prompt -->
+        <div class="card" style="margin-bottom:16px;border-left:4px solid var(--tv-gold);display:flex;align-items:center;gap:12px;">
+          <i class="ti ti-plug-connected" style="color:var(--tv-gold);font-size:22px;"></i>
+          <div style="flex:1;font-size:13.5px;"><strong>Connect QuickBooks</strong> for live revenue, expenses, and invoices.</div>
+          <button class="btn btn-secondary btn-sm">Connect</button>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-cash" style="color:var(--tv-forest-light)"></i> Revenue (MTD)</div><div class="kpi-value">$42,000</div><div class="kpi-delta neg" style="color:var(--tv-text-muted);">Connect to track changes</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-receipt" style="color:var(--tv-negative)"></i> Expenses (MTD)</div><div class="kpi-value">$28,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Net Profit (MTD)</div><div class="kpi-value">$14,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-wallet" style="color:#1E5FAD"></i> Cash Balance</div><div class="kpi-value">$31,200</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-warning)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div></div>
+        </div>
+
+        <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:16px;"><i class="ti ti-info-circle"></i> Showing manual figures — Connect QuickBooks for live numbers.</div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <!-- Revenue trend -->
+          <div class="card">
+            <div class="section-title">Revenue trend <span style="font-size:11.5px;font-weight:400;color:var(--tv-text-muted);">Last 6 months</span></div>
+            <svg viewBox="0 0 320 120" width="100%">
+              <rect x="10"  y="60" width="36" height="50" rx="3" fill="var(--tv-forest-light)"/>
+              <rect x="60"  y="45" width="36" height="65" rx="3" fill="var(--tv-forest-light)"/>
+              <rect x="110" y="55" width="36" height="55" rx="3" fill="var(--tv-forest-light)"/>
+              <rect x="160" y="35" width="36" height="75" rx="3" fill="var(--tv-forest-light)"/>
+              <rect x="210" y="40" width="36" height="70" rx="3" fill="var(--tv-forest-light)"/>
+              <rect x="260" y="25" width="36" height="85" rx="3" fill="var(--tv-forest)"/>
+              <text x="28"  y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jan</text>
+              <text x="78"  y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Feb</text>
+              <text x="128" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Mar</text>
+              <text x="178" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Apr</text>
+              <text x="228" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">May</text>
+              <text x="278" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
+            </svg>
+          </div>
+          <!-- Accounts -->
+          <div class="card">
+            <div class="section-header"><div class="section-title">Accounts</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add</button></div>
+            <div class="table-scroll">
+              <table class="tv-table">
+                <thead><tr><th>Account</th><th>Type</th><th style="text-align:right;">Balance</th><th></th></tr></thead>
+                <tbody>
+                  <tr><td>Operating Checking</td><td><span class="badge badge-forest">Checking</span></td><td style="text-align:right;">$24,800</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
+                  <tr><td>Business Savings</td><td><span class="badge badge-forest">Savings</span></td><td style="text-align:right;">$6,400</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
+                  <tr style="background:var(--tv-bg);font-weight:600;"><td>Total</td><td></td><td style="text-align:right;">$31,200</td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-bottom:16px;">
+          <!-- Invoices -->
+          <div class="card">
+            <div class="section-header"><div class="section-title">Invoices</div></div>
+            <div class="table-scroll">
+              <table class="tv-table">
+                <thead><tr><th>Customer</th><th>Amount</th><th>Status</th><th>Due date</th></tr></thead>
+                <tbody>
+                  <tr><td>Northwind Co.</td><td>$6,200</td><td><span class="badge badge-green">Paid</span></td><td>Jun 15</td></tr>
+                  <tr><td>Pinecrest Studio</td><td>$3,450</td><td><span class="badge badge-red">Overdue</span></td><td>May 20</td></tr>
+                  <tr><td>Harbor Group</td><td>$2,100</td><td><span class="badge badge-gray">Open</span></td><td>Jun 28</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Expenses -->
+          <div class="card">
+            <div class="section-header"><div class="section-title">Expenses</div></div>
+            <div class="table-scroll">
+              <table class="tv-table">
+                <thead><tr><th>Vendor</th><th>Category</th><th>Date</th><th style="text-align:right;">Amount</th></tr></thead>
+                <tbody>
+                  <tr><td>Adobe</td><td><span class="badge badge-gray">Software</span></td><td>Jun 3</td><td style="text-align:right;" class="amount-neg">-$599</td></tr>
+                  <tr><td>WeWork</td><td><span class="badge badge-gray">Rent</span></td><td>Jun 1</td><td style="text-align:right;" class="amount-neg">-$1,800</td></tr>
+                  <tr><td>Delta Airlines</td><td><span class="badge badge-gray">Travel</span></td><td>May 28</td><td style="text-align:right;" class="amount-neg">-$842</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Activity -->
+        <div class="card">
+          <div class="section-title">Activity</div>
+          <div class="list-item">
+            <div class="item-icon icon-green"><i class="ti ti-file-invoice"></i></div>
+            <div class="item-main"><div class="item-name">Invoice paid — Northwind Co.</div><div class="item-sub">INV-1042</div></div>
+            <div class="item-right"><div class="item-amount amount-pos">+$6,200</div><div class="item-meta">Jun 5</div></div>
+          </div>
+          <div class="list-item">
+            <div class="item-icon icon-red"><i class="ti ti-receipt"></i></div>
+            <div class="item-main"><div class="item-name">Expense — WeWork</div><div class="item-sub">Rent</div></div>
+            <div class="item-right"><div class="item-amount amount-neg">-$1,800</div><div class="item-meta">Jun 1</div></div>
+          </div>
+          <div class="list-item">
+            <div class="item-icon icon-blue"><i class="ti ti-building-bank"></i></div>
+            <div class="item-main"><div class="item-name">Account added — Business Savings</div></div>
+            <div class="item-right"><div class="item-meta">May 30</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================= AI ASSISTANT ============================= -->
+      <div id="page-aiassistant" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">AI Assistant</div>
+            <div class="page-subtitle">Ask about your finances in plain language</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm">Scope: All accounts <i class="ti ti-chevron-down"></i></button>
+            <div style="display:inline-flex;border:1px solid var(--tv-border);border-radius:var(--radius-sm);overflow:hidden;">
+              <button class="btn-sm" style="padding:6px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;">Concise</button>
+              <button class="btn-sm" style="padding:6px 12px;background:var(--tv-forest);color:#fff;border-radius:0;border-left:1px solid var(--tv-border);">Balanced</button>
+              <button class="btn-sm" style="padding:6px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);">Detailed</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Portfolio scope card -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title">Portfolio scope</div><div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm">Select all</button><button class="btn btn-secondary btn-sm">Clear</button></div></div>
+          <p style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:12px;">Choose which areas the assistant should consider.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <span class="badge badge-forest" style="cursor:pointer;">Net worth</span>
+            <span class="badge badge-forest" style="cursor:pointer;">Cash &amp; accounts</span>
+            <span class="badge badge-forest" style="cursor:pointer;">Investments</span>
+            <span class="badge badge-gray" style="cursor:pointer;">Real estate</span>
+            <span class="badge badge-gray" style="cursor:pointer;">Business</span>
+            <span class="badge badge-forest" style="cursor:pointer;">Debt</span>
+            <span class="badge badge-forest" style="cursor:pointer;">Budget</span>
+            <span class="badge badge-gray" style="cursor:pointer;">Transactions</span>
+          </div>
+        </div>
+
+        <!-- Insights card -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title">Insights</div><button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Refresh insights</button></div>
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);margin-bottom:10px;">
+            <div class="item-icon icon-red" style="flex-shrink:0;"><i class="ti ti-alert-triangle"></i></div>
+            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;"><div style="font-weight:600;font-size:13.5px;">Dining over budget</div><span class="badge badge-amber">Actionable</span></div><div style="font-size:12.5px;color:var(--tv-text-muted);">You're $112 over your dining budget this month.</div><div style="font-size:12px;background:var(--tv-bg);border-radius:var(--radius-sm);padding:6px 10px;margin-top:6px;">Suggested: cap weekend delivery at $40/wk.</div></div>
+            <button class="btn btn-secondary btn-sm">Discuss</button>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;padding:12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);">
+            <div class="item-icon icon-green" style="flex-shrink:0;"><i class="ti ti-info-circle"></i></div>
+            <div style="flex:1;"><div style="display:flex;align-items:center;gap:8px;"><div style="font-weight:600;font-size:13.5px;">Emergency fund on track</div><span class="badge badge-gray">Info</span></div><div style="font-size:12.5px;color:var(--tv-text-muted);">You've saved 65% of your 3-month target.</div></div>
+            <button class="btn btn-secondary btn-sm">Discuss</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Ask the Assistant</div>
+          <!-- Chat thread -->
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <!-- User bubble -->
+            <div style="display:flex;justify-content:flex-end;">
+              <div style="max-width:70%;background:var(--tv-forest);color:#fff;padding:11px 16px;border-radius:14px 14px 4px 14px;font-size:13.5px;">
+                How much did I spend on dining last month, and is it trending up?
+              </div>
+            </div>
+            <!-- AI bubble -->
+            <div style="display:flex;gap:10px;">
+              <div class="item-icon icon-forest" style="width:32px;height:32px;flex-shrink:0;"><i class="ti ti-robot"></i></div>
+              <div style="max-width:75%;">
+                <div style="background:var(--tv-sage-pale);color:var(--tv-text-primary);padding:12px 16px;border-radius:14px 14px 14px 4px;font-size:13.5px;">
+                  You spent <strong>$612</strong> on dining in May. A few things stand out:
+                  <ul style="margin:8px 0 0 18px;padding:0;">
+                    <li>That's <strong>+18%</strong> vs your April dining spend ($519).</li>
+                    <li>Weekend delivery orders drove most of the increase.</li>
+                    <li>You're $112 over your $500 dining budget for the month.</li>
+                  </ul>
+                </div>
+                <!-- Message actions -->
+                <div style="display:flex;gap:12px;margin-top:6px;color:var(--tv-text-muted);font-size:15px;">
+                  <i class="ti ti-copy" style="cursor:pointer;" title="Copy"></i>
+                  <i class="ti ti-refresh" style="cursor:pointer;" title="Regenerate"></i>
+                  <i class="ti ti-thumb-up" style="cursor:pointer;" title="Helpful"></i>
+                  <i class="ti ti-thumb-down" style="cursor:pointer;" title="Not helpful"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <hr class="divider">
+
+          <!-- Prompt library grouped by capability -->
+          <div style="font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;color:var(--tv-text-muted);margin-bottom:8px;">Prompt library</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Spending</span><span class="badge badge-forest" style="cursor:pointer;">Where can I cut $300/mo?</span><span class="badge badge-forest" style="cursor:pointer;">What are my top categories?</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Debt</span><span class="badge badge-forest" style="cursor:pointer;">Which debt should I pay first?</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Saving</span><span class="badge badge-forest" style="cursor:pointer;">Can I afford a $40k car?</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Investing</span><span class="badge badge-forest" style="cursor:pointer;">Is my portfolio diversified?</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Credit</span><span class="badge badge-forest" style="cursor:pointer;">How do I improve my utilization?</span></div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span style="font-size:11.5px;font-weight:600;color:var(--tv-text-muted);min-width:80px;">Planning</span><span class="badge badge-forest" style="cursor:pointer;">Summarize my net worth trend</span></div>
+          </div>
+          <div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:12px;"><i class="ti ti-adjustments"></i> Considering: Net worth, Cash, Investments, Debt, Budget · Balanced answers</div>
+          <div style="display:flex;gap:8px;margin-bottom:14px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export conversation</button><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New chat</button></div>
+
+          <!-- Input bar -->
+          <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:6px 8px 6px 14px;">
+            <input class="form-input" style="border:none;box-shadow:none;height:32px;padding:0;flex:1;" placeholder="Ask anything about your money…">
+            <button class="icon-btn" title="Voice input"><i class="ti ti-microphone"></i></button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-send"></i> Send</button>
+          </div>
+          <div style="font-size:11px;color:var(--tv-text-muted);margin-top:10px;display:flex;align-items:center;gap:5px;"><i class="ti ti-info-circle" style="font-size:13px;"></i> AI guidance — not financial advice.</div>
+        </div>
+      </div>
+
+      <!-- ============================= CALCULATORS ============================= -->
+      <div id="page-calculators" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Calculators</div>
+            <div class="page-subtitle">Model payoffs, growth, and interest scenarios</div>
+          </div>
+        </div>
+
+        <!-- Segmented control -->
+        <div class="tabs">
+          <div class="tab active">Mortgage payoff</div>
+          <div class="tab">Compound interest</div>
+          <div class="tab">Simple interest</div>
+        </div>
+
+        <div class="grid-2">
+          <!-- Inputs -->
+          <div class="card">
+            <div class="section-title">Mortgage details</div>
+            <div class="form-group">
+              <label class="form-label">Balance owed</label>
+              <input class="form-input" value="$360,000">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Interest rate</label>
+              <input class="form-input" value="6.5%">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Monthly payment</label>
+              <input class="form-input" value="$2,400">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label">Extra each month</label>
+              <input class="form-input" value="$300">
+            </div>
+          </div>
+
+          <!-- Results -->
+          <div class="card">
+            <div class="section-title">Results</div>
+            <div class="grid-2" style="gap:12px;">
+              <div class="kpi-card" style="margin:0;">
+                <div class="kpi-label">Payoff (current)</div>
+                <div class="kpi-value" style="font-size:18px;">Apr 2041</div>
+              </div>
+              <div class="kpi-card" style="margin:0;">
+                <div class="kpi-label">Payoff (with extra)</div>
+                <div class="kpi-value" style="font-size:18px;">Oct 2034</div>
+              </div>
+              <div class="kpi-card" style="margin:0;">
+                <div class="kpi-label">Time saved</div>
+                <div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">6y 4m</div>
+              </div>
+              <div class="kpi-card" style="margin:0;">
+                <div class="kpi-label">Interest saved</div>
+                <div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">$84,210</div>
+              </div>
+            </div>
+            <div style="margin-top:16px;background:var(--tv-positive-bg);border-left:3px solid var(--tv-positive);border-radius:var(--radius-md);padding:12px 14px;font-size:13px;color:var(--tv-text-primary);">
+              Paying <strong>$300 extra</strong> each month pays your loan off <strong>6y 4m sooner</strong> and saves <strong>$84,210</strong> in interest.
+            </div>
+            <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:14px;">
+              Other tabs: <span style="opacity:.6;">Compound interest</span> · <span style="opacity:.6;">Simple interest</span> — switch above to model savings growth.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================= GOALS ============================= -->
+      <div id="page-goals" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Goals</div>
+            <div class="page-subtitle">Track progress toward what matters</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> New goal</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-target" style="font-size:13px;color:var(--tv-forest-light)"></i> Goals</div><div class="kpi-value">3</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-pig-money" style="font-size:13px;color:var(--tv-forest-light)"></i> Saved so far</div><div class="kpi-value">$46,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag" style="font-size:13px;color:var(--tv-gold)"></i> Total target</div><div class="kpi-value">$120,000</div></div>
+        </div>
+
+        <!-- New goal form -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title">New goal</div>
+          <div class="grid-3" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Name</label><input class="form-input" placeholder="e.g. Vacation fund"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option>Savings</option><option>Net worth</option><option>Debt payoff</option><option>Custom</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target amount</label><input class="form-input" placeholder="$10,000"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Already saved</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target date</label><input class="form-input" type="date"></div>
+            <div style="display:flex;align-items:end;"><button class="btn btn-primary" style="width:100%;justify-content:center;"><i class="ti ti-plus"></i> Create goal</button></div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div class="item-icon icon-amber"><i class="ti ti-umbrella"></i></div>
+              <div class="item-main">
+                <div class="item-name">Emergency fund</div>
+                <div class="item-sub">Safety net · Target Dec 2026</div>
+              </div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:45%;background:var(--tv-forest);"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$9,000 of $20,000</span><span style="color:var(--tv-text-muted);">45%</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $650/mo for 2y 3m</div>
+            <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn btn-secondary btn-sm">+$100</button><button class="btn btn-secondary btn-sm">+$500</button></div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div class="item-icon icon-forest"><i class="ti ti-home"></i></div>
+              <div class="item-main">
+                <div class="item-name">House down payment</div>
+                <div class="item-sub">Real estate · Target Aug 2028</div>
+              </div>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:22%;background:var(--tv-forest);"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$17,000 of $80,000</span><span style="color:var(--tv-text-muted);">22%</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $2,100/mo for 2y 6m</div>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+              <div class="item-icon icon-green"><i class="ti ti-car"></i></div>
+              <div class="item-main">
+                <div class="item-name">New car</div>
+                <div class="item-sub">Purchase · Target Mar 2026</div>
+              </div>
+              <span class="badge badge-green"><i class="ti ti-check"></i> Goal reached</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:80%;background:var(--tv-positive);"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$20,000 of $20,000</span><span style="color:var(--tv-text-muted);">80% funded · target met early</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $0/mo — fully funded</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Admin Analytics + Customer Care moved to the dedicated Ops Portal (assets/terravest-ops-portal.html). -->
 
     </div><!-- /page-content -->
   </div><!-- /main-area -->
@@ -2358,10 +3599,21 @@ function navigate(pageId, navEl) {
     home:'Home', accounts:'Accounts', transactions:'Transactions', budget:'Budgets',
     billpay:'Pay Bills', debt:'Debt Lab', invest:'Investments', realestate:'Properties',
     dealroom:'Deal Room', fractional:'Fractional LLC', security:'Security',
-    messages:'Messages', settings:'Settings', styleguide:'Style Guide', flowmap:'UI Flow Map'
+    messages:'Messages', settings:'Settings', styleguide:'Style Guide', flowmap:'UI Flow Map',
+    business:'My Business', aiassistant:'AI Assistant', calculators:'Calculators',
+    goals:'Goals', admin:'Admin · Analytics', customercare:'Customer Care',
+    profile:'Profile', auth:'Auth / KYC'
   };
   document.getElementById('topbar-label').textContent = labels[pageId] || 'TerraVest';
   document.querySelector('.page-content').scrollTop = 0;
+}
+
+// SSN mask toggle — reveals only the last 4; the full SSN is never shown.
+function toggleSsn(btn) {
+  const el = document.getElementById('ssn-mask');
+  const shown = el.textContent.trim() === '•••-••-6789';
+  el.textContent = shown ? '•••-••-••••' : '•••-••-6789';
+  btn.innerHTML = shown ? '<i class="ti ti-eye"></i> Show' : '<i class="ti ti-eye-off"></i> Hide';
 }
 </script>
 </body>

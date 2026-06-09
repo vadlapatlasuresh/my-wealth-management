@@ -10,6 +10,7 @@
 | POST | `/api/v1/payments/bill-pay-intents` | create intent (idempotent) |
 | GET | `/api/v1/payments/bill-pay-intents/{id}` | read |
 | POST | `/api/v1/payments/bill-pay-intents/{id}/cancel` | cancel |
+| GET | `/api/v1/payments/support/{userId}/bill-pay-intents` | Customer Care read-only view of a member's payments (CARE/ADMIN, audited) |
 | POST | `/api/v1/payments/webhook` | Stripe webhook (⚠️ **no signature verify**, payload discarded; `permitAll`) |
 
 ## Data model

@@ -11,4 +11,6 @@ public interface DealWatchRepository extends JpaRepository<DealWatch, Long> {
     boolean existsByUserIdAndDealId(Long userId, Long dealId);
 
     void deleteByUserIdAndDealId(Long userId, Long dealId);
+
+    void deleteByUserId(Long userId);
 }

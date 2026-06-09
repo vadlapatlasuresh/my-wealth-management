@@ -412,47 +412,115 @@ body{
         <div style="font-family:var(--display);font-size:28px;">Welcome back</div>
         <div class="muted" style="font-size:14px;margin-top:4px;">Sign in to your TerraVest account</div>
       </div>
-      <div class="field"><i class="ti ti-mail"></i><span class="typed">alex.morgan@email.com</span></div>
+      <div class="segmented" style="margin-bottom:16px;"><div class="seg on">Sign in</div><div class="seg">Create account</div></div>
+      <div class="field"><i class="ti ti-mail"></i><span class="typed">dana.reyes@gmail.com</span></div>
       <div class="field"><i class="ti ti-lock"></i><span class="typed">••••••••••</span><i class="ti ti-eye" style="margin-left:auto;"></i></div>
       <div style="text-align:right;margin:-4px 4px 16px;"><a style="color:var(--tv-forest);font-size:13.5px;font-weight:600;">Forgot password?</a></div>
       <button class="btn">Sign in</button>
-      <div class="faceid-row"><i class="ti ti-face-id"></i> Use Face ID</div>
-      <div style="text-align:center;margin-top:22px;font-size:14px;color:var(--tv-text-secondary);">New here? <a style="color:var(--tv-forest);font-weight:700;">Create account</a></div>
+      <div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px;color:var(--tv-text-muted);font-size:12.5px;"><i class="ti ti-shield-lock" style="color:var(--tv-forest);font-size:15px;"></i> A 6-digit code is required on every sign in.</div>
+      <div style="text-align:center;margin-top:18px;font-size:14px;color:var(--tv-text-secondary);">New to TerraVest? <a style="color:var(--tv-forest);font-weight:700;">Create one</a></div>
     </div></div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">1</span> Sign In</div>
+  <div class="caption-chip"><span class="num">1</span> Sign In — Password</div>
 </div>
 
-<!-- ===================== 2. SIGN UP ===================== -->
+<!-- ===================== 2. SIGN IN — MFA CODE ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen">
     <div class="dynamic-island"></div>
     <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
     <div class="content">
-      <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
-      <div class="nav-large"><h1>Create account</h1></div>
-      <div class="scroll" style="padding-top:6px;">
-        <div style="display:flex;gap:10px;">
-          <div class="field" style="flex:1;"><span class="typed">Alex</span></div>
-          <div class="field" style="flex:1;"><span class="typed">Morgan</span></div>
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Back to sign in</div>
+      <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;text-align:center;">
+        <div class="logo-tile" style="margin:0 auto 18px;width:60px;height:60px;border-radius:17px;background:linear-gradient(150deg,var(--tv-sage),var(--tv-forest-light));"><i class="ti ti-mail-check" style="color:#fff;font-size:30px;"></i></div>
+        <div style="font-family:var(--display);font-size:26px;">Verify it's you</div>
+        <div class="muted" style="font-size:14px;margin:8px 22px 24px;line-height:1.5;">Enter the 6-digit code sent to<br><b style="color:var(--tv-text-secondary);">d•••@gmail.com</b> via <b style="color:var(--tv-text-secondary);">Email</b></div>
+        <div class="code-boxes">
+          <div class="code-box filled">3</div>
+          <div class="code-box filled">1</div>
+          <div class="code-box filled">8</div>
+          <div class="code-box cursor"></div>
+          <div class="code-box"></div>
+          <div class="code-box"></div>
         </div>
-        <div class="field"><i class="ti ti-mail"></i><span class="typed">alex.morgan@email.com</span></div>
-        <div class="field"><i class="ti ti-phone"></i><span class="typed">(415) 555-4821</span></div>
-        <div class="sec-label" style="margin-top:10px;">Account type</div>
-        <div class="segmented"><div class="seg on">Individual</div><div class="seg">Business</div></div>
-        <div class="field" style="margin-top:11px;"><i class="ti ti-id"></i><span class="ph">SSN (last 4)</span><span style="margin-left:auto;color:var(--tv-text-muted);font-size:12px;">•••• 6 4 1 9</span></div>
-        <div class="field"><i class="ti ti-lock"></i><span class="typed">••••••••</span></div>
-        <div style="display:flex;gap:8px;align-items:flex-start;margin:2px 2px 16px;color:var(--tv-text-muted);font-size:12px;line-height:1.4;"><i class="ti ti-shield-lock" style="color:var(--tv-forest);font-size:15px;"></i> Your data is encrypted end-to-end and never sold. SSN is used only for identity verification.</div>
-        <button class="btn">Continue</button>
+        <div style="margin:18px 0 22px;"><button class="btn">Verify</button></div>
+        <div class="muted" style="font-size:13.5px;">Didn't get it? <a style="color:var(--tv-forest);font-weight:600;">Resend code</a></div>
+        <div style="display:flex;gap:7px;align-items:center;justify-content:center;margin-top:16px;background:var(--tv-gold-pale);border:1px solid var(--tv-gold-light);border-radius:11px;padding:10px 12px;color:var(--tv-warning);font-size:12.5px;font-weight:600;"><i class="ti ti-code" style="font-size:16px;"></i> Dev code: 318204</div>
       </div>
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">2</span> Sign Up</div>
+  <div class="caption-chip"><span class="num">2</span> Sign In — MFA Code</div>
 </div>
 
-<!-- ===================== 3. SMS VERIFY ===================== -->
+<!-- ===================== 3. SIGN UP — KYC ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-back"><i class="ti ti-chevron-left"></i>Sign in</div>
+      <div class="nav-large" style="padding-top:0;"><h1>Create account</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="sec-label" style="margin-top:0;">Account type</div>
+        <div class="segmented"><div class="seg on">Individual</div><div class="seg">Business</div></div>
+
+        <div class="sec-label">Your details</div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;"><span class="typed">Dana</span></div>
+          <div class="field" style="flex:1;"><span class="typed">Reyes</span></div>
+        </div>
+        <div class="field"><i class="ti ti-calendar"></i><span style="color:var(--tv-text-muted);font-size:12px;">Date of birth</span><span class="typed" style="margin-left:auto;">Mar 14, 1990</span></div>
+
+        <div class="sec-label">Email</div>
+        <div class="field" style="margin-bottom:6px;"><i class="ti ti-mail"></i><span class="typed">dana.reyes@gmail.com</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Email verified</span></div>
+        <div class="muted" style="font-size:12px;margin:0 2px 4px;">Verified with a 6-digit code · dev hint: 528193</div>
+
+        <div class="sec-label">Password</div>
+        <div class="field" style="margin-bottom:6px;"><i class="ti ti-lock"></i><span class="typed">••••••••••</span><i class="ti ti-eye" style="margin-left:auto;"></i></div>
+        <div class="pbar" style="margin-bottom:4px;"><span style="width:88%;background:var(--tv-positive);"></span></div>
+        <div class="muted" style="font-size:12px;margin:0 2px;"><b class="pos">Strong</b> password</div>
+        <div class="field" style="margin-top:8px;"><i class="ti ti-lock-check"></i><span class="typed">••••••••••</span><i class="ti ti-check pos" style="margin-left:auto;font-size:18px;"></i></div>
+
+        <div class="sec-label">Phone</div>
+        <div class="field"><i class="ti ti-phone"></i><span class="typed">(415) 555-4821</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Phone verified</span></div>
+        <div class="muted" style="font-size:12px;margin:-6px 2px 0;">Verified via SMS code · dev hint: 470216</div>
+
+        <div class="sec-label">Address</div>
+        <div class="field"><i class="ti ti-map-pin"></i><span class="typed">742 Evergreen Terrace</span></div>
+        <div class="field"><i class="ti ti-map-pin"></i><span class="ph">Apt, suite (optional)</span></div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1.4;"><span class="typed">San Francisco</span></div>
+          <div class="field" style="flex:.6;"><span class="typed">CA</span></div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;"><span class="typed">94103</span></div>
+          <div class="field" style="flex:1;"><span class="typed">United States</span></div>
+        </div>
+
+        <div class="sec-label">Preferred MFA channel</div>
+        <div class="segmented"><div class="seg on">Email</div><div class="seg">SMS</div></div>
+        <div class="muted" style="font-size:12px;margin:6px 2px 0;">Where we send your sign-in code.</div>
+
+        <div class="sec-label">Social Security Number</div>
+        <div class="field" style="margin-bottom:6px;"><i class="ti ti-id"></i><span class="typed">123-45-6789</span><i class="ti ti-shield-lock" style="margin-left:auto;color:var(--tv-forest);"></i></div>
+        <div class="muted" style="font-size:12px;margin:0 2px;">Encrypted at rest — only the last 4 are ever shown.</div>
+
+        <div class="row" style="border:1px solid var(--tv-border);border-radius:13px;margin-top:14px;background:#fff;">
+          <i class="ti ti-square-check-filled" style="color:var(--tv-forest);font-size:22px;"></i>
+          <div class="body"><div class="s" style="font-size:12.5px;line-height:1.4;color:var(--tv-text-secondary);">I agree to the <b style="color:var(--tv-forest);">Terms</b> & <b style="color:var(--tv-forest);">Privacy Policy</b>.</div></div>
+        </div>
+        <button class="btn" style="margin-top:14px;">Create account</button>
+        <div style="display:flex;gap:7px;align-items:center;justify-content:center;margin:14px 0 4px;color:var(--tv-text-muted);font-size:12px;"><i class="ti ti-shield-check" style="color:var(--tv-forest);font-size:15px;"></i> Protected by bank-grade encryption · Powered by Plaid</div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">3</span> Sign Up — KYC</div>
+</div>
+
+<!-- ===================== 4. SIGN UP — VERIFY EMAIL / PHONE ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen">
     <div class="dynamic-island"></div>
@@ -461,23 +529,25 @@ body{
       <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
       <div class="scroll" style="display:flex;flex-direction:column;justify-content:center;text-align:center;">
         <div class="logo-tile" style="margin:0 auto 18px;width:60px;height:60px;border-radius:17px;background:linear-gradient(150deg,var(--tv-sage),var(--tv-forest-light));"><i class="ti ti-message-2-code" style="color:#fff;font-size:30px;"></i></div>
-        <div style="font-family:var(--display);font-size:26px;">Verify your number</div>
-        <div class="muted" style="font-size:14px;margin:8px 24px 26px;line-height:1.5;">Enter the 6-digit code sent to<br><b style="color:var(--tv-text-secondary);">••• ••• 4821</b></div>
+        <div style="font-family:var(--display);font-size:26px;">Verify your phone</div>
+        <div class="muted" style="font-size:14px;margin:8px 24px 24px;line-height:1.5;">Enter the 6-digit code sent via SMS to<br><b style="color:var(--tv-text-secondary);">•••-•••-4821</b></div>
         <div class="code-boxes">
           <div class="code-box filled">4</div>
-          <div class="code-box filled">9</div>
-          <div class="code-box filled">2</div>
           <div class="code-box filled">7</div>
-          <div class="code-box cursor"></div>
+          <div class="code-box filled">0</div>
+          <div class="code-box filled">2</div>
+          <div class="code-box cursor">1</div>
           <div class="code-box"></div>
         </div>
-        <div class="muted" style="font-size:13.5px;margin:18px 0 26px;">Resend in <b style="color:var(--tv-text-secondary);">0:24</b></div>
-        <button class="btn">Verify</button>
+        <div style="margin:18px 0 20px;"><button class="btn">Verify</button></div>
+        <div class="muted" style="font-size:13.5px;">Resend in <b style="color:var(--tv-text-secondary);">0:24</b></div>
+        <div style="display:flex;gap:7px;align-items:center;justify-content:center;margin-top:16px;background:var(--tv-gold-pale);border:1px solid var(--tv-gold-light);border-radius:11px;padding:10px 12px;color:var(--tv-warning);font-size:12.5px;font-weight:600;"><i class="ti ti-code" style="font-size:16px;"></i> Dev code: 470216</div>
+        <div style="display:flex;align-items:center;gap:8px;justify-content:center;margin-top:18px;color:var(--tv-positive);font-size:13px;font-weight:600;"><i class="ti ti-circle-check"></i> Email already verified</div>
       </div>
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">3</span> SMS Verification</div>
+  <div class="caption-chip"><span class="num">4</span> Sign Up — Verify Phone</div>
 </div>
 
 <!-- ===================== 4. HOME DASHBOARD (NORMAL) ===================== -->
@@ -534,7 +604,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">4</span> Home — Dashboard</div>
+  <div class="caption-chip"><span class="num">5</span> Home — Dashboard</div>
 </div>
 
 <!-- ===================== 5. HOME — DOWNFALL ALERT ===================== -->
@@ -589,7 +659,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">5</span> Home — Downfall Alert</div>
+  <div class="caption-chip"><span class="num">6</span> Home — Downfall Alert</div>
 </div>
 
 <!-- ===================== 6. ACCOUNTS ===================== -->
@@ -629,7 +699,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">6</span> Accounts</div>
+  <div class="caption-chip"><span class="num">7</span> Accounts</div>
 </div>
 
 <!-- ===================== 7. TRANSACTIONS ===================== -->
@@ -674,7 +744,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">7</span> Transactions</div>
+  <div class="caption-chip"><span class="num">8</span> Transactions</div>
 </div>
 
 <!-- ===================== 8. BUDGET ===================== -->
@@ -709,10 +779,20 @@ body{
           <div class="muted" style="font-size:13px;margin-top:3px;">$640 saved of $960 budget</div>
           <div class="pbar"><span style="width:67%;background:var(--tv-forest);"></span></div>
         </div>
+        <div class="sec-label">Category breakdown</div>
+        <div style="overflow:hidden;margin-bottom:10px;"><div class="chips" style="flex-wrap:nowrap;">
+          <div class="chip on">All</div><div class="chip">Needs</div><div class="chip">Wants</div><div class="chip">Savings</div>
+        </div></div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-home"></i></div><div class="body"><div class="t">Housing</div><div class="s">Needs · $1,842 of $1,900</div><div class="pbar" style="margin-top:6px;"><span style="width:97%;background:var(--tv-positive);"></span></div></div><div class="val"><div class="v">$58</div><div class="d muted">left</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-tools-kitchen-2"></i></div><div class="body"><div class="t">Dining</div><div class="s">Wants · $612 of $500</div><div class="pbar" style="margin-top:6px;"><span style="width:100%;background:var(--tv-negative);"></span></div></div><div class="val"><div class="v neg">−$112</div><div class="d neg">over</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest-light);"><i class="ti ti-pig-money"></i></div><div class="body"><div class="t">Emergency fund</div><div class="s">Savings · $640 of $960</div><div class="pbar" style="margin-top:6px;"><span style="width:67%;background:var(--tv-forest);"></span></div></div><div class="val"><div class="v">$320</div><div class="d muted">left</div></div></div>
+        </div>
         <div class="ai-card" style="margin-top:16px;">
           <div class="spark"><i class="ti ti-sparkles"></i></div>
-          <div><div class="t">On track</div><div class="s">Needs & Wants are near target. Add $320 to Savings to hit 20% this month.</div></div>
+          <div><div class="t">On track</div><div class="s">Dining is $112 over. Move it to Savings to hit your 20% target this month.</div></div>
         </div>
+        <button class="btn" style="margin-top:14px;">Save budget</button>
       </div>
     </div>
     <div class="tabbar">
@@ -724,7 +804,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">8</span> Budget</div>
+  <div class="caption-chip"><span class="num">9</span> Budget</div>
 </div>
 
 <!-- ===================== 9. PAY BILLS ===================== -->
@@ -759,7 +839,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">9</span> Pay Bills</div>
+  <div class="caption-chip"><span class="num">10</span> Pay Bills</div>
 </div>
 
 <!-- ===================== 10. DEBT LAB ===================== -->
@@ -768,32 +848,58 @@ body{
     <div class="dynamic-island"></div>
     <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
     <div class="content">
-      <div class="nav-large"><h1>Debt Lab</h1></div>
+      <div class="nav-large"><h1>Debt Payoff Lab</h1></div>
       <div class="scroll" style="padding-top:4px;">
-        <div class="group" style="padding:15px;display:block;">
+        <div class="kpi-grid">
+          <div class="kpi"><div class="lab">Total Debt</div><div class="v">$18,050</div><div class="d muted">3 accounts</div></div>
+          <div class="kpi"><div class="lab">Weighted APR</div><div class="v">14.8%</div><div class="d muted">avg</div></div>
+          <div class="kpi"><div class="lab">Min / mo</div><div class="v">$520</div><div class="d muted">payments</div></div>
+          <div class="kpi"><div class="lab">Highest APR</div><div class="v neg">22.9%</div><div class="d muted">Visa</div></div>
+        </div>
+        <div class="ai-card" style="margin-top:14px;background:linear-gradient(135deg,#E6F4EC,#fbfdfb);border-color:#bfe3cd;">
+          <div class="spark" style="background:linear-gradient(135deg,var(--tv-forest-light),var(--tv-forest));"><i class="ti ti-bulb"></i></div>
+          <div style="flex:1;"><div class="t" style="color:var(--tv-forest);">Recommended: Avalanche</div><div class="s">Debt-free by <b>Mar 2028</b>, saving the most interest ($540 vs Snowball).</div><button class="btn-sm" style="margin-top:9px;">Use this plan</button></div>
+        </div>
+        <div class="sec-label">Your debts</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:#1A1F71;"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Visa Signature</div><div class="s">Min $95 / mo</div></div><div class="val"><div class="v">$4,890</div><div class="d neg">22.9% APR</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:#2671B9;"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Amex Platinum</div><div class="s">Min $145 / mo</div></div><div class="val"><div class="v">$6,160</div><div class="d" style="color:var(--tv-warning);">12.4% APR</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-car"></i></div><div class="body"><div class="t">Auto loan</div><div class="s">Min $280 / mo</div></div><div class="val"><div class="v">$7,000</div><div class="d pos">5.9% APR</div></div></div>
+        </div>
+        <div class="group" style="margin-top:14px;padding:15px;display:block;">
           <div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-weight:600;font-size:14px;">Extra payment</div><div style="font-family:var(--display);font-size:24px;color:var(--tv-forest);">$300<span style="font-size:14px;color:var(--tv-text-muted);">/mo</span></div></div>
           <div class="slider"><div class="fill" style="width:42%;"></div><div class="knob" style="left:42%;"></div></div>
           <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);"><span>$0</span><span>$700</span></div>
+          <button class="btn" style="margin-top:12px;">Compare strategies</button>
         </div>
         <div class="sec-label">Strategy comparison</div>
         <div class="strat best" style="margin-bottom:12px;">
-          <div class="head"><div class="nm">Avalanche</div><div class="badge gold"><i class="ti ti-coin" style="font-size:11px;"></i> Cheapest</div></div>
-          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Mar 2028</span></div>
+          <div class="head"><div class="nm">Avalanche</div><div style="display:flex;gap:5px;"><div class="badge gold"><i class="ti ti-coin" style="font-size:11px;"></i> Cheapest</div></div></div>
+          <div style="font-size:12px;color:var(--tv-text-secondary);margin:5px 0 2px;"><i class="ti ti-trending-down" style="color:var(--tv-positive);font-size:13px;"></i> Highest interest rate first — mathematically cheapest.</div>
           <div class="met"><span class="l">Total interest</span><span style="font-weight:700;color:var(--tv-positive);">$2,140</span></div>
           <div class="costbar"><span style="width:38%;background:var(--tv-positive);"></span></div>
+          <div style="font-size:11.5px;color:var(--tv-positive);margin-top:5px;">Saves $540 vs the costliest option</div>
+          <div class="met"><span class="l">Time · Debt-free · Liquidity</span><span style="font-weight:600;">3y 4m · Mar 2028 · Low</span></div>
+          <button class="btn-sm" style="width:100%;margin-top:10px;">Set as plan</button>
         </div>
         <div class="strat" style="margin-bottom:12px;">
           <div class="head"><div class="nm">Snowball</div><div class="badge green"><i class="ti ti-bolt" style="font-size:11px;"></i> Fastest</div></div>
-          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Jan 2028</span></div>
+          <div style="font-size:12px;color:var(--tv-text-secondary);margin:5px 0 2px;"><i class="ti ti-bolt" style="color:var(--tv-gold);font-size:13px;"></i> Smallest balance first — quick wins build momentum.</div>
           <div class="met"><span class="l">Total interest</span><span style="font-weight:700;">$2,680</span></div>
-          <div class="costbar"><span style="width:56%;background:var(--tv-gold);"></span></div>
+          <div class="costbar"><span style="width:100%;background:var(--tv-gold);"></span></div>
+          <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:5px;">Most expensive of the three</div>
+          <div class="met"><span class="l">Time · Debt-free · Liquidity</span><span style="font-weight:600;">3y 2m · Jan 2028 · High</span></div>
+          <button class="btn-sm ghost" style="width:100%;margin-top:10px;">Set as plan</button>
         </div>
         <div class="strat">
-          <div class="head"><div class="nm">Hybrid</div><div class="badge grey">Balanced</div></div>
-          <div class="met"><span class="l">Debt-free date</span><span style="font-weight:600;">Feb 2028</span></div>
+          <div class="head"><div class="nm">Hybrid</div><div class="badge grey">Current plan</div></div>
+          <div style="font-size:12px;color:var(--tv-text-secondary);margin:5px 0 2px;"><i class="ti ti-scale" style="color:var(--tv-forest-light);font-size:13px;"></i> Balanced — clears small balances among your highest-rate debts.</div>
           <div class="met"><span class="l">Total interest</span><span style="font-weight:700;">$2,410</span></div>
-          <div class="costbar"><span style="width:47%;background:var(--tv-forest-light);"></span></div>
+          <div class="costbar"><span style="width:71%;background:var(--tv-forest-light);"></span></div>
+          <div class="met"><span class="l">Time · Debt-free · Liquidity</span><span style="font-weight:600;">3y 3m · Feb 2028 · Medium</span></div>
+          <button class="btn-sm ghost" style="width:100%;margin-top:10px;">Current plan</button>
         </div>
+        <div class="muted" style="font-size:11.5px;text-align:center;margin:12px 4px 0;">Assumes on-time payments and no new debt.</div>
       </div>
     </div>
     <div class="tabbar">
@@ -805,7 +911,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">10</span> Debt Lab</div>
+  <div class="caption-chip"><span class="num">11</span> Debt Lab</div>
 </div>
 
 <!-- ===================== 11. INVESTMENTS ===================== -->
@@ -814,34 +920,41 @@ body{
     <div class="dynamic-island"></div>
     <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
     <div class="content">
-      <div class="nav-large"><h1>Investments</h1></div>
-      <div style="padding:0 18px 12px;"><div class="segmented"><div class="seg on">Stocks</div><div class="seg">Alternatives</div></div></div>
+      <div class="nav-large"><h1>Invest</h1></div>
+      <div style="padding:0 18px 12px;overflow:hidden;"><div class="segmented" style="font-size:11.5px;"><div class="seg on">Stocks</div><div class="seg">Brokers</div><div class="seg">Alt</div><div class="seg">Market</div></div></div>
       <div class="scroll" style="padding-top:0;">
         <div class="group" style="padding:15px;display:block;">
-          <div class="muted" style="font-size:13px;">Total value</div>
+          <div class="muted" style="font-size:13px;">Total invested</div>
           <div style="display:flex;align-items:flex-end;justify-content:space-between;">
             <div><div style="font-size:30px;font-weight:700;letter-spacing:-.6px;">$86,300</div><div class="pos" style="font-size:13.5px;font-weight:600;"><i class="ti ti-trending-up"></i> +$1,240 (1.46%) today</div></div>
             <svg width="90" height="40" viewBox="0 0 90 40"><polyline points="0,32 12,28 24,30 36,22 48,24 60,14 72,18 84,6" fill="none" stroke="var(--tv-positive)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
         </div>
-        <div class="sec-label">Holdings</div>
-        <div class="group">
-          <div class="row"><div class="inst" style="background:#000;">🍎</div><div class="body"><div class="t">AAPL</div><div class="s">Apple Inc · 42 sh</div></div><div class="val"><div class="v">$8,910</div><div class="d pos">+0.9%</div></div></div>
-          <div class="row"><div class="inst" style="background:#76B900;">NV</div><div class="body"><div class="t">NVDA</div><div class="s">NVIDIA · 18 sh</div></div><div class="val"><div class="v">$21,420</div><div class="d pos">+2.7%</div></div></div>
-          <div class="row"><div class="inst" style="background:#8E1F2C;">VTI</div><div class="body"><div class="t">VTI</div><div class="s">Total Market ETF · 96 sh</div></div><div class="val"><div class="v">$28,170</div><div class="d neg">−0.3%</div></div></div>
+        <div class="sec-label">Allocation</div>
+        <div class="group" style="padding:15px;display:block;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span>US Equity</span><b>58%</b></div><div class="pbar"><span style="width:58%;background:var(--tv-forest);"></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px;"><span>International</span><b>22%</b></div><div class="pbar"><span style="width:22%;background:var(--tv-forest-light);"></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px;"><span>Bonds</span><b>12%</b></div><div class="pbar"><span style="width:12%;background:var(--tv-gold);"></span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px;"><span>Cash</span><b>8%</b></div><div class="pbar"><span style="width:8%;background:var(--tv-sage);"></span></div>
         </div>
-        <div class="sec-label">Linked brokers</div>
+        <div class="sec-label">Portfolio holdings</div>
+        <div class="group">
+          <div class="row"><div class="inst" style="background:#000;">🍎</div><div class="body"><div class="t">AAPL</div><div class="s">Apple Inc · 42 sh · Fidelity</div></div><div class="val"><div class="v">$8,910</div><div class="d pos">+0.9%</div></div></div>
+          <div class="row"><div class="inst" style="background:#76B900;">NV</div><div class="body"><div class="t">NVDA</div><div class="s">NVIDIA · 18 sh · Robinhood</div></div><div class="val"><div class="v">$21,420</div><div class="d pos">+2.7%</div></div></div>
+          <div class="row"><div class="inst" style="background:#8E1F2C;">VTI</div><div class="body"><div class="t">VTI</div><div class="s">Total Market ETF · 96 sh · Schwab</div></div><div class="val"><div class="v">$28,170</div><div class="d neg">−0.3%</div></div></div>
+        </div>
+        <div class="sec-label">Connect a broker</div>
         <div class="chips">
           <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Robinhood</div>
           <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Fidelity</div>
-          <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> Schwab</div>
-          <div class="chip"><i class="ti ti-plus" style="font-size:13px;"></i> Add broker</div>
+          <div class="chip"><i class="ti ti-plug" style="font-size:13px;"></i> Schwab · Connect</div>
+          <div class="chip"><i class="ti ti-plug" style="font-size:13px;"></i> Vanguard · Connect</div>
         </div>
-        <div class="group" style="margin-top:16px;padding:13px;opacity:.65;border:1px dashed var(--tv-border);box-shadow:none;">
-          <div style="display:flex;gap:11px;align-items:center;">
-            <div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-building-estate"></i></div>
-            <div style="font-size:13px;color:var(--tv-text-secondary);line-height:1.4;"><b>Alternatives</b> would list LLCs, Land & Apartments — equity, valuations and income in one view.</div>
-          </div>
+        <div class="muted" style="font-size:11px;margin:6px 4px 0;">256-bit encrypted · read-only · credentials never stored. OAuth in demo mode.</div>
+        <div class="group" style="margin-top:14px;padding:18px 15px;display:block;text-align:center;border:1px dashed var(--tv-border);box-shadow:none;">
+          <i class="ti ti-building-store" style="font-size:30px;color:var(--tv-gold);"></i>
+          <div style="font-weight:700;margin-top:6px;">Marketplace</div>
+          <div class="muted" style="font-size:12.5px;margin-top:3px;line-height:1.4;">Example offerings — not live. Curated alternative-investment deals appear here once a provider is connected.</div>
         </div>
       </div>
     </div>
@@ -854,7 +967,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">11</span> Investments</div>
+  <div class="caption-chip"><span class="num">12</span> Investments</div>
 </div>
 
 <!-- ===================== 12. MY BUSINESS ===================== -->
@@ -868,12 +981,21 @@ body{
         <div class="pill-select">Acme LLC <i class="ti ti-chevron-down" style="font-size:15px;"></i></div>
       </div>
       <div class="scroll" style="padding-top:6px;">
-        <div class="biz-kpis">
-          <div class="biz-kpi"><div class="l">Revenue</div><div class="v pos">$42k</div></div>
-          <div class="biz-kpi"><div class="l">Expenses</div><div class="v neg">$28k</div></div>
-          <div class="biz-kpi"><div class="l">Net</div><div class="v" style="color:var(--tv-forest);">$14k</div></div>
+        <div class="chips" style="margin-bottom:12px;">
+          <div class="chip green"><i class="ti ti-circle-check" style="font-size:13px;"></i> QuickBooks connected</div>
+          <div class="chip gold">LLC</div>
+          <div class="chip">Synced 2m ago</div>
         </div>
-        <div class="sec-label">Cash flow · 6 mo</div>
+        <div class="biz-kpis">
+          <div class="biz-kpi"><div class="l">Revenue MTD</div><div class="v pos">$42k</div></div>
+          <div class="biz-kpi"><div class="l">Expenses MTD</div><div class="v neg">$28k</div></div>
+          <div class="biz-kpi"><div class="l">Net MTD</div><div class="v" style="color:var(--tv-forest);">$14k</div></div>
+        </div>
+        <div class="biz-kpis" style="margin-top:9px;grid-template-columns:1fr 1fr;">
+          <div class="biz-kpi"><div class="l">Cash balance</div><div class="v">$58,200</div></div>
+          <div class="biz-kpi"><div class="l">Outstanding invoices</div><div class="v" style="color:var(--tv-warning);">$9,700</div></div>
+        </div>
+        <div class="sec-label">Revenue trend · 6 mo</div>
         <div class="group" style="padding:16px 15px;display:block;">
           <svg viewBox="0 0 290 96" width="100%" height="96">
             <line x1="0" y1="80" x2="290" y2="80" stroke="var(--tv-border)"/>
@@ -892,8 +1014,19 @@ body{
         </div>
         <div class="sec-label">Invoices</div>
         <div class="group">
-          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">#1042 · Northwind Co.</div><div class="s">Paid Jun 2</div></div><div class="val"><div class="v">$6,500</div><div class="d pos">Paid</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">#1042 · Northwind Co.</div><div class="s">Due Jun 2</div></div><div class="val"><div class="v">$6,500</div><div class="d pos">Paid</div></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-alert-circle"></i></div><div class="body"><div class="t">#1043 · Globex Inc.</div><div class="s">Due May 28</div></div><div class="val"><div class="v neg">$3,200</div><div class="d neg">Overdue</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">#1044 · Initech</div><div class="s">Due Jun 20</div></div><div class="val"><div class="v">$6,500</div><div class="d" style="color:var(--tv-warning);">Open</div></div></div>
+        </div>
+        <div class="sec-label">Expenses</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:#3D8A68;"><i class="ti ti-building-warehouse"></i></div><div class="body"><div class="t">AWS</div><div class="s">Software · Jun 4</div></div><div class="val"><div class="v neg">−$1,840</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-briefcase"></i></div><div class="body"><div class="t">Office lease</div><div class="s">Rent · Jun 1</div></div><div class="val"><div class="v neg">−$3,200</div></div></div>
+        </div>
+        <div class="sec-label">Activity</div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-cash"></i></div><div class="body"><div class="t">Invoice #1042 paid</div><div class="s">Northwind Co. · Jun 2</div></div><div class="val"><div class="v pos">+$6,500</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-plus"></i></div><div class="body"><div class="t">Account added</div><div class="s">Chase Business · Jun 1</div></div></div>
         </div>
       </div>
     </div>
@@ -906,7 +1039,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">12</span> My Business</div>
+  <div class="caption-chip"><span class="num">13</span> My Business</div>
 </div>
 
 <!-- ===================== 13. AI ASSISTANT ===================== -->
@@ -933,6 +1066,7 @@ body{
         </div>
         <div class="msg-actions"><i class="ti ti-copy"></i><i class="ti ti-refresh"></i><i class="ti ti-thumb-up"></i><i class="ti ti-thumb-down"></i></div>
         <div style="margin-top:auto;">
+          <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;color:var(--tv-warning);background:var(--tv-warning-bg);padding:9px 11px;border-radius:10px;font-size:11.5px;line-height:1.35;"><i class="ti ti-info-circle" style="font-size:15px;margin-top:1px;"></i> AI guidance notice — not financial advice.</div>
           <div class="chips" style="margin-bottom:10px;">
             <div class="chip"><i class="ti ti-sparkles" style="font-size:13px;color:var(--tv-gold);"></i> Am I on track to retire?</div>
             <div class="chip"><i class="ti ti-sparkles" style="font-size:13px;color:var(--tv-gold);"></i> Cut my spending</div>
@@ -947,7 +1081,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">13</span> AI Assistant</div>
+  <div class="caption-chip"><span class="num">14</span> AI Assistant</div>
 </div>
 
 <!-- ===================== 14. PROPERTIES ===================== -->
@@ -994,10 +1128,237 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">14</span> Properties</div>
+  <div class="caption-chip"><span class="num">15</span> Properties</div>
 </div>
 
-<!-- ===================== 15. SETTINGS — APPEARANCE & LANGUAGE ===================== -->
+<!-- ===================== 15. CALCULATORS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Calculators</h1></div>
+      <div style="padding:0 18px 12px;overflow:hidden;"><div class="segmented" style="font-size:11.5px;"><div class="seg on">Mortgage</div><div class="seg">Compound</div><div class="seg">Simple</div></div></div>
+      <div class="scroll" style="padding-top:0;">
+        <div class="group" style="margin-bottom:10px;">
+          <div class="row"><div class="body"><div class="t">Use a linked property</div></div><div class="val"><div class="v" style="color:var(--tv-text-muted);font-weight:500;">1420 Cedar Lane <i class="ti ti-chevron-down" style="font-size:14px;"></i></div></div></div>
+        </div>
+        <div class="field"><i class="ti ti-home"></i><span class="muted" style="flex:1;">Balance owed</span><span class="typed">$360,000</span></div>
+        <div class="field"><i class="ti ti-percentage"></i><span class="muted" style="flex:1;">Interest rate (APR)</span><span class="typed">6.25%</span></div>
+        <div class="field"><i class="ti ti-cash"></i><span class="muted" style="flex:1;">Monthly payment</span><span class="typed">$2,217</span></div>
+        <div class="field"><i class="ti ti-plus"></i><span class="muted" style="flex:1;">Extra each month</span><span class="typed">$300</span></div>
+        <div class="hero" style="margin-top:6px;">
+          <div class="lab">With an extra $300/mo you'll be</div>
+          <div class="big" style="font-size:30px;">Mortgage-free 6 yrs early</div>
+          <div class="delta up"><i class="ti ti-trending-up"></i> Save $94,820 in interest</div>
+        </div>
+        <div class="kpi-grid" style="margin-top:12px;">
+          <div class="kpi"><div class="lab">Payoff (current)</div><div class="v">22 yr 4 mo</div><div class="d muted">Oct 2048</div></div>
+          <div class="kpi"><div class="lab">Payoff (with extra)</div><div class="v pos">16 yr 1 mo</div><div class="d pos">Jul 2042</div></div>
+          <div class="kpi"><div class="lab">Time saved</div><div class="v pos">6 yr 3 mo</div></div>
+          <div class="kpi"><div class="lab">Interest saved</div><div class="v pos">$94,820</div></div>
+        </div>
+        <div class="muted" style="font-size:12px;text-align:center;margin:12px 6px 0;line-height:1.4;">Paying $2,517/mo clears your loan by Jul 2042 and cuts total interest from $238k to $143k.</div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">16</span> Calculators — Mortgage payoff</div>
+</div>
+
+<!-- ===================== 16. GOALS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div style="padding:2px 18px 8px;display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:28px;font-weight:700;">Goals</h1>
+        <button class="btn-sm"><i class="ti ti-plus" style="font-size:13px;"></i> New goal</button>
+      </div>
+      <div class="scroll" style="padding-top:6px;">
+        <div class="biz-kpis">
+          <div class="biz-kpi"><div class="l">Goals</div><div class="v">3</div></div>
+          <div class="biz-kpi"><div class="l">Saved so far</div><div class="v pos">$32k</div></div>
+          <div class="biz-kpi"><div class="l">Total target</div><div class="v">$95k</div></div>
+        </div>
+        <div class="sec-label">Your goals</div>
+        <div class="group" style="padding:15px;display:block;">
+          <div style="display:flex;align-items:center;gap:11px;"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-shield-check"></i></div><div style="flex:1;"><div style="font-weight:700;font-size:15.5px;">Emergency fund</div><div class="muted" style="font-size:12.5px;">Savings · by Dec 2026</div></div><i class="ti ti-trash" style="color:#c2cdc7;"></i></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:11px;"><span class="muted">$12,000 of $20,000</span><b>60%</b></div>
+          <div class="pbar"><span style="width:60%;background:var(--tv-forest);"></span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:11px;"><div class="muted" style="font-size:12.5px;">Save <b style="color:var(--tv-text-primary);">$1,333/mo</b> for 6 mo</div><div class="chips"><div class="chip">+$100</div><div class="chip">+$500</div></div></div>
+        </div>
+        <div class="group" style="padding:15px;display:block;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:11px;"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-plane"></i></div><div style="flex:1;"><div style="font-weight:700;font-size:15.5px;">Japan trip</div><div class="muted" style="font-size:12.5px;">Savings · by Apr 2027</div></div><i class="ti ti-trash" style="color:#c2cdc7;"></i></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:11px;"><span class="muted">$2,800 of $8,000</span><b>35%</b></div>
+          <div class="pbar"><span style="width:35%;background:var(--tv-gold);"></span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:11px;"><div class="muted" style="font-size:12.5px;">Save <b style="color:var(--tv-text-primary);">$520/mo</b> for 10 mo</div><div class="chips"><div class="chip">+$100</div><div class="chip">+$500</div></div></div>
+        </div>
+        <div class="group" style="padding:15px;display:block;margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:11px;"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-target"></i></div><div style="flex:1;"><div style="font-weight:700;font-size:15.5px;">$1M net worth</div><div class="muted" style="font-size:12.5px;">Net worth · by 2034</div></div><div class="badge green">Goal reached</div></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-top:11px;"><span class="muted">$67,000 of $67,000</span><b>100%</b></div>
+          <div class="pbar"><span style="width:100%;background:var(--tv-positive);"></span></div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">17</span> Goals</div>
+</div>
+
+<!-- ===================== 17. DEAL ROOM ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div style="padding:2px 18px 8px;display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:28px;font-weight:700;">Deal Room</h1>
+        <button class="btn-sm"><i class="ti ti-plus" style="font-size:13px;"></i> Register</button>
+      </div>
+      <div style="padding:0 18px 12px;overflow:hidden;"><div class="segmented" style="font-size:11px;"><div class="seg on">Market</div><div class="seg">My Deals</div><div class="seg">Saved</div><div class="seg">Track</div></div></div>
+      <div style="padding:0 18px 10px;overflow:hidden;"><div class="chips" style="flex-wrap:nowrap;">
+        <div class="chip on">All</div><div class="chip">Real Estate</div><div class="chip">Business</div><div class="chip"><i class="ti ti-arrows-sort" style="font-size:12px;"></i> Highest return</div>
+      </div></div>
+      <div class="scroll" style="padding-top:0;">
+        <div class="prop">
+          <div class="photo" style="background:linear-gradient(135deg,#a9d3ba,#3D8A68);"><div class="badge"><i class="ti ti-flame" style="font-size:11px;"></i> Open</div></div>
+          <div class="info">
+            <div style="font-size:16px;font-weight:700;">Cedar Park Multifamily</div>
+            <div class="muted" style="font-size:12.5px;">Real Estate · Multifamily · Austin, TX</div>
+            <div class="chips" style="margin-top:9px;"><div class="chip gold">Target IRR 18%</div><div class="chip green">Equity</div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:11px;font-size:13px;">
+              <div><div class="muted" style="font-size:11px;">Target raise</div><div style="font-weight:700;">$2.4M</div></div>
+              <div style="text-align:right;"><div class="muted" style="font-size:11px;">Min invest</div><div style="font-weight:700;">$25,000</div></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:11px;"><span class="muted">$1.6M committed · 67%</span><span class="muted">Hold 60 mo</span></div>
+            <div class="pbar"><span style="width:67%;background:var(--tv-forest);"></span></div>
+            <button class="btn-sm" style="width:100%;margin-top:11px;">View details</button>
+          </div>
+        </div>
+        <div class="prop" style="margin-top:14px;">
+          <div class="photo" style="background:linear-gradient(135deg,#F0C878,#C9973A);"><div class="badge"><i class="ti ti-flame" style="font-size:11px;"></i> Open</div></div>
+          <div class="info">
+            <div style="font-size:16px;font-weight:700;">SaaS Roll-up Fund II</div>
+            <div class="muted" style="font-size:12.5px;">Private Equity · Buyout · Remote</div>
+            <div class="chips" style="margin-top:9px;"><div class="chip gold">12–16% / yr</div><div class="chip">Quarterly</div></div>
+            <div style="display:flex;justify-content:space-between;margin-top:11px;font-size:13px;">
+              <div><div class="muted" style="font-size:11px;">Target raise</div><div style="font-weight:700;">$5.0M</div></div>
+              <div style="text-align:right;"><div class="muted" style="font-size:11px;">Min invest</div><div style="font-weight:700;">$50,000</div></div>
+            </div>
+            <button class="btn-sm ghost" style="width:100%;margin-top:11px;">View details</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">18</span> Deal Room — Marketplace</div>
+</div>
+
+<!-- ===================== 18. ADMIN · ANALYTICS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div style="padding:2px 18px 8px;display:flex;align-items:center;justify-content:space-between;">
+        <h1 style="font-size:24px;font-weight:700;">Admin · Analytics</h1>
+        <div class="pill-select" style="font-size:13px;padding:7px 12px;">30d <i class="ti ti-chevron-down" style="font-size:14px;"></i></div>
+      </div>
+      <div class="scroll" style="padding-top:6px;">
+        <div class="muted" style="font-size:12.5px;margin:0 2px 12px;">Operational KPIs from the audit event stream.</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="lab">Total events</div><div class="v">48,210</div><div class="d muted">last 30d</div></div>
+          <div class="kpi"><div class="lab">Active users</div><div class="v">1,284</div><div class="d pos">+8.2%</div></div>
+          <div class="kpi"><div class="lab">Error rate</div><div class="v pos">0.4%</div><div class="d muted">182 failures</div></div>
+          <div class="kpi"><div class="lab">Logins</div><div class="v">9,640</div><div class="d muted">37 failed · 64 signups</div></div>
+        </div>
+        <div class="sec-label">Daily activity</div>
+        <div class="group" style="padding:16px 15px;display:block;">
+          <svg viewBox="0 0 290 80" width="100%" height="80">
+            <line x1="0" y1="68" x2="290" y2="68" stroke="var(--tv-border)"/>
+            <g fill="var(--tv-forest-light)">
+              <rect x="6" y="44" width="14" height="24" rx="3"/><rect x="26" y="36" width="14" height="32" rx="3"/><rect x="46" y="50" width="14" height="18" rx="3"/><rect x="66" y="28" width="14" height="40" rx="3"/><rect x="86" y="20" width="14" height="48" rx="3" fill="var(--tv-forest)"/><rect x="106" y="38" width="14" height="30" rx="3"/><rect x="126" y="46" width="14" height="22" rx="3"/><rect x="146" y="30" width="14" height="38" rx="3"/><rect x="166" y="22" width="14" height="46" rx="3" fill="var(--tv-forest)"/><rect x="186" y="34" width="14" height="34" rx="3"/><rect x="206" y="42" width="14" height="26" rx="3"/><rect x="226" y="26" width="14" height="42" rx="3"/><rect x="246" y="18" width="14" height="50" rx="3" fill="var(--tv-forest)"/><rect x="266" y="40" width="14" height="28" rx="3"/>
+            </g>
+          </svg>
+        </div>
+        <div class="sec-label">Top actions</div>
+        <div class="group">
+          <div class="row"><div class="body"><div class="t">account.sync</div></div><div class="val"><div class="badge grey">12,840</div></div></div>
+          <div class="row"><div class="body"><div class="t">auth.login</div></div><div class="val"><div class="badge grey">9,640</div></div></div>
+          <div class="row"><div class="body"><div class="t">transaction.list</div></div><div class="val"><div class="badge grey">7,210</div></div></div>
+        </div>
+        <div class="sec-label">Recent failures</div>
+        <div class="group">
+          <div class="row"><div class="body"><div class="t">auth.login</div><div class="s">u_8421 · 9:32 AM · 73.2.x.x</div></div><div class="val"><div class="badge" style="background:var(--tv-negative-bg);color:var(--tv-negative);">FAILURE</div></div></div>
+          <div class="row"><div class="body"><div class="t">plaid.exchange</div><div class="s">u_5510 · 8:14 AM · 98.4.x.x</div></div><div class="val"><div class="badge" style="background:var(--tv-negative-bg);color:var(--tv-negative);">FAILURE</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">19</span> Admin · Analytics</div>
+</div>
+
+<!-- ===================== 19. CUSTOMER CARE ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Customer Care</h1></div>
+      <div style="padding:0 18px 10px;"><div class="searchbar"><i class="ti ti-search"></i> Search by email or name</div></div>
+      <div class="scroll" style="padding-top:0;">
+        <div class="sec-label" style="margin-top:4px;">Member 360</div>
+        <div class="group" style="padding:15px;display:block;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;">JD</div>
+            <div style="flex:1;"><div style="font-weight:700;font-size:16px;">Jordan Diaz</div><div class="muted" style="font-size:12.5px;">jordan.d@email.com · u_8421</div></div>
+            <div class="badge grey">USER</div>
+          </div>
+        </div>
+        <div class="biz-kpis" style="margin-top:12px;">
+          <div class="biz-kpi"><div class="l">Account type</div><div class="v" style="font-size:14px;">Individual</div></div>
+          <div class="biz-kpi"><div class="l">Phone</div><div class="v pos" style="font-size:14px;">Verified</div></div>
+          <div class="biz-kpi"><div class="l">Identity</div><div class="v" style="font-size:13px;">SSN ••6419</div></div>
+        </div>
+        <div class="muted" style="font-size:12px;margin:8px 4px 0;">Member since Mar 2025 · 2 issues</div>
+        <div class="segmented" style="margin-top:14px;"><div class="seg on">Issues (2)</div><div class="seg">Activity (24)</div></div>
+        <div class="group" style="margin-top:12px;">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-alert-circle"></i></div><div class="body"><div class="t">plaid.exchange failed</div><div class="s">Plaid · Jun 5 · 98.4.x.x</div></div><div class="val"><div class="badge" style="background:var(--tv-negative-bg);color:var(--tv-negative);">FAILURE</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-warning);"><i class="ti ti-lock"></i></div><div class="body"><div class="t">auth.login failed</div><div class="s">Auth · Jun 1 · 73.2.x.x</div></div><div class="val"><div class="badge" style="background:var(--tv-negative-bg);color:var(--tv-negative);">FAILURE</div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">20</span> Customer Care — Member 360</div>
+</div>
+
+<!-- ===================== 20. SETTINGS — APPEARANCE & LANGUAGE ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen">
     <div class="dynamic-island"></div>
@@ -1049,10 +1410,66 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">15</span> Settings — Appearance & Language</div>
+  <div class="caption-chip"><span class="num">21</span> Settings — Appearance & Language</div>
 </div>
 
-<!-- ===================== 16. DARK MODE SHOWCASE ===================== -->
+<!-- ===================== 22. PROFILE — KYC & MASKED SSN ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large"><h1>Profile</h1></div>
+      <div class="scroll" style="padding-top:4px;">
+        <div class="group" style="padding:15px;display:block;">
+          <div style="display:flex;align-items:center;gap:13px;">
+            <div style="width:52px;height:52px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;">DR</div>
+            <div style="flex:1;min-width:0;"><div style="font-weight:700;font-size:17px;">Dana Reyes</div><div class="muted" style="font-size:12.5px;">dana.reyes@gmail.com · 5 linked accounts</div></div>
+            <div class="badge gold">Member</div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin:18px 2px 8px;">
+          <div class="sec-label" style="margin:0;">Personal details</div>
+          <a style="color:var(--tv-forest);font-size:13px;font-weight:600;"><i class="ti ti-pencil" style="font-size:14px;"></i> Edit profile</a>
+        </div>
+        <div class="group">
+          <div class="row"><i class="ti ti-user" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Name</div></div><div class="val"><div class="v" style="font-weight:500;">Dana Reyes</div></div></div>
+          <div class="row"><i class="ti ti-mail" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Email</div><div class="s">dana.reyes@gmail.com</div></div><span class="badge green"><i class="ti ti-circle-check" style="font-size:12px;"></i> Verified</span></div>
+          <div class="row"><i class="ti ti-phone" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Phone</div><div class="s">(415) 555-4821</div></div><span class="badge green"><i class="ti ti-circle-check" style="font-size:12px;"></i> Verified</span></div>
+          <div class="row"><i class="ti ti-calendar" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Date of birth</div></div><div class="val"><div class="v" style="font-weight:500;">Mar 14, 1990</div></div></div>
+          <div class="row"><i class="ti ti-map-pin" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Address</div><div class="s">742 Evergreen Terrace<br>San Francisco, CA 94103 · United States</div></div></div>
+          <div class="row"><i class="ti ti-briefcase" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Account type</div></div><div class="val"><div class="v" style="font-weight:500;">Individual</div></div></div>
+          <div class="row"><i class="ti ti-shield-check" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Identity</div></div><span class="badge green"><i class="ti ti-circle-check" style="font-size:12px;"></i> Verified</span></div>
+          <div class="row"><i class="ti ti-key" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">SSN</div><div class="s">Encrypted — last 4 shown on reveal</div></div><div class="val" style="display:flex;align-items:center;gap:10px;"><div class="v" style="font-weight:600;letter-spacing:1px;">•••-••-••••</div><i class="ti ti-eye" style="color:var(--tv-forest);font-size:18px;"></i></div></div>
+        </div>
+
+        <div class="sec-label">MFA channel</div>
+        <div class="segmented"><div class="seg on">Email</div><div class="seg">SMS</div></div>
+        <div class="muted" style="font-size:12px;margin:6px 2px 0;">Your sign-in code goes to d•••@gmail.com.</div>
+
+        <div class="sec-label">Security</div>
+        <div class="group">
+          <div class="row"><i class="ti ti-lock-square-rounded" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Two-factor</div></div><div class="val" style="display:flex;align-items:center;gap:10px;"><span class="badge grey">Not enabled</span><span class="btn-sm" style="padding:5px 12px;">Enable</span></div></div>
+          <div class="row"><i class="ti ti-password" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t">Password</div></div><a style="color:var(--tv-forest);font-size:14px;font-weight:600;">Change</a></div>
+        </div>
+
+        <button class="btn" style="margin-top:16px;background:var(--tv-negative-bg);color:var(--tv-negative);"><i class="ti ti-logout"></i> Sign out</button>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">22</span> Profile — KYC & Masked SSN</div>
+</div>
+
+<!-- ===================== 23. DARK MODE SHOWCASE ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen dark">
     <div class="dynamic-island"></div>
@@ -1097,7 +1514,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">16</span> Dark theme</div>
+  <div class="caption-chip"><span class="num">23</span> Dark theme</div>
 </div>
 
 </main>

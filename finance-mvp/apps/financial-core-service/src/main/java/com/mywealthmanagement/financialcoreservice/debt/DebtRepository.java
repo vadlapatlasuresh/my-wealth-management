@@ -6,4 +6,6 @@ import java.util.List;
 
 public interface DebtRepository extends JpaRepository<Debt, Long> {
     List<Debt> findByUserId(Long userId);
+
+    void deleteByUserId(Long userId);
 }

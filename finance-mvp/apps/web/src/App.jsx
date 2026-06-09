@@ -23,7 +23,10 @@ export default function App() {
   const [authForm, setAuthForm] = useState({
     email: "",
     password: "",
-    name: ""
+    name: "",
+    accountType: "INDIVIDUAL",
+    mfaChannel: "EMAIL",
+    country: "United States"
   });
   const [user, setUser] = useState(null);
   const [billPayForm, setBillPayForm] = useState({
@@ -146,22 +149,30 @@ export default function App() {
     init();
   }, []);
 
+  // Shared success path: store the session for a token-bearing auth response
+  // (from login, MFA verify, or register) and load the dashboard. AuthPage owns
+  // the network calls now (login may require an MFA second step), so it hands the
+  // final token-bearing response here.
+  async function onAuthenticated(response) {
+    if (!response || !response.token) {
+      throw new Error((response && response.message) || "Authentication failed");
+    }
+    const email = response.email || authForm.email;
+    const name = response.name || authForm.name || "";
+    setAuthToken(response.token, email, name);
+    setUser({ email, name });
+    setError("");
+    await loadAll();
+  }
+
   async function submitAuth(event) {
+    // Registration still flows through the parent; login (incl. MFA) is handled
+    // inside AuthPage and reports back via onAuthenticated.
     event.preventDefault();
     try {
       setError("");
-      const response =
-        authMode === "login" ? await api.login(authForm) : await api.register(authForm);
-      
-      if (response && response.token) {
-        const email = response.email || authForm.email;
-        const name = response.name || authForm.name || "";
-        setAuthToken(response.token, email, name);
-        setUser({ email, name });
-        await loadAll();
-      } else {
-        throw new Error(response.message || "Authentication failed");
-      }
+      const response = await api.register(authForm);
+      await onAuthenticated(response);
     } catch (err) {
       setError(err.message);
     }
@@ -287,7 +298,9 @@ export default function App() {
         authForm={authForm}
         setAuthForm={setAuthForm}
         error={error}
+        setError={setError}
         onSubmit={submitAuth}
+        onAuthenticated={onAuthenticated}
       />
     );
   }

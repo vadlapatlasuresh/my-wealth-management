@@ -48,4 +48,33 @@ public class OtpService {
     private static String normalize(String phone) {
         return phone == null ? "" : phone.replaceAll("\\D", "");
     }
+
+    // --- Raw-key variants (do NOT strip characters) for MFA (key=user id) and
+    //     email verification (key=email). Reusing the phone normalize() would
+    //     collapse these keys (e.g. an email has no digits). ---
+
+    /** Generate + store a code for an arbitrary key; returns the code (dev only). */
+    public String generateFor(String key) {
+        String code = String.format("%06d", RANDOM.nextInt(1_000_000));
+        store.put(rawKey(key), new Entry(code, Instant.now().plusSeconds(TTL_SECONDS)));
+        return code;
+    }
+
+    /** Verify a submitted code for an arbitrary key; consumes it on success. */
+    public boolean verifyFor(String key, String code) {
+        if (key == null || code == null) return false;
+        Entry e = store.get(rawKey(key));
+        if (e == null) return false;
+        if (Instant.now().isAfter(e.expiresAt())) {
+            store.remove(rawKey(key));
+            return false;
+        }
+        boolean ok = e.code().equals(code.trim());
+        if (ok) store.remove(rawKey(key));
+        return ok;
+    }
+
+    private static String rawKey(String key) {
+        return "k:" + (key == null ? "" : key.trim().toLowerCase());
+    }
 }

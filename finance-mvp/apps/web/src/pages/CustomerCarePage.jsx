@@ -1,5 +1,77 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, getUserRoles } from '../api';
+
+// Roles a support admin can grant/revoke from this console.
+const MANAGED_ROLES = [
+  { key: 'CARE', label: 'Customer Care', help: 'Look up members and view their activity & issues' },
+  { key: 'ADMIN', label: 'Administrator', help: 'Full access, including granting roles' },
+];
+
+// Light money formatter (no external dep) for the read-only data tabs.
+function money(v) {
+  const n = Number(v);
+  if (v == null || Number.isNaN(n)) return '—';
+  return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+}
+
+// Read-only "what the customer sees" data tabs — each fetched on demand for the selected member.
+const DATA_TABS = {
+  accounts: {
+    label: 'Accounts', icon: 'ti-building-bank',
+    fetch: (id) => api.supportGetAccounts(id),
+    rows: (r) => r || [],
+    head: ['Account', 'Type', 'Balance'],
+    row: (a, i) => (
+      <tr key={a.id ?? i}>
+        <td style={{ fontWeight: 500 }}>{a.name || a.officialName || '—'}</td>
+        <td><span className="badge badge-gray">{a.type || a.accountType || a.subtype || '—'}</span></td>
+        <td style={{ fontWeight: 600 }}>{money(a.balance ?? a.currentBalance ?? a.availableBalance)}</td>
+      </tr>
+    ),
+  },
+  transactions: {
+    label: 'Transactions', icon: 'ti-arrows-exchange',
+    fetch: (id) => api.supportGetTransactions(id),
+    rows: (r) => r || [],
+    head: ['Date', 'Description', 'Category', 'Amount'],
+    row: (t, i) => (
+      <tr key={t.id ?? i}>
+        <td style={{ color: 'var(--tv-text-muted)', whiteSpace: 'nowrap' }}>{t.date || t.transactionDate || '—'}</td>
+        <td style={{ fontWeight: 500 }}>{t.name || t.description || t.merchant || '—'}</td>
+        <td><span className="badge badge-gray">{t.category || '—'}</span></td>
+        <td style={{ fontWeight: 600 }}>{money(t.amount)}</td>
+      </tr>
+    ),
+  },
+  payments: {
+    label: 'Payments', icon: 'ti-receipt',
+    fetch: (id) => api.supportGetPayments(id),
+    rows: (r) => r?.items || [],
+    head: ['Payee', 'Amount', 'Status', 'Date'],
+    row: (p, i) => (
+      <tr key={p.intent_id ?? p.id ?? i}>
+        <td style={{ fontWeight: 500 }}>{p.payee || '—'}</td>
+        <td style={{ fontWeight: 600 }}>{money(p.amount)}</td>
+        <td><span className={`badge ${p.status === 'FAILED' ? 'badge-red' : 'badge-forest'}`}>{p.status || '—'}</span></td>
+        <td style={{ color: 'var(--tv-text-muted)' }}>{p.scheduled_date || p.created_at || '—'}</td>
+      </tr>
+    ),
+  },
+  deals: {
+    label: 'Deals', icon: 'ti-briefcase',
+    fetch: (id) => api.supportGetDeals(id),
+    rows: (r) => r || [],
+    head: ['Deal', 'Status', 'Category', 'Interest'],
+    row: (d, i) => (
+      <tr key={d.id ?? i}>
+        <td style={{ fontWeight: 500 }}>{d.title || '—'}</td>
+        <td><span className="badge badge-forest">{d.status || '—'}</span></td>
+        <td><span className="badge badge-gray">{d.category || '—'}</span></td>
+        <td style={{ color: 'var(--tv-text-muted)' }}>{d.interestCount ?? 0} interested</td>
+      </tr>
+    ),
+  },
+};
 
 /* Format an ISO/LocalDateTime string to a short, readable timestamp. */
 function ts(v) {
@@ -34,7 +106,8 @@ function ActivityRow({ e }) {
 }
 
 export default function CustomerCarePage() {
-  const [query, setQuery] = useState('');
+  // Multi-field help-desk search (any combination, AND-ed on the backend).
+  const [fields, setFields] = useState({ first: '', last: '', email: '', phone: '' });
   const [users, setUsers] = useState([]);
   const [loadingList, setLoadingList] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -42,12 +115,23 @@ export default function CustomerCarePage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [tab, setTab] = useState('issues'); // issues | activity
   const [error, setError] = useState('');
+  // Role management (ADMIN only — the backend gates /roles to ROLE_ADMIN).
+  const isAdmin = getUserRoles().includes('ADMIN');
+  const [roleBusy, setRoleBusy] = useState('');   // the role key currently being changed
+  const [roleNotice, setRoleNotice] = useState('');
+  const [confirmAdmin, setConfirmAdmin] = useState(false); // guard granting ADMIN
+  // Read-only data tabs (accounts/transactions/payments/deals) — fetched on demand.
+  const [dataRows, setDataRows] = useState([]);
+  const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState('');
 
-  async function runSearch(q = query) {
+  const setField = (k, v) => setFields((f) => ({ ...f, [k]: v }));
+
+  async function runSearch(params = fields) {
     setLoadingList(true);
     setError('');
     try {
-      const res = await api.supportSearchUsers(q, 0, 25);
+      const res = await api.supportSearchUsers({ ...params, page: 0, size: 25 });
       setUsers(res?.content ?? []);
     } catch (e) {
       setError(e.message || 'Search failed');
@@ -58,19 +142,56 @@ export default function CustomerCarePage() {
   }
 
   // Load the most-recent users on first open.
-  useEffect(() => { runSearch(''); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { runSearch({ first: '', last: '', email: '', phone: '' }); /* eslint-disable-next-line */ }, []);
+
+  // Fetch the read-only data tab for the selected member, on demand.
+  useEffect(() => {
+    const cfg = DATA_TABS[tab];
+    if (!selected || !cfg) return undefined;
+    let cancelled = false;
+    setDataLoading(true);
+    setDataError('');
+    setDataRows([]);
+    cfg.fetch(selected.id)
+      .then((r) => { if (!cancelled) setDataRows(cfg.rows(r)); })
+      .catch((e) => { if (!cancelled) setDataError(e.message || 'Could not load this data.'); })
+      .finally(() => { if (!cancelled) setDataLoading(false); });
+    return () => { cancelled = true; };
+  }, [selected, tab]);
 
   async function openUser(u) {
     setSelected(u);
     setDetail(null);
     setLoadingDetail(true);
     setError('');
+    setRoleNotice('');
+    setConfirmAdmin(false);
     try {
       setDetail(await api.supportGetUser(u.id));
     } catch (e) {
       setError(e.message || 'Could not load user');
     } finally {
       setLoadingDetail(false);
+    }
+  }
+
+  // Grant or revoke a role for the selected member. ADMIN-only on the backend.
+  async function changeRole(roleKey, action) {
+    if (!detail) return;
+    setRoleBusy(roleKey);
+    setRoleNotice('');
+    try {
+      const updated = await api.supportChangeUserRole(detail.id, roleKey, action);
+      const newRoles = updated?.roles ?? [];
+      // Reflect the change in the open profile and the list row.
+      setDetail((d) => (d ? { ...d, roles: newRoles } : d));
+      setUsers((list) => list.map((x) => (x.id === detail.id ? { ...x, roles: newRoles } : x)));
+      setRoleNotice(`${action === 'REVOKE' ? 'Revoked' : 'Granted'} ${roleKey} for ${detail.name || detail.email}.`);
+      setConfirmAdmin(false);
+    } catch (e) {
+      setRoleNotice(e.message || 'Could not change the role.');
+    } finally {
+      setRoleBusy('');
     }
   }
 
@@ -92,20 +213,28 @@ export default function CustomerCarePage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 360px) 1fr', gap: 16, alignItems: 'start' }}>
         {/* Left: search + user list */}
         <div className="card">
-          <form
-            className="filter-bar"
-            onSubmit={(e) => { e.preventDefault(); runSearch(); }}
-          >
-            <div className="filter-search" style={{ flex: 1 }}>
-              <i className="ti ti-search"></i>
-              <input
-                type="text"
-                placeholder="Search by email or name…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
+          <form onSubmit={(e) => { e.preventDefault(); runSearch(); }}>
+            <div className="section-title" style={{ marginBottom: 8 }}>Find a customer</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <input className="form-input" placeholder="First name" value={fields.first}
+                onChange={(e) => setField('first', e.target.value)} />
+              <input className="form-input" placeholder="Last name" value={fields.last}
+                onChange={(e) => setField('last', e.target.value)} />
             </div>
-            <button className="btn btn-primary btn-sm" type="submit">Search</button>
+            <input className="form-input" placeholder="Email" value={fields.email}
+              style={{ marginTop: 8, width: '100%' }} onChange={(e) => setField('email', e.target.value)} />
+            <input className="form-input" placeholder="Phone" value={fields.phone}
+              style={{ marginTop: 8, width: '100%' }} onChange={(e) => setField('phone', e.target.value)} />
+            <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+              <button className="btn btn-primary btn-sm" type="submit" style={{ flex: 1, justifyContent: 'center' }}>
+                <i className="ti ti-search"></i> Search
+              </button>
+              <button className="btn btn-secondary btn-sm" type="button"
+                onClick={() => { setFields({ first: '', last: '', email: '', phone: '' }); runSearch({ first: '', last: '', email: '', phone: '' }); }}>
+                Clear
+              </button>
+            </div>
+            <div className="setting-help" style={{ marginTop: 6 }}>Any combination — matches are AND-ed. Blank shows recent members.</div>
           </form>
 
           <div style={{ marginTop: 10 }}>
@@ -195,20 +324,144 @@ export default function CustomerCarePage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Roles & access — only an ADMIN can grant/revoke (backend enforces this too). */}
+                {isAdmin && (
+                  <div style={{ marginTop: 16, borderTop: '1px solid var(--tv-border-light)', paddingTop: 14 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                      <i className="ti ti-shield-lock" style={{ color: 'var(--tv-forest)' }}></i>
+                      <span style={{ fontWeight: 600 }}>Roles &amp; access</span>
+                    </div>
+                    {roleNotice && (
+                      <div className="setting-help" style={{ marginBottom: 10, color: 'var(--tv-text-secondary)' }}>
+                        <i className="ti ti-info-circle"></i> {roleNotice}
+                      </div>
+                    )}
+                    {MANAGED_ROLES.map((r) => {
+                      const has = (detail.roles || []).includes(r.key);
+                      const busy = roleBusy === r.key;
+                      const armingAdmin = r.key === 'ADMIN' && !has && confirmAdmin;
+                      return (
+                        <div key={r.key} className="setting-row" style={{ alignItems: 'center' }}>
+                          <div>
+                            <div className="setting-label">
+                              {r.label} {has && <span className="badge badge-forest" style={{ marginLeft: 6 }}>Active</span>}
+                            </div>
+                            <div className="setting-help">{r.help}</div>
+                          </div>
+                          {has ? (
+                            <button
+                              className="btn btn-secondary btn-sm"
+                              disabled={busy}
+                              onClick={() => changeRole(r.key, 'REVOKE')}
+                            >
+                              <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-user-minus'}`}></i> {busy ? 'Working…' : 'Revoke'}
+                            </button>
+                          ) : armingAdmin ? (
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => changeRole(r.key, 'GRANT')}>
+                                <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-shield-check'}`}></i> {busy ? 'Working…' : 'Confirm admin'}
+                              </button>
+                              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setConfirmAdmin(false)}>Cancel</button>
+                            </div>
+                          ) : (
+                            <button
+                              className="btn btn-primary btn-sm"
+                              disabled={busy}
+                              onClick={() => (r.key === 'ADMIN' ? setConfirmAdmin(true) : changeRole(r.key, 'GRANT'))}
+                            >
+                              <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-user-plus'}`}></i> {busy ? 'Working…' : 'Grant'}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
-              {/* Activity / issues */}
+              {/* Issue spotlight — the help-desk agent's first read: what did the caller hit? */}
+              {(() => {
+                const issues = detail.issues || [];
+                const latest = issues[0];
+                if (!latest) {
+                  return (
+                    <div className="card" style={{ marginBottom: 16, borderColor: 'var(--tv-positive)', background: 'var(--tv-positive-bg, #E6F4EC)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <i className="ti ti-shield-check" style={{ fontSize: 20, color: 'var(--tv-positive)' }}></i>
+                        <div>
+                          <div style={{ fontWeight: 600 }}>No recent issues</div>
+                          <div className="setting-help">This member’s account looks healthy — no failed or denied actions on record.</div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return (
+                  <div className="card" style={{ marginBottom: 16, borderColor: 'var(--tv-negative)' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                      <div className="item-icon icon-red" style={{ width: 40, height: 40, fontSize: 18, flexShrink: 0 }}>
+                        <i className="ti ti-alert-triangle"></i>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6 }}>
+                          <span style={{ fontWeight: 700 }}>Most recent issue</span>
+                          <span style={{ color: 'var(--tv-text-muted)', fontSize: 12 }}>{ts(latest.createdAt)}</span>
+                        </div>
+                        <div style={{ marginTop: 4, fontSize: 15 }}>
+                          <span style={{ fontWeight: 600 }}>{latest.action || 'Action failed'}</span>
+                          {latest.service && <span className="badge badge-gray" style={{ marginLeft: 8 }}>{latest.service}</span>}
+                          <span className="badge badge-red" style={{ marginLeft: 6 }}>{latest.status ?? latest.outcome ?? 'FAILED'}</span>
+                        </div>
+                        <div className="setting-help" style={{ marginTop: 6 }}>
+                          {issues.length > 1
+                            ? `This member hit ${issues.length} issues recently. Review the full list below to help with their call.`
+                            : 'Review the activity below to help with their call.'}
+                          {latest.sourceIp ? ` · from ${latest.sourceIp}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Tabs: activity/issues + read-only "what the customer sees" data */}
               <div className="card">
-                <div className="seg-control" style={{ marginBottom: 12 }}>
+                <div className="seg-control" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
                   <button className={`seg-btn ${tab === 'issues' ? 'active' : ''}`} onClick={() => setTab('issues')}>
-                    Issues encountered ({(detail.issues || []).length})
+                    Issues ({(detail.issues || []).length})
                   </button>
                   <button className={`seg-btn ${tab === 'activity' ? 'active' : ''}`} onClick={() => setTab('activity')}>
-                    Recent activity ({(detail.recentActivity || []).length})
+                    Activity ({(detail.recentActivity || []).length})
                   </button>
+                  {Object.entries(DATA_TABS).map(([key, cfg]) => (
+                    <button key={key} className={`seg-btn ${tab === key ? 'active' : ''}`} onClick={() => setTab(key)}>
+                      <i className={`ti ${cfg.icon}`} style={{ marginRight: 4 }}></i>{cfg.label}
+                    </button>
+                  ))}
                 </div>
 
-                {(() => {
+                {DATA_TABS[tab] ? (
+                  <>
+                    <div className="setting-help" style={{ marginBottom: 8 }}>
+                      <i className="ti ti-eye"></i> Read-only — what {detail.name || 'this member'} sees. You can view but not change it.
+                    </div>
+                    {dataLoading ? (
+                      <div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div>
+                    ) : dataError ? (
+                      <div className="empty-state"><i className="ti ti-alert-triangle"></i><p>{dataError}</p></div>
+                    ) : dataRows.length === 0 ? (
+                      <div className="empty-state"><i className={`ti ${DATA_TABS[tab].icon}`}></i><p>No {DATA_TABS[tab].label.toLowerCase()} on record.</p></div>
+                    ) : (
+                      <div className="table-scroll">
+                        <table className="tv-table">
+                          <thead><tr>{DATA_TABS[tab].head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
+                          <tbody>{dataRows.map((r, i) => DATA_TABS[tab].row(r, i))}</tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                ) : (() => {
                   const rows = tab === 'issues' ? (detail.issues || []) : (detail.recentActivity || []);
                   if (rows.length === 0) {
                     return (

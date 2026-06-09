@@ -29,6 +29,8 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests()
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
+                .requestMatchers("/internal/**").permitAll() // server-to-server purge, guarded by X-Internal-Key
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 .anyRequest().authenticated() // All requests require authentication
                 .and()
                 .sessionManagement()

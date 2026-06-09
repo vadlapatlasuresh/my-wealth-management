@@ -17,8 +17,8 @@ broker, or RIA. The realistic obligations:
 | Area | What it means for us | Status |
 |---|---|---|
 | **Data aggregation (Plaid)** | Honor Plaid's data-use terms; store tokens encrypted; let users disconnect & delete. | 🟡 Plaid wired; token encryption placeholder (`APP_ENCRYPTION_KEY`) ⬜ |
-| **GLBA / privacy (US)** | Safeguard nonpublic personal info; privacy notice; right to delete. | 🟡 SSN/EIN store last‑4 only ✅; data‑delete flow ⬜ |
-| **CCPA/CPRA, GDPR (if EU)** | Export my data, delete my data, consent records. | ⬜ (audit-service gives the consent/event backbone) |
+| **GLBA / privacy (US)** | Safeguard nonpublic personal info; privacy notice; right to delete. | 🟡 SSN/EIN last‑4 only ✅; account delete ✅ (cross-service cascade ⬜) |
+| **CCPA/CPRA, GDPR (if EU)** | Export my data, delete my data, consent records. | 🟡 **data export ✅** (client bundle + `GET /api/v1/me/export`); account delete ✅; cross-service cascade + consent ledger ⬜ |
 | **PCI DSS** | Only if we touch card PANs. **Avoid storing PANs** — use Stripe/Plaid tokens. | ✅ design avoids PANs |
 | **"Not financial advice"** | Disclaimers on AI + projections/calculators. | ✅ config-driven disclaimers exist |
 | **Payments (bill pay)** | Money movement = use a licensed rail (Stripe/Plaid Transfer/Dwolla); don't custody funds. | 🟡 provider-abstracted, mock until keys |

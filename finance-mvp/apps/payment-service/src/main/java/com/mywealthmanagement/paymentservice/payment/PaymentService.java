@@ -28,7 +28,11 @@ public class PaymentService {
     }
 
     public List<BillPayIntentDto> getIntents() {
-        Long userId = currentUserId();
+        return getIntents(currentUserId());
+    }
+
+    /** Same, for an explicit user — used by the customer-care read-only view. */
+    public List<BillPayIntentDto> getIntents(Long userId) {
         return repository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());

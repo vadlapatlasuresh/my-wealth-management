@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TerraVest Ops — Support / Help Desk Portal (Design)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+/* ============================================================
+   TerraVest OPS PORTAL — dedicated support / help-desk console
+   Design mockup (separate from the member app, separate URL).
+   Flow: agent login → search customer (name/email/phone) →
+   full read-only customer 360 (everything the customer sees) →
+   help / grant access — every step logged in the agent audit trail.
+   IVR + chatbot panels are integration-ready (later).
+   ============================================================ */
+:root{
+  --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68;
+  --tv-sage:#8AB89A; --tv-sage-light:#C4DDD0; --tv-sage-pale:#EAF3EE;
+  --tv-gold:#C9973A; --tv-gold-light:#F0C878; --tv-gold-pale:#FDF5E4;
+  --tv-positive:#1E7B4B; --tv-positive-bg:#E6F4EC;
+  --tv-negative:#C0392B; --tv-negative-bg:#FDECEA;
+  --tv-warning:#B07D1C; --tv-warning-bg:#FEF6E0;
+  --tv-info:#2D6B9E; --tv-info-bg:#E7F0F8;
+  --tv-white:#fff; --tv-bg:#F4F6F5; --tv-card:#fff;
+  --tv-border:#DDE5E1; --tv-border-light:#EEF3F0; --tv-neutral-bg:#F0F4F8;
+  --tv-text-primary:#111D17; --tv-text-secondary:#4A5E54; --tv-text-muted:#7A9086;
+  --font-display:'DM Serif Display',Georgia,serif; --font-body:'DM Sans',system-ui,sans-serif;
+  --radius-sm:6px; --radius-md:10px; --radius-lg:16px;
+  --shadow-sm:0 1px 3px rgba(26,77,59,.06),0 1px 2px rgba(26,77,59,.04);
+  --shadow-md:0 4px 12px rgba(26,77,59,.08),0 2px 4px rgba(26,77,59,.04);
+  --shadow-lg:0 10px 34px rgba(26,77,59,.16);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-body);background:var(--tv-bg);color:var(--tv-text-primary);line-height:1.5;-webkit-font-smoothing:antialiased}
+.muted{color:var(--tv-text-muted)} .help{font-size:12.5px;color:var(--tv-text-muted)}
+.hidden{display:none!important}
+code{background:var(--tv-neutral-bg);padding:1px 5px;border-radius:4px;font-size:12px}
+
+/* Buttons / badges */
+.btn{font-family:inherit;border:none;cursor:pointer;border-radius:var(--radius-sm);padding:9px 15px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+.btn-sm{padding:6px 11px;font-size:12.5px}
+.btn-primary{background:var(--tv-forest);color:#fff}.btn-primary:hover{background:var(--tv-forest-mid)}
+.btn-secondary{background:var(--tv-bg);color:var(--tv-text-primary);border:1px solid var(--tv-border)}.btn-secondary:hover{border-color:var(--tv-forest-light)}
+.btn-danger{background:var(--tv-negative);color:#fff}
+.badge{display:inline-flex;align-items:center;gap:4px;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600}
+.badge-gray{background:var(--tv-neutral-bg);color:var(--tv-text-secondary)}
+.badge-forest{background:var(--tv-sage-pale);color:var(--tv-forest)}
+.badge-red{background:var(--tv-negative-bg);color:var(--tv-negative)}
+.badge-amber{background:var(--tv-gold-pale);color:var(--tv-warning)}
+.badge-info{background:var(--tv-info-bg);color:var(--tv-info)}
+
+/* ===== LOGIN ===== */
+.login-wrap{min-height:100vh;display:grid;place-items:center;background:radial-gradient(1200px 600px at 50% -10%, #21543f 0%, #14352a 55%, #0e2a21 100%)}
+.login-card{width:380px;background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:30px 28px}
+.login-brand{display:flex;align-items:center;gap:11px;margin-bottom:6px}
+.login-brand .mark{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,#1A4D3B,#2D6B52);display:flex;align-items:center;justify-content:center}
+.login-brand .mark i{color:var(--tv-gold-light);font-size:20px}
+.login-brand .t{font-family:var(--font-display);font-size:22px}
+.login-brand .s{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tv-gold)}
+.field{margin-top:14px}
+.field label{font-size:12px;font-weight:600;color:var(--tv-text-secondary)}
+.field input{width:100%;margin-top:5px;padding:11px 12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);font-family:inherit;font-size:14px;outline:none}
+.field input:focus{border-color:var(--tv-forest-light)}
+.gate{margin-top:16px;background:var(--tv-warning-bg);border:1px solid #f0e0b8;border-radius:var(--radius-md);padding:9px 12px;font-size:12px;color:var(--tv-warning);display:flex;gap:7px;align-items:flex-start}
+
+/* ===== PORTAL SHELL ===== */
+.shell{display:flex;height:100vh;overflow:hidden}
+.rail{width:64px;background:var(--tv-forest);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;flex-shrink:0}
+.rail .mark{width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.rail .mark i{color:var(--tv-gold-light)}
+.rail .ri{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;color:var(--tv-sage-light);cursor:pointer;font-size:19px}
+.rail .ri:hover{background:rgba(255,255,255,.07);color:#fff}
+.rail .ri.active{background:rgba(255,255,255,.12);color:#fff}
+.rail .me{margin-top:auto;width:36px;height:36px;border-radius:50%;background:var(--tv-gold);color:var(--tv-forest);display:flex;align-items:center;justify-content:center;font-weight:700}
+
+.main{flex:1;display:flex;flex-direction:column;min-width:0}
+.topbar{height:54px;background:#fff;border-bottom:1px solid var(--tv-border);display:flex;align-items:center;gap:14px;padding:0 18px;flex-shrink:0}
+.topbar .title{font-weight:600}
+.topbar .tag{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--tv-gold)}
+.topbar .spacer{flex:1}
+.call-chip{display:inline-flex;align-items:center;gap:7px;background:var(--tv-info-bg);color:var(--tv-info);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600}
+.agent-chip{display:inline-flex;align-items:center;gap:8px;font-size:13px}
+.agent-chip .av{width:30px;height:30px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+
+.body{flex:1;display:grid;grid-template-columns:1fr 320px;overflow:hidden}
+.work{overflow:auto;padding:18px 20px}
+.aside{border-left:1px solid var(--tv-border);background:#fff;overflow:auto;padding:16px}
+
+/* cards / generic */
+.card{background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow-sm)}
+.h1{font-family:var(--font-display);font-size:26px}
+.sub{color:var(--tv-text-muted);font-size:13px}
+.section-title{font-weight:600;font-size:14px;margin-bottom:10px}
+.search{display:flex;align-items:center;gap:8px;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 13px}
+.search input{border:none;background:none;outline:none;font-family:inherit;font-size:14px;flex:1;color:inherit}
+.seg{display:inline-flex;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{border:none;background:none;font-family:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--tv-text-secondary)}
+.seg button.active{background:#fff;color:var(--tv-forest);box-shadow:var(--shadow-sm)}
+.list-item{display:flex;align-items:center;gap:11px;padding:10px;border-radius:10px;cursor:pointer;border:1px solid transparent}
+.list-item:hover{background:var(--tv-bg)}
+.list-item.active{background:var(--tv-sage-pale);border-color:var(--tv-sage-light)}
+.iico{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ic-forest{background:var(--tv-sage-pale);color:var(--tv-forest)} .ic-red{background:var(--tv-negative-bg);color:var(--tv-negative)}
+.ic-green{background:var(--tv-positive-bg);color:var(--tv-positive)} .ic-gold{background:var(--tv-gold-pale);color:var(--tv-warning)}
+.im{flex:1;min-width:0}.in{font-weight:600;font-size:14px}.isub{font-size:12.5px;color:var(--tv-text-muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.kpi{background:var(--tv-bg);border:1px solid var(--tv-border-light);border-radius:var(--radius-md);padding:12px}
+.kpi-l{font-size:11px;color:var(--tv-text-muted);text-transform:uppercase;letter-spacing:.05em}
+.kpi-v{font-size:18px;font-weight:600;margin-top:2px}
+.kpi-d{font-size:12px;margin-top:3px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--tv-text-muted);padding:8px 10px;border-bottom:1px solid var(--tv-border)}
+td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
+.row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid var(--tv-border-light)}.row:last-child{border-bottom:none}
+.spot{border:1px solid var(--tv-negative);border-radius:var(--radius-lg);background:#fff;padding:15px}
+.spot.ok{border-color:var(--tv-positive);background:var(--tv-positive-bg)}
+.viewas{display:flex;align-items:center;gap:8px;background:var(--tv-gold-pale);border:1px solid #ecd9a8;color:var(--tv-warning);border-radius:var(--radius-md);padding:8px 12px;font-size:12.5px;font-weight:600;margin-bottom:14px}
+.flow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 16px}
+.flow .s{display:inline-flex;align-items:center;gap:6px;background:var(--tv-sage-pale);border:1px solid var(--tv-border-light);color:var(--tv-text-secondary);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600}
+
+/* Agent audit trail (right rail) */
+.aud-h{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:4px}
+.timeline{position:relative;margin-top:12px;padding-left:18px}
+.timeline:before{content:"";position:absolute;left:5px;top:4px;bottom:4px;width:2px;background:var(--tv-border)}
+.tl{position:relative;padding:0 0 14px}
+.tl:before{content:"";position:absolute;left:-16px;top:3px;width:10px;height:10px;border-radius:50%;background:var(--tv-forest-light);border:2px solid #fff;box-shadow:0 0 0 1px var(--tv-border)}
+.tl.warn:before{background:var(--tv-negative)}
+.tl .a{font-size:13px;font-weight:600}
+.tl .m{font-size:12px;color:var(--tv-text-muted)}
+.tl .t{font-size:11px;color:var(--tv-text-muted)}
+/* IVR / chatbot panel */
+.intg{margin-top:16px;border:1px dashed var(--tv-border);border-radius:var(--radius-md);padding:12px;background:var(--tv-bg)}
+.intg .lab{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tv-text-muted);margin-bottom:8px}
+.bubble{background:#fff;border:1px solid var(--tv-border);border-radius:10px;padding:8px 10px;font-size:12.5px;margin-bottom:6px}
+.bubble.bot{background:var(--tv-sage-pale);border-color:var(--tv-sage-light)}
+@media(max-width:1000px){.body{grid-template-columns:1fr}.aside{display:none}.kpi-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- ====================== LOGIN ====================== -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="mark"><i class="ti ti-mountain"></i></div>
+      <div><div class="t">TerraVest</div><div class="s">Ops Portal</div></div>
+    </div>
+    <p class="help" style="margin-top:6px">Support / help-desk console. Sign in with your agent account.</p>
+    <div class="field"><label>Work email</label><input id="lg-email" value="agent.dana@terravest.ops" autocomplete="username"></div>
+    <div class="field"><label>Password</label><input id="lg-pass" type="password" value="••••••••••" autocomplete="current-password"></div>
+    <div class="field"><label>2-step code</label><input id="lg-otp" value="318 204" inputmode="numeric"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px" onclick="signIn()"><i class="ti ti-login"></i> Sign in to Ops</button>
+    <div class="gate"><i class="ti ti-shield-lock" style="margin-top:1px"></i><span>Access is restricted to <b>CARE / ADMIN</b> roles and is fully audited. Sessions require 2-step verification.</span></div>
+  </div>
+</div>
+
+<!-- ====================== PORTAL ====================== -->
+<div id="portal" class="shell hidden">
+  <!-- left rail -->
+  <div class="rail">
+    <div class="mark"><i class="ti ti-mountain"></i></div>
+    <div class="ri active" title="Customer search"><i class="ti ti-search"></i></div>
+    <div class="ri" title="Queue"><i class="ti ti-inbox"></i></div>
+    <div class="ri" title="Analytics"><i class="ti ti-chart-dots"></i></div>
+    <div class="ri" title="Audit"><i class="ti ti-history"></i></div>
+    <div class="me" title="Dana (CARE)">D</div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div><span class="title">TerraVest</span> <span class="tag">Ops</span></div>
+      <div class="spacer"></div>
+      <span class="call-chip" id="callChip"><i class="ti ti-phone-call"></i> Live call · IVR matched ••4417</span>
+      <span class="agent-chip"><span class="av">D</span> Dana Ortiz · <span class="badge badge-amber" style="margin-left:2px">CARE</span></span>
+    </div>
+
+    <div class="body">
+      <!-- WORK AREA -->
+      <div class="work">
+        <div class="h1">Customer Care</div>
+        <div class="sub">A customer called — find them, see what they hit, and help. You are viewing their data <b>read-only</b>.</div>
+        <div class="flow">
+          <span class="s"><i class="ti ti-phone"></i> Call in</span>
+          <span class="s"><i class="ti ti-search"></i> Find customer</span>
+          <span class="s"><i class="ti ti-id-badge-2"></i> 360 profile</span>
+          <span class="s"><i class="ti ti-eye"></i> See their data</span>
+          <span class="s"><i class="ti ti-alert-triangle"></i> Spot the issue</span>
+          <span class="s"><i class="ti ti-shield-check"></i> Help / grant access</span>
+        </div>
+
+        <!-- Multi-field search -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="section-title">Find a customer</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:10px;align-items:end">
+            <div><label class="help">First name</label><div class="search" style="margin-top:4px"><input id="q-first" placeholder="e.g. Alex"></div></div>
+            <div><label class="help">Last name</label><div class="search" style="margin-top:4px"><input id="q-last" placeholder="Kumar"></div></div>
+            <div><label class="help">Email</label><div class="search" style="margin-top:4px"><input id="q-email" placeholder="name@…"></div></div>
+            <div><label class="help">Phone</label><div class="search" style="margin-top:4px"><input id="q-phone" placeholder="+1 …"></div></div>
+            <button class="btn btn-primary" onclick="doSearch()"><i class="ti ti-search"></i> Search</button>
+          </div>
+          <div id="results" style="margin-top:12px"></div>
+        </div>
+
+        <!-- Customer 360 -->
+        <div id="detail"></div>
+      </div>
+
+      <!-- RIGHT RAIL: agent audit trail + IVR/chatbot -->
+      <div class="aside">
+        <div class="aud-h"><i class="ti ti-clipboard-check" style="color:var(--tv-forest)"></i> Agent session log</div>
+        <div class="help">Every step this agent takes is recorded for compliance.</div>
+        <div class="timeline" id="trail"></div>
+
+        <div class="intg">
+          <div class="lab"><i class="ti ti-phone-call"></i> IVR (integration-ready)</div>
+          <div class="bubble">Caller verified via IVR: phone <b>••0192</b> → matched account <b>••4417</b>. Reason code: <b>PAYMENT_FAILED</b>.</div>
+          <button class="btn btn-secondary btn-sm" onclick="openFromIvr()"><i class="ti ti-user-search"></i> Open matched customer</button>
+        </div>
+        <div class="intg">
+          <div class="lab"><i class="ti ti-message-chatbot"></i> Chatbot transcript (integration-ready)</div>
+          <div class="bubble bot">Bot: I can’t complete your bill payment.</div>
+          <div class="bubble">Customer: it keeps failing!</div>
+          <div class="bubble bot">Bot: Escalating to a specialist…</div>
+          <span class="badge badge-info"><i class="ti ti-arrow-up-right"></i> Escalated → this agent</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---- sample data (mirrors SupportUserDetailDto + the member app's data) ---- */
+const USERS = {
+  1042:{id:1042,first:'Alex',last:'Kumar',name:'Alex Kumar',email:'alex.kumar@example.com',phone:'+1 (512) 555-0192',
+    accountType:'INDIVIDUAL',business:null,phoneVerified:true,idLabel:'SSN ••4417',identityVerified:false,since:'Mar 2026',roles:['USER'],
+    netWorth:'$128,440',cash:'$14,210',invest:'$86,900',realEstate:'$310,000',cards:'-$4,120',
+    accounts:[['Chase Checking','Depository','$8,940','••4417'],['Amex Platinum','Credit card','-$4,120','••1009'],['Fidelity Brokerage','Investment','$86,900','••7741']],
+    tx:[['Jun 7','Whole Foods','Groceries','-$84.20'],['Jun 6','Payroll — Acme','Income','+$3,250.00'],['Jun 5','ConEd','Utilities','-$120.50']],
+    budget:[['Housing','$2,000','$1,950'],['Food','$600','$640'],['Transport','$300','$210']],
+    deals:[['Sunrise Multifamily Fund','OPEN','Sponsor','3 leads'],['Oak Street Retail','Interested','Investor','Status: CONTACTED']],
+    payments:[['ConEd','$120.50','COMPLETED','Jun 7'],['Verizon','$95.00','FAILED','Jun 7']],
+    activity:[
+      {t:'Jun 7, 09:14',action:'POST /payments/bill-pay-intents',svc:'payment',status:400,fail:true,ip:'73.12.x.x',note:'Validation failed — missing funding account'},
+      {t:'Jun 7, 09:13',action:'Link account (Plaid)',svc:'aggregation',status:400,fail:true,ip:'73.12.x.x',note:'ITEM_LOGIN_REQUIRED'},
+      {t:'Jun 7, 09:10',action:'Login success',svc:'auth',status:'SUCCESS',fail:false,ip:'73.12.x.x'},
+    ]},
+  1043:{id:1043,first:'Alexa',last:'Romero',name:'Alexa Romero',email:'alexa.r@example.com',phone:'+1 (415) 555-0046',
+    accountType:'BUSINESS',business:'Romero Holdings LLC',phoneVerified:true,idLabel:'EIN ••8830',identityVerified:true,since:'Jan 2026',roles:['USER','CARE'],
+    netWorth:'$642,300',cash:'$58,400',invest:'$402,100',realEstate:'$1,200,000',cards:'-$8,900',
+    accounts:[['BoA Business','Depository','$58,400','••2210']],tx:[['Jun 7','Stripe payout','Income','+$12,400']],
+    budget:[['Payroll','$40,000','$38,200']],deals:[['Romero Fund I','OPEN','Sponsor','12 leads']],payments:[['Payroll run','$38,200','COMPLETED','Jun 1']],
+    activity:[{t:'Jun 7, 08:40',action:'Login success',svc:'auth',status:'SUCCESS',fail:false,ip:'Chrome·macOS'}]},
+  1044:{id:1044,first:'Alexander',last:'Pike',name:'Alexander Pike',email:'a.pike@example.com',phone:'+1 (212) 555-7781',
+    accountType:'INDIVIDUAL',business:null,phoneVerified:false,idLabel:'—',identityVerified:false,since:'Jun 2026',roles:['USER'],
+    netWorth:'$2,100',cash:'$2,100',invest:'$0',realEstate:'$0',cards:'$0',accounts:[],tx:[],budget:[],deals:[],payments:[],
+    activity:[{t:'Jun 7, 07:58',action:'SMS code verify',svc:'auth',status:401,fail:true,ip:'98.4.x.x',note:'Code expired — 3 attempts'}]},
+};
+const ORDER=[1042,1043,1044];
+let selectedId=null, tab='overview';
+const TRAIL=[];
+
+function esc(s){return String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+function now(){const d=new Date();return d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',second:'2-digit'})}
+function log(action,meta,warn){TRAIL.unshift({action,meta,t:now(),warn});renderTrail()}
+function renderTrail(){
+  document.getElementById('trail').innerHTML = TRAIL.map(e=>`
+    <div class="tl ${e.warn?'warn':''}"><div class="a">${esc(e.action)}</div>${e.meta?`<div class="m">${esc(e.meta)}</div>`:''}<div class="t">${e.t}</div></div>`).join('')
+    || '<div class="help">No actions yet.</div>';
+}
+function issues(u){return u.activity.filter(a=>a.fail)}
+
+function signIn(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('portal').classList.remove('hidden');
+  log('Signed in to Ops Portal','agent.dana@terravest.ops · 2-step verified · role CARE');
+}
+
+function doSearch(){
+  const f=v=>document.getElementById(v).value.trim().toLowerCase();
+  const qf=f('q-first'),ql=f('q-last'),qe=f('q-email'),qp=f('q-phone').replace(/\D/g,'');
+  const ids=ORDER.filter(id=>{const u=USERS[id];
+    return (!qf||u.first.toLowerCase().includes(qf)) && (!ql||u.last.toLowerCase().includes(ql)) &&
+           (!qe||u.email.toLowerCase().includes(qe)) && (!qp||u.phone.replace(/\D/g,'').includes(qp));});
+  const terms=[qf&&`first:${qf}`,ql&&`last:${ql}`,qe&&`email:${qe}`,qp&&`phone:${qp}`].filter(Boolean).join(' ')||'(all)';
+  log('Searched customers',`${terms} → ${ids.length} result(s)`);
+  document.getElementById('results').innerHTML = ids.length? ids.map(id=>{const u=USERS[id];return `
+    <div class="list-item" onclick="open360(${id})">
+      <div class="iico ic-forest"><i class="ti ti-user"></i></div>
+      <div class="im"><div class="in">${esc(u.name)}</div>
+        <div class="isub"><span>${esc(u.email)}</span><span>·</span><span>${esc(u.phone)}</span>${u.roles.filter(r=>r!=='USER').map(r=>`<span class="badge badge-amber">${r}</span>`).join('')}</div></div>
+      <button class="btn btn-secondary btn-sm">View</button>
+    </div>`}).join('') : '<div class="help" style="padding:12px 4px">No customers match. Try fewer fields.</div>';
+}
+function openFromIvr(){document.getElementById('q-phone').value='0192';doSearch();open360(1042);log('Opened from IVR match','phone ••0192 → Alex Kumar #1042')}
+
+function open360(id){selectedId=id;tab='overview';const u=USERS[id];
+  log('Opened customer profile',`${u.name} · #${id} · ${u.email}`);
+  renderDetail();document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function setTab(t){tab=t;const u=USERS[selectedId];log('Viewed '+t,`${u.name} · #${u.id}`);renderDetail()}
+function grant(role,action){const u=USERS[selectedId];
+  if(action==='GRANT'&&!u.roles.includes(role))u.roles.push(role);
+  if(action==='REVOKE')u.roles=u.roles.filter(r=>r!==role);
+  log((action==='GRANT'?'Granted ':'Revoked ')+role,`${u.name} · #${u.id}`, role==='ADMIN');
+  renderDetail();
+}
+function badge(ok,y,n){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?y:n}</span>`}
+
+const TABS=[['overview','Overview','ti-id-badge-2'],['accounts','Accounts','ti-building-bank'],['tx','Transactions','ti-arrows-exchange'],
+  ['budget','Budget & Goals','ti-chart-pie'],['deals','Deal Room','ti-briefcase'],['payments','Payments','ti-receipt'],
+  ['activity','Activity & Issues','ti-history'],['roles','Roles & Access','ti-shield-lock']];
+
+function tabBody(u){
+  const T=(rows,head)=>rows.length?`<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`:'<div class="help" style="padding:14px 4px">No data.</div>';
+  if(tab==='overview'){const iss=issues(u),l=iss[0];return `
+    <div class="kpi-grid" style="margin-bottom:14px">
+      <div class="kpi"><div class="kpi-l">Net worth</div><div class="kpi-v">${u.netWorth}</div><div class="kpi-d muted">as the customer sees it</div></div>
+      <div class="kpi"><div class="kpi-l">Cash</div><div class="kpi-v">${u.cash}</div></div>
+      <div class="kpi"><div class="kpi-l">Investments</div><div class="kpi-v">${u.invest}</div></div>
+      <div class="kpi"><div class="kpi-l">Real estate</div><div class="kpi-v">${u.realEstate}</div></div>
+    </div>
+    ${l?`<div class="spot"><div style="display:flex;gap:12px;align-items:flex-start"><div class="iico ic-red" style="width:40px;height:40px;font-size:18px"><i class="ti ti-alert-triangle"></i></div>
+      <div style="flex:1"><div style="display:flex;justify-content:space-between;flex-wrap:wrap"><b>Most recent issue</b><span class="muted" style="font-size:12px">${l.t}</span></div>
+      <div style="margin-top:4px"><b>${esc(l.action)}</b> <span class="badge badge-gray">${l.svc}</span> <span class="badge badge-red">${l.status}</span></div>
+      <div class="help" style="margin-top:6px">${l.note?esc(l.note)+' · ':''}${iss.length>1?`Hit ${iss.length} issues recently — see Activity & Issues.`:''}${l.ip?' · from '+l.ip:''}</div></div></div></div>`
+      :`<div class="spot ok"><b><i class="ti ti-shield-check"></i> No recent issues</b><div class="help">Account looks healthy.</div></div>`}`;
+  }
+  if(tab==='accounts')return T(u.accounts.map(a=>`<tr><td><b>${a[0]}</b><div class="help">${a[3]}</div></td><td><span class="badge badge-gray">${a[1]}</span></td><td style="font-weight:600">${a[2]}</td></tr>`).join(''),['Account','Type','Balance']);
+  if(tab==='tx')return T(u.tx.map(a=>`<tr><td class="muted">${a[0]}</td><td><b>${a[1]}</b></td><td><span class="badge badge-gray">${a[2]}</span></td><td style="font-weight:600">${a[3]}</td></tr>`).join(''),['Date','Description','Category','Amount']);
+  if(tab==='budget')return T(u.budget.map(a=>`<tr><td><b>${a[0]}</b></td><td>${a[1]}</td><td>${a[2]}</td></tr>`).join(''),['Category','Planned','Spent']);
+  if(tab==='deals')return T(u.deals.map(a=>`<tr><td><b>${a[0]}</b></td><td><span class="badge badge-forest">${a[1]}</span></td><td>${a[2]}</td><td class="muted">${a[3]}</td></tr>`).join(''),['Deal','Status','Role','Detail']);
+  if(tab==='payments')return T(u.payments.map(a=>`<tr><td><b>${a[0]}</b></td><td>${a[1]}</td><td><span class="badge ${a[2]==='FAILED'?'badge-red':'badge-forest'}">${a[2]}</span></td><td class="muted">${a[3]}</td></tr>`).join(''),['Payee','Amount','Status','Date']);
+  if(tab==='activity')return T(u.activity.map(e=>`<tr><td class="muted" style="white-space:nowrap">${e.t}</td><td><b>${esc(e.action)}</b>${e.note?`<div class="help">${esc(e.note)}</div>`:''}</td><td><span class="badge badge-gray">${e.svc}</span></td><td><span class="badge ${e.fail?'badge-red':'badge-forest'}">${e.status}</span></td><td class="muted" style="font-size:12px">${e.ip||''}</td></tr>`).join(''),['When','Action','Service','Status','IP']);
+  if(tab==='roles')return `${[['CARE','Customer Care','Look up members & view activity'],['ADMIN','Administrator','Full access, incl. granting roles']].map(([k,label,h])=>{const has=u.roles.includes(k);
+    return `<div class="row"><div><div style="font-weight:600">${label} ${has?'<span class="badge badge-forest">Active</span>':''}</div><div class="help">${h}</div></div>
+    ${has?`<button class="btn btn-secondary btn-sm" onclick="grant('${k}','REVOKE')"><i class="ti ti-user-minus"></i> Revoke</button>`:`<button class="btn ${k==='ADMIN'?'btn-danger':'btn-primary'} btn-sm" onclick="grant('${k}','GRANT')"><i class="ti ti-user-plus"></i> Grant</button>`}</div>`;}).join('')}
+    <div class="help" style="margin-top:10px"><i class="ti ti-info-circle"></i> Granting is ADMIN-only and audited as <code>support.role.grant</code>.</div>`;
+  return '';
+}
+
+function renderDetail(){
+  const u=USERS[selectedId]; if(!u){document.getElementById('detail').innerHTML='';return;}
+  document.getElementById('detail').innerHTML = `
+  <div class="viewas"><i class="ti ti-eye"></i> Viewing ${esc(u.name)}’s account — READ-ONLY (you can see everything the customer sees; you cannot move their money)</div>
+  <div class="card" style="margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="iico ic-forest" style="width:48px;height:48px;font-size:22px"><i class="ti ti-user"></i></div>
+      <div style="flex:1"><div style="font-weight:700;font-size:18px">${esc(u.name)}</div><div class="muted">${esc(u.email)} · ${esc(u.phone)} · ID ${u.id}</div></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${u.roles.map(r=>`<span class="badge badge-gray">${r}</span>`).join('')}</div>
+    </div>
+    <div class="kpi-grid" style="margin-top:14px">
+      <div class="kpi"><div class="kpi-l">Account</div><div class="kpi-v">${u.accountType}</div>${u.business?`<div class="kpi-d muted">${esc(u.business)}</div>`:''}</div>
+      <div class="kpi"><div class="kpi-l">Phone</div><div class="kpi-v" style="font-size:15px">${esc(u.phone)}</div><div class="kpi-d">${badge(u.phoneVerified,'Verified','Unverified')}</div></div>
+      <div class="kpi"><div class="kpi-l">Identity</div><div class="kpi-v" style="font-size:15px">${esc(u.idLabel)}</div><div class="kpi-d">${badge(u.identityVerified,'Verified','Unverified')}</div></div>
+      <div class="kpi"><div class="kpi-l">Member since</div><div class="kpi-v" style="font-size:15px">${u.since}</div><div class="kpi-d" style="color:${issues(u).length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${issues(u).length} issue${issues(u).length===1?'':'s'}</div></div>
+    </div>
+  </div>
+  <div class="seg" style="margin-bottom:14px">${TABS.map(([k,label,ic])=>`<button class="${tab===k?'active':''}" onclick="setTab('${k}')"><i class="ti ${ic}"></i> ${label}</button>`).join('')}</div>
+  <div class="card">${tabBody(u)}</div>`;
+}
+renderTrail();
+</script>
+</body>
+</html>

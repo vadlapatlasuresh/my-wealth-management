@@ -29,6 +29,9 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests()
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
+                .requestMatchers("/internal/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
+                .requestMatchers("/api/v1/business/oauth/callback").permitAll() // Intuit redirect carries userId in state
                 .anyRequest().authenticated() // All requests require authentication
                 .and()
                 .sessionManagement()

@@ -29,6 +29,8 @@ public class SecurityConfig {
                 .csrf().disable()
                 .authorizeHttpRequests()
                 .requestMatchers("/error").permitAll() // avoid 5xx being masked as 403
+                .requestMatchers("/internal/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 .requestMatchers("/api/v1/notifications/internal").permitAll() // internal: guarded by X-Internal-Key in the controller
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()

@@ -3,6 +3,9 @@
 **Responsibility:** property CRUD + valuation. Valuation is a **mock provider** behind a real interface.
 **Source:** [finance-mvp/apps/real-estate-service](../../../finance-mvp/apps/real-estate-service) · 🗄️ schema `real_estate`
 
+> This service also hosts the **Deal Room** (`/api/v1/deals/**`, `/api/v1/sponsor/**`) — documented
+> separately in [12-deals-and-sponsor-service.md](12-deals-and-sponsor-service.md).
+
 ## Endpoints
 | Method | Path | Purpose |
 |---|---|---|

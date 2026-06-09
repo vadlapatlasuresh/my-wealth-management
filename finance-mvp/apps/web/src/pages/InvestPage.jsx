@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { currency } from '../utils/format';
+import { api } from '../api';
 import Sparkline from '../components/Sparkline';
 import LastRefreshed from '../components/LastRefreshed';
 import { BROKERS, getBroker } from '../config/brokers';
@@ -10,13 +11,6 @@ import { BROKERS, getBroker } from '../config/brokers';
 
 /* Holdings start empty and are populated by real synced data via `snapshot.holdings`. */
 const EMPTY_HOLDINGS = [];
-
-const ALLOCATION = [
-  { label: 'US Equity', pct: 58, color: 'var(--tv-forest)' },
-  { label: 'International', pct: 22, color: 'var(--tv-forest-light)' },
-  { label: 'Bonds', pct: 12, color: 'var(--tv-gold)' },
-  { label: 'Cash', pct: 8, color: 'var(--tv-sage)' }
-];
 
 /* Sub-tabs for the page. */
 const TABS = [
@@ -42,36 +36,6 @@ const ALT_TYPES = [
   { value: 'Collectibles', label: 'Collectibles', icon: 'ti-diamond', accent: 'icon-gold' },
   { value: 'Other', label: 'Other', icon: 'ti-circle-dot', accent: 'icon-red' }
 ];
-
-/* localStorage keys */
-const LS_BROKERS = 'tv_invest_brokers';
-const LS_ALTS = 'tv_invest_alts';
-
-/* ------------------------------------------------------------------ *
- * localStorage helpers — read defensively, write on every change.
- * ------------------------------------------------------------------ */
-
-function loadJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function saveJson(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore quota / private-mode errors */
-  }
-}
-
-/* Generate a unique-ish id without crypto. */
-const newId = () => `${Date.now()}${Math.random()}`;
 
 /* Map an offering's risk level to a badge color. */
 function riskBadge(risk) {
@@ -115,21 +79,23 @@ export default function InvestPage({ snapshot }) {
   /* Stocks tab — broker filter */
   const [brokerFilter, setBrokerFilter] = useState('all');
 
-  /* Persisted broker accounts — start empty; the user links real accounts. */
-  const [brokers, setBrokers] = useState(() => loadJson(LS_BROKERS, []));
+  /* Server-persisted broker accounts — start empty; the user links real accounts. */
+  const [brokers, setBrokers] = useState([]);
 
-  /* Persisted alternative investments — start empty; the user adds their own. */
-  const [alts, setAlts] = useState(() => loadJson(LS_ALTS, []));
+  /* Server-persisted alternative investments — start empty; the user adds their own. */
+  const [alts, setAlts] = useState([]);
 
-  /* Write-through setters keep state + localStorage in sync. */
-  const persistBrokers = (next) => {
-    setBrokers(next);
-    saveJson(LS_BROKERS, next);
-  };
-  const persistAlts = (next) => {
-    setAlts(next);
-    saveJson(LS_ALTS, next);
-  };
+  /* Load the user's linked brokers + alternatives from the backend on mount. */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [b, a] = await Promise.allSettled([api.getBrokerAccounts(), api.getAltInvestments()]);
+      if (cancelled) return;
+      if (b.status === 'fulfilled') setBrokers(Array.isArray(b.value) ? b.value : []);
+      if (a.status === 'fulfilled') setAlts(Array.isArray(a.value) ? a.value : []);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   /* ---- Broker connect flow state (config-driven) ----
    * `connectBrokerId` holds the id of the broker whose connect panel is open
@@ -162,20 +128,21 @@ export default function InvestPage({ snapshot }) {
    * metadata — never the entered credentials/passwords. The "name" prefers a
    * user-supplied broker name (the generic "Other" form) and falls back to the
    * config display name. A newly linked account shows $0 until real data syncs. */
-  const finalizeConnect = (broker, inputs = {}) => {
+  const finalizeConnect = async (broker, inputs = {}) => {
     const displayName = (inputs.name && inputs.name.trim()) || broker.name;
-    const entry = {
-      id: newId(),
-      brokerId: broker.id,
-      name: displayName,
-      accountType: ACCOUNT_TYPES[0],
-      /* No fabricated balance — a freshly linked account starts at $0 until it syncs. */
-      value: 0,
-      connected: true,
-      linkedAt: new Date().toISOString()
-    };
-    persistBrokers([entry, ...brokers]);
-    closeConnect();
+    try {
+      // We send ONLY connected metadata — never the entered credentials/passwords.
+      const created = await api.linkBrokerAccount({
+        brokerId: broker.id,
+        name: displayName,
+        accountType: ACCOUNT_TYPES[0],
+        value: 0,
+      });
+      setBrokers((prev) => [created, ...prev]);
+      closeConnect();
+    } catch (e) {
+      setConnectError(e?.message || 'Could not link account.');
+    }
   };
 
   /* OAuth path — simulated authorize step, then mark connected. */
@@ -198,11 +165,20 @@ export default function InvestPage({ snapshot }) {
     finalizeConnect(activeBroker, credInputs);
   };
 
-  const disconnectBroker = (id) => persistBrokers(brokers.filter((b) => b.id !== id));
+  const disconnectBroker = async (id) => {
+    try {
+      await api.deleteBrokerAccount(id);
+      setBrokers((prev) => prev.filter((b) => b.id !== id));
+    } catch { /* keep the row if the delete fails */ }
+  };
 
-  /* Mock "sync" — just stamps a fresh linkedAt so "last synced" updates. */
-  const syncBroker = (id) =>
-    persistBrokers(brokers.map((b) => (b.id === id ? { ...b, linkedAt: new Date().toISOString() } : b)));
+  /* Re-sync — stamps a fresh linkedAt server-side so "last synced" updates. */
+  const syncBroker = async (id) => {
+    try {
+      const updated = await api.syncBrokerAccount(id);
+      setBrokers((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    } catch { /* ignore transient sync failure */ }
+  };
 
   /* ---- Alternatives form state ---- */
   const [altForm, setAltForm] = useState(null); // null = hidden; {id?} present when editing
@@ -218,36 +194,37 @@ export default function InvestPage({ snapshot }) {
       notes: a.notes || ''
     });
 
-  const saveAlt = () => {
+  const saveAlt = async () => {
     if (!altForm || !altForm.name.trim()) return;
-    const value = Number(altForm.value) || 0;
-    const ownershipPct = altForm.ownershipPct === '' ? '' : Number(altForm.ownershipPct);
-    if (altForm.id) {
-      // edit existing
-      persistAlts(
-        alts.map((a) =>
-          a.id === altForm.id
-            ? { ...a, type: altForm.type, name: altForm.name.trim(), value, ownershipPct, notes: altForm.notes }
-            : a
-        )
-      );
-    } else {
-      // add new
-      const entry = {
-        id: newId(),
-        type: altForm.type,
-        name: altForm.name.trim(),
-        value,
-        ownershipPct,
-        notes: altForm.notes,
-        addedAt: new Date().toISOString()
-      };
-      persistAlts([entry, ...alts]);
+    const payload = {
+      type: altForm.type,
+      name: altForm.name.trim(),
+      value: Number(altForm.value) || 0,
+      ownershipPct: altForm.ownershipPct === '' ? null : Number(altForm.ownershipPct),
+      notes: altForm.notes,
+    };
+    try {
+      if (altForm.id) {
+        const updated = await api.updateAltInvestment(altForm.id, payload);
+        setAlts((prev) => prev.map((a) => (a.id === altForm.id ? updated : a)));
+      } else {
+        const created = await api.createAltInvestment(payload);
+        setAlts((prev) => [created, ...prev]);
+      }
+      setAltForm(null);
+    } catch (e) {
+      // Surface the failure inline by keeping the form open; reuse connectError area isn't ideal,
+      // so just alert via the form's disabled state. Simplest: log and keep form open.
+      setAltForm((f) => (f ? { ...f, error: e?.message || 'Could not save.' } : f));
     }
-    setAltForm(null);
   };
 
-  const deleteAlt = (id) => persistAlts(alts.filter((a) => a.id !== id));
+  const deleteAlt = async (id) => {
+    try {
+      await api.deleteAltInvestment(id);
+      setAlts((prev) => prev.filter((a) => a.id !== id));
+    } catch { /* keep the row if delete fails */ }
+  };
 
   /* ---- Derived values ---- */
 
@@ -290,6 +267,29 @@ export default function InvestPage({ snapshot }) {
     });
     return Array.from(map.values()).sort((x, y) => y.value - x.value);
   }, [alts]);
+
+  /* Real asset allocation derived from the user's actual holdings + alternatives.
+     No hardcoded percentages — buckets are computed from market values and hidden
+     when zero, so an empty portfolio shows an honest empty allocation. */
+  const allocation = useMemo(() => {
+    let equities = 0;
+    let cash = 0;
+    holdings.forEach((h) => {
+      const mv = (Number(h.qty) || 0) * (Number(h.price) || 0);
+      if ((h.symbol || '').toUpperCase() === 'CASH') cash += mv;
+      else equities += mv;
+    });
+    const buckets = [
+      { label: 'Stocks & ETFs', value: equities, color: 'var(--tv-forest)' },
+      { label: 'Alternatives', value: altsTotal, color: 'var(--tv-forest-light)' },
+      { label: 'Cash', value: cash, color: 'var(--tv-gold)' },
+    ].filter((b) => b.value > 0);
+    const total = buckets.reduce((s, b) => s + b.value, 0);
+    return buckets.map((b) => ({
+      ...b,
+      pct: total > 0 ? Math.round((b.value / total) * 100) : 0,
+    }));
+  }, [holdings, altsTotal]);
 
   /* Build a CSV from the (filtered) holdings table and trigger a download via Blob. */
   function exportHoldingsCsv() {
@@ -363,8 +363,10 @@ export default function InvestPage({ snapshot }) {
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-chart-pie" style={{ color: 'var(--tv-forest)' }}></i> Allocations</div>
-              <div className="kpi-value">{ALLOCATION.length}</div>
-              <div className="kpi-delta pos"><i className="ti ti-check"></i> Diversified</div>
+              <div className="kpi-value">{allocation.length}</div>
+              {allocation.length > 1 && (
+                <div className="kpi-delta pos"><i className="ti ti-check"></i> Diversified</div>
+              )}
             </div>
           </div>
 
@@ -372,7 +374,13 @@ export default function InvestPage({ snapshot }) {
             {/* Allocation */}
             <div className="card">
               <div className="card-title">Allocation</div>
-              {ALLOCATION.map((a) => (
+              {allocation.length === 0 && (
+                <div className="empty-state" style={{ padding: '18px 0' }}>
+                  <i className="ti ti-chart-pie"></i>
+                  <p>No allocation yet. Link a broker or add holdings to see your mix.</p>
+                </div>
+              )}
+              {allocation.map((a) => (
                 <div key={a.label} style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>

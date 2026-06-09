@@ -14,4 +14,6 @@ public interface BillPayIntentRepository extends JpaRepository<BillPayIntent, Lo
     Optional<BillPayIntent> findByIdAndUserId(Long id, Long userId);
 
     Optional<BillPayIntent> findByUserIdAndIdempotencyKey(Long userId, String idempotencyKey);
+
+    void deleteByUserId(Long userId);
 }
