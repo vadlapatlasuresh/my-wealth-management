@@ -198,6 +198,9 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-claude-opus-4-8}
       # Google Gemini (used when AI_PROVIDER=gemini)
+      # PILOT: fetch gemini.api_key from the secrets-service at boot. Once verified in
+      # prod, drop GEMINI_API_KEY below entirely — the value lives only in the store.
+      SECRETS_SCOPES: gemini
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
 

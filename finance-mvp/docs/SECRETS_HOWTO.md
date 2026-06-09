@@ -154,8 +154,16 @@ public class SecretsEnvPostProcessor implements EnvironmentPostProcessor {
 }
 ```
 
-**Rollout order (low-risk first):** `ai-insights-service` (`gemini.api_key`) →
-verify → the rest. Remove each migrated key from `.env.prod` as you go.
+**Implemented pilot:** `ai-insights-service` ships this exact shim
+(`SecretsEnvironmentPostProcessor` + `META-INF/spring.factories`). It activates only
+when `SECRETS_URI` **and** `SECRETS_SCOPES` are set (so local dev is unchanged), maps
+`gemini.api_key` → `gemini.api-key`, and skips placeholder values. Verified: with
+`GEMINI_API_KEY` removed from the environment, the service fetched the key from the
+store at boot and made a real authenticated Gemini call.
+
+**Rollout order (low-risk first):** `ai-insights-service` (done) → the rest. Lift the
+same class into each service (or a shared module), set its `SECRETS_SCOPES`, and remove
+the migrated keys from `.env.prod` as you go.
 
 ---
 
