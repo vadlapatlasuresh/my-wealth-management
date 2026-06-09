@@ -14,7 +14,9 @@
     "cap:android": "npm run build && cap sync android && cap open android",
     "cap:ios": "npm run build && cap sync ios && cap open ios",
     "android:run": "npm run build && cap sync android && cap run android",
-    "ios:run": "npm run build && cap sync ios && cap run ios"
+    "ios:run": "npm run build && cap sync ios && cap run ios",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -30,6 +32,7 @@
     "react-router-dom": "^6.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
