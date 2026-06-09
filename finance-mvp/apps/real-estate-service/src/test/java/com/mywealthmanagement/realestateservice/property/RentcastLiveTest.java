@@ -34,19 +34,22 @@ class RentcastLiveTest {
 
     @Test
     void lookupDetailsReturnsLiveData() {
-        PropertyEstimate estimate = liveProvider().lookupDetails(SAMPLE_ADDRESS);
+        RentcastPropertyValuationProvider provider = liveProvider();
+        PropertyEstimate live = provider.lookupDetails(SAMPLE_ADDRESS);
+        // Deterministic mock baseline for the same address — used to prove we got LIVE data.
+        PropertyEstimate mock = new MockPropertyValuationProvider().lookupDetails(SAMPLE_ADDRESS);
+        BigDecimal liveAvm = provider.estimateValue(SAMPLE_ADDRESS, new BigDecimal("1"));
 
-        System.out.println("RentCast lookupDetails(" + SAMPLE_ADDRESS + ") -> " + estimate);
+        System.out.println("RentCast lookupDetails(" + SAMPLE_ADDRESS + ") -> " + live);
+        System.out.println("  mock baseline value=" + mock.estimatedValue() + ", live AVM=" + liveAvm);
 
-        assertThat(estimate).isNotNull();
-        assertThat(estimate.estimatedValue())
-                .as("RentCast should return a positive AVM value")
+        assertThat(live).isNotNull();
+        assertThat(live.estimatedValue())
+                .as("lookupDetails should carry the live AVM value, not the mock baseline")
                 .isNotNull()
-                .isGreaterThan(BigDecimal.ZERO);
-        // At least one physical detail should be populated from the property record.
-        assertThat(estimate.beds() != null || estimate.sqft() != null)
-                .as("RentCast should return at least beds or square footage")
-                .isTrue();
+                .isGreaterThan(BigDecimal.ZERO)
+                .isEqualByComparingTo(liveAvm)
+                .isNotEqualByComparingTo(mock.estimatedValue());
     }
 
     @Test

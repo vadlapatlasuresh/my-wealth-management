@@ -82,50 +82,59 @@ public class RentcastPropertyValuationProvider implements PropertyValuationProvi
         if (disabled() || address == null || address.isBlank()) {
             return fallback.lookupDetails(address);
         }
+        // Each RentCast call is independent and best-effort: an address may have an AVM
+        // value but no property record (404), or vice versa. A failure on one must not
+        // discard the data from the others — we fill any gaps from the deterministic mock.
+        BigDecimal estimatedValue = null;
         try {
             JsonNode avm = get("/avm/value", address);
-            BigDecimal estimatedValue = avm != null && avm.hasNonNull("price")
-                    ? avm.get("price").decimalValue().setScale(4, RoundingMode.HALF_UP)
-                    : null;
+            if (avm != null && avm.hasNonNull("price")) {
+                estimatedValue = avm.get("price").decimalValue().setScale(4, RoundingMode.HALF_UP);
+            }
+        } catch (Exception e) {
+            log.warn("RentCast AVM value lookup failed for '{}' ({}).", address, e.getMessage());
+        }
 
-            // Physical details come from the property record endpoint (returns an array).
+        Integer beds = null, sqft = null, yearBuilt = null;
+        BigDecimal baths = null;
+        try {
             JsonNode props = get("/properties", address);
             JsonNode record = props != null && props.isArray() && props.size() > 0 ? props.get(0)
                     : (props != null && props.isObject() ? props : null);
-
-            Integer beds = intOrNull(record, "bedrooms");
-            BigDecimal baths = decimalOrNull(record, "bathrooms");
-            Integer sqft = intOrNull(record, "squareFootage");
-            Integer yearBuilt = intOrNull(record, "yearBuilt");
-
-            // Long-term rent estimate (best-effort).
-            BigDecimal rentEstimate = null;
-            try {
-                JsonNode rent = get("/avm/rent/long-term", address);
-                if (rent != null && rent.hasNonNull("rent")) {
-                    rentEstimate = rent.get("rent").decimalValue().setScale(4, RoundingMode.HALF_UP);
-                }
-            } catch (Exception ignored) {
-                // rent is optional; leave null and let the mock fill if everything else failed
-            }
-
-            // If the core value lookup yielded nothing, fall back wholesale for a coherent record.
-            if (estimatedValue == null && beds == null && sqft == null) {
-                return fallback.lookupDetails(address);
-            }
-            PropertyEstimate mock = fallback.lookupDetails(address);
-            return new PropertyEstimate(
-                    estimatedValue != null ? estimatedValue : mock.estimatedValue(),
-                    beds != null ? beds : mock.beds(),
-                    baths != null ? baths : mock.baths(),
-                    sqft != null ? sqft : mock.sqft(),
-                    yearBuilt != null ? yearBuilt : mock.yearBuilt(),
-                    rentEstimate != null ? rentEstimate : mock.rentEstimate()
-            );
+            beds = intOrNull(record, "bedrooms");
+            baths = decimalOrNull(record, "bathrooms");
+            sqft = intOrNull(record, "squareFootage");
+            yearBuilt = intOrNull(record, "yearBuilt");
         } catch (Exception e) {
-            log.warn("RentCast property lookup failed ({}); using mock details.", e.getMessage());
+            log.warn("RentCast property record lookup failed for '{}' ({}); using mock physical details.",
+                    address, e.getMessage());
+        }
+
+        BigDecimal rentEstimate = null;
+        try {
+            JsonNode rent = get("/avm/rent/long-term", address);
+            if (rent != null && rent.hasNonNull("rent")) {
+                rentEstimate = rent.get("rent").decimalValue().setScale(4, RoundingMode.HALF_UP);
+            }
+        } catch (Exception e) {
+            log.warn("RentCast rent lookup failed for '{}' ({}); using mock rent estimate.",
+                    address, e.getMessage());
+        }
+
+        // Nothing real came back at all → return a fully-coherent mock record.
+        if (estimatedValue == null && beds == null && sqft == null && rentEstimate == null) {
             return fallback.lookupDetails(address);
         }
+        // Fill any gaps from the mock so the UI always gets a complete record.
+        PropertyEstimate mock = fallback.lookupDetails(address);
+        return new PropertyEstimate(
+                estimatedValue != null ? estimatedValue : mock.estimatedValue(),
+                beds != null ? beds : mock.beds(),
+                baths != null ? baths : mock.baths(),
+                sqft != null ? sqft : mock.sqft(),
+                yearBuilt != null ? yearBuilt : mock.yearBuilt(),
+                rentEstimate != null ? rentEstimate : mock.rentEstimate()
+        );
     }
 
     private Integer intOrNull(JsonNode node, String field) {
