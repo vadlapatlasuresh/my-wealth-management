@@ -70,8 +70,13 @@ $COMPOSE up -d --force-recreate --no-deps caddy
 echo "==> Waiting for services to report healthy (up to ~7 min; slow on a 1-OCPU box)"
 deadline=$(( $(date +%s) + 420 ))
 while :; do
+  # Flag only containers whose health is explicitly set AND not "healthy"
+  # (i.e. "starting" / "unhealthy"). Containers without a healthcheck — e.g.
+  # Caddy — report an empty health field and must NOT be treated as unhealthy,
+  # or the gate never passes. Exact-match avoids the substring trap where
+  # 'healthy' also matches 'unhealthy'.
   unhealthy=$($COMPOSE ps --format '{{.Name}} {{.Health}}' 2>/dev/null \
-    | grep -Ev 'healthy|^$' || true)
+    | awk '$2 != "" && $2 != "healthy" { print }' || true)
   if [ -z "$unhealthy" ]; then echo "    all services healthy ✓"; break; fi
   if [ "$(date +%s)" -ge "$deadline" ]; then
     echo "    TIMEOUT — still not healthy:"; echo "$unhealthy"
