@@ -119,6 +119,11 @@ services:
       DATABASE_URL: ${AUTH_DATABASE_URL:?}
       DATABASE_USER: ${AUTH_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
+      # SECURITY: returns OTP codes in API responses so signup/MFA work WITHOUT a
+      # real email/SMS provider. Defaults true to preserve the current key-less
+      # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
+      # users (do it together with enabling SendGrid/Twilio, or codes won't deliver).
+      OTP_EXPOSE_DEV_CODE: ${OTP_EXPOSE_DEV_CODE:-true}
 
   account-aggregation-service:
     <<: *java-defaults
@@ -219,6 +224,8 @@ services:
       DATABASE_USER: ${PAY_DATABASE_USER:?}
       DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Provider toggle: mock (default) | stripe. Set PAYMENT_PROVIDER=stripe + keys to go live.
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
 
@@ -233,7 +240,16 @@ services:
       DATABASE_USER: ${NOTIF_DATABASE_USER:?}
       DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Channel provider toggles: mock (default) | sendgrid / twilio / fcm.
+      # Set the toggle AND the matching keys to go live for each channel.
+      COMMS_PROVIDER_EMAIL: ${COMMS_PROVIDER_EMAIL:-mock}
+      COMMS_PROVIDER_SMS: ${COMMS_PROVIDER_SMS:-mock}
+      COMMS_PROVIDER_PUSH: ${COMMS_PROVIDER_PUSH:-mock}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM: ${SENDGRID_FROM:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      TWILIO_FROM: ${TWILIO_FROM:-}
       FCM_SERVER_KEY: ${FCM_SERVER_KEY:-}
       # Shared key the real-estate-service presents to /notifications/internal
       NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
