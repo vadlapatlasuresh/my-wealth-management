@@ -31,6 +31,9 @@ x-java-defaults: &java-defaults
     # Audit: any service can emit domain audit events to the audit-service.
     AUDIT_URI: http://audit-service:8080
     AUDIT_INGEST_KEY: ${AUDIT_INGEST_KEY:?set AUDIT_INGEST_KEY in .env.prod}
+    # Centralized secret store: services fetch their scoped secrets at boot.
+    SECRETS_URI: http://secrets-service:8080
+    SECRETS_INTERNAL_KEY: ${SECRETS_INTERNAL_KEY:?set SECRETS_INTERNAL_KEY in .env.prod}
     # JVM: respect container memory limits. Override via JVM_OPTS in .env.prod on
     # small hosts (e.g. a 6GB box: SerialGC + capped metaspace shrinks each service).
     JAVA_TOOL_OPTIONS: "${JVM_OPTS:--XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50}"
@@ -85,6 +88,7 @@ services:
     # build: { context: ., dockerfile: Dockerfile.java-service, args: { SERVICE: api-gateway } }
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,audit
       # Downstream routing → compose DNS. All services listen on 8080 internally (SERVER_PORT).
       SERVICE_AUTH_URI: http://auth-service:8080
       SERVICE_AGGREGATION_URI: http://account-aggregation-service:8080
@@ -111,6 +115,7 @@ services:
     container_name: wealth-auth-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,encryption,audit
       DATABASE_URL: ${AUTH_DATABASE_URL:?}
       DATABASE_USER: ${AUTH_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
@@ -121,6 +126,7 @@ services:
     container_name: wealth-account-aggregation-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,encryption,plaid
       DATABASE_URL: ${AGG_DATABASE_URL:?}
       DATABASE_USER: ${AGG_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AGG_DATABASE_PASSWORD:?}
@@ -137,6 +143,7 @@ services:
     container_name: wealth-financial-core-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt
       DATABASE_URL: ${CORE_DATABASE_URL:?}
       DATABASE_USER: ${CORE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CORE_DATABASE_PASSWORD:?}
@@ -148,6 +155,7 @@ services:
     container_name: wealth-real-estate-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,realestate,notifications-internal
       DATABASE_URL: ${RE_DATABASE_URL:?}
       DATABASE_USER: ${RE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
@@ -166,6 +174,7 @@ services:
     container_name: wealth-business-financials-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,qbo
       DATABASE_URL: ${BIZ_DATABASE_URL:?}
       DATABASE_USER: ${BIZ_DATABASE_USER:?}
       DATABASE_PASSWORD: ${BIZ_DATABASE_PASSWORD:?}
@@ -185,6 +194,7 @@ services:
     container_name: wealth-ai-insights-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,gemini,anthropic,openai
       DATABASE_URL: ${AI_DATABASE_URL:?}
       DATABASE_USER: ${AI_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:?}
@@ -204,6 +214,7 @@ services:
     container_name: wealth-payment-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,stripe
       DATABASE_URL: ${PAY_DATABASE_URL:?}
       DATABASE_USER: ${PAY_DATABASE_USER:?}
       DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
@@ -217,6 +228,7 @@ services:
     container_name: wealth-notification-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,sendgrid,twilio,fcm,notifications-internal
       DATABASE_URL: ${NOTIF_DATABASE_URL:?}
       DATABASE_USER: ${NOTIF_DATABASE_USER:?}
       DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
@@ -232,6 +244,7 @@ services:
     container_name: wealth-platform-config-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt
       DATABASE_URL: ${CONFIG_DATABASE_URL:?}
       DATABASE_USER: ${CONFIG_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CONFIG_DATABASE_PASSWORD:?}
@@ -247,10 +260,30 @@ services:
     container_name: wealth-audit-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,audit
       DATABASE_URL: ${AUDIT_DATABASE_URL:?}
       DATABASE_USER: ${AUDIT_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUDIT_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+
+  # ---------------- Centralized secret store ----------------
+  secrets-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-secrets-service:${TAG:-latest}
+    container_name: wealth-secrets-service
+    environment:
+      <<: *java-env
+      DATABASE_URL: ${SECRETS_DATABASE_URL:?}
+      DATABASE_USER: ${SECRETS_DATABASE_USER:?}
+      DATABASE_PASSWORD: ${SECRETS_DATABASE_PASSWORD:?}
+      # KEK provider: local | kms.
+      #   kms (recommended in prod): KEK lives in Cloud KMS, NO secret here. Set
+      #     SECRETS_PROVIDER=kms + SECRETS_KMS_KEY_NAME (terraform output secrets_kms_key_name);
+      #     the VM's service account (infra/gcp/kms.tf) authorizes wrap/unwrap.
+      #   local: derive KEK from SECRETS_MASTER_KEY (the one interim secret).
+      SECRETS_PROVIDER: ${SECRETS_PROVIDER:-local}
+      SECRETS_KMS_KEY_NAME: ${SECRETS_KMS_KEY_NAME:-}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-} # required only when SECRETS_PROVIDER=local
 
   # ---------------- OPTIONAL local Postgres (instead of Neon) ----------------
   # Uncomment to self-host Postgres in the stack. Then set every *_DATABASE_URL to

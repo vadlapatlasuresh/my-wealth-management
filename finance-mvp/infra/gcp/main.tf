@@ -84,6 +84,14 @@ resource "google_compute_instance" "vm" {
     }
   }
 
+  # Dedicated service account so the VM can call Cloud KMS (wrap/unwrap the
+  # secrets-service DEKs) via its metadata-server identity — no key file needed.
+  # cloud-platform scope + the single KMS IAM grant in kms.tf gate what it can do.
+  service_account {
+    email  = google_service_account.vm.email
+    scopes = ["cloud-platform"]
+  }
+
   # GCP creates the Linux user from the "<user>:<key>" metadata format.
   metadata = {
     ssh-keys = "${var.ssh_user}:${trimspace(file(pathexpand(var.ssh_pubkey_path)))}"
