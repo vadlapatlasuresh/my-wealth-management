@@ -1,4 +1,4 @@
-import { defineConfig } from "vite";
+import { defineConfig, configDefaults } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
@@ -74,5 +74,12 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
+  },
+  // Vitest runs the unit tests only. The Playwright end-to-end suite under
+  // tests/e2e/ uses Playwright's own test() runner (run via `npm run e2e`) and
+  // must NOT be picked up here, or Vitest errors with
+  // "Playwright Test did not expect test() to be called here".
+  test: {
+    exclude: [...configDefaults.exclude, "tests/e2e/**"],
   },
 });
