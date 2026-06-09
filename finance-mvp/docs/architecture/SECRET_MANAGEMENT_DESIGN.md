@@ -4,9 +4,13 @@
 
 > ✅ **Built & verified end-to-end** — the `secrets-service` (port 8091) implements the
 > store, envelope crypto, grants, rotation, and audit described below, with placeholders
-> seeded for every secret. Operational runbook: [../SECRETS_HOWTO.md](../SECRETS_HOWTO.md).
-> Remaining for prod: swap `LocalMasterKeyProvider` → GCP KMS, and roll the `secrets-client`
-> into each service (Phase 2). KMS anchoring (§2) is the one piece not yet wired.
+> seeded for every secret. The `secrets-client` is rolled into all services, and **GCP KMS
+> anchoring is implemented**: `GcpKmsMasterKeyProvider` (KMS REST + GCE metadata identity,
+> no key file) selected via `SECRETS_PROVIDER=kms`, with the KMS key + IAM in
+> `infra/gcp/kms.tf`. Operational runbook: [../SECRETS_HOWTO.md](../SECRETS_HOWTO.md).
+> Remaining for prod: `terraform apply` the KMS key, flip `SECRETS_PROVIDER=kms`, and
+> delete the migrated secrets from `.env.prod`. (KMS crypto is verified only on a GCP VM;
+> the local default remains `SECRETS_PROVIDER=local`.)
 
 Goal: stop storing API keys, encryption keys, DB credentials, and inter-service
 keys in **git or plaintext `.env` files**. Move them into a centralized,

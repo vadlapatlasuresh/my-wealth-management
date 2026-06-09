@@ -276,10 +276,14 @@ services:
       DATABASE_URL: ${SECRETS_DATABASE_URL:?}
       DATABASE_USER: ${SECRETS_DATABASE_USER:?}
       DATABASE_PASSWORD: ${SECRETS_DATABASE_PASSWORD:?}
-      # Root KEK material. INTERIM: the single remaining secret in .env.prod.
-      # Replace LocalMasterKeyProvider with a GCP KMS provider to remove this entirely
-      # (see docs/architecture/SECRET_MANAGEMENT_DESIGN.md §2-4).
-      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:?set SECRETS_MASTER_KEY in .env.prod (or wire GCP KMS)}
+      # KEK provider: local | kms.
+      #   kms (recommended in prod): KEK lives in Cloud KMS, NO secret here. Set
+      #     SECRETS_PROVIDER=kms + SECRETS_KMS_KEY_NAME (terraform output secrets_kms_key_name);
+      #     the VM's service account (infra/gcp/kms.tf) authorizes wrap/unwrap.
+      #   local: derive KEK from SECRETS_MASTER_KEY (the one interim secret).
+      SECRETS_PROVIDER: ${SECRETS_PROVIDER:-local}
+      SECRETS_KMS_KEY_NAME: ${SECRETS_KMS_KEY_NAME:-}
+      SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-} # required only when SECRETS_PROVIDER=local
 
   # ---------------- OPTIONAL local Postgres (instead of Neon) ----------------
   # Uncomment to self-host Postgres in the stack. Then set every *_DATABASE_URL to

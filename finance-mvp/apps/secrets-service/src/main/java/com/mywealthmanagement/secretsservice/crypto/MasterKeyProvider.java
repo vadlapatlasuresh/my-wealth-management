@@ -1,22 +1,25 @@
 package com.mywealthmanagement.secretsservice.crypto;
 
-import javax.crypto.SecretKey;
-
 /**
- * Supplies the root Key-Encryption-Key (KEK) used to wrap/unwrap data-encryption keys.
+ * Wraps/unwraps data-encryption keys (DEKs) under a root key (KEK). This is the
+ * "secret zero" seam — the KEK itself is never returned to the application.
  *
- * This is the "secret zero" seam. There are two implementations:
- *   - {@link LocalMasterKeyProvider}: derives the KEK from SECRETS_MASTER_KEY (dev / fallback).
- *   - (prod) a GCP KMS-backed provider where the KEK never leaves KMS and unwrap is a
- *     remote Decrypt call authorized by the VM's service-account identity — so no key
- *     material is ever stored in env or on disk. See SECRET_MANAGEMENT_DESIGN.md §2-4.
+ * Implementations:
+ *   - {@link LocalMasterKeyProvider}: KEK derived from SECRETS_MASTER_KEY; wrap/unwrap
+ *     is local AES-256-GCM. For dev / single-host without KMS. (default)
+ *   - {@link GcpKmsMasterKeyProvider}: KEK lives in GCP KMS and never leaves it; wrap is
+ *     KMS Encrypt and unwrap is KMS Decrypt, authorized by the VM's service-account
+ *     identity (no key material in env or on disk). Selected with secrets.provider=kms.
  *
- * The rest of the service depends only on this interface, so swapping local→KMS is a
- * one-class change with no impact on the data model or APIs.
+ * `wrapped` strings are opaque and provider-specific; the same provider that wrapped a
+ * DEK must unwrap it (switching providers requires a re-wrap migration).
  */
 public interface MasterKeyProvider {
-    /** The active KEK (AES-256). */
-    SecretKey kek();
+    /** Wrap raw DEK bytes; returns an opaque, storable string (e.g. Base64 ciphertext). */
+    String wrap(byte[] dek);
+
+    /** Recover raw DEK bytes from a previously wrapped string. */
+    byte[] unwrap(String wrapped);
 
     /** Identifier of the active KEK (for audit + future key-version tracking). */
     String keyId();

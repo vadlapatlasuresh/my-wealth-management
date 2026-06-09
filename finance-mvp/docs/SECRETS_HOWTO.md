@@ -169,9 +169,11 @@ the migrated keys from `.env.prod` as you go.
 
 ## 7. Production deploy
 
-1. **KEK in KMS, not env:** add a GCP KMS key + bind `cryptoKey.decrypt` to the VM
-   service account (`infra/gcp`), then replace `LocalMasterKeyProvider` with a
-   KMS-backed `MasterKeyProvider` (the only class that changes).
+1. **KEK in KMS, not env (implemented):** `terraform apply` in `infra/gcp` creates the
+   KMS key + a VM service account with encrypt/decrypt on it. Then set on the VM:
+   `SECRETS_PROVIDER=kms` and `SECRETS_KMS_KEY_NAME=$(terraform output -raw secrets_kms_key_name)`,
+   and leave `SECRETS_MASTER_KEY` blank. `GcpKmsMasterKeyProvider` wraps/unwraps DEKs via
+   the KMS REST API using the VM's metadata-server identity — no key file, no env secret.
 2. **Compose:** the `secrets-service` block is in `docker-compose.prod.yml`. Give
    services `SECRETS_URI=http://secrets-service:8091` + `SECRETS_INTERNAL_KEY`.
 3. **`.env.prod` shrinks to non-secrets:** domains, image tag, provider toggles.
