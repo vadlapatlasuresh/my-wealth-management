@@ -1,4 +1,4 @@
-package com.mywealthmanagement.aiinsightsservice.config;
+package com.mywealthmanagement.accountaggregationservice.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;

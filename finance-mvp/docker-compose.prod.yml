@@ -88,6 +88,7 @@ services:
     # build: { context: ., dockerfile: Dockerfile.java-service, args: { SERVICE: api-gateway } }
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,audit
       # Downstream routing → compose DNS. All services listen on 8080 internally (SERVER_PORT).
       SERVICE_AUTH_URI: http://auth-service:8080
       SERVICE_AGGREGATION_URI: http://account-aggregation-service:8080
@@ -114,6 +115,7 @@ services:
     container_name: wealth-auth-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,encryption,audit
       DATABASE_URL: ${AUTH_DATABASE_URL:?}
       DATABASE_USER: ${AUTH_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
@@ -124,6 +126,7 @@ services:
     container_name: wealth-account-aggregation-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,encryption,plaid
       DATABASE_URL: ${AGG_DATABASE_URL:?}
       DATABASE_USER: ${AGG_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AGG_DATABASE_PASSWORD:?}
@@ -140,6 +143,7 @@ services:
     container_name: wealth-financial-core-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt
       DATABASE_URL: ${CORE_DATABASE_URL:?}
       DATABASE_USER: ${CORE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CORE_DATABASE_PASSWORD:?}
@@ -151,6 +155,7 @@ services:
     container_name: wealth-real-estate-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,realestate,notifications-internal
       DATABASE_URL: ${RE_DATABASE_URL:?}
       DATABASE_USER: ${RE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
@@ -169,6 +174,7 @@ services:
     container_name: wealth-business-financials-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,qbo
       DATABASE_URL: ${BIZ_DATABASE_URL:?}
       DATABASE_USER: ${BIZ_DATABASE_USER:?}
       DATABASE_PASSWORD: ${BIZ_DATABASE_PASSWORD:?}
@@ -188,6 +194,7 @@ services:
     container_name: wealth-ai-insights-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,gemini,anthropic,openai
       DATABASE_URL: ${AI_DATABASE_URL:?}
       DATABASE_USER: ${AI_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:?}
@@ -198,9 +205,6 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       AI_MODEL: ${AI_MODEL:-claude-opus-4-8}
       # Google Gemini (used when AI_PROVIDER=gemini)
-      # PILOT: fetch gemini.api_key from the secrets-service at boot. Once verified in
-      # prod, drop GEMINI_API_KEY below entirely — the value lives only in the store.
-      SECRETS_SCOPES: gemini
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
 
@@ -210,6 +214,7 @@ services:
     container_name: wealth-payment-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,stripe
       DATABASE_URL: ${PAY_DATABASE_URL:?}
       DATABASE_USER: ${PAY_DATABASE_USER:?}
       DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
@@ -223,6 +228,7 @@ services:
     container_name: wealth-notification-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,sendgrid,twilio,fcm,notifications-internal
       DATABASE_URL: ${NOTIF_DATABASE_URL:?}
       DATABASE_USER: ${NOTIF_DATABASE_USER:?}
       DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
@@ -238,6 +244,7 @@ services:
     container_name: wealth-platform-config-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt
       DATABASE_URL: ${CONFIG_DATABASE_URL:?}
       DATABASE_USER: ${CONFIG_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CONFIG_DATABASE_PASSWORD:?}
@@ -253,6 +260,7 @@ services:
     container_name: wealth-audit-service
     environment:
       <<: *java-env
+      SECRETS_SCOPES: jwt,audit
       DATABASE_URL: ${AUDIT_DATABASE_URL:?}
       DATABASE_USER: ${AUDIT_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUDIT_DATABASE_PASSWORD:?}
