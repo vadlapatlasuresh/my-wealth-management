@@ -14,6 +14,7 @@ from the whole platform down to each individual service. Diagrams are written in
 | [02-web-app-workflows.md](02-web-app-workflows.md) | **Web app** | End-to-end web user journeys (flows A–N): boot + **MFA login**, dashboard load, remote config, Plaid link, bill pay, AI chat, **goals, calculators, budget/debt, Deal Room, profile, data export/delete, security, admin & customer-care consoles**. |
 | [03-data-persistence-and-audit.md](03-data-persistence-and-audit.md) | **Cross-cutting** | **What external data we store**, where, tokens, the data-export/deletion tooling, and the **audit/compliance gap analysis**. (Answers the "are we saving member data for reference/audit?" question.) |
 | [04-feature-status-and-gaps.md](04-feature-status-and-gaps.md) | **Cross-cutting** | Every feature: backend-wired vs mock vs hardcoded, and **what is pending** to be production-real. |
+| [05-end-to-end-process-flows.md](05-end-to-end-process-flows.md) | **Granular, step-by-step** | The full request pipeline (client → gateway → JWT → routing → secrets/config → DB → response → audit) **and** the UI workflows (interaction → trigger → response → component data flow), with sequence diagrams and a single end-to-end vertical slice. |
 | [components/](components/) | **Granular** | One file per service/feature area — responsibility, endpoints, data model (ER), and sequence diagrams for each piece. |
 
 ### Component (per-service / per-feature) files
