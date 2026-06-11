@@ -365,7 +365,13 @@ svg{display:block;}
         <div style="font-family:var(--display); font-size:30px;">Welcome back</div>
         <div class="secondary" style="margin-top:6px;">Sign in to your TerraVest account</div>
       </div>
-      <div style="margin-top:26px;">
+      <div style="margin-top:24px;">
+        <div class="lbl" style="margin-bottom:8px;">Account type</div>
+        <div class="segmented" style="margin-bottom:8px;">
+          <div class="seg sel"><i class="ti ti-user"></i> Individual</div>
+          <div class="seg"><i class="ti ti-building"></i> Business</div>
+        </div>
+        <div class="tiny muted" style="margin-bottom:18px; line-height:1.5;">Personal wealth account — sign in with your email. Switch to <b style="color:var(--tv-forest);">Business</b> for your company login &amp; EIN-linked profile.</div>
         <div class="m-field"><span class="m-label">Email</span><input value="alex.morgan@email.com"><i class="ti ti-mail trail"></i></div>
         <div class="m-field"><span class="m-label">Password</span><input type="password" value="••••••••••"><i class="ti ti-eye trail"></i></div>
       </div>
@@ -380,6 +386,12 @@ svg{display:block;}
       </div>
       <div style="text-align:center; margin-top:24px;">
         <span class="secondary tiny">New to TerraVest? </span><button class="btn-text" style="padding:4px;">Create account</button>
+      </div>
+      <div class="row" style="display:flex; align-items:center; gap:10px; margin:18px 0 0;"><span style="flex:1; height:1px; background:var(--tv-border);"></span><span class="tiny muted" style="letter-spacing:.1em; font-weight:700;">STAFF</span><span style="flex:1; height:1px; background:var(--tv-border);"></span></div>
+      <div class="m-card" style="margin-top:14px; display:flex; align-items:center; gap:12px;">
+        <i class="ti ti-headset" style="font-size:26px; color:var(--tv-forest);"></i>
+        <div class="grow" style="flex:1;"><div style="font-weight:600;">Operations / staff sign in</div><div class="tiny muted">CARE &amp; ADMIN console</div></div>
+        <i class="ti ti-chevron-right muted"></i>
       </div>
     </div></div>
   </div></div>
@@ -1243,6 +1255,35 @@ svg{display:block;}
   <div class="caption-chip"><span class="num">21</span>Deal Room — Marketplace</div>
 </div>
 
+<!-- ============ OPS / ADMIN SIGN IN ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen dark"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Operations Portal</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:20px;">
+      <div style="text-align:center; margin:6px 0 22px;">
+        <div style="width:72px; height:72px; border-radius:20px; background:linear-gradient(150deg,var(--tv-forest-mid),var(--tv-forest)); display:flex; align-items:center; justify-content:center; margin:0 auto 16px;">
+          <i class="ti ti-headset" style="font-size:36px; color:#fff;"></i>
+        </div>
+        <div style="font-family:var(--display); font-size:24px; color:#E6EFE9;">Operations Portal</div>
+        <div class="secondary" style="margin-top:6px; color:#9fc0ad;">Staff sign in · CARE / ADMIN only</div>
+      </div>
+      <div class="m-field"><span class="m-label" style="background:#0E1A14; color:#9fc0ad;">Work email</span><input value="agent.dana@terravest.ops" style="color:#E6EFE9; border-color:#2a4234;"><i class="ti ti-mail trail"></i></div>
+      <div class="m-field"><span class="m-label" style="background:#0E1A14; color:#9fc0ad;">Password</span><input type="password" value="••••••••••" style="color:#E6EFE9; border-color:#2a4234;"><i class="ti ti-eye trail"></i></div>
+      <div class="m-field"><span class="m-label" style="background:#0E1A14; color:#9fc0ad;">2-step code</span><input value="318 204" style="color:#E6EFE9; border-color:#2a4234; letter-spacing:4px;"><i class="ti ti-shield-lock trail"></i></div>
+      <button class="btn-filled"><i class="ti ti-login-2"></i> Sign in to console</button>
+      <div style="display:flex; gap:10px; align-items:flex-start; margin-top:16px; background:rgba(201,151,58,.12); border:1px solid rgba(201,151,58,.35); border-radius:14px; padding:12px 13px;">
+        <i class="ti ti-alert-triangle" style="color:var(--tv-gold-light); font-size:18px; flex-shrink:0; margin-top:1px;"></i>
+        <div style="font-size:12px; color:#cdbf9c; line-height:1.5;">Access is restricted to <b style="color:#F0C878;">CARE / ADMIN</b> roles and is <b style="color:#F0C878;">fully audited</b>. Every action is logged for compliance.</div>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; justify-content:center; margin-top:16px; color:#7e988a; font-size:12px;"><i class="ti ti-fingerprint" style="font-size:16px; color:var(--tv-sage);"></i> Biometric unlock on trusted devices</div>
+      <div style="text-align:center; margin-top:12px;"><button class="btn-text" style="color:#9fc0ad;"><i class="ti ti-arrow-left" style="font-size:14px;"></i> Back to member sign in</button></div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">22</span>Ops / Admin — Sign In</div>
+</div>
+
 <!-- ============ 21. ADMIN ANALYTICS ============ -->
 <div class="frame-wrap">
   <div class="pixel"><div class="screen"><div class="punch-hole"></div>
@@ -1286,38 +1327,239 @@ svg{display:block;}
     </div></div>
     <div class="gesture-bar"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">22</span>Admin · Analytics</div>
+  <div class="caption-chip"><span class="num">23</span>Admin · Analytics</div>
+</div>
+
+<!-- ============ OPS · MEMBER SEARCH ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Member search</span><span class="chip green chip-round tiny" style="height:24px;"><i class="ti ti-shield-half-filled"></i> CARE</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div style="display:flex; gap:10px; align-items:center; background:var(--tv-forest); color:#fff; border-radius:16px; padding:12px 14px; margin-bottom:16px;">
+        <i class="ti ti-phone-call" style="font-size:22px;"></i>
+        <div style="flex:1;"><div style="font-weight:700; font-size:13.5px;">Live call · IVR matched ••4417</div><div style="font-size:12px; opacity:.85;">Reason code: PAYMENT_FAILED</div></div>
+        <button class="btn-tonal" style="height:34px; padding:0 14px; background:#fff; color:var(--tv-forest);">Open</button>
+      </div>
+      <div class="lbl" style="margin-bottom:10px;">Find a member</div>
+      <div style="display:flex; gap:12px;">
+        <div class="m-field" style="flex:1;"><span class="m-label">First name</span><input value="Alex"></div>
+        <div class="m-field" style="flex:1;"><span class="m-label">Last name</span><input value=""></div>
+      </div>
+      <div class="m-field"><span class="m-label">Email</span><input value=""><i class="ti ti-mail trail"></i></div>
+      <div class="m-field"><span class="m-label">Phone</span><input value="••• ••• 4417"><i class="ti ti-phone trail"></i></div>
+      <button class="btn-filled"><i class="ti ti-search"></i> Search members</button>
+      <div class="section-title">Results (3)</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-forest); color:#fff; font-size:13px; font-weight:700;">AK</div><div class="grow"><div class="t1">Alex Kumar</div><div class="t2">alex.k@email.com · ••4417</div></div><span class="chip red-emph chip-round tiny" style="height:24px;">2 issues</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-forest-light); color:#fff; font-size:13px; font-weight:700;">AR</div><div class="grow"><div class="t1">Alexa Romero</div><div class="t2">alexa@romeroholdings.com · ••8830 · BUSINESS</div></div><span class="chip green chip-round tiny" style="height:24px;">OK</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold); color:#fff; font-size:13px; font-weight:700;">AP</div><div class="grow"><div class="t1">Alexander Pike</div><div class="t2">a.pike@email.com · ••0192</div></div><span class="chip red-emph chip-round tiny" style="height:24px;">1 issue</span></div>
+      </div>
+      <div style="display:flex; gap:7px; align-items:center; justify-content:center; margin-top:14px; color:var(--tv-text-muted); font-size:12px;"><i class="ti ti-lock-square-rounded" style="color:var(--tv-forest); font-size:15px;"></i> Every lookup is logged · CARE / ADMIN audited</div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">24</span>Ops · Member Search</div>
 </div>
 
 <!-- ============ 22. CUSTOMER CARE ============ -->
 <div class="frame-wrap">
   <div class="pixel"><div class="screen"><div class="punch-hole"></div>
     <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
-    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Customer Care</span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Member 360</span></div>
     <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
-      <div class="m-field on-card" style="margin-bottom:14px;"><span class="m-label">Search by email or name</span><input value="alex.morgan@email.com"><i class="ti ti-search trail"></i></div>
-      <!-- member 360 -->
       <div class="m-card">
-        <div class="row gap12" style="gap:12px; margin-bottom:12px;"><div class="ab-avatar" style="width:46px; height:46px; font-size:17px;">AM</div><div class="grow"><div class="t1" style="font-size:16px;">Alex Morgan</div><div class="t2">alex.morgan@email.com · ID 8821</div></div></div>
-        <div class="kpi-grid">
+        <div class="row gap12" style="gap:12px; margin-bottom:12px;"><div class="ab-avatar" style="width:46px; height:46px; font-size:17px;">AK</div><div class="grow"><div class="t1" style="font-size:16px;">Alex Kumar</div><div class="t2">alex.k@email.com · ID 4417</div></div><span class="chip chip-round tiny" style="height:24px;">USER</span></div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn-tonal" style="flex:1; height:40px; padding:0;"><i class="ti ti-phone"></i> Call</button>
+          <button class="btn-tonal" style="flex:1; height:40px; padding:0;"><i class="ti ti-message-2"></i> Chat</button>
+          <button class="btn-tonal" style="flex:1; height:40px; padding:0;"><i class="ti ti-mail"></i> Email</button>
+        </div>
+        <div class="kpi-grid" style="margin-top:12px;">
           <div class="kpi" style="padding:10px;"><div class="k-lbl">Account type</div><div class="k-val" style="font-size:15px;">Individual</div></div>
           <div class="kpi" style="padding:10px;"><div class="k-lbl">Phone</div><div class="k-val" style="font-size:15px; color:var(--tv-positive);">Verified</div></div>
-          <div class="kpi" style="padding:10px;"><div class="k-lbl">Identity</div><div class="k-val" style="font-size:15px;">SSN ••6789</div><span class="tiny" style="color:var(--tv-positive);">Verified</span></div>
-          <div class="kpi" style="padding:10px;"><div class="k-lbl">Member since</div><div class="k-val" style="font-size:15px;">Jan 2026</div><span class="tiny muted">1 issue</span></div>
+          <div class="kpi" style="padding:10px;"><div class="k-lbl">Identity</div><div class="k-val" style="font-size:15px;">SSN ••4417</div></div>
+          <div class="kpi" style="padding:10px;"><div class="k-lbl">Member since</div><div class="k-val" style="font-size:15px;">Mar 2026</div><span class="tiny muted">2 issues</span></div>
         </div>
       </div>
-      <div class="segmented sm" style="margin:16px 0 14px;">
-        <div class="seg sel"><i class="ti ti-check"></i> Issues (1)</div><div class="seg">Recent activity (12)</div>
+      <div class="chip-row chip-round" style="margin:16px 0 12px; flex-wrap:nowrap; overflow-x:auto;">
+        <span class="chip chip-round sel"><i class="ti ti-check"></i> Overview</span><span class="chip chip-round">Accounts</span><span class="chip chip-round">Transactions</span><span class="chip chip-round">Payments</span><span class="chip chip-round">Activity</span>
       </div>
+      <div class="kpi-grid">
+        <div class="kpi"><div class="k-lbl">Net worth</div><div class="k-val">$128,430</div></div>
+        <div class="kpi"><div class="k-lbl">Cash</div><div class="k-val">$24,180</div></div>
+      </div>
+      <div class="section-title">Issue spotlight</div>
+      <div class="m-card" style="border:1.5px solid var(--tv-negative);">
+        <div class="lrow" style="border:none;"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-alert-circle"></i></div><div class="grow"><div class="t1">PLAID_EXCHANGE failed</div><div class="t2">Jun 5 · Aggregation · ITEM_LOGIN_REQUIRED</div></div></div>
+        <button class="btn-filled" style="margin-top:10px; height:46px;"><i class="ti ti-tool"></i> Open &amp; resolve</button>
+      </div>
+      <div class="section-title">Roles &amp; access</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-headset"></i></div><div class="grow"><div class="t1">CARE</div><div class="t2">View members, activity &amp; issues</div></div><span class="chip green chip-round tiny" style="height:24px;">Granted</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-shield-cog"></i></div><div class="grow"><div class="t1">ADMIN</div><div class="t2">Full access · grant roles</div></div><button class="btn-text" style="padding:4px;">Grant</button></div>
+      </div>
+      <div class="tiny muted" style="margin-top:8px;"><i class="ti ti-info-circle"></i> Role changes require ADMIN and are logged as support.role.grant.</div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">25</span>Ops · Member 360</div>
+</div>
+
+<!-- ============ OPS · ISSUE & RESOLVE ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Resolve issue</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="m-card" style="border:1.5px solid var(--tv-negative);">
+        <div class="row" style="display:flex; align-items:center; gap:10px; margin-bottom:8px;"><span class="chip red-emph chip-round tiny" style="height:24px;">FAILURE</span><span class="tiny muted">Jun 5 · 9:32 AM</span></div>
+        <div style="font-weight:700; font-size:16px;">PLAID_EXCHANGE failed</div>
+        <div class="secondary tiny" style="margin-top:4px; line-height:1.5;">Member: <b style="color:var(--tv-text-primary);">Alex Kumar</b> · u_4417<br>Service: Plaid aggregation · 98.4.x.x<br>Reason: <b style="color:var(--tv-negative);">ITEM_LOGIN_REQUIRED</b> — the bank needs the member to re-authenticate.</div>
+      </div>
+      <div class="section-title">Suggested actions</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-refresh"></i></div><div class="grow"><div class="t1">Send relink request</div><div class="t2">Push a Plaid re-auth link to the member</div></div><button class="btn-tonal" style="height:34px; padding:0 16px;">Send</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-message-2-code"></i></div><div class="grow"><div class="t1">Resend verification code</div><div class="t2">Email / SMS a fresh 6-digit code</div></div><button class="btn-tonal" style="height:34px; padding:0 16px;">Resend</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold-pale); color:var(--tv-gold);"><i class="ti ti-lock-open"></i></div><div class="grow"><div class="t1">Grant temporary access</div><div class="t2">24h elevated session · ADMIN</div></div><button class="btn-text" style="padding:4px;">Grant</button></div>
+      </div>
+      <div class="section-title">Reach the member</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-phone"></i></div><div class="grow"><div class="t1">Call back</div><div class="t2">••• ••• 4417</div></div><i class="ti ti-chevron-right muted"></i></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-message-2"></i></div><div class="grow"><div class="t1">Continue in chat</div><div class="t2">Escalated from chatbot · “it keeps failing!”</div></div><span class="chip green chip-round tiny" style="height:24px;">Online</span></div>
+      </div>
+      <div class="section-title">Resolution</div>
+      <div class="m-field"><span class="m-label">Resolution note</span><input value=""><i class="ti ti-note trail"></i></div>
+      <button class="btn-filled"><i class="ti ti-circle-check"></i> Mark resolved</button>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:14px; color:var(--tv-text-muted); font-size:12px; line-height:1.5;"><i class="ti ti-lock-square-rounded" style="color:var(--tv-forest); font-size:15px; flex-shrink:0; margin-top:1px;"></i> Every action is recorded to the audit log (support.*) with your agent ID, timestamp and IP.</div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">26</span>Ops · Issue &amp; Resolve</div>
+</div>
+
+<!-- ============ NOTIFICATIONS ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Notifications</span><i class="ti ti-checks ab-icon"></i></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="segmented sm" style="margin-bottom:14px;"><div class="seg sel"><i class="ti ti-check"></i> All</div><div class="seg">Unread (3)</div></div>
+      <div class="section-title" style="margin-top:0;">Today</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-alert-triangle"></i></div><div class="grow"><div class="t1">Budget alert · Dining</div><div class="t2">You're at 92% of your Dining budget.</div></div><span style="width:9px; height:9px; border-radius:50%; background:var(--tv-forest); flex:0 0 auto;"></span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-receipt"></i></div><div class="grow"><div class="t1">Payment scheduled</div><div class="t2">Mortgage $1,842 set for Jun 15.</div></div><span style="width:9px; height:9px; border-radius:50%; background:var(--tv-forest); flex:0 0 auto;"></span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-refresh"></i></div><div class="grow"><div class="t1">Accounts synced</div><div class="t2">3 accounts updated via Plaid.</div></div><span style="width:9px; height:9px; border-radius:50%; background:var(--tv-forest); flex:0 0 auto;"></span></div>
+      </div>
+      <div class="section-title">Earlier</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold-pale); color:var(--tv-gold);"><i class="ti ti-trending-up"></i></div><div class="grow"><div class="t1">Net worth up 1.7%</div><div class="t2">+$2,140 over the last 30 days.</div></div><span class="tiny muted">2d</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-shield-check"></i></div><div class="grow"><div class="t1">New sign-in approved</div><div class="t2">Pixel · San Francisco.</div></div><span class="tiny muted">3d</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-sparkles"></i></div><div class="grow"><div class="t1">Weekly summary ready</div><div class="t2">Your money in/out for last week.</div></div><span class="tiny muted">5d</span></div>
+      </div>
+      <div style="text-align:center; margin-top:14px;"><button class="btn-text">Mark all as read</button></div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">27</span>Notifications</div>
+</div>
+
+<!-- ============ SECURITY ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Security</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="m-card" style="background:var(--tv-positive-bg); display:flex; align-items:center; gap:12px;">
+        <i class="ti ti-shield-check" style="font-size:30px; color:var(--tv-positive);"></i>
+        <div class="grow"><div style="font-weight:700;">Security score: Good</div><div class="tiny" style="color:var(--tv-positive);">2 of 3 protections enabled</div></div>
+      </div>
+      <div class="section-title">Sign-in &amp; verification</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-shield-lock"></i></div><div class="grow"><div class="t1">Two-factor authentication</div><div class="t2">Code required on every sign in</div></div><div class="m-switch on"></div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-fingerprint"></i></div><div class="grow"><div class="t1">Fingerprint unlock</div><div class="t2">Unlock the app with biometrics</div></div><div class="m-switch on"></div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-bell-ringing"></i></div><div class="grow"><div class="t1">Login alerts</div><div class="t2">Notify me of new sign-ins</div></div><div class="m-switch"></div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-key"></i></div><div class="grow"><div class="t1">Change password</div></div><i class="ti ti-chevron-right muted"></i></div>
+      </div>
+      <div class="section-title">Active sessions</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-device-mobile"></i></div><div class="grow"><div class="t1">This Pixel</div><div class="t2">San Francisco · Now</div></div><span class="chip green chip-round tiny" style="height:24px;">Current</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:#EEF1EF; color:var(--tv-text-secondary);"><i class="ti ti-device-desktop"></i></div><div class="grow"><div class="t1">Chrome · macOS</div><div class="t2">Austin, TX · 2h ago</div></div><button class="btn-text" style="padding:4px;">Sign out</button></div>
+      </div>
+      <div class="section-title">Login history</div>
       <div class="m-card" style="padding:6px 16px;">
-        <div class="lrow"><div class="grow"><div class="t1">PLAID_EXCHANGE</div><div class="t2">Jun 5 · Aggregation · 73.21.x.x</div></div><span class="chip red-emph chip-round tiny" style="height:24px;">FAILURE</span></div>
-        <div class="lrow"><div class="grow"><div class="t1">LOGIN</div><div class="t2">Jun 7 · Auth · 73.21.x.x</div></div><span class="chip green chip-round tiny" style="height:24px;">SUCCESS</span></div>
-        <div class="lrow"><div class="grow"><div class="t1">SYNC_ACCOUNTS</div><div class="t2">Jun 7 · Aggregation · 73.21.x.x</div></div><span class="chip green chip-round tiny" style="height:24px;">SUCCESS</span></div>
+        <div class="lrow"><div class="grow"><div class="t1">Sign in · Pixel</div><div class="t2">Today · 9:41 AM</div></div><span class="chip green chip-round tiny" style="height:24px;">SUCCESS</span></div>
+        <div class="lrow"><div class="grow"><div class="t1">Sign in · Unknown device</div><div class="t2">Jun 5 · 98.4.x.x</div></div><span class="chip red-emph chip-round tiny" style="height:24px;">FAILED</span></div>
+        <div class="lrow"><div class="grow"><div class="t1">Sign in · Pixel</div><div class="t2">Jun 4 · 9:02 AM</div></div><span class="chip green chip-round tiny" style="height:24px;">SUCCESS</span></div>
       </div>
     </div></div>
     <div class="gesture-bar"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">23</span>Customer Care</div>
+  <div class="caption-chip"><span class="num">28</span>Security — Sessions &amp; History</div>
+</div>
+
+<!-- ============ HELP & SUPPORT — CONTACT ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Help &amp; Support</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="secondary tiny" style="margin-bottom:14px;">We're here 7 days a week. Choose how you'd like to reach us.</div>
+      <div class="section-title" style="margin-top:0;">Contact us</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-phone"></i></div><div class="grow"><div class="t1">Call us</div><div class="t2">Mon–Sun · 6am–9pm PT</div></div><span class="chip chip-round tiny" style="height:24px; color:var(--tv-forest);">1-800-837-7283</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-message-2"></i></div><div class="grow"><div class="t1">Live chat</div><div class="t2">Avg. reply under 2 min</div></div><span class="chip green chip-round tiny" style="height:24px;">Online</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold-pale); color:var(--tv-gold);"><i class="ti ti-mail"></i></div><div class="grow"><div class="t1">Email us</div><div class="t2">support@terravest.app</div></div><span class="tiny muted">~24h</span></div>
+      </div>
+      <div class="section-title">Something wrong?</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-flag"></i></div><div class="grow"><div class="t1">Report an issue</div><div class="t2">Bugs, payments, account access</div></div><i class="ti ti-chevron-right muted"></i></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-shield-lock"></i></div><div class="grow"><div class="t1">Report fraud or security concern</div><div class="t2">Priority response</div></div><i class="ti ti-chevron-right muted"></i></div>
+      </div>
+      <div class="section-title">Help center</div>
+      <div class="m-card" style="padding:4px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-help-circle"></i></div><div class="grow"><div class="t1">Browse FAQs</div></div><i class="ti ti-chevron-right muted"></i></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-book-2"></i></div><div class="grow"><div class="t1">Getting started guide</div></div><i class="ti ti-chevron-right muted"></i></div>
+      </div>
+      <div class="m-card" style="margin-top:14px; display:flex; align-items:center; gap:12px; background:var(--tv-gold-pale); border:1px solid var(--tv-gold-light);">
+        <i class="ti ti-sparkles" style="font-size:24px; color:var(--tv-gold);"></i>
+        <div class="grow"><div style="font-weight:700; color:var(--tv-warning);">Ask the AI assistant</div><div class="tiny" style="color:var(--tv-text-secondary);">Instant answers about your accounts, any time.</div></div>
+      </div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">29</span>Help &amp; Support — Contact</div>
+</div>
+
+<!-- ============ REPORT AN ISSUE ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Report an issue</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="lbl" style="margin-bottom:8px;">What's it about?</div>
+      <div class="chip-row chip-round" style="margin-bottom:18px;">
+        <span class="chip chip-round sel"><i class="ti ti-bug"></i> Bug</span>
+        <span class="chip chip-round">Payment problem</span>
+        <span class="chip chip-round">Account access</span>
+        <span class="chip chip-round">Data looks wrong</span>
+        <span class="chip chip-round">Other</span>
+      </div>
+      <div class="m-field"><span class="m-label">Subject</span><input value="Pay button does nothing"><i class="ti ti-pencil trail"></i></div>
+      <div class="lbl" style="margin-bottom:8px;">Describe what happened</div>
+      <div style="border:1.5px solid var(--tv-border); border-radius:12px; padding:14px 16px; font-size:14.5px; color:var(--tv-text-secondary); line-height:1.5; min-height:92px; margin-bottom:14px;">When I tap "Pay" on the mortgage payee, nothing happens. Tried twice on Wi-Fi and cellular.</div>
+      <div style="border:1.5px dashed var(--tv-border); border-radius:12px; padding:14px; display:flex; align-items:center; justify-content:center; gap:8px; color:var(--tv-text-muted); font-weight:600; font-size:13.5px; margin-bottom:14px;"><i class="ti ti-paperclip" style="font-size:18px;"></i> Attach screenshot or recording</div>
+      <div class="m-card" style="padding:4px 16px; margin-bottom:14px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-bug"></i></div><div class="grow"><div class="t1">Include diagnostic info</div><div class="t2">App version, device &amp; recent errors</div></div><div class="m-switch on"></div></div>
+      </div>
+      <div class="lbl" style="margin-bottom:8px;">How urgent is it?</div>
+      <div class="segmented sm" style="margin-bottom:18px;"><div class="seg">Low</div><div class="seg sel"><i class="ti ti-check"></i> Medium</div><div class="seg">High</div></div>
+      <button class="btn-filled"><i class="ti ti-send"></i> Submit report</button>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:14px; color:var(--tv-text-muted); font-size:12px; line-height:1.5;"><i class="ti ti-clock" style="color:var(--tv-forest); font-size:15px; flex-shrink:0; margin-top:1px;"></i> Our care team typically responds within 24 hours. Critical issues are prioritized and routed to an agent.</div>
+    </div></div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">30</span>Report an Issue</div>
 </div>
 
 <!-- ============ 24. PROFILE — KYC + MASKED SSN ============ -->
@@ -1370,7 +1612,7 @@ svg{display:block;}
     </div>
     <div class="gesture-bar"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">24</span>Profile — KYC &amp; SSN</div>
+  <div class="caption-chip"><span class="num">31</span>Profile — KYC &amp; SSN</div>
 </div>
 
 <!-- ============ 25. DARK MODE ============ -->
@@ -1414,7 +1656,7 @@ svg{display:block;}
     </div>
     <div class="gesture-bar"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">25</span>Dark theme (Material You)</div>
+  <div class="caption-chip"><span class="num">32</span>Dark theme (Material You)</div>
 </div>
 
 </main>
