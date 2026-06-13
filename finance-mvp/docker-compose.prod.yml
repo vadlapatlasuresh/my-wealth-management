@@ -119,6 +119,11 @@ services:
       DATABASE_URL: ${AUTH_DATABASE_URL:?}
       DATABASE_USER: ${AUTH_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
+      # Where auth-service POSTs OTP codes for delivery (NotificationClient ->
+      # notification-service /internal/comms/otp). Without this it defaults to
+      # localhost:8088 and silently calls itself, so real email/SMS never sends.
+      # The X-Internal-Key both sides use resolves from the shared AUDIT_INGEST_KEY.
+      NOTIFICATION_URI: http://notification-service:8080
       # SECURITY: returns OTP codes in API responses so signup/MFA work WITHOUT a
       # real email/SMS provider. Defaults true to preserve the current key-less
       # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
