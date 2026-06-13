@@ -44,8 +44,9 @@ PAIRS=(
   realestate.provider_api_key:REALESTATE_PROVIDER_API_KEY
 )
 
-# Load .env.prod into this shell.
-set -a; . "./$ENV_FILE"; set +a
+# Read a single key from the env file WITHOUT sourcing it (values may contain
+# spaces, e.g. JVM_OPTS=-XX:+UseSerialGC ..., which `source` would try to execute).
+getenv() { grep -E "^$1=" "$ENV_FILE" | head -1 | cut -d= -f2- | tr -d '\r'; }
 
 # Network the secrets-service is attached to.
 NET=$(docker inspect "$SVC_CONTAINER" -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}' 2>/dev/null) \
@@ -53,7 +54,8 @@ NET=$(docker inspect "$SVC_CONTAINER" -f '{{range $k,$v := .NetworkSettings.Netw
 echo "secrets-service network: $NET"
 
 # Mint a short-lived ADMIN JWT from the shared JWT_SECRET.
-: "${JWT_SECRET:?JWT_SECRET must be set in $ENV_FILE}"
+JWT_SECRET=$(getenv JWT_SECRET)
+[ -n "$JWT_SECRET" ] || { echo "ERROR: JWT_SECRET not found in $ENV_FILE"; exit 1; }
 ADMIN_JWT=$(python3 - "$JWT_SECRET" <<'PY'
 import sys,hmac,hashlib,base64,json,time
 s=sys.argv[1].encode(); b=lambda x: base64.urlsafe_b64encode(x).rstrip(b'=')
@@ -69,7 +71,7 @@ echo "Loading secrets into the store…"
 set=0; skip=0
 for pair in "${PAIRS[@]}"; do
   name=${pair%%:*}; var=${pair##*:}
-  val=$(printenv "$var" || true)
+  val=$(getenv "$var")
   if [ -z "${val:-}" ]; then echo "  skip  $name (no $var)"; skip=$((skip+1)); continue; fi
   body=$(python3 -c 'import json,sys;print(json.dumps({"value":sys.argv[1]}))' "$val")
   code=$(api -o /dev/null -w '%{http_code}' -X POST "$SVC_URL/admin/secrets/$name/rotate" \
