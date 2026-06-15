@@ -1,179 +1,234 @@
-# 00 — GO-LIVE TODO (the master checklist)
+# 00 — GO-LIVE PLAN (the master production-readiness checklist)
 
-**This is the single, living checklist to take TerraVest from "live with mocks" to
-"fully live for real users."** We work it **top to bottom, one item at a time**, and
-check boxes off as we go. Deeper context per phase is in
-[04-ROADMAP-TO-LIVE.md](04-ROADMAP-TO-LIVE.md) and
-[06-APIS-AND-KEYS.md](06-APIS-AND-KEYS.md); the ops mechanics are in
-[../finance-mvp/OPERATIONS_RUNBOOK.md](../finance-mvp/OPERATIONS_RUNBOOK.md).
+**The single, exhaustive checklist to take TerraVest from "live with mocks" to "production-ready
+for real users with real money."** We work it **top to bottom, one item at a time**, checking
+boxes off as we go. Every item has an **owner** and an **acceptance test**.
 
-**Legend:** `[ ]` todo · `[x]` done · **(You)** = needs your action (keys/accounts/VM) ·
-**(Me)** = I do it (code/deploy/verify). Each item has an **acceptance** = how we know it's done.
+Companion docs: [04-ROADMAP-TO-LIVE.md](04-ROADMAP-TO-LIVE.md) ·
+[06-APIS-AND-KEYS.md](06-APIS-AND-KEYS.md) ·
+[../finance-mvp/OPERATIONS_RUNBOOK.md](../finance-mvp/OPERATIONS_RUNBOOK.md)
 
-> **Live URL:** https://app.terravest.app  ·  **Cost today:** ~$0 (GCP trial + Neon free + all providers mocked)
+**Legend:** `[ ]` todo · `[x]` done · **(You)** = your action (accounts/keys/VM/legal) ·
+**(Me)** = I do it (code/deploy/verify) · **Effort:** S/M/L.
+
+> **Live URL:** https://app.terravest.app · **Cost today:** ~$0 (GCP trial + Neon free + all providers mocked)
 
 ---
 
-## 📍 Where we are right now (2026-06-11)
+## 📍 Current state (2026-06-15)
 - App is **live and works end-to-end with mocks**; all manual data-entry flows verified.
-- **Deploys are currently BLOCKED.** Last successful deploy was PR #17. Everything merged
-  since — #18 (secrets-service), #20 (mobile designs), #21 (provider-toggle wiring),
-  #22/#23 (secrets tooling) — is **on `main` but NOT live yet**, because the secrets-service
-  (#18) made `SECRETS_INTERNAL_KEY` + a secrets DB **required** in `.env.prod`, which the VM
-  doesn't have. **Phase 0 fixes this and ships all the accumulated work at once.**
+- **Deploys are currently BLOCKED at Phase 0.** The secrets-service (#18) was stood up, but
+  `auth-service` comes up **unhealthy** on deploy (needs its crash log to pinpoint). Until 0.x is
+  green, nothing merged since PR #17 is live.
+- Everything below "real provider" is **mock** by design; flipping each is a toggle + key.
+
+### How "mock → real" works
+Each integration is a Spring bean gated by `@ConditionalOnProperty`. Set the **toggle** + **key**
+in the VM's `.env.prod` and redeploy the one service. If a key is missing/invalid it logs
+`falling back to mock` — so you always know. (Toggles were wired through compose in PR #21.)
 
 ---
 
-## PHASE 0 — 🔴 Unblock deploys (stand up the secrets-service) — DO FIRST
-*Goal: green deploy again, and everything merged since #17 goes live in one shot.*
+# PHASE 0 — 🔴 Unblock deploys (FINISH FIRST)
+*Goal: a green one-click deploy that ships everything merged since #17.*
 
-- [ ] **(You) 0.1 — Create a Neon database `secrets_db`.** In the Neon console (same project
-  as your other DBs), create a database named `secrets_db`. Reuse the same role/password as
-  your other services. Note the host. *(Use a dedicated DB — NOT `currentSchema=secrets`, which
-  Neon silently ignores; that was the original schema-collision bug.)*
-  **Acceptance:** `secrets_db` exists and you have its host/user/password.
-
-- [ ] **(You) 0.2 — Add the secrets config to the VM's `.env.prod`.** SSH in and run (replaces
-  only the 3 Neon values; the two keys are generated for you):
+- [x] 0.1 (You) Create Neon `secrets_db`; add `SECRETS_*` to `.env.prod`.
+- [x] 0.2 (Me) Add `secrets-service` to the CI build matrix so its image publishes (PR #27).
+- [ ] **0.3 (You) Pull the `auth-service` crash log** so I can fix the unhealthy boot:
   ```bash
-  ssh -i ~/.ssh/terravest_deploy deploy@34.139.32.148
-  cd ~/my-wealth-management/finance-mvp   # or ~/finance-mvp
-  NEON_HOST="ep-xxxx.us-east-1.aws.neon.tech"; NEON_USER="your_user"; NEON_PASS="your_pass"
-  cat >> .env.prod <<EOF
-
-  # --- secrets-service (PR #18) ---
-  SECRETS_PROVIDER=local
-  SECRETS_INTERNAL_KEY=$(openssl rand -base64 32)
-  SECRETS_MASTER_KEY=$(openssl rand -base64 32)
-  SECRETS_DATABASE_URL=jdbc:postgresql://${NEON_HOST}/secrets_db?sslmode=require
-  SECRETS_DATABASE_USER=${NEON_USER}
-  SECRETS_DATABASE_PASSWORD=${NEON_PASS}
-  EOF
+  ssh -i ~/.ssh/terravest_deploy deploy@34.139.32.148 \
+    'cd ~/my-wealth-management/finance-mvp && docker compose -f docker-compose.prod.yml \
+     --env-file .env.prod logs --tail=80 auth-service' | grep -iE "error|exception|caused by|fatal|jwt|secret|started|failed" | tail -30
   ```
-  **Acceptance:** `grep SECRETS_ .env.prod` shows all six lines populated.
-
-- [ ] **(Me) 0.3 — Deploy and verify all 12 services come up healthy.** I run the deploy
-  workflow; it now passes config validation, secrets-service boots (Flyway creates tables in
-  `secrets_db`), Caddy serves the site, health-gate goes green.
-  **Acceptance:** deploy job = success; `https://app.terravest.app` 200; `/actuator/health` 200;
-  a fresh register→dashboard works; real-estate/deal-room 200 (i.e. all the post-#17 work is live).
-
-- [ ] **(Me) 0.4 — Re-run the end-to-end flow test** (write→read-back across every feature) to
-  confirm nothing regressed in the big batch of merged changes.
-  **Acceptance:** the flow suite passes (same 21/21 non-key flows as before).
+- [ ] **0.4 (Me) Fix the auth-service boot failure** (likely `JwtSecretGuard` rejecting the
+  secret, or a missing OTP→notification config) and redeploy. **Acceptance:** deploy job =
+  success; all 12 services healthy; `https://app.terravest.app` 200.
+- [ ] **0.5 (Me) Re-run the end-to-end flow test** (write→read-back across every feature) to
+  confirm the big merged batch didn't regress anything. **Acceptance:** flow suite green.
 
 ---
 
-## PHASE 1 — 🔴 Close the security gate (before ANY real user)
-*Goal: real OTP delivery + stop leaking codes. These two go together — you can't hide the code
-until real delivery works.*
+# PHASE 1 — 🔴 Security gate (before ANY real user)
+*Goal: stop leaking OTP codes, deliver them for real, and refuse weak secrets at boot.*
 
-- [ ] **(You) 1.1 — SendGrid account.** Sign up, verify a sender (an email you control, ideally
-  on your domain), create an API key. → `SENDGRID_API_KEY`, `SENDGRID_FROM`.
-- [ ] **(You) 1.2 — Twilio account.** Sign up, buy/verify a sending number. →
-  `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`.
-- [ ] **(You) 1.3 — Set toggles + keys in `.env.prod`:**
-  ```
-  COMMS_PROVIDER_EMAIL=sendgrid
-  SENDGRID_API_KEY=...
-  SENDGRID_FROM=you@yourdomain.com
-  COMMS_PROVIDER_SMS=twilio
-  TWILIO_ACCOUNT_SID=...
-  TWILIO_AUTH_TOKEN=...
-  TWILIO_FROM=+1...
-  OTP_EXPOSE_DEV_CODE=false
-  ```
-- [ ] **(Me) 1.4 — Deploy auth + notification services and verify.**
-  **Acceptance:** a brand-new email/phone receives a **real** OTP; API responses contain **no**
-  `devCode`; signup and returning-login (MFA) still complete end-to-end.
-- [ ] **(You, deliverability) 1.5 — Domain email auth:** add SendGrid's SPF/DKIM CNAME records
-  so OTP/notification email doesn't land in spam.
-  **Acceptance:** SendGrid shows the sender domain "verified"; a test email lands in inbox.
+- [ ] **1.1 (You) SendGrid** — account, **verified sender**, API key → `SENDGRID_API_KEY`,
+  `SENDGRID_FROM`. Add SendGrid **SPF/DKIM** DNS records (deliverability). **S**
+- [ ] **1.2 (You) Twilio** — account + sending number → `TWILIO_ACCOUNT_SID`,
+  `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. **S**
+- [ ] **1.3 (You) Set toggles + `OTP_EXPOSE_DEV_CODE=false` in `.env.prod`:** `COMMS_PROVIDER_EMAIL=sendgrid`,
+  `COMMS_PROVIDER_SMS=twilio`, plus the keys above. **S**
+- [ ] **1.4 (Me) Deploy auth + notification; verify.** **Acceptance:** a brand-new email/phone
+  receives a **real** OTP; API responses contain **no** `devCode`; signup + MFA login still work. **S**
+- [ ] **1.5 (Me) Fail-fast secret guards** — refuse to boot in prod if `JWT_SECRET`,
+  `APP_ENCRYPTION_KEY`, or `AUDIT_INGEST_KEY` are blank/demo/weak (auth has `JwtSecretGuard`;
+  extend the pattern to the others). **Acceptance:** a blank key stops that service with a clear
+  fatal log. **M**
+- [ ] **1.6 (Me) Harden CORS** — whitelist specific headers/methods (drop `*`); confirm
+  `WEB_ORIGINS` has no wildcard in prod. **S**
+- [ ] **1.7 (Me) Tighten CSP/security headers** in the [Caddyfile](../finance-mvp/Caddyfile).
+  **Acceptance:** CSP present; site still works; headers grade A. **M**
+- [ ] **1.8 (Me) Move web JWT off `localStorage`** → httpOnly cookie or in-memory + refresh
+  (XSS hardening). **Acceptance:** token not readable from `localStorage`. **M**
 
 ---
 
-## PHASE 2 — Core integrations (highest user value)
-*Goal: real bank data + real AI. Plaid also unlocks bill-pay funding.*
+# PHASE 2 — Core real data (highest user value)
+*Goal: real bank data + real AI.*
 
-- [ ] **(You) 2.1 — Plaid sandbox keys.** Sign up at Plaid; grab the free **sandbox**
-  `PLAID_CLIENT_ID`/`PLAID_SECRET`. Set them + `PLAID_ENV=sandbox` in `.env.prod`.
-- [ ] **(Me) 2.2 — Deploy account-aggregation + verify with Plaid's sandbox bank.**
-  **Acceptance:** linking with Plaid sandbox creds (`user_good`/`pass_good`) populates real
-  accounts + transactions → net worth/budgets update; bill-pay can pick a funding account.
-- [ ] **(You) 2.3 — Plaid production access** (when ready for real banks): request production in
-  the Plaid dashboard, set production keys + `PLAID_ENV=production`.
-  **Acceptance:** a real bank links and syncs.
-- [ ] **(You) 2.4 — AI key.** Get `ANTHROPIC_API_KEY` (or `GEMINI_API_KEY`). Set
-  `AI_PROVIDER=anthropic` (or `gemini`) + model in `.env.prod`.
-- [ ] **(Me) 2.5 — Deploy ai-insights + verify.**
-  **Acceptance:** insights + chat return real, grounded responses (no "mock" fallback in logs).
-
----
-
-## PHASE 3 — Remaining providers (turn on as the feature is needed)
-*Each is one toggle + key + redeploy. See [06-APIS-AND-KEYS.md](06-APIS-AND-KEYS.md).*
-
-- [ ] **(You/Me) 3.1 — Stripe** (real bill-pay/billing): `PAYMENT_PROVIDER=stripe`,
-  `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (+ register the webhook URL). Deploy payment-service.
-- [ ] **(You/Me) 3.2 — RentCast** (real property valuations): `REALESTATE_PROVIDER=rentcast`,
-  `REALESTATE_PROVIDER_API_KEY`. Deploy real-estate-service.
-- [ ] **(You/Me) 3.3 — QuickBooks Online** (business): `BUSINESS_PROVIDER=quickbooks`,
-  `QBO_CLIENT_ID/SECRET`, register `QBO_REDIRECT_URI`, set `APP_WEB_URL`. Deploy business-financials.
-- [ ] **(You/Me) 3.4 — FCM push** (`COMMS_PROVIDER_PUSH=fcm` + `FCM_SERVER_KEY`) and
-  **Google Maps** address autocomplete (`VITE_GOOGLE_MAPS_API_KEY`, build-time).
-  **Acceptance (each):** the feature works against the real provider; logs show no mock fallback.
+- [ ] **2.1 (You) Plaid sandbox** keys → `PLAID_CLIENT_ID/SECRET`, `PLAID_ENV=sandbox`. **S**
+- [ ] **2.2 (Me) Deploy account-aggregation; verify with Plaid sandbox** (`user_good`/`pass_good`).
+  **Acceptance:** linking populates real accounts + transactions → net worth/budgets update;
+  bill-pay can pick a funding account. **S**
+- [ ] **2.3 (Me) Harden the Plaid webhook** — implement the TODO in `PlaidWebhookVerifier`
+  (fetch ES256 key, verify JWT signature + body hash); set `PLAID_WEBHOOK_VERIFY=true`.
+  **Acceptance:** forged webhook → 401; real webhook → processed. **M**
+- [ ] **2.4 (You) Plaid production access** (when launching to real banks) → production keys +
+  `PLAID_ENV=production`. **Acceptance:** a real bank links + syncs. **S** *(gated on Plaid review)*
+- [ ] **2.5 (You) AI key** → `ANTHROPIC_API_KEY` (or `GEMINI_API_KEY`); set `AI_PROVIDER` + model. **S**
+- [ ] **2.6 (Me) Deploy ai-insights; verify.** **Acceptance:** insights + chat are real and
+  grounded in the user's numbers; no mock fallback in logs. **S**
 
 ---
 
-## PHASE 4 — Production hardening
-*Goal: safe to hold real financial data.*
+# PHASE 3 — Remaining integrations (turn on per feature)
+*Each is a toggle + key + redeploy; see [06-APIS-AND-KEYS.md](06-APIS-AND-KEYS.md).*
 
-- [ ] **(You/Me) 4.1 — Backups + restore drill.** Confirm Neon automated backups/PITR; do a
-  test restore and document it. **Acceptance:** a restore drill succeeds and is written down.
-- [ ] **(Me, then You) 4.2 — Migrate secrets INTO the store.** Now that secrets-service is up
-  (Phase 0), run `deploy/seed-secrets.sh` on the VM to load `.env.prod` keys into the encrypted
-  store, roll the per-service `secrets-client` shim out beyond ai-insights, and trim `.env.prod`
-  to non-secrets. **Acceptance:** services read keys from the store; `.env.prod` holds only
-  non-secret config + the KMS/identity bits.
-- [ ] **(You) 4.3 — Move KEK to GCP KMS** (prod-grade): `terraform apply` in `infra/gcp` for the
-  KMS key + VM service account; set `SECRETS_PROVIDER=kms` + `SECRETS_KMS_KEY_NAME`, blank
-  `SECRETS_MASTER_KEY`. **Acceptance:** secrets-service unwraps via KMS; no master key on disk.
-- [ ] **(You/Me) 4.4 — Rotate every secret that ever touched git or chat** (JWT_SECRET,
-  APP_ENCRYPTION_KEY, all provider keys, DB passwords). **Acceptance:** old values invalid.
-- [ ] **(You/Me) 4.5 — Error tracking + alerting:** add a Sentry DSN; wire alerts/SLOs on the
-  Prometheus metrics. **Acceptance:** a forced error appears in Sentry.
-- [ ] **(Me) 4.6 — Tighten security headers / CSP** in the
-  [Caddyfile](../finance-mvp/Caddyfile). **Acceptance:** CSP set; site still works; headers graded.
-- [ ] **(Me) 4.7 — CI E2E:** add the Playwright happy-path (signup → link → dashboard → pay) to
-  CI. **Acceptance:** CI runs the E2E test on every push.
-- [ ] **(You) 4.8 — Host decision** after the GCP trial: downsize the VM or move to Hetzner.
-  **Acceptance:** running on the chosen long-term host.
+- [ ] **3.1 (You/Me) Stripe** — `PAYMENT_PROVIDER=stripe`, `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`; register the webhook URL; finish **webhook signature verification**
+  (`StripeWebhookVerifier`). **Acceptance:** a real PaymentIntent is created; signed webhook
+  updates status; forged webhook rejected. **M**
+- [ ] **3.2 (You/Me) RentCast** — `REALESTATE_PROVIDER=rentcast`, `REALESTATE_PROVIDER_API_KEY`.
+  **Acceptance:** property lookup returns real AVM/rent data (no mock fallback). **S**
+- [ ] **3.3 (You/Me) QuickBooks Online** — `BUSINESS_PROVIDER=quickbooks`, `QBO_CLIENT_ID/SECRET`,
+  register `QBO_REDIRECT_URI`, set `APP_WEB_URL`; verify OAuth connect + token refresh.
+  **Acceptance:** connecting a QBO sandbox company shows real P&L/invoices/expenses. **M**
+- [ ] **3.4 (You/Me) FCM push** — `COMMS_PROVIDER_PUSH=fcm` + service-account creds (migrate off
+  the legacy server-key API to FCM HTTP v1). **Acceptance:** a device receives a push. **M**
+- [ ] **3.5 (You/Me) Google Maps** address autocomplete — `VITE_GOOGLE_MAPS_API_KEY` (build-time;
+  the deploy rebuilds web). **Acceptance:** address fields autocomplete. **S**
 
 ---
 
-## PHASE 5 — Compliance & data lifecycle (mostly code, no keys)
-- [ ] **(Me) 5.1 — Delete-cascade:** internal `DELETE by-user` in every data-owning service,
-  orchestrated from account-delete (true GDPR delete). **Acceptance:** deleting an account wipes
-  the user's data across all services.
-- [ ] **(Me) 5.2 — Consent ledger:** persist ToS/privacy acceptances with timestamps/version.
-- [ ] **(Me) 5.3 — Audit domain events:** emit semantic events; net-worth daily snapshot job.
-- [ ] **(You) 5.4 — Legal:** Terms of Service, Privacy Policy, and financial disclaimers
-  reviewed by counsel before public launch. **Acceptance:** linked + accepted at signup.
+# PHASE 4 — Production robustness (safe under load & failure)
+*Goal: the app behaves correctly with bad input, traffic spikes, and flaky dependencies.*
+
+- [ ] **4.1 (Me) Input validation** — add `@Valid` + constraints to every write DTO; reject raw
+  `Map<String,Object>` bodies (property/deal/bill-pay/support). **Acceptance:** bad payloads →
+  400 with field errors, not 500. **M**
+- [ ] **4.2 (Me) Rate limiting** — gateway-level (per-IP + per-user) on auth/OTP and write
+  endpoints (bucket4j/Resilience4j). **Acceptance:** OTP/login throttles after N attempts. **M**
+- [ ] **4.3 (Me) Retries + circuit breakers** for outbound calls (Plaid, Stripe, RentCast,
+  SendGrid, Twilio, QBO) via Resilience4j. **Acceptance:** a provider outage degrades gracefully,
+  doesn't hang requests. **M**
+- [ ] **4.4 (Me) Persistent idempotency** — move the in-memory notification/payment idempotency
+  cache to the DB (survives restarts + multi-instance). **Acceptance:** replaying a key after a
+  restart is still de-duped. **M**
+- [ ] **4.5 (Me) Pagination + size caps** on list endpoints (notifications, transactions,
+  accounts, deals). **Acceptance:** large lists paginate; no unbounded fetch. **M**
+- [ ] **4.6 (Me) DB indexes** on hot paths (`user_id` and FK columns) via new Flyway migrations.
+  **Acceptance:** explain-plan uses indexes on the common queries. **S**
+- [ ] **4.7 (Me) Health probes + graceful shutdown** — real readiness/liveness indicators;
+  drain in-flight requests on SIGTERM. **Acceptance:** a rolling deploy drops zero requests. **M**
 
 ---
 
-## PHASE 6 — Mobile to the stores
-- [ ] **(You/Me) 6.1 — Finish iOS simulator build** (Android verified). See
-  [../docs/phases/PHASE_8_MOBILE.md](../docs/phases/PHASE_8_MOBILE.md).
-- [ ] **(You) 6.2 — Signing:** Android keystore; Apple cert + provisioning profile.
-- [ ] **(You/Me) 6.3 — Build store binaries, prepare listings, submit.**
-  **Acceptance:** signed iOS + Android builds run against prod; store listings live.
+# PHASE 5 — Observability, backups & secret management
+*Goal: we can see problems, recover data, and keep secrets safe.*
+
+- [ ] **5.1 (Me) Structured (JSON) logging** (correlation IDs already in the log pattern); ship
+  logs somewhere queryable. **Acceptance:** logs searchable by `requestId`/`userId`. **M**
+- [ ] **5.2 (You/Me) Error tracking (Sentry)** — add DSN to all services + web; alert on new
+  errors. **Acceptance:** a forced exception appears in Sentry with stack + request id. **S**
+- [ ] **5.3 (You/Me) Metrics & alerts** — scrape `/actuator/prometheus`; dashboards + alerts on
+  error rate, latency, healthy-instance count. **Acceptance:** an SLO alert fires in a drill. **M**
+- [ ] **5.4 (You/Me) Backups + restore drill** — confirm Neon PITR/automated backups; perform a
+  **test restore** and document it. **Acceptance:** a restore drill succeeds, written up. **M**
+- [ ] **5.5 (You/Me) Migrate secrets INTO the store** — run `deploy/seed-secrets.sh` to load
+  `.env.prod` keys into the secrets-service; trim `.env.prod` to non-secrets. **Acceptance:**
+  services read keys from the store; `.env.prod` holds only config. **M**
+- [ ] **5.6 (You) KEK in GCP KMS** — `terraform apply` (infra/gcp) for the KMS key + VM service
+  account; set `SECRETS_PROVIDER=kms` + `SECRETS_KMS_KEY_NAME`; blank `SECRETS_MASTER_KEY`.
+  **Acceptance:** secrets unwrap via KMS; no master key on disk. **M**
+- [ ] **5.7 (You/Me) Rotate every secret that ever touched git/chat** (JWT_SECRET,
+  APP_ENCRYPTION_KEY, all provider keys, DB passwords). **Acceptance:** old values invalid. **S**
 
 ---
 
-## The very next action
-**Phase 0.1 + 0.2 are yours** (create `secrets_db`, append the `SECRETS_*` block to `.env.prod`).
-The moment you say **"done"**, I run **0.3** (deploy) and **0.4** (verify) — which also makes all
-the merged-but-unshipped work (#18–#23) live. Then we roll straight into Phase 1.
+# PHASE 6 — Compliance, legal & data lifecycle
+*Goal: lawful to hold real financial PII; honor user data rights.*
 
-*Keep this file updated: check the box and add a date when each item lands.*
+- [ ] **6.1 (Me) Delete-cascade hardening** — make `DELETE /me` reliably purge across every
+  data-owning service (durable retries, not best-effort). **Acceptance:** deleting an account
+  removes all user data across services; verified by query. **M**
+- [ ] **6.2 (Me) Consent ledger** — persist ToS/privacy acceptance (version + timestamp) at
+  signup and for data-sharing (Deal Room). **Acceptance:** acceptances are queryable per user. **M**
+- [ ] **6.3 (Me) GDPR/CCPA data export** — `GET /api/v1/me/export` returning all user data.
+  **Acceptance:** a user can download their data. **M**
+- [ ] **6.4 (Me) Broaden audit coverage** — emit semantic events for payments, deals, budgets,
+  account links (today: auth events only). **Acceptance:** sensitive actions appear in the audit
+  chain. **M**
+- [ ] **6.5 (Me) Data-retention policy + purge jobs** — define retention; scheduled cleanup.
+  **Acceptance:** policy documented; job runs. **S**
+- [ ] **6.6 (You) Legal** — Terms of Service, Privacy Policy, financial disclaimers, and a list
+  of third-party data processors (Plaid/Stripe/etc.) reviewed by counsel. **Acceptance:** linked
+  + accepted at signup; privacy policy published. **L (external)**
+
+---
+
+# PHASE 7 — Web app hardening (UX & accessibility)
+- [ ] **7.1 (Me) Form validation** (length/format) before submit across auth/property/deal forms. **S**
+- [ ] **7.2 (Me) Loading / empty / error states** for every page + a top-level error boundary. **M**
+- [ ] **7.3 (Me) Accessibility** — semantic HTML, ARIA labels, keyboard nav, contrast. **M**
+- [ ] **7.4 (Me) Disabled-button reasons / inline help** so users aren't stuck. **S**
+- [ ] **7.5 (Me, optional) Dark mode + finish i18n** (already scaffolded). **M**
+
+---
+
+# PHASE 8 — Testing & CI quality gates
+- [ ] **8.1 (Me) Unit/integration tests for untested services** — notification, payment, business,
+  api-gateway, audit, real-estate core, platform-config (today: sparse). **Acceptance:** each
+  critical flow has a test. **L**
+- [ ] **8.2 (Me) Expand Playwright E2E** — link account → dashboard → add property → goal →
+  bill-pay → settings → delete account. **Acceptance:** suite runs green in CI. **M**
+- [ ] **8.3 (Me) Wire E2E + coverage gates into CI** on every PR. **Acceptance:** PRs blocked on
+  red tests. **S**
+- [ ] **8.4 (Me) Contract tests for provider seams** (mock vs real parity) so toggles can't
+  silently break. **M**
+
+---
+
+# PHASE 9 — Mobile to the stores
+- [ ] **9.1 (You/Me) Finish iOS build** (Android verified). See
+  [../docs/phases/PHASE_8_MOBILE.md](../docs/phases/PHASE_8_MOBILE.md). **M**
+- [ ] **9.2 (Me) Disable mixed-content / enforce HTTPS** in `capacitor.config.ts` for prod. **S**
+- [ ] **9.3 (You) Signing** — Android keystore; Apple cert + provisioning profile. **M**
+- [ ] **9.4 (You/Me) Native Plaid Link + push + biometric unlock** in the app. **L**
+- [ ] **9.5 (You/Me) Build store binaries, listings, submit** to App Store + Play Store. **L**
+
+---
+
+# PHASE 10 — Launch readiness
+- [ ] **10.1 (You/Me) Load test** the critical paths (signup, link, dashboard) at expected peak. **M**
+- [ ] **10.2 (Me) Security review / pen-test pass** (`/security-review` + external if budget). **M**
+- [ ] **10.3 (You) Host decision** post-GCP-trial — downsize VM or move to Hetzner; confirm
+  long-term cost. **S**
+- [ ] **10.4 (You/Me) Incident runbook + on-call** — who gets paged, how to roll back. **S**
+- [ ] **10.5 (You/Me) Final go/no-go** — all 🔴 phases (0,1) + Plaid + backups + legal complete →
+  **launch**. **Acceptance:** a real user signs up, links a real bank, sees real data, with MFA
+  delivered by email/SMS and no dev-code in responses. 🚀
+
+---
+
+## Critical path (minimum to onboard the first real user safely)
+**0 → 1 → 2.1/2.2 (Plaid) → 2.5/2.6 (AI) → 4.1 (validation) → 4.2 (rate limit) → 5.2 (Sentry) →
+5.4 (backups) → 6.1/6.2/6.6 (delete + consent + legal).** Phases 3, 7, 8, 9, 10 raise quality
+and reach but aren't all blockers for a careful beta.
+
+## Sequencing notes
+- **🔴 = hard blockers** (Phases 0 and 1). Do not expose to any real user until both are done.
+- Phases **4, 5, 7, 8** are mostly **(Me)** code — they can proceed in parallel with you
+  obtaining keys for Phases 1–3.
+- **Cost** stays ~$0 until you turn on providers/onboard users; Plaid sandbox + Sentry/SendGrid
+  free tiers cover early testing.
+
+*Keep this file the source of truth: check the box and add a date as each item lands.*
