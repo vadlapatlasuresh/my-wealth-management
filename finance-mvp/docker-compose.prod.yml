@@ -63,6 +63,14 @@ x-java-defaults: &java-defaults
         # Per-service cap. Override via SVC_MEM_LIMIT in .env.prod (e.g. 450M on a 6GB box).
         memory: ${SVC_MEM_LIMIT:-640M}
 
+# Services whose secrets live ONLY in the store (provider keys are blank in .env.prod after
+# centralization) MUST wait for secrets-service to be healthy. Otherwise their boot-time
+# secrets-client fetch races the store, fails, and they fall back to (blank) env — silently
+# disabling Plaid/SendGrid/Gemini/etc. until the next restart.
+x-needs-secrets: &needs-secrets
+  secrets-service:
+    condition: service_healthy
+
 services:
   # ---------------- Reverse proxy (the only public service) ----------------
   caddy:
@@ -145,6 +153,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-account-aggregation-service:${TAG:-latest}
     container_name: wealth-account-aggregation-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,encryption,plaid
@@ -174,6 +184,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-real-estate-service:${TAG:-latest}
     container_name: wealth-real-estate-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,realestate,notifications-internal
@@ -193,6 +205,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-business-financials-service:${TAG:-latest}
     container_name: wealth-business-financials-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,qbo
@@ -213,6 +227,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-ai-insights-service:${TAG:-latest}
     container_name: wealth-ai-insights-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,gemini,anthropic,openai
@@ -233,6 +249,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-payment-service:${TAG:-latest}
     container_name: wealth-payment-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,stripe
@@ -249,6 +267,8 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-notification-service:${TAG:-latest}
     container_name: wealth-notification-service
+    depends_on:
+      <<: *needs-secrets
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,sendgrid,twilio,fcm,notifications-internal
