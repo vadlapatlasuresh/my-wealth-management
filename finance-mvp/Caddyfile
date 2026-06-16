@@ -17,12 +17,20 @@
 {$API_DOMAIN} {
     encode gzip zstd
 
-    # Security headers (baseline; tighten CSP once asset origins are known)
+    # Security headers. CSP allow-list reflects the origins the SPA actually loads:
+    #   Google Fonts (fonts.googleapis/gstatic), jsDelivr, Google Maps, Plaid Link
+    #   (cdn.plaid.com + *.plaid.com, incl. its iframe), Photon (komoot) + MyMemory
+    #   for address/translation. 'unsafe-inline' is kept for styles and the small
+    #   Vite/Plaid inline scripts; revisit with nonces later. After deploy, verify
+    #   Plaid linking, address autocomplete, and fonts in the browser console — any
+    #   blocked origin is reported there and just needs adding to the matching list.
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.plaid.com https://cdn.jsdelivr.net https://maps.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.plaid.com https://maps.googleapis.com https://photon.komoot.io https://api.mymemory.translated.net; frame-src 'self' https://cdn.plaid.com https://*.plaid.com; worker-src 'self' blob:; upgrade-insecure-requests"
         -Server
     }
 

@@ -1,0 +1,69 @@
+name: build-images
+
+# Build and push every service image to GHCR on merge to main, so production
+# deploys are a clean `docker compose pull` (deploy/deploy.sh) with no manual
+# build-all.sh on the VM and no stale-image drift. Tags each image :latest and
+# :<sha>; .env.prod's TAG selects which one prod runs.
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "finance-mvp/apps/**"
+      - "finance-mvp/Dockerfile.java-service"
+      - ".github/workflows/images.yml"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  images:
+    name: ${{ matrix.service }} (image)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - account-aggregation-service
+          - financial-core-service
+          - real-estate-service
+          - business-financials-service
+          - ai-insights-service
+          - payment-service
+          - notification-service
+          - platform-config-service
+          - audit-service
+          - secrets-service
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # GHCR image names must be lowercase; the owner already is, but be safe.
+      - name: Resolve owner
+        id: owner
+        run: echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: finance-mvp
+          file: finance-mvp/Dockerfile.java-service
+          build-args: SERVICE=${{ matrix.service }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:latest
+            ghcr.io/${{ steps.owner.outputs.owner }}/wealth-${{ matrix.service }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
