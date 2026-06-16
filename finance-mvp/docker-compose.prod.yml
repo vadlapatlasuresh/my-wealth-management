@@ -131,6 +131,10 @@ services:
       # localhost:8088 and silently calls itself, so real email/SMS never sends.
       # The X-Internal-Key both sides use resolves from the shared AUDIT_INGEST_KEY.
       NOTIFICATION_URI: http://notification-service:8080
+      # Delete-cascade (GDPR): the data services auth-service purges on account
+      # deletion (DELETE /internal/users/{id}). Without this it defaults to
+      # localhost ports and silently purges nothing in prod, leaving orphaned data.
+      PURGE_TARGETS: http://account-aggregation-service:8080,http://financial-core-service:8080,http://real-estate-service:8080,http://business-financials-service:8080,http://ai-insights-service:8080,http://payment-service:8080,http://notification-service:8080
       # SECURITY: returns OTP codes in API responses so signup/MFA work WITHOUT a
       # real email/SMS provider. Defaults true to preserve the current key-less
       # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
