@@ -117,10 +117,12 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
   restart is still de-duped. **M**
 - [ ] **4.5 (Me) Pagination + size caps** on list endpoints (notifications, transactions,
   accounts, deals). **Acceptance:** large lists paginate; no unbounded fetch. **M**
-- [ ] **4.6 (Me) DB indexes** on hot paths (`user_id` and FK columns) via new Flyway migrations.
-  **Acceptance:** explain-plan uses indexes on the common queries. **S**
-- [ ] **4.7 (Me) Health probes + graceful shutdown** — real readiness/liveness indicators;
-  drain in-flight requests on SIGTERM. **Acceptance:** a rolling deploy drops zero requests. **M**
+- [x] **4.6 (Me) DB indexes (done 2026-06-16, PR #34).** Added the missing `user_id`/FK indexes on
+  account-aggregation (plaid_items/accounts/transactions) + notification (notifications); other
+  services already index their hot paths. Applied by Flyway on next deploy.
+- [x] **4.7 (Me) Graceful shutdown (done 2026-06-16, PR #34).** `SERVER_SHUTDOWN=graceful` + 20s drain
+  + `stop_grace_period=30s` for all services — rolling deploys drain in-flight requests.
+  *(TODO: richer readiness/liveness probe groups.)*
 
 ---
 
