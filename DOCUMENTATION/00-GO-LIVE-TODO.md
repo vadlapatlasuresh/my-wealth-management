@@ -149,11 +149,13 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 # PHASE 6 — Compliance, legal & data lifecycle
 *Goal: lawful to hold real financial PII; honor user data rights.*
 
-- [ ] **6.1 (Me) Delete-cascade hardening** — make `DELETE /me` reliably purge across every
-  data-owning service (durable retries, not best-effort). **Acceptance:** deleting an account
-  removes all user data across services; verified by query. **M**
-- [ ] **6.2 (Me) Consent ledger** — persist ToS/privacy acceptance (version + timestamp) at
-  signup and for data-sharing (Deal Room). **Acceptance:** acceptances are queryable per user. **M**
+- [x] **6.1 (Me) Delete-cascade hardening (done 2026-06-16, PR #36).** Durable, persisted
+  `user_deletion_task` per (user, target) with a scheduled retry (cap 10) — a transient outage no
+  longer orphans data. **Also fixed a real prod bug:** `PURGE_TARGETS` was unset, so prod deletes
+  were silently purging nothing. *(Verify after deploy.)*
+- [~] **6.2 (Me) Consent ledger — largely exists.** platform-config has a versioned `disclaimer` +
+  per-user `disclaimer_acceptance` (version + timestamp) ledger (entity/repo/controller). *(Remaining:
+  enforce acceptance at signup + capture Deal Room data-sharing consent.)*
 - [ ] **6.3 (Me) GDPR/CCPA data export** — `GET /api/v1/me/export` returning all user data.
   **Acceptance:** a user can download their data. **M**
 - [ ] **6.4 (Me) Broaden audit coverage** — emit semantic events for payments, deals, budgets,
