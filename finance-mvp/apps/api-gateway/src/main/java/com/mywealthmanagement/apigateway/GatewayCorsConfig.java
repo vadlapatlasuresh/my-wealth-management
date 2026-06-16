@@ -24,15 +24,25 @@ public class GatewayCorsConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOriginPatterns(
-                Arrays.stream(allowedOrigins.split(","))
-                        .map(String::trim)
-                        .filter(s -> !s.isEmpty())
-                        .toList());
+        List<String> origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        // allowCredentials=true with a "*" origin is a security hole (browsers reject it,
+        // and reflecting it would leak credentials). Fail fast on a misconfigured prod env.
+        if (origins.contains("*")) {
+            throw new IllegalStateException(
+                    "gateway.cors.allowed-origins must list explicit origins (not '*') because "
+                            + "credentials are allowed. Set GATEWAY_CORS_ALLOWED_ORIGINS to your web origin(s).");
+        }
+        config.setAllowedOriginPatterns(origins);
         config.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
 
-        config.setAllowedHeaders(List.of("*"));
+        // Explicit allow-list instead of "*": the SPA sends Authorization (Bearer) and
+        // Content-Type; the rest are standard browser/preflight headers.
+        config.setAllowedHeaders(List.of(
+                "Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
