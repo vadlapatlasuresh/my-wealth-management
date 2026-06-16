@@ -15,12 +15,16 @@ Companion docs: [04-ROADMAP-TO-LIVE.md](04-ROADMAP-TO-LIVE.md) ·
 
 ---
 
-## 📍 Current state (2026-06-15)
-- App is **live and works end-to-end with mocks**; all manual data-entry flows verified.
-- **Deploys are currently BLOCKED at Phase 0.** The secrets-service (#18) was stood up, but
-  `auth-service` comes up **unhealthy** on deploy (needs its crash log to pinpoint). Until 0.x is
-  green, nothing merged since PR #17 is live.
-- Everything below "real provider" is **mock** by design; flipping each is a toggle + key.
+## 📍 Current state (2026-06-16)
+- App is **live end-to-end** at https://app.terravest.app; deploys **unblocked** (Phase 0 done).
+- **Secrets fully centralized** ✅ — every provider key lives only in the KMS-encrypted store;
+  `.env.prod` holds only bootstrap config (5.5 + 5.6 done).
+- **Real providers live:** ✅ Plaid (sandbox), ✅ SendGrid email OTP (dev code hidden), ✅ Gemini AI.
+- **Security hardening shipped:** CSP/headers (1.7), rate-limiting (4.2), fail-fast encryption-key
+  guard (1.5), CORS allow-list (1.6) — all merged (PRs #30, #32), **deploy to activate**.
+- **Ops:** images auto-build+push via `ci.yml` on merge; `deploy/build-all.sh` is the VM fallback.
+  secrets-service uses its own `secrets_db`; all Neon DBs share one `neondb_owner` password.
+- Everything still "mock" is by design; flipping each is a toggle + key.
 
 ### How "mock → real" works
 Each integration is a Spring bean gated by `@ConditionalOnProperty`. Set the **toggle** + **key**
@@ -34,39 +38,30 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 
 - [x] 0.1 (You) Create Neon `secrets_db`; add `SECRETS_*` to `.env.prod`.
 - [x] 0.2 (Me) Add `secrets-service` to the CI build matrix so its image publishes (PR #27).
-- [ ] **0.3 (You) Pull the `auth-service` crash log** so I can fix the unhealthy boot:
-  ```bash
-  ssh -i ~/.ssh/terravest_deploy deploy@34.139.32.148 \
-    'cd ~/my-wealth-management/finance-mvp && docker compose -f docker-compose.prod.yml \
-     --env-file .env.prod logs --tail=80 auth-service' | grep -iE "error|exception|caused by|fatal|jwt|secret|started|failed" | tail -30
-  ```
-- [ ] **0.4 (Me) Fix the auth-service boot failure** (likely `JwtSecretGuard` rejecting the
-  secret, or a missing OTP→notification config) and redeploy. **Acceptance:** deploy job =
-  success; all 12 services healthy; `https://app.terravest.app` 200.
-- [ ] **0.5 (Me) Re-run the end-to-end flow test** (write→read-back across every feature) to
-  confirm the big merged batch didn't regress anything. **Acceptance:** flow suite green.
+- [x] **0.3/0.4 Fixed the unhealthy boot (done 2026-06-16).** Root cause: a stale `neondb_owner`
+  password in `.env.prod` (all DBs share one) + secrets-service pointed at the wrong DB. Recovered
+  the working password, gave secrets-service its own `secrets_db`, repaired auth's Flyway baseline.
+  All 12 services healthy; site 200.
+- [x] **0.5 Verified key flows (done 2026-06-16):** signup→dashboard, Plaid link, email OTP.
 
 ---
 
 # PHASE 1 — 🔴 Security gate (before ANY real user)
 *Goal: stop leaking OTP codes, deliver them for real, and refuse weak secrets at boot.*
 
-- [ ] **1.1 (You) SendGrid** — account, **verified sender**, API key → `SENDGRID_API_KEY`,
-  `SENDGRID_FROM`. Add SendGrid **SPF/DKIM** DNS records (deliverability). **S**
+- [x] **1.1 (You) SendGrid email live (done 2026-06-16).** Verified sender + key; email OTP delivers.
+  *(TODO: SPF/DKIM domain auth for deliverability — currently a Gmail single-sender.)*
 - [ ] **1.2 (You) Twilio** — account + sending number → `TWILIO_ACCOUNT_SID`,
-  `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. **S**
-- [ ] **1.3 (You) Set toggles + `OTP_EXPOSE_DEV_CODE=false` in `.env.prod`:** `COMMS_PROVIDER_EMAIL=sendgrid`,
-  `COMMS_PROVIDER_SMS=twilio`, plus the keys above. **S**
-- [ ] **1.4 (Me) Deploy auth + notification; verify.** **Acceptance:** a brand-new email/phone
-  receives a **real** OTP; API responses contain **no** `devCode`; signup + MFA login still work. **S**
-- [ ] **1.5 (Me) Fail-fast secret guards** — refuse to boot in prod if `JWT_SECRET`,
-  `APP_ENCRYPTION_KEY`, or `AUDIT_INGEST_KEY` are blank/demo/weak (auth has `JwtSecretGuard`;
-  extend the pattern to the others). **Acceptance:** a blank key stops that service with a clear
-  fatal log. **M**
-- [ ] **1.6 (Me) Harden CORS** — whitelist specific headers/methods (drop `*`); confirm
-  `WEB_ORIGINS` has no wildcard in prod. **S**
-- [ ] **1.7 (Me) Tighten CSP/security headers** in the [Caddyfile](../finance-mvp/Caddyfile).
-  **Acceptance:** CSP present; site still works; headers grade A. **M**
+  `TWILIO_AUTH_TOKEN`, `TWILIO_FROM`. **S** *(SMS optional; email works.)*
+- [x] **1.3/1.4 Email toggle + dev-code hidden + verified (done 2026-06-16).** `COMMS_PROVIDER_EMAIL=sendgrid`,
+  `OTP_EXPOSE_DEV_CODE=false`; fixed the `NOTIFICATION_URI` wiring bug (PR #26). Real OTP delivered; no `devCode`.
+- [x] **1.5 (Me) Fail-fast secret guards (done 2026-06-16, PR #32).** `JWT_SECRET` (`JwtSecretGuard`)
+  + `APP_ENCRYPTION_KEY` (auth + account-aggregation) refuse to boot in prod if blank/demo/weak.
+  *(TODO: extend to `AUDIT_INGEST_KEY`.)*
+- [x] **1.6 (Me) Harden CORS (done 2026-06-16, PR #32).** Gateway uses an explicit header allow-list
+  (dropped `*`) and fails fast on a `*` origin with credentials.
+- [x] **1.7 (Me) CSP/security headers (done 2026-06-16, PR #30).** Content-Security-Policy (allow-listing
+  the SPA's real origins) + Permissions-Policy in the [Caddyfile](../finance-mvp/Caddyfile). *(Verify Plaid/maps/fonts post-deploy.)*
 - [ ] **1.8 (Me) Move web JWT off `localStorage`** → httpOnly cookie or in-memory + refresh
   (XSS hardening). **Acceptance:** token not readable from `localStorage`. **M**
 
@@ -75,18 +70,15 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 # PHASE 2 — Core real data (highest user value)
 *Goal: real bank data + real AI.*
 
-- [ ] **2.1 (You) Plaid sandbox** keys → `PLAID_CLIENT_ID/SECRET`, `PLAID_ENV=sandbox`. **S**
-- [ ] **2.2 (Me) Deploy account-aggregation; verify with Plaid sandbox** (`user_good`/`pass_good`).
-  **Acceptance:** linking populates real accounts + transactions → net worth/budgets update;
-  bill-pay can pick a funding account. **S**
+- [x] **2.1/2.2 Plaid sandbox live (done 2026-06-16).** Keys set (now in the store), `PLAID_ENV=sandbox`;
+  account-aggregation links banks + populates accounts/transactions. *(Production = 2.4.)*
 - [ ] **2.3 (Me) Harden the Plaid webhook** — implement the TODO in `PlaidWebhookVerifier`
   (fetch ES256 key, verify JWT signature + body hash); set `PLAID_WEBHOOK_VERIFY=true`.
   **Acceptance:** forged webhook → 401; real webhook → processed. **M**
 - [ ] **2.4 (You) Plaid production access** (when launching to real banks) → production keys +
   `PLAID_ENV=production`. **Acceptance:** a real bank links + syncs. **S** *(gated on Plaid review)*
-- [ ] **2.5 (You) AI key** → `ANTHROPIC_API_KEY` (or `GEMINI_API_KEY`); set `AI_PROVIDER` + model. **S**
-- [ ] **2.6 (Me) Deploy ai-insights; verify.** **Acceptance:** insights + chat are real and
-  grounded in the user's numbers; no mock fallback in logs. **S**
+- [x] **2.5/2.6 AI live (Gemini, done 2026-06-16).** `AI_PROVIDER=gemini` + key (in the store);
+  ai-insights returns real, grounded responses. *(Swap to Anthropic anytime via the store.)*
 
 ---
 
@@ -115,8 +107,8 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 - [ ] **4.1 (Me) Input validation** — add `@Valid` + constraints to every write DTO; reject raw
   `Map<String,Object>` bodies (property/deal/bill-pay/support). **Acceptance:** bad payloads →
   400 with field errors, not 500. **M**
-- [ ] **4.2 (Me) Rate limiting** — gateway-level (per-IP + per-user) on auth/OTP and write
-  endpoints (bucket4j/Resilience4j). **Acceptance:** OTP/login throttles after N attempts. **M**
+- [x] **4.2 (Me) Rate limiting (done 2026-06-16, PR #32).** Per-IP fixed-window limiter on the auth/OTP
+  endpoints → `429`, configurable via `auth.ratelimit.*`. *(TODO: extend to write endpoints; Redis for multi-instance.)*
 - [ ] **4.3 (Me) Retries + circuit breakers** for outbound calls (Plaid, Stripe, RentCast,
   SendGrid, Twilio, QBO) via Resilience4j. **Acceptance:** a provider outage degrades gracefully,
   doesn't hang requests. **M**
@@ -143,12 +135,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
   error rate, latency, healthy-instance count. **Acceptance:** an SLO alert fires in a drill. **M**
 - [ ] **5.4 (You/Me) Backups + restore drill** — confirm Neon PITR/automated backups; perform a
   **test restore** and document it. **Acceptance:** a restore drill succeeds, written up. **M**
-- [ ] **5.5 (You/Me) Migrate secrets INTO the store** — run `deploy/seed-secrets.sh` to load
-  `.env.prod` keys into the secrets-service; trim `.env.prod` to non-secrets. **Acceptance:**
-  services read keys from the store; `.env.prod` holds only config. **M**
-- [ ] **5.6 (You) KEK in GCP KMS** — `terraform apply` (infra/gcp) for the KMS key + VM service
-  account; set `SECRETS_PROVIDER=kms` + `SECRETS_KMS_KEY_NAME`; blank `SECRETS_MASTER_KEY`.
-  **Acceptance:** secrets unwrap via KMS; no master key on disk. **M**
+- [x] **5.5 Secrets migrated INTO the store (done 2026-06-16).** All 11 services load scoped secrets
+  at boot via `secrets-client`; provider keys are blank in `.env.prod`.
+- [x] **5.6 KEK in GCP KMS (done 2026-06-16).** `SECRETS_PROVIDER=kms` + `SECRETS_KMS_KEY_NAME`;
+  `SECRETS_MASTER_KEY` blank. secrets-service unwraps via the VM's KMS identity; no master key on disk.
 - [ ] **5.7 (You/Me) Rotate every secret that ever touched git/chat** (JWT_SECRET,
   APP_ENCRYPTION_KEY, all provider keys, DB passwords). **Acceptance:** old values invalid. **S**
 
