@@ -104,9 +104,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 # PHASE 4 — Production robustness (safe under load & failure)
 *Goal: the app behaves correctly with bad input, traffic spikes, and flaky dependencies.*
 
-- [ ] **4.1 (Me) Input validation** — add `@Valid` + constraints to every write DTO; reject raw
-  `Map<String,Object>` bodies (property/deal/bill-pay/support). **Acceptance:** bad payloads →
-  400 with field errors, not 500. **M**
+- [~] **4.1 (Me) Input validation — foundational pass done (2026-06-17, PR #41).** All 11 services'
+  `GlobalExceptionHandler` now map malformed JSON / type-mismatch / constraint violations → **400**
+  (not 500); `PropertyDto` is `@Valid`-constrained as the first DTO. *(Remaining: `@Valid`+constraints
+  on the other write DTOs — deal/bill-pay/business/invest — and convert raw `Map` bodies. Incremental.)*
 - [x] **4.2 (Me) Rate limiting (done 2026-06-16, PR #32).** Per-IP fixed-window limiter on the auth/OTP
   endpoints → `429`, configurable via `auth.ratelimit.*`. *(TODO: extend to write endpoints; Redis for multi-instance.)*
 - [ ] **4.3 (Me) Retries + circuit breakers** for outbound calls (Plaid, Stripe, RentCast,
