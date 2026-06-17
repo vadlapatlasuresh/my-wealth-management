@@ -114,9 +114,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 - [ ] **4.3 (Me) Retries + circuit breakers** for outbound calls (Plaid, Stripe, RentCast,
   SendGrid, Twilio, QBO) via Resilience4j. **Acceptance:** a provider outage degrades gracefully,
   doesn't hang requests. **M**
-- [ ] **4.4 (Me) Persistent idempotency** — move the in-memory notification/payment idempotency
-  cache to the DB (survives restarts + multi-instance). **Acceptance:** replaying a key after a
-  restart is still de-duped. **M**
+- [x] **4.4 (Me) Persistent idempotency (done 2026-06-17).** Payment was already DB-backed
+  (`BillPayIntent.idempotencyKey`); notification moved from an in-memory cache to a DB
+  reserve-then-act on `notification_idempotency` (UNIQUE), so replays survive restarts/multi-instance
+  and a concurrent double-send is also prevented.
 - [~] **4.5 (Me) Size caps — done for the high-volume lists (2026-06-17, PR #46).** transactions
   (most-recent 500, display-only path) + notifications (200) are bounded → no unbounded fetch.
   *(accounts/deals are naturally small; add full page/size pagination later if a list grows.)*
