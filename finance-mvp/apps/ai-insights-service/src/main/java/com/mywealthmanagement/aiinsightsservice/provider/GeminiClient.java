@@ -41,7 +41,8 @@ public class GeminiClient {
         this.model = model;
         this.maxTokens = maxTokens;
         this.thinkingBudget = thinkingBudget;
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this.restClient = RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(HttpTimeouts.ai()).build();
     }
 
     /** True when an API key is present, i.e. real calls can be made. */

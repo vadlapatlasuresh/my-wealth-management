@@ -111,9 +111,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
   on the other write DTOs — deal/bill-pay/business/invest — and convert raw `Map` bodies. Incremental.)*
 - [x] **4.2 (Me) Rate limiting (done 2026-06-16, PR #32).** Per-IP fixed-window limiter on the auth/OTP
   endpoints → `429`, configurable via `auth.ratelimit.*`. *(TODO: extend to write endpoints; Redis for multi-instance.)*
-- [ ] **4.3 (Me) Retries + circuit breakers** for outbound calls (Plaid, Stripe, RentCast,
-  SendGrid, Twilio, QBO) via Resilience4j. **Acceptance:** a provider outage degrades gracefully,
-  doesn't hang requests. **M**
+- [~] **4.3 (Me) Outbound timeouts (done 2026-06-17).** Added connect+read timeouts to the external
+  provider HTTP clients (SendGrid/Twilio/FCM = 5s/10s; Gemini/Anthropic = 5s/60s) so a hung provider
+  fails fast instead of pinning a thread — the core "doesn't hang requests" win. *(Full Resilience4j
+  circuit-breakers/retries deferred — higher value once traffic grows.)*
 - [x] **4.4 (Me) Persistent idempotency (done 2026-06-17).** Payment was already DB-backed
   (`BillPayIntent.idempotencyKey`); notification moved from an in-memory cache to a DB
   reserve-then-act on `notification_idempotency` (UNIQUE), so replays survive restarts/multi-instance

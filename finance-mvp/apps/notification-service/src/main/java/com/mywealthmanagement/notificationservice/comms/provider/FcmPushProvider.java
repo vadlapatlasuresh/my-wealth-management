@@ -35,7 +35,8 @@ public class FcmPushProvider implements ChannelProvider {
     public FcmPushProvider(
             @Value("${fcm.base-url:https://fcm.googleapis.com}") String baseUrl,
             @Value("${fcm.server-key:}") String serverKey) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this.restClient = RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(com.mywealthmanagement.notificationservice.comms.HttpTimeouts.provider()).build();
         this.serverKey = serverKey;
     }
 
