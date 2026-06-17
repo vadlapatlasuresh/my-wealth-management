@@ -8,6 +8,7 @@ import com.mywealthmanagement.notificationservice.notification.NotificationPrefe
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalTime;
@@ -16,7 +17,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Generic dispatch pipeline:
@@ -44,17 +44,18 @@ public class NotificationOrchestrator {
     @Value("${comms.quietHours:}")
     private String quietHours;
 
-    // userId -> (idempotencyKey -> prior results). In-memory is fine for the MVP.
-    private final Map<Long, Map<String, List<DeliveryResult>>> idempotencyCache = new ConcurrentHashMap<>();
+    private final NotificationIdempotencyRepository idempotencyRepository;
 
     public NotificationOrchestrator(MessageTemplateRepository templateRepository,
                                     NotificationPreferenceRepository preferenceRepository,
                                     TemplateRenderer renderer,
-                                    ChannelRouter router) {
+                                    ChannelRouter router,
+                                    NotificationIdempotencyRepository idempotencyRepository) {
         this.templateRepository = templateRepository;
         this.preferenceRepository = preferenceRepository;
         this.renderer = renderer;
         this.router = router;
+        this.idempotencyRepository = idempotencyRepository;
     }
 
     public List<DeliveryResult> dispatch(Long userId,
@@ -65,12 +66,14 @@ public class NotificationOrchestrator {
                                          String idempotencyKey) {
 
         if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            List<DeliveryResult> prior = idempotencyCache
-                    .getOrDefault(userId, Map.of())
-                    .get(idempotencyKey);
-            if (prior != null) {
-                log.info("[Orchestrator] Idempotent replay userId={} key={} -> returning prior result", userId, idempotencyKey);
-                return prior;
+            try {
+                // Reserve the key BEFORE dispatching (persistent, survives restarts). A concurrent
+                // or replayed request collides on the UNIQUE constraint and is treated as a replay.
+                idempotencyRepository.saveAndFlush(new NotificationIdempotency(userId, idempotencyKey));
+            } catch (DataIntegrityViolationException duplicate) {
+                log.info("[Orchestrator] Idempotent replay userId={} key={} -> skipping re-dispatch", userId, idempotencyKey);
+                return List.of(DeliveryResult.sent(Channel.IN_APP, "idempotent-replay",
+                        "Already processed (idempotent replay)"));
             }
         }
 
@@ -93,10 +96,6 @@ public class NotificationOrchestrator {
             }
         }
 
-        if (idempotencyKey != null && !idempotencyKey.isBlank()) {
-            idempotencyCache.computeIfAbsent(userId, k -> new ConcurrentHashMap<>())
-                    .put(idempotencyKey, results);
-        }
         return results;
     }
 
