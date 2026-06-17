@@ -3,6 +3,7 @@ package com.mywealthmanagement.notificationservice.notification;
 import com.mywealthmanagement.notificationservice.notification.dto.NotificationDto;
 import com.mywealthmanagement.notificationservice.notification.dto.PreferenceDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,8 @@ public class NotificationController {
     @GetMapping("")
     public ResponseEntity<Map<String, List<NotificationDto>>> list() {
         Long userId = currentUserId();
-        List<NotificationDto> items = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId)
+        // Bounded display list (newest-first) so the inbox can't trigger an unbounded fetch.
+        List<NotificationDto> items = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, Limit.of(200))
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
