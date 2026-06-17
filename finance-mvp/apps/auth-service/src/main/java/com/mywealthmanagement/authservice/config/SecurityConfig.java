@@ -31,6 +31,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests()
                 // Profile read/update + self-deletion must be authenticated (matched before the broad permitAll).
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/me/export").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/auth/me").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/auth/me").authenticated()
                 .requestMatchers("/api/v1/auth/**").permitAll() // login/register/mfa/email are public
