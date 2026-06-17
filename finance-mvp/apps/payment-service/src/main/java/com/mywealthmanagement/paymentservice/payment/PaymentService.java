@@ -22,6 +22,7 @@ public class PaymentService {
 
     private final BillPayIntentRepository repository;
     private final PaymentProvider paymentProvider;
+    private final com.mywealthmanagement.paymentservice.audit.AuditClient auditClient;
 
     private Long currentUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -125,7 +126,10 @@ public class PaymentService {
         intent.setIdempotencyKey(
                 idempotencyKey != null && !idempotencyKey.isBlank() ? idempotencyKey : null);
 
-        return toDto(repository.save(intent));
+        BillPayIntent saved = repository.save(intent);
+        auditClient.record(String.valueOf(userId), "billpay.create", "SUCCESS",
+                "intentId=" + saved.getId() + ";amount=" + amount + ";status=" + saved.getStatus());
+        return toDto(saved);
     }
 
     public BillPayIntentDto cancelIntent(Long id) {

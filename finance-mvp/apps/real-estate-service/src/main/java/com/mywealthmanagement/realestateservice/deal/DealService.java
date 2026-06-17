@@ -38,6 +38,7 @@ public class DealService {
     private final DealDocumentRepository documentRepository;
     private final DealWatchRepository watchRepository;
     private final LeadNotifier leadNotifier;
+    private final com.mywealthmanagement.realestateservice.audit.AuditClient auditClient;
 
     private Long getUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -331,7 +332,9 @@ public class DealService {
         Deal deal = new Deal();
         deal.setUserId(getUserId());
         applyEditableFields(deal, dto, true);
-        return toDto(dealRepository.save(deal));
+        Deal saved = dealRepository.save(deal);
+        auditClient.record(String.valueOf(saved.getUserId()), "deal.create", "SUCCESS", "dealId=" + saved.getId());
+        return toDto(saved);
     }
 
     public DealDto updateDeal(Long id, DealDto dto) {

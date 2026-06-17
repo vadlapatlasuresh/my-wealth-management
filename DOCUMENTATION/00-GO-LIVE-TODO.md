@@ -162,9 +162,9 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
   returns profile + account-aggregation (accounts/transactions) + financial-core (goals/debts/net-worth)
   as downloadable JSON, authenticated. Extensible: services auto-included as they add `/internal/users/{id}/export`.
   *(Remaining: add the export endpoint to real-estate/business/payment/notification.)*
-- [ ] **6.4 (Me) Broaden audit coverage** — emit semantic events for payments, deals, budgets,
-  account links (today: auth events only). **Acceptance:** sensitive actions appear in the audit
-  chain. **M**
+- [~] **6.4 (Me) Broaden audit coverage — started (2026-06-17).** Added a domain `AuditClient` to
+  payment + real-estate and emit `billpay.create` + `deal.create` into the tamper-evident chain
+  (was: auth + secrets only). *(Remaining: budgets, account-links, and cancel/delete events.)*
 - [ ] **6.5 (Me) Data-retention policy + purge jobs** — define retention; scheduled cleanup.
   **Acceptance:** policy documented; job runs. **S**
 - [ ] **6.6 (You) Legal** — Terms of Service, Privacy Policy, financial disclaimers, and a list
