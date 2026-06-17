@@ -56,7 +56,11 @@ x-java-defaults: &java-defaults
     interval: 20s
     timeout: 8s
     retries: 12
-    start_period: 180s
+    # Generous grace: on this small VM the heavier services (auth runs Flyway +
+    # scheduling) can take a while to open the port on a cold deploy. During this
+    # window a not-yet-ready container stays "starting" (not "unhealthy"), so a
+    # dependent's `depends_on: service_healthy` keeps waiting instead of aborting.
+    start_period: 300s
   deploy:
     resources:
       limits:
