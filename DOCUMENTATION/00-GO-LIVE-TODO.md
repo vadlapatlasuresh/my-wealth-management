@@ -116,8 +116,9 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 - [ ] **4.4 (Me) Persistent idempotency** — move the in-memory notification/payment idempotency
   cache to the DB (survives restarts + multi-instance). **Acceptance:** replaying a key after a
   restart is still de-duped. **M**
-- [ ] **4.5 (Me) Pagination + size caps** on list endpoints (notifications, transactions,
-  accounts, deals). **Acceptance:** large lists paginate; no unbounded fetch. **M**
+- [~] **4.5 (Me) Size caps — done for the high-volume lists (2026-06-17, PR #46).** transactions
+  (most-recent 500, display-only path) + notifications (200) are bounded → no unbounded fetch.
+  *(accounts/deals are naturally small; add full page/size pagination later if a list grows.)*
 - [x] **4.6 (Me) DB indexes (done 2026-06-16, PR #34).** Added the missing `user_id`/FK indexes on
   account-aggregation (plaid_items/accounts/transactions) + notification (notifications); other
   services already index their hot paths. Applied by Flyway on next deploy.
