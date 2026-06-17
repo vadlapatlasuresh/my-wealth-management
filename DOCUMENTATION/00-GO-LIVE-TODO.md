@@ -165,8 +165,9 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 - [~] **6.4 (Me) Broaden audit coverage — started (2026-06-17).** Added a domain `AuditClient` to
   payment + real-estate and emit `billpay.create` + `deal.create` into the tamper-evident chain
   (was: auth + secrets only). *(Remaining: budgets, account-links, and cancel/delete events.)*
-- [ ] **6.5 (Me) Data-retention policy + purge jobs** — define retention; scheduled cleanup.
-  **Acceptance:** policy documented; job runs. **S**
+- [~] **6.5 (Me) Retention purge — started (2026-06-17).** Daily scheduled job purges read
+  notifications older than 180 days (configurable via `notifications.retention.*`); conservative
+  (unread + in-window kept). *(Remaining: retention windows for other data + a written policy.)*
 - [ ] **6.6 (You) Legal** — Terms of Service, Privacy Policy, financial disclaimers, and a list
   of third-party data processors (Plaid/Stripe/etc.) reviewed by counsel. **Acceptance:** linked
   + accepted at signup; privacy policy published. **L (external)**
