@@ -7,6 +7,7 @@ import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
 import com.mywealthmanagement.realestateservice.deal.dto.MyInterestDto;
 import com.mywealthmanagement.realestateservice.config.JwtService;
 import com.mywealthmanagement.realestateservice.sponsor.dto.SponsorProjectDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -83,7 +84,7 @@ public class DealController {
     }
 
     @PostMapping
-    public ResponseEntity<DealDto> createDeal(@RequestBody DealDto dealDto) {
+    public ResponseEntity<DealDto> createDeal(@Valid @RequestBody DealDto dealDto) {
         return ResponseEntity.ok(dealService.createDeal(dealDto));
     }
 
@@ -152,7 +153,7 @@ public class DealController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<DealDto> updateDeal(@PathVariable Long id, @RequestBody DealDto dealDto) {
+    public ResponseEntity<DealDto> updateDeal(@PathVariable Long id, @Valid @RequestBody DealDto dealDto) {
         return ResponseEntity.ok(dealService.updateDeal(id, dealDto));
     }
 
