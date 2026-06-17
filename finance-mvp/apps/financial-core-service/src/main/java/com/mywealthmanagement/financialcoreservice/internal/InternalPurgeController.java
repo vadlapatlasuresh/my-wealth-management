@@ -29,6 +29,23 @@ public class InternalPurgeController {
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
 
+    private void requireInternal(String key) {
+        if (StringUtils.hasText(internalKey) && !internalKey.equals(key)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
+        }
+    }
+
+    /** GDPR data export: this service's data for the user. */
+    @GetMapping("/{userId}/export")
+    public ResponseEntity<java.util.Map<String, Object>> export(@PathVariable Long userId,
+                                                                @RequestHeader(value = "X-Internal-Key", required = false) String key) {
+        requireInternal(key);
+        return ResponseEntity.ok(java.util.Map.of(
+                "goals", goalRepository.findByUserIdOrderByCreatedAtAsc(userId),
+                "debts", debtRepository.findByUserId(userId),
+                "netWorthSnapshots", netWorthSnapshotRepository.findByUserIdOrderBySnapshotDateAsc(userId)));
+    }
+
     @DeleteMapping("/{userId}")
     @Transactional
     public ResponseEntity<Void> purge(@PathVariable Long userId,

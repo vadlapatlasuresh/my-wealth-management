@@ -27,6 +27,7 @@ public class AuthController {
     private final JwtService jwtService;
     private final OtpService otpService;
     private final NotificationClient notificationClient;
+    private final ExportClient exportClient;
 
     @Value("${mfa.enabled:true}")
     private boolean mfaEnabled;
@@ -121,6 +122,19 @@ public class AuthController {
         Long userId = currentUserId();
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         return ResponseEntity.ok(authService.getProfile(userId));
+    }
+
+    /** GDPR data export (right-to-access): the signed-in user's data across services as JSON. */
+    @GetMapping("/me/export")
+    public ResponseEntity<Map<String, Object>> exportMyData() {
+        Long userId = currentUserId();
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        Map<String, Object> export = new java.util.LinkedHashMap<>();
+        export.put("profile", authService.getProfile(userId));
+        export.putAll(exportClient.exportUser(userId));
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"terravest-data-export.json\"")
+                .body(export);
     }
 
     /** Update editable profile fields. */

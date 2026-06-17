@@ -12,10 +12,13 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Map;
+
 /**
  * Server-to-server data purge for account deletion (GDPR/CCPA right-to-delete).
  * Guarded by the shared X-Internal-Key; the auth-service calls this when a user
  * deletes their account so no linked-bank tokens/accounts/transactions remain.
+ * Also serves the read-only data export (GDPR right-to-access) for the same data.
  */
 @RestController
 @RequestMapping("/internal/users")
@@ -28,6 +31,22 @@ public class InternalPurgeController {
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
+
+    private void requireInternal(String key) {
+        if (StringUtils.hasText(internalKey) && !internalKey.equals(key)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
+        }
+    }
+
+    /** GDPR data export: this service's data for the user (encrypted Plaid tokens excluded). */
+    @GetMapping("/{userId}/export")
+    public ResponseEntity<Map<String, Object>> export(@PathVariable Long userId,
+                                                      @RequestHeader(value = "X-Internal-Key", required = false) String key) {
+        requireInternal(key);
+        return ResponseEntity.ok(Map.of(
+                "accounts", accountRepository.findByUserId(userId),
+                "transactions", transactionRepository.findByUserId(userId)));
+    }
 
     @DeleteMapping("/{userId}")
     @Transactional
