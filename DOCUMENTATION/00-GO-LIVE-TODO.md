@@ -72,9 +72,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 
 - [x] **2.1/2.2 Plaid sandbox live (done 2026-06-16).** Keys set (now in the store), `PLAID_ENV=sandbox`;
   account-aggregation links banks + populates accounts/transactions. *(Production = 2.4.)*
-- [ ] **2.3 (Me) Harden the Plaid webhook** — implement the TODO in `PlaidWebhookVerifier`
-  (fetch ES256 key, verify JWT signature + body hash); set `PLAID_WEBHOOK_VERIFY=true`.
-  **Acceptance:** forged webhook → 401; real webhook → processed. **M**
+- [x] **2.3 (Me) Plaid webhook verification (done 2026-06-17, PR pending).** Full ES256 check:
+  fetch the JWK for the JWT's `kid`, verify the signature, assert `request_body_sha256` matches
+  the body, and reject stale tokens (5-min replay window). Fails closed. OFF by default; enable
+  with `PLAID_WEBHOOK_VERIFY=true` in prod. *(You: set that env once on real banks.)*
 - [ ] **2.4 (You) Plaid production access** (when launching to real banks) → production keys +
   `PLAID_ENV=production`. **Acceptance:** a real bank links + syncs. **S** *(gated on Plaid review)*
 - [x] **2.5/2.6 AI live (Gemini, done 2026-06-16).** `AI_PROVIDER=gemini` + key (in the store);
