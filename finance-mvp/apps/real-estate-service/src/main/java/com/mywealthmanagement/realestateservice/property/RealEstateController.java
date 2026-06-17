@@ -1,6 +1,7 @@
 package com.mywealthmanagement.realestateservice.property;
 
 import com.mywealthmanagement.realestateservice.property.dto.PropertyDto;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class RealEstateController {
     }
 
     @PostMapping
-    public ResponseEntity<PropertyDto> createProperty(@RequestBody PropertyDto propertyDto) {
+    public ResponseEntity<PropertyDto> createProperty(@Valid @RequestBody PropertyDto propertyDto) {
         return ResponseEntity.ok(propertyService.createProperty(propertyDto));
     }
 
@@ -31,7 +32,7 @@ public class RealEstateController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PropertyDto> updateProperty(@PathVariable Long id, @RequestBody PropertyDto propertyDto) {
+    public ResponseEntity<PropertyDto> updateProperty(@PathVariable Long id, @Valid @RequestBody PropertyDto propertyDto) {
         return ResponseEntity.ok(propertyService.updateProperty(id, propertyDto));
     }
 

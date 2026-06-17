@@ -53,6 +53,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(s).body(body(s, ex.getReason() != null ? ex.getReason() : s.getReasonPhrase()));
     }
 
+    @ExceptionHandler({
+            org.springframework.http.converter.HttpMessageNotReadableException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class
+    })
+    public ResponseEntity<Map<String, Object>> handleBadRequest(Exception ex) {
+        return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST,
+                "Malformed or invalid request body or parameter"));
+    }
+
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleConstraint(jakarta.validation.ConstraintViolationException ex) {
+        return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, ex.getMessage()));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
