@@ -33,7 +33,8 @@ public class SendGridEmailProvider implements ChannelProvider {
             @Value("${sendgrid.base-url:https://api.sendgrid.com}") String baseUrl,
             @Value("${sendgrid.api-key:}") String apiKey,
             @Value("${sendgrid.from:}") String fromEmail) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this.restClient = RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(com.mywealthmanagement.notificationservice.comms.HttpTimeouts.provider()).build();
         this.apiKey = apiKey;
         this.fromEmail = fromEmail;
     }

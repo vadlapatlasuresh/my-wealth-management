@@ -38,7 +38,8 @@ public class TwilioSmsProvider implements ChannelProvider {
             @Value("${twilio.account-sid:}") String accountSid,
             @Value("${twilio.auth-token:}") String authToken,
             @Value("${twilio.from:}") String fromNumber) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this.restClient = RestClient.builder().baseUrl(baseUrl)
+                .requestFactory(com.mywealthmanagement.notificationservice.comms.HttpTimeouts.provider()).build();
         this.accountSid = accountSid;
         this.authToken = authToken;
         this.fromNumber = fromNumber;
