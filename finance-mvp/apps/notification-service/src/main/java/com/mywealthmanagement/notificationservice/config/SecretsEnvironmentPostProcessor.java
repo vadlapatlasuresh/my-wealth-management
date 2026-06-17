@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.env.MapPropertySource;
+import org.springframework.core.env.SystemEnvironmentPropertySource;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -82,7 +82,7 @@ public class SecretsEnvironmentPostProcessor implements EnvironmentPostProcessor
 
         if (!resolved.isEmpty()) {
             // addFirst → fetched secrets win over env defaults for the same key.
-            env.getPropertySources().addFirst(new MapPropertySource(SOURCE, resolved));
+            env.getPropertySources().addFirst(new SystemEnvironmentPropertySource(SOURCE, resolved));
         }
     }
 }
