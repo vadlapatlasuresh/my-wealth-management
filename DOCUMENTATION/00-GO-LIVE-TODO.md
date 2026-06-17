@@ -158,8 +158,10 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 - [~] **6.2 (Me) Consent ledger — largely exists.** platform-config has a versioned `disclaimer` +
   per-user `disclaimer_acceptance` (version + timestamp) ledger (entity/repo/controller). *(Remaining:
   enforce acceptance at signup + capture Deal Room data-sharing consent.)*
-- [ ] **6.3 (Me) GDPR/CCPA data export** — `GET /api/v1/me/export` returning all user data.
-  **Acceptance:** a user can download their data. **M**
+- [~] **6.3 (Me) GDPR data export — core services done (2026-06-17, PR #48).** `GET /api/v1/me/export`
+  returns profile + account-aggregation (accounts/transactions) + financial-core (goals/debts/net-worth)
+  as downloadable JSON, authenticated. Extensible: services auto-included as they add `/internal/users/{id}/export`.
+  *(Remaining: add the export endpoint to real-estate/business/payment/notification.)*
 - [ ] **6.4 (Me) Broaden audit coverage** — emit semantic events for payments, deals, budgets,
   account links (today: auth events only). **Acceptance:** sensitive actions appear in the audit
   chain. **M**
