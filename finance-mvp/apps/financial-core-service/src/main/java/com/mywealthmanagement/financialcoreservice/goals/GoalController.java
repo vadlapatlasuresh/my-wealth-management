@@ -1,5 +1,6 @@
 package com.mywealthmanagement.financialcoreservice.goals;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,12 +20,12 @@ public class GoalController {
     }
 
     @PostMapping
-    public GoalDto create(@RequestBody GoalDto dto) {
+    public GoalDto create(@Valid @RequestBody GoalDto dto) {
         return goalService.create(dto);
     }
 
     @PutMapping("/{id}")
-    public GoalDto update(@PathVariable Long id, @RequestBody GoalDto dto) {
+    public GoalDto update(@PathVariable Long id, @Valid @RequestBody GoalDto dto) {
         return goalService.update(id, dto);
     }
 

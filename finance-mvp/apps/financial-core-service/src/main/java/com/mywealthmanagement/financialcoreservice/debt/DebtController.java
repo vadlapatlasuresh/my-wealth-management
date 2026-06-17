@@ -3,6 +3,7 @@ package com.mywealthmanagement.financialcoreservice.debt;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,7 @@ public class DebtController {
     }
 
     @PostMapping("/add")
-    public ResponseEntity<DebtDto> addDebt(@RequestBody DebtDto debtDto) {
+    public ResponseEntity<DebtDto> addDebt(@Valid @RequestBody DebtDto debtDto) {
         DebtDto newDebt = debtService.addDebt(debtDto);
         return ResponseEntity.ok(newDebt);
     }
