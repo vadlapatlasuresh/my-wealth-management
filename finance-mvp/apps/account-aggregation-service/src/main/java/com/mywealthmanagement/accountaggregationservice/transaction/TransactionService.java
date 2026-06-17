@@ -2,6 +2,8 @@ package com.mywealthmanagement.accountaggregationservice.transaction;
 
 import com.mywealthmanagement.accountaggregationservice.transaction.dto.TransactionDto;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,8 +19,13 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
 
+    // Display-list cap: a heavy account can't trigger an unbounded fetch. Normal accounts
+    // are well under this, so behaviour is unchanged for them; tune via TRANSACTIONS_LIST_MAX.
+    @Value("${transactions.list.max:500}")
+    private int listMax;
+
     public List<TransactionDto> getTransactionsByUserId(Long userId) {
-        return transactionRepository.findByUserId(userId).stream()
+        return transactionRepository.findByUserIdOrderByDateDesc(userId, Limit.of(listMax)).stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
     }
