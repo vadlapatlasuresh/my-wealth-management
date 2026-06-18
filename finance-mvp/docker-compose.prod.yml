@@ -257,7 +257,7 @@ services:
       <<: *needs-secrets
     environment:
       <<: *java-env
-      SECRETS_SCOPES: jwt,stripe
+      SECRETS_SCOPES: jwt,stripe,notifications-internal
       DATABASE_URL: ${PAY_DATABASE_URL:?}
       DATABASE_USER: ${PAY_DATABASE_USER:?}
       DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
@@ -266,6 +266,11 @@ services:
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Payment reminders -> notification-service in-app ingest (best-effort, shared key,
+      # same pattern as real-estate's deal alerts). The key loads from the store via the
+      # notifications-internal scope above.
+      SERVICE_NOTIFICATION_URL: http://notification-service:8080
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
 
   notification-service:
     <<: *java-defaults
