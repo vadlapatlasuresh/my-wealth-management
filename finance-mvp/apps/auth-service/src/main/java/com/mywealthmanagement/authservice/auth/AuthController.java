@@ -116,6 +116,41 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("verified", ok));
     }
 
+    /** Step 1 of password reset: email a one-time code. Always 200 (no account enumeration). */
+    @PostMapping("/password/forgot")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        if (email != null && email.contains("@")) {
+            authService.findByEmail(email).ifPresent(u -> {
+                String code = otpService.generateFor("pwreset:" + email.toLowerCase());
+                notificationClient.sendOtp("EMAIL", email, code, "password-reset");
+            });
+        }
+        return ResponseEntity.ok(Map.of("sent", true,
+                "message", "If that email is registered, a reset code has been sent."));
+    }
+
+    /** Step 2 of password reset: verify the code and set a new password. */
+    @PostMapping("/password/reset")
+    public ResponseEntity<Map<String, Object>> resetPassword(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String code = body.get("code");
+        String newPassword = body.get("newPassword");
+        if (email == null || code == null || newPassword == null || newPassword.length() < 8) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("reset", false,
+                    "message", "Provide a valid email, code, and a password of at least 8 characters."));
+        }
+        if (!otpService.verifyFor("pwreset:" + email.toLowerCase(), code)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("reset", false,
+                    "message", "That code is invalid or has expired."));
+        }
+        boolean ok = authService.updatePassword(email, newPassword);
+        return ok
+                ? ResponseEntity.ok(Map.of("reset", true, "message", "Password updated — you can now sign in."))
+                : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("reset", false,
+                        "message", "Could not reset the password. Please try again."));
+    }
+
     /** Full profile for the signed-in user (SSN/EIN masked). */
     @GetMapping("/me")
     public ResponseEntity<ProfileResponse> me() {

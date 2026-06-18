@@ -76,6 +76,7 @@ public class InternalCommsController {
             case "login" -> "login";
             case "email-verify" -> "email verification";
             case "phone-verify" -> "phone verification";
+            case "password-reset" -> "password reset";
             default -> "verification";
         };
     }

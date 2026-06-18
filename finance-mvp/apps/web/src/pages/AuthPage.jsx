@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { api } from "../api";
+import ForgotPassword from "../components/ForgotPassword";
 
 const FEATURES = [
   { icon: "ti ti-chart-line", title: "Complete net-worth picture", sub: "Bank, cards, investments & property in one view" },
@@ -61,6 +62,7 @@ function maskPhone(v) {
 
 export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, setError, onSubmit, onAuthenticated }) {
   const isLogin = authMode === "login";
+  const [showForgot, setShowForgot] = useState(false);
 
   // Local UI-only state (not part of the submitted form).
   const [showPwd, setShowPwd] = useState(false);
@@ -654,7 +656,15 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
 
               {isLogin && (
                 <div style={{ textAlign: "right", marginTop: 8 }}>
-                  <span style={{ fontSize: 12.5, color: "var(--tv-forest-light)", cursor: "pointer", fontWeight: 500 }}>Forgot password?</span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setShowForgot(true)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setShowForgot(true); }}
+                    style={{ fontSize: 12.5, color: "var(--tv-forest-light)", cursor: "pointer", fontWeight: 500 }}
+                  >
+                    Forgot password?
+                  </span>
                 </div>
               )}
             </div>
@@ -1011,6 +1021,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
           )}
         </div>
       </div>
+      {showForgot && <ForgotPassword onClose={() => setShowForgot(false)} />}
     </div>
   );
 }
