@@ -30,4 +30,5 @@ public class ProfileResponse {
     private Boolean emailVerified;
     private Boolean identityVerified;
     private String mfaChannel;      // EMAIL | SMS
+    private Integer sessionTimeoutMinutes; // client idle-logout window (5..30)
 }

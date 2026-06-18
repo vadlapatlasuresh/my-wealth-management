@@ -92,6 +92,10 @@ public class User {
     @Column(name = "identity_verified")
     private Boolean identityVerified = false;
 
+    // Client idle-logout window in minutes (default 5, max 30). Enforced in the web/app.
+    @Column(name = "session_timeout_minutes")
+    private Integer sessionTimeoutMinutes = 5;
+
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 

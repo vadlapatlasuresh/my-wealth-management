@@ -171,6 +171,10 @@ public class AuthService {
         if (r.getPostalCode() != null) u.setPostalCode(r.getPostalCode());
         if (r.getCountry() != null) u.setCountry(r.getCountry());
         if (!isBlank(r.getMfaChannel())) u.setMfaChannel(normalizeChannel(r.getMfaChannel()));
+        if (r.getSessionTimeoutMinutes() != null) {
+            // Clamp to the allowed 5..30 minute window.
+            u.setSessionTimeoutMinutes(Math.max(5, Math.min(30, r.getSessionTimeoutMinutes())));
+        }
         return toProfile(userRepository.save(u));
     }
 
@@ -197,6 +201,7 @@ public class AuthService {
         p.setEmailVerified(u.getEmailVerified());
         p.setIdentityVerified(u.getIdentityVerified());
         p.setMfaChannel(u.getMfaChannel());
+        p.setSessionTimeoutMinutes(u.getSessionTimeoutMinutes() != null ? u.getSessionTimeoutMinutes() : 5);
         return p;
     }
 

@@ -17,4 +17,5 @@ public class UpdateProfileRequest {
     private String postalCode;
     private String country;
     private String mfaChannel;    // EMAIL | SMS
+    private Integer sessionTimeoutMinutes; // client idle-logout window; clamped 5..30
 }

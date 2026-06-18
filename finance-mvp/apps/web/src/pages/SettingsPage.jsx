@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api, setAuthToken, getStoredEmail, getStoredName } from '../api';
 import { getTheme, applyTheme } from '../theme';
+import { getSessionTimeoutMinutes, setSessionTimeoutMinutes } from '../hooks/useIdleLogout';
 
 // Safe localStorage helpers for local-only preferences.
 function lsGet(key, fallback) {
@@ -83,6 +84,31 @@ export default function SettingsPage() {
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+
+  // Security: auto-logout idle window (minutes). Default 5, max 30. Persisted to the
+  // profile (so it follows the user across devices) and locally (so the idle timer uses
+  // it immediately).
+  const [sessionTimeout, setSessionTimeout] = useState(getSessionTimeoutMinutes());
+  useEffect(() => {
+    api
+      .getProfile()
+      .then((p) => {
+        if (p && p.sessionTimeoutMinutes) {
+          setSessionTimeout(p.sessionTimeoutMinutes);
+          setSessionTimeoutMinutes(p.sessionTimeoutMinutes);
+        }
+      })
+      .catch(() => {});
+  }, []);
+  async function changeSessionTimeout(minutes) {
+    setSessionTimeout(minutes);
+    setSessionTimeoutMinutes(minutes); // idle timer picks this up immediately
+    try {
+      await api.updateProfile({ sessionTimeoutMinutes: minutes });
+    } catch {
+      /* local setting still applies even if the save fails */
+    }
+  }
 
   // Load saved notification preferences on mount; fall back to defaults on failure.
   useEffect(() => {
@@ -251,6 +277,31 @@ export default function SettingsPage() {
               </div>
             ))
           )}
+        </div>
+
+        {/* Security card (profile-backed) */}
+        <div className="card">
+          <div className="card-title">Security</div>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label className="form-label" htmlFor="settings-session-timeout">
+              Auto-logout after inactivity
+            </label>
+            <select
+              id="settings-session-timeout"
+              className="form-select"
+              value={sessionTimeout}
+              onChange={(e) => changeSessionTimeout(Number(e.target.value))}
+            >
+              <option value={5}>5 minutes (default)</option>
+              <option value={10}>10 minutes</option>
+              <option value={15}>15 minutes</option>
+              <option value={20}>20 minutes</option>
+              <option value={30}>30 minutes (max)</option>
+            </select>
+            <div className="setting-help">
+              For your security, you'll be signed out automatically after this much inactivity.
+            </div>
+          </div>
         </div>
 
         {/* Appearance card (local-only) */}
