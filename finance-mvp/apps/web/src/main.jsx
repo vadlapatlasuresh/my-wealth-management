@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./styles/terravest-theme.css"; // Import the new theme
 import "./i18n"; // Initialize i18n (auto-detects language) before first render
 import { registerSW } from "virtual:pwa-register";
@@ -37,6 +38,8 @@ loadRemoteConfig();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

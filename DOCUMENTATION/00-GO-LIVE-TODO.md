@@ -179,7 +179,9 @@ in the VM's `.env.prod` and redeploy the one service. If a key is missing/invali
 
 # PHASE 7 — Web app hardening (UX & accessibility)
 - [ ] **7.1 (Me) Form validation** (length/format) before submit across auth/property/deal forms. **S**
-- [ ] **7.2 (Me) Loading / empty / error states** for every page + a top-level error boundary. **M**
+- [~] **7.2 (Me) Top-level error boundary (done 2026-06-17).** A React ErrorBoundary wraps the app
+  so a JS crash shows a friendly reload screen instead of a white page (logs to console; Sentry-ready).
+  *(Remaining: per-page loading/empty states.)*
 - [ ] **7.3 (Me) Accessibility** — semantic HTML, ARIA labels, keyboard nav, contrast. **M**
 - [ ] **7.4 (Me) Disabled-button reasons / inline help** so users aren't stuck. **S**
 - [ ] **7.5 (Me, optional) Dark mode + finish i18n** (already scaffolded). **M**
