@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
 import AppLayout from "./components/AppLayout";
+import useIdleLogout from "./hooks/useIdleLogout";
 import { formatDate } from "./utils/format";
 
 export default function App() {
@@ -271,6 +272,9 @@ export default function App() {
     window.addEventListener("auth:unauthorized", onUnauthorized);
     return () => window.removeEventListener("auth:unauthorized", onUnauthorized);
   }, []);
+
+  // Auto-logout after the user's configured idle window (default 5 min) while signed in.
+  useIdleLogout(!!user, handleLogout);
 
   function openBillPay() {
     const firstCard = accounts.find((a) => a.type === "CREDIT_CARD");
