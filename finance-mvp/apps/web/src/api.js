@@ -113,6 +113,17 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  // Password reset (forgot password): step 1 emails a code, step 2 sets the new password.
+  forgotPassword: (email) =>
+    request("/api/v1/auth/password/forgot", {
+      method: "POST",
+      body: JSON.stringify({ email })
+    }),
+  resetPassword: (payload) =>
+    request("/api/v1/auth/password/reset", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
   // Permanently delete the signed-in user's account (identity/credentials).
   deleteAccount: () => request("/api/v1/auth/me", { method: "DELETE" }),
   // GDPR/CCPA data export — the user's full data bundle as JSON.

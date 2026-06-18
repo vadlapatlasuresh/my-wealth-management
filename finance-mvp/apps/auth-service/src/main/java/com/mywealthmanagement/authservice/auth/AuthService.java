@@ -209,6 +209,16 @@ public class AuthService {
         return userRepository.findByEmail(email);
     }
 
+    /** Set a new password (forgot-password flow, after the emailed code is verified). */
+    public boolean updatePassword(String email, String newPassword) {
+        return userRepository.findByEmail(email).map(u -> {
+            u.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(u);
+            auditClient.record(String.valueOf(u.getId()), "auth.password.reset", "SUCCESS", null);
+            return true;
+        }).orElse(false);
+    }
+
     /**
      * Permanently remove a user: first purge all downstream financial data across
      * services (best-effort), then delete the identity. Idempotent. Audit logs are
