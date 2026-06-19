@@ -1,5 +1,11 @@
 package com.mywealthmanagement.notificationservice.notification;
 
+import com.mywealthmanagement.notificationservice.comms.AuthEmailClient;
+import com.mywealthmanagement.notificationservice.comms.Channel;
+import com.mywealthmanagement.notificationservice.comms.ChannelProvider;
+import com.mywealthmanagement.notificationservice.comms.ChannelRouter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,22 +15,31 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Map;
 
 /**
- * Internal, service-to-service endpoint for creating an in-app notification for a given
- * user. Guarded by a shared {@code X-Internal-Key} header (the audit-service pattern):
- * other services (e.g. real-estate-service when an investor expresses interest) post here
- * to notify a user who is not the caller.
+ * Internal, service-to-service endpoint for notifying a user (who is not the caller).
+ * Guarded by a shared {@code X-Internal-Key} header. Always creates an in-app notification;
+ * if the request sets {@code "email": true} and an EMAIL provider is active, it ALSO emails
+ * the user (their address is resolved from auth-service). Used by e.g. real-estate deal
+ * alerts and payment reminders.
  */
 @RestController
 @RequestMapping("/api/v1/notifications/internal")
 public class InternalNotificationController {
 
+    private static final Logger log = LoggerFactory.getLogger(InternalNotificationController.class);
+
     @Value("${notifications.internal.key:}")
     private String internalKey;
 
     private final NotificationRepository repository;
+    private final ChannelRouter channelRouter;
+    private final AuthEmailClient authEmailClient;
 
-    public InternalNotificationController(NotificationRepository repository) {
+    public InternalNotificationController(NotificationRepository repository,
+                                          ChannelRouter channelRouter,
+                                          AuthEmailClient authEmailClient) {
         this.repository = repository;
+        this.channelRouter = channelRouter;
+        this.authEmailClient = authEmailClient;
     }
 
     @PostMapping
@@ -47,7 +62,24 @@ public class InternalNotificationController {
         n.setChannel("INAPP");
         n.setReadFlag(false);
         repository.save(n);
+
+        // Optional email delivery (best-effort) when requested and an EMAIL provider is live.
+        if (Boolean.parseBoolean(str(body.get("email"), "false"))) {
+            sendEmail(n);
+        }
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private void sendEmail(Notification n) {
+        try {
+            ChannelProvider provider = channelRouter.providerFor(Channel.EMAIL);
+            if (provider == null) return; // mock/none — nothing to send
+            String email = authEmailClient.emailFor(n.getUserId());
+            if (email == null) return;
+            provider.send(email, n.getTitle(), n.getBody(), Map.of("type", "alert"));
+        } catch (Exception e) {
+            log.warn("alert email for user {} failed: {}", n.getUserId(), e.getMessage());
+        }
     }
 
     private String str(Object o, String fallback) {

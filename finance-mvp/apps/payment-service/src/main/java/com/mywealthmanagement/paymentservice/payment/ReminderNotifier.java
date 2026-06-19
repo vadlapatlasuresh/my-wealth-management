@@ -43,7 +43,8 @@ public class ReminderNotifier {
                     "type", "PAYMENT",
                     "title", "Upcoming payment reminder",
                     "body", "Your payment of " + amount + " to " + (payee == null || payee.isBlank() ? "a payee" : payee)
-                            + " is scheduled for " + when + ".");
+                            + " is scheduled for " + when + ".",
+                    "email", true);
             restClient.post()
                     .uri("/api/v1/notifications/internal")
                     .header("X-Internal-Key", internalKey)
