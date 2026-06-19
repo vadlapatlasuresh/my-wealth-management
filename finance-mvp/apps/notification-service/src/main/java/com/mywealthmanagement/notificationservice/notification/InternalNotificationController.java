@@ -33,13 +33,16 @@ public class InternalNotificationController {
     private final NotificationRepository repository;
     private final ChannelRouter channelRouter;
     private final AuthEmailClient authEmailClient;
+    private final NotificationPreferenceRepository preferenceRepository;
 
     public InternalNotificationController(NotificationRepository repository,
                                           ChannelRouter channelRouter,
-                                          AuthEmailClient authEmailClient) {
+                                          AuthEmailClient authEmailClient,
+                                          NotificationPreferenceRepository preferenceRepository) {
         this.repository = repository;
         this.channelRouter = channelRouter;
         this.authEmailClient = authEmailClient;
+        this.preferenceRepository = preferenceRepository;
     }
 
     @PostMapping
@@ -53,9 +56,18 @@ public class InternalNotificationController {
         if (userId == null) {
             return ResponseEntity.badRequest().build();
         }
+        Long uid = Long.valueOf(userId.toString());
+
+        // Optional preference gate: when the caller names a preference (e.g.
+        // "weeklySummary"), respect an explicit opt-out — skip the notification
+        // entirely. A user with no preference row keeps the on-by-default behavior.
+        String respect = str(body.get("respectPreference"), "");
+        if (StringUtils.hasText(respect) && optedOut(uid, respect)) {
+            return ResponseEntity.noContent().build();
+        }
 
         Notification n = new Notification();
-        n.setUserId(Long.valueOf(userId.toString()));
+        n.setUserId(uid);
         n.setType(str(body.get("type"), "SYSTEM"));
         n.setTitle(str(body.get("title"), "Notification"));
         n.setBody(str(body.get("body"), ""));
@@ -80,6 +92,17 @@ public class InternalNotificationController {
         } catch (Exception e) {
             log.warn("alert email for user {} failed: {}", n.getUserId(), e.getMessage());
         }
+    }
+
+    /** True when the user has a preference row that explicitly disables {@code key}. */
+    private boolean optedOut(Long userId, String key) {
+        return preferenceRepository.findByUserId(userId).map(p -> switch (key) {
+            case "weeklySummary" -> !p.isWeeklySummary();
+            case "paymentAlerts" -> !p.isPaymentAlerts();
+            case "budgetAlerts" -> !p.isBudgetAlerts();
+            case "email" -> !p.isEmailEnabled();
+            default -> false;
+        }).orElse(false);
     }
 
     private String str(Object o, String fallback) {

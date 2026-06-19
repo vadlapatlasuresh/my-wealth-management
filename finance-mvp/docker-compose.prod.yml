@@ -178,11 +178,14 @@ services:
     container_name: wealth-financial-core-service
     environment:
       <<: *java-env
-      SECRETS_SCOPES: jwt
+      SECRETS_SCOPES: jwt,notifications-internal
       DATABASE_URL: ${CORE_DATABASE_URL:?}
       DATABASE_USER: ${CORE_DATABASE_USER:?}
       DATABASE_PASSWORD: ${CORE_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Weekly net-worth digest -> notification-service (best-effort, shared key)
+      SERVICE_NOTIFICATION_URL: http://notification-service:8080
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
 
   real-estate-service:
     <<: *java-defaults
