@@ -163,6 +163,16 @@ public class AuthService {
         if (r.getFirstName() != null) u.setFirstName(r.getFirstName());
         if (r.getLastName() != null) u.setLastName(r.getLastName());
         if (r.getPhone() != null) u.setPhone(r.getPhone());
+        // SSN is write-once (progressive KYC): set it only when none is on file yet,
+        // and only when it looks like a 9-digit value. An already-set SSN is never
+        // overwritten here. Stored encrypted at rest; only the last 4 are shown.
+        if (!isBlank(r.getSsn()) && u.getSsnLast4() == null) {
+            String digits = r.getSsn().replaceAll("\\D", "");
+            if (digits.length() == 9) {
+                u.setSsnEncrypted(digits);
+                u.setSsnLast4(last4(digits));
+            }
+        }
         if (r.getDateOfBirth() != null) u.setDateOfBirth(parseDate(r.getDateOfBirth()));
         if (r.getAddressLine1() != null) u.setAddressLine1(r.getAddressLine1());
         if (r.getAddressLine2() != null) u.setAddressLine2(r.getAddressLine2());
@@ -174,6 +184,15 @@ public class AuthService {
         if (r.getSessionTimeoutMinutes() != null) {
             // Clamp to the allowed 5..30 minute window.
             u.setSessionTimeoutMinutes(Math.max(5, Math.min(30, r.getSessionTimeoutMinutes())));
+        }
+        // Progressive KYC: once the core identity fields are all on file, flag the
+        // profile as identity-collected. (Never un-sets a previously-verified flag.)
+        if (Boolean.TRUE.equals(u.getIdentityVerified()) == false
+                && u.getSsnLast4() != null
+                && u.getDateOfBirth() != null
+                && !isBlank(u.getAddressLine1())
+                && !isBlank(u.getPostalCode())) {
+            u.setIdentityVerified(true);
         }
         return toProfile(userRepository.save(u));
     }

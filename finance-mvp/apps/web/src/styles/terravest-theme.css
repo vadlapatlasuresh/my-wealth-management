@@ -713,6 +713,41 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 /* =============================================
    STEPPER
    ============================================= */
+/* ProfileWizard (progressive profiling) — two-column field grid + pref toggles */
+.wizard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+}
+@media (max-width: 460px) { .wizard-grid { grid-template-columns: 1fr; } }
+.wizard-pref {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--tv-border);
+  border-radius: var(--radius-md);
+  background: var(--tv-white);
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.wizard-pref:hover { border-color: var(--tv-sage); }
+.wizard-pref.on { border-color: var(--tv-forest); background: var(--tv-sage-pale); }
+.wizard-pref > i { font-size: 20px; color: var(--tv-forest); width: 22px; text-align: center; }
+.wizard-switch {
+  width: 40px; height: 22px; border-radius: 22px; flex-shrink: 0;
+  background: var(--tv-border); position: relative; transition: background .18s;
+}
+.wizard-switch.on { background: var(--tv-forest); }
+.wizard-switch .knob {
+  position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  border-radius: 50%; background: #fff; box-shadow: var(--shadow-sm);
+  transition: transform .18s;
+}
+.wizard-switch.on .knob { transform: translateX(18px); }
+
 .stepper {
   display: flex;
   align-items: center;
