@@ -11,7 +11,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt": when a new build is available the SW waits, and we surface a
+      // one-click reload banner (main.jsx + swUpdateBanner.js) instead of a
+      // surprise auto-reload. Gives the user a visible, deliberate update path.
+      registerType: "prompt",
       // We register the SW manually in main.jsx so we can skip it on native
       // (Capacitor) where a SW would intercept/block API calls.
       injectRegister: false,

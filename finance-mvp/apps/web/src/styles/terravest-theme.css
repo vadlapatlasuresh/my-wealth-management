@@ -263,6 +263,36 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 .user-name { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.96); }
 .user-role { font-size: 11px; color: var(--tv-sage-light); }
 
+/* Explicit sign-out button at the bottom of the sidebar. Clear and labeled,
+   sits directly under the profile card. Collapses to an icon in rail mode. */
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.82);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.sidebar-signout:hover {
+  background: rgba(192,57,43,.16);
+  border-color: rgba(192,57,43,.5);
+  color: #fff;
+}
+.sidebar-signout i { font-size: 16px; }
+.app-shell.sidebar-collapsed .sidebar .sidebar-signout {
+  justify-content: center;
+  padding: 9px 0;
+}
+.app-shell.sidebar-collapsed .sidebar .sidebar-signout .nav-label { display: none; }
+
 /* =============================================
    COLLAPSIBLE SIDEBAR (hamburger toggle)
    Generic: toggling `.sidebar-collapsed` on .app-shell turns the
