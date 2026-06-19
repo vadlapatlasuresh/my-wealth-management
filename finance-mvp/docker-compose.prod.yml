@@ -285,6 +285,9 @@ services:
       DATABASE_USER: ${NOTIF_DATABASE_USER:?}
       DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Resolve a user's email (for alert emails) from auth-service. Uses the shared
+      # AUDIT_INGEST_KEY as X-Internal-Key (already in the env anchor).
+      SERVICE_AUTH_URL: http://auth-service:8080
       # Channel provider toggles: mock (default) | sendgrid / twilio / fcm.
       # Set the toggle AND the matching keys to go live for each channel.
       COMMS_PROVIDER_EMAIL: ${COMMS_PROVIDER_EMAIL:-mock}

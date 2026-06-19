@@ -45,7 +45,8 @@ public class LeadNotifier {
                     "userId", sponsorUserId,
                     "type", "DEAL",
                     "title", "New investor interest",
-                    "body", investorName + " expressed interest in \"" + dealTitle + "\"."
+                    "body", investorName + " expressed interest in \"" + dealTitle + "\".",
+                    "email", true
             );
             restClient.post()
                     .uri("/api/v1/notifications/internal")
