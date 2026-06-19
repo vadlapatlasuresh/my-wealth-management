@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./styles/terravest-theme.css"; // Import the new theme
 import "./i18n"; // Initialize i18n (auto-detects language) before first render
 import { registerSW } from "virtual:pwa-register";
+import { showReloadBanner } from "./swUpdateBanner";
 import { applyTheme, getTheme } from "./theme";
 import { loadRemoteConfig } from "./config/remoteConfig";
 
@@ -25,7 +26,24 @@ if (isNative) {
     );
   }
 } else {
-  registerSW({ immediate: true });
+  // PWA update flow: when a newer build is cached, show a one-click reload
+  // banner instead of silently stranding the client on an old bundle (or
+  // surprise-reloading mid-form). Also re-checks for new deploys hourly so
+  // long-lived tabs don't go stale. See swUpdateBanner.js + vite.config.js
+  // (registerType: "prompt").
+  const updateSW = registerSW({
+    immediate: true,
+    onNeedRefresh() {
+      showReloadBanner(() => updateSW(true));
+    },
+    onRegisteredSW(_swUrl, reg) {
+      if (reg) {
+        setInterval(() => {
+          reg.update().catch(() => {});
+        }, 60 * 60 * 1000);
+      }
+    },
+  });
 }
 
 // Apply the saved theme (light/dark/glass) before first paint.

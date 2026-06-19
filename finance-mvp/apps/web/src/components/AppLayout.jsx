@@ -166,17 +166,14 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }
             <div className="user-name">{user?.name || (user?.email ? user.email.split('@')[0] : 'User')}</div>
             <div className="user-role">View profile</div>
           </div>
-          <i
-            className="ti ti-logout"
-            style={{ marginLeft: 'auto', color: 'rgba(255,255,255,.55)', fontSize: '16px' }}
-            title="Sign out"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              handleLogout();
-            }}
-          />
+          <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', color: 'rgba(255,255,255,.45)', fontSize: '16px' }} />
         </NavLink>
+        {/* Explicit, clearly-labeled sign-out control at the very bottom of the sidebar.
+            (Collapses to an icon-only button when the sidebar is in rail mode.) */}
+        <button type="button" className="sidebar-signout" onClick={handleLogout} title={t('nav.logout', 'Sign out')}>
+          <i className="ti ti-logout"></i>
+          <span className="nav-label">{t('nav.logout', 'Sign out')}</span>
+        </button>
       </div>
     </aside>
   );
@@ -317,6 +314,8 @@ function OuterTabs() {
       <NavLink to="/billpay" className={getOuterTabClass('/billpay')}><i className="ti ti-receipt"></i>Bill Pay</NavLink>
       <NavLink to="/debt" className={getOuterTabClass('/debt')}><i className="ti ti-trending-down"></i>Debt Lab</NavLink>
       <NavLink to="/dealroom" className={getOuterTabClass('/dealroom')}><i className="ti ti-briefcase"></i>Deal Room</NavLink>
+      <NavLink to="/mybusiness" className={getOuterTabClass('/mybusiness')}><i className="ti ti-building-store"></i>My Business</NavLink>
+      <NavLink to="/ai-assistant" className={getOuterTabClass('/ai-assistant')}><i className="ti ti-sparkles"></i>AI Assistant</NavLink>
       <NavLink to="/styleguide" className={getOuterTabClass('/styleguide')}><i className="ti ti-palette"></i>Style Guide</NavLink>
       <NavLink to="/flowmap" className={getOuterTabClass('/flowmap')}><i className="ti ti-git-merge"></i>UI Flow Map</NavLink>
     </div>
