@@ -1,6 +1,19 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api, isCareAgent } from '../api';
+import ProfileWizard from '../components/ProfileWizard';
+
+/* Which core profile fields are still missing (drives the completion nudge). */
+function missingProfileFields(p) {
+  if (!p) return [];
+  const checks = [
+    [!p.firstName || !p.lastName, 'name'],
+    [!p.dateOfBirth, 'date of birth'],
+    [!p.addressLine1 || !p.postalCode, 'address'],
+    [!p.ssnMasked, 'identity (SSN)'],
+  ];
+  return checks.filter(([missing]) => missing).map(([, label]) => label);
+}
 
 /* Derive up-to-two-letter initials from an email address. */
 function initialsFromEmail(email) {
@@ -24,6 +37,9 @@ export default function ProfilePage({ user, accounts, onLogout }) {
   const [showSsn, setShowSsn] = useState(false);
   const [showEin, setShowEin] = useState(false);
 
+  // Progressive-profiling wizard.
+  const [showWizard, setShowWizard] = useState(false);
+
   // Edit mode + the editable draft.
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(null);
@@ -37,7 +53,14 @@ export default function ProfilePage({ user, accounts, onLogout }) {
     (async () => {
       try {
         const p = await api.getProfile();
-        if (!cancelled) setProfile(p);
+        if (cancelled) return;
+        setProfile(p);
+        // Progressive nudge: auto-open the wizard once per browser session when
+        // core details are still missing (and the user hasn't dismissed it).
+        if (missingProfileFields(p).length && !sessionStorage.getItem('tv_wizard_seen')) {
+          sessionStorage.setItem('tv_wizard_seen', '1');
+          setShowWizard(true);
+        }
       } catch {
         if (!cancelled) setProfileError('Could not load your profile.');
       }
@@ -165,6 +188,35 @@ export default function ProfilePage({ user, accounts, onLogout }) {
           <div className="page-subtitle">Manage your account, security, and preferences</div>
         </div>
       </div>
+
+      {/* Progressive-profiling nudge: shown only while core details are missing. */}
+      {profile && missingProfileFields(profile).length > 0 && (
+        <div className="card home-guide-banner" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14 }}>
+          <i className="ti ti-user-check" style={{ fontSize: 26, color: 'var(--tv-forest)' }}></i>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="item-name" style={{ fontSize: 15 }}>Finish setting up your profile</div>
+            <div className="item-sub">
+              Still needed: {missingProfileFields(profile).join(', ')}. It only takes a minute.
+            </div>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowWizard(true)}>
+            <i className="ti ti-arrow-right"></i> Complete
+          </button>
+        </div>
+      )}
+
+      {showWizard && (
+        <ProfileWizard
+          profile={profile}
+          onClose={() => setShowWizard(false)}
+          onComplete={async () => {
+            // Re-fetch so the header card + completion nudge reflect every step
+            // that was saved (the final step doesn't return a profile).
+            try { setProfile(await api.getProfile()); } catch { /* keep current */ }
+            setShowWizard(false);
+          }}
+        />
+      )}
 
       {/* Profile header card */}
       <div className="card" style={{ marginBottom: 16 }}>
