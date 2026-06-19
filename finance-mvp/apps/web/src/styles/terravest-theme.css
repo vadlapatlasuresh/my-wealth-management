@@ -711,6 +711,24 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 }
 
 /* =============================================
+   SOCIAL SIGN-IN (AuthPage)
+   ============================================= */
+.social-login { margin-top: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.social-divider {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  color: var(--tv-text-muted); font-size: 12px; margin-bottom: 4px;
+}
+.social-divider::before, .social-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--tv-border);
+}
+.social-google { min-height: 40px; display: flex; justify-content: center; }
+.social-apple {
+  width: 320px; max-width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #111; color: #fff; border-radius: var(--radius-md); padding: 10px;
+  font-weight: 600; opacity: .6; cursor: not-allowed;
+}
+
+/* =============================================
    STEPPER
    ============================================= */
 /* ProfileWizard (progressive profiling) — two-column field grid + pref toggles */

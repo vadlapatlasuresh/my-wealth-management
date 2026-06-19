@@ -124,6 +124,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  // Social sign-in: which providers are enabled (server-side, key-gated), and the
+  // Google ID-token exchange for our own JWT.
+  getOAuthConfig: () => request("/api/v1/auth/oauth/config"),
+  oauthGoogle: (idToken) =>
+    request("/api/v1/auth/oauth/google", {
+      method: "POST",
+      body: JSON.stringify({ idToken })
+    }),
   // Permanently delete the signed-in user's account (identity/credentials).
   deleteAccount: () => request("/api/v1/auth/me", { method: "DELETE" }),
   // GDPR/CCPA data export — the user's full data bundle as JSON.

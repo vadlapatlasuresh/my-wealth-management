@@ -152,6 +152,9 @@ services:
       # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
       # users (do it together with enabling SendGrid/Twilio, or codes won't deliver).
       OTP_EXPOSE_DEV_CODE: ${OTP_EXPOSE_DEV_CODE:-true}
+      # Social sign-in. Blank -> provider disabled + button hidden. Set to activate.
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
 
   account-aggregation-service:
     <<: *java-defaults
