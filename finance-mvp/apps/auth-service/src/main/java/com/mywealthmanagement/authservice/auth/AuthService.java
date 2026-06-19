@@ -139,6 +139,27 @@ public class AuthService {
         return jwtService.generateToken(String.valueOf(user.getId()), roleNames(user));
     }
 
+    /**
+     * Find an existing user by email, or provision one for a verified social
+     * (Google/Apple) sign-in. Federated accounts have no usable password — a random
+     * one is stored so the local-login path can never authenticate them. The email
+     * is trusted as verified because the provider already verified it.
+     */
+    public User findOrCreateOAuthUser(String email, String name, String provider) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User u = new User(
+                    email,
+                    passwordEncoder.encode("oauth:" + java.util.UUID.randomUUID()),
+                    Collections.singleton(Role.USER));
+            u.setName(isBlank(name) ? email.split("@")[0] : name);
+            u.setAccountType("INDIVIDUAL");
+            u.setEmailVerified(true);
+            User saved = userRepository.save(u);
+            auditClient.record(String.valueOf(saved.getId()), "auth.oauth.register", "SUCCESS", provider);
+            return saved;
+        });
+    }
+
     /** Mark a user's email as verified (after an email OTP succeeds). */
     public void markEmailVerified(String email) {
         userRepository.findByEmail(email).ifPresent(u -> {

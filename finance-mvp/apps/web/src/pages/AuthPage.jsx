@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { api } from "../api";
 import ForgotPassword from "../components/ForgotPassword";
+import SocialLogin from "../components/SocialLogin";
 
 const FEATURES = [
   { icon: "ti ti-chart-line", title: "Complete net-worth picture", sub: "Bank, cards, investments & property in one view" },
@@ -1002,6 +1003,9 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
               {isLogin ? (mfaBusy ? "Signing in…" : "Sign in") : "Create account"}
             </button>
           </form>
+
+          {/* Social sign-in (renders only when a provider is configured server-side). */}
+          <SocialLogin onAuthenticated={onAuthenticated} onError={(m) => setError && setError(m)} />
 
           <div style={{ textAlign: "center", marginTop: 18, fontSize: 13, color: "var(--tv-text-muted)" }}>
             {isLogin ? "New to TerraVest? " : "Already have an account? "}
