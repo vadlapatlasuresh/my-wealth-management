@@ -124,6 +124,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  // Consent ledger: record a ToS/Privacy acceptance (authenticated) + read the
+  // signed-in user's full acceptance history.
+  acceptDisclaimer: (key, version = 1) =>
+    request("/api/v1/content/disclaimers/accept", {
+      method: "POST",
+      body: JSON.stringify({ key, version })
+    }),
+  getMyAcceptances: () => request("/api/v1/content/disclaimers/acceptances"),
   // Social sign-in: which providers are enabled (server-side, key-gated), and the
   // Google ID-token exchange for our own JWT.
   getOAuthConfig: () => request("/api/v1/auth/oauth/config"),

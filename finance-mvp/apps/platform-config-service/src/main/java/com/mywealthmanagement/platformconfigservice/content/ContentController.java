@@ -28,10 +28,17 @@ public class ContentController {
 
     @PostMapping("/disclaimers/accept")
     public ResponseEntity<Map<String, Boolean>> accept(
-            @RequestBody Map<String, Object> body,
+            @RequestBody(required = false) Map<String, Object> body,
             Authentication authentication) {
-        String key = body == null ? null : String.valueOf(body.get("key"));
-        Integer version = parseVersion(body == null ? null : body.get("version"));
+        Object rawKey = body == null ? null : body.get("key");
+        String key = rawKey == null ? null : rawKey.toString().trim();
+        if (key == null || key.isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("accepted", false));
+        }
+        Integer version = parseVersion(body.get("version"));
+        if (version == null) {
+            version = 1; // a consent record always carries a version
+        }
 
         DisclaimerAcceptance acceptance = new DisclaimerAcceptance();
         acceptance.setUserId(Long.parseLong(authentication.getName())); // principal name = userId
@@ -41,6 +48,21 @@ public class ContentController {
         acceptanceRepository.save(acceptance);
 
         return ResponseEntity.ok(Map.of("accepted", true));
+    }
+
+    /** The signed-in user's consent ledger (every ToS/Privacy acceptance, newest first). */
+    @GetMapping("/disclaimers/acceptances")
+    public ResponseEntity<List<Map<String, Object>>> myAcceptances(Authentication authentication) {
+        Long userId = Long.parseLong(authentication.getName());
+        List<Map<String, Object>> ledger = acceptanceRepository
+                .findByUserIdOrderByAcceptedAtDesc(userId)
+                .stream()
+                .map(a -> Map.<String, Object>of(
+                        "key", a.getDisclaimerKey(),
+                        "version", a.getVersion(),
+                        "acceptedAt", a.getAcceptedAt().toString()))
+                .toList();
+        return ResponseEntity.ok(ledger);
     }
 
     private static Integer parseVersion(Object v) {
