@@ -1,6 +1,7 @@
 package com.mywealthmanagement.financialcoreservice.debt.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -19,12 +20,15 @@ public class DebtDto {
     @Size(max = 200, message = "name must be at most 200 characters")
     private String name;
 
+    @NotNull(message = "balance is required")
     @PositiveOrZero(message = "balance must be zero or positive")
     private BigDecimal balance;
 
+    @NotNull(message = "apr is required")
     @PositiveOrZero(message = "apr must be zero or positive")
     private BigDecimal apr;
 
+    @NotNull(message = "minPayment is required")
     @PositiveOrZero(message = "minPayment must be zero or positive")
     private BigDecimal minPayment;
 }
