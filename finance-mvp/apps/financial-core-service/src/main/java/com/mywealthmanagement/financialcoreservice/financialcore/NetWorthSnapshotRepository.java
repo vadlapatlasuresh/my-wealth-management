@@ -1,6 +1,7 @@
 package com.mywealthmanagement.financialcoreservice.financialcore;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -9,6 +10,10 @@ import java.util.Optional;
 public interface NetWorthSnapshotRepository extends JpaRepository<NetWorthSnapshot, Long> {
 
     Optional<NetWorthSnapshot> findByUserIdAndSnapshotDate(Long userId, LocalDate snapshotDate);
+
+    /** Every user that has at least one net-worth datapoint (drives the weekly digest). */
+    @Query("select distinct s.userId from NetWorthSnapshot s")
+    List<Long> findDistinctUserIds();
 
     List<NetWorthSnapshot> findByUserIdAndSnapshotDateGreaterThanEqualOrderBySnapshotDateAsc(
             Long userId, LocalDate from);
