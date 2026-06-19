@@ -54,11 +54,68 @@ public class FinancialCoreService {
         Long userId = getUserId();
         String authHeader = getAuthorizationHeader();
 
-        // Fetch accounts and transactions from Account Aggregation Service
-        List<AccountDto> accounts = accountAggregationClient.getAccounts(authHeader);
-        List<TransactionDto> transactions = accountAggregationClient.getTransactions(authHeader);
+        // Fetch real balances, compute net worth, and upsert today's datapoint. This
+        // is shared with the daily background job (NetWorthDailySnapshotJob) so the
+        // chart keeps a continuous history even when the user doesn't open the app.
+        NetWorthSnapshot snap = computeAndPersistSnapshot(userId, authHeader);
+        BigDecimal cash = nz(snap.getCash());
+        BigDecimal investments = nz(snap.getInvestments());
+        BigDecimal creditCardsDebt = nz(snap.getCreditCards());
+        BigDecimal loansDebt = nz(snap.getLoans());
+        BigDecimal realEstateValue = nz(snap.getRealEstateValue());
+        BigDecimal realEstateEquity = nz(snap.getRealEstateEquity());
+        BigDecimal netTotal = nz(snap.getTotal());
 
-        // --- Calculate Net Worth from REAL sources ---
+        // 30-day changes computed from REAL history: current − value ~30 days ago.
+        // When no ~30-day-old snapshot exists yet, the change is 0 (honest), not faked.
+        BigDecimal change30dNetWorth = BigDecimal.ZERO;
+        BigDecimal change30dCash = BigDecimal.ZERO;
+        BigDecimal change30dInvestments = BigDecimal.ZERO;
+        BigDecimal change30dCreditCards = BigDecimal.ZERO;
+        BigDecimal change30dRealEstateValue = BigDecimal.ZERO;
+        BigDecimal change30dRealEstateEquity = BigDecimal.ZERO;
+        try {
+            NetWorthSnapshot prior = snapshotRepository
+                    .findFirstByUserIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
+                            userId, LocalDate.now().minusDays(30))
+                    .orElse(null);
+            if (prior != null) {
+                change30dNetWorth = netTotal.subtract(nz(prior.getTotal()));
+                change30dCash = cash.subtract(nz(prior.getCash()));
+                change30dInvestments = investments.subtract(nz(prior.getInvestments()));
+                change30dCreditCards = creditCardsDebt.subtract(nz(prior.getCreditCards()));
+                change30dRealEstateValue = realEstateValue.subtract(nz(prior.getRealEstateValue()));
+                change30dRealEstateEquity = realEstateEquity.subtract(nz(prior.getRealEstateEquity()));
+            }
+        } catch (Exception e) {
+            log.warn("30d change history lookup failed ({}); reporting 0", e.getMessage());
+        }
+
+        SnapshotDto.NetWorthDto netWorthDto = new SnapshotDto.NetWorthDto(netTotal, change30dNetWorth);
+        SnapshotDto.ComponentsDto componentsDto = new SnapshotDto.ComponentsDto(
+                cash, change30dCash,
+                investments, change30dInvestments,
+                creditCardsDebt, change30dCreditCards,
+                loansDebt,
+                realEstateValue, change30dRealEstateValue,
+                realEstateEquity, change30dRealEstateEquity
+        );
+
+        // --- Time series from REAL persisted daily history (no synthetic curve) ---
+        List<SnapshotDto.TimeSeriesPoint> series = buildSeriesFromHistory(userId, range);
+
+        return new SnapshotDto(userId, LocalDateTime.now(), netWorthDto, componentsDto, series);
+    }
+
+    /**
+     * Fetch the user's accounts + real estate, compute net worth, and upsert today's
+     * snapshot. Shared by the live read ({@link #getSnapshot}) and the daily background
+     * job ({@code NetWorthDailySnapshotJob}); the latter passes a freshly-minted
+     * per-user bearer token so the cross-service calls authenticate without a request.
+     */
+    NetWorthSnapshot computeAndPersistSnapshot(Long userId, String authHeader) {
+        List<AccountDto> accounts = accountAggregationClient.getAccounts(authHeader);
+
         // Assets (cash, investments) add; liabilities (credit cards, loans) subtract.
         BigDecimal cash = BigDecimal.ZERO;
         BigDecimal investments = BigDecimal.ZERO;
@@ -111,74 +168,39 @@ public class FinancialCoreService {
         BigDecimal netTotal = cash.add(investments).add(realEstateEquity)
                 .subtract(creditCardsDebt).subtract(loansDebt);
 
-        // Persist today's datapoint so history accrues from real values (idempotent
-        // per user/day). Best-effort: persistence failure must not break the read.
-        persistDailySnapshot(userId, netTotal, cash, investments, creditCardsDebt,
+        return persistDailySnapshot(userId, netTotal, cash, investments, creditCardsDebt,
                 loansDebt, realEstateValue, realEstateEquity);
-
-        // 30-day changes computed from REAL history: current − value ~30 days ago.
-        // When no ~30-day-old snapshot exists yet, the change is 0 (honest), not faked.
-        BigDecimal change30dNetWorth = BigDecimal.ZERO;
-        BigDecimal change30dCash = BigDecimal.ZERO;
-        BigDecimal change30dInvestments = BigDecimal.ZERO;
-        BigDecimal change30dCreditCards = BigDecimal.ZERO;
-        BigDecimal change30dRealEstateValue = BigDecimal.ZERO;
-        BigDecimal change30dRealEstateEquity = BigDecimal.ZERO;
-        try {
-            NetWorthSnapshot prior = snapshotRepository
-                    .findFirstByUserIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
-                            userId, LocalDate.now().minusDays(30))
-                    .orElse(null);
-            if (prior != null) {
-                change30dNetWorth = netTotal.subtract(nz(prior.getTotal()));
-                change30dCash = cash.subtract(nz(prior.getCash()));
-                change30dInvestments = investments.subtract(nz(prior.getInvestments()));
-                change30dCreditCards = creditCardsDebt.subtract(nz(prior.getCreditCards()));
-                change30dRealEstateValue = realEstateValue.subtract(nz(prior.getRealEstateValue()));
-                change30dRealEstateEquity = realEstateEquity.subtract(nz(prior.getRealEstateEquity()));
-            }
-        } catch (Exception e) {
-            log.warn("30d change history lookup failed ({}); reporting 0", e.getMessage());
-        }
-
-        SnapshotDto.NetWorthDto netWorthDto = new SnapshotDto.NetWorthDto(netTotal, change30dNetWorth);
-        SnapshotDto.ComponentsDto componentsDto = new SnapshotDto.ComponentsDto(
-                cash, change30dCash,
-                investments, change30dInvestments,
-                creditCardsDebt, change30dCreditCards,
-                loansDebt,
-                realEstateValue, change30dRealEstateValue,
-                realEstateEquity, change30dRealEstateEquity
-        );
-
-        // --- Time series from REAL persisted daily history (no synthetic curve) ---
-        List<SnapshotDto.TimeSeriesPoint> series = buildSeriesFromHistory(userId, range);
-
-        return new SnapshotDto(userId, LocalDateTime.now(), netWorthDto, componentsDto, series);
     }
 
-    /** Upsert one net-worth datapoint per user per day. Best-effort. */
-    private void persistDailySnapshot(Long userId, BigDecimal total, BigDecimal cash,
+    /** Upsert one net-worth datapoint per user per day. Best-effort; returns the row
+     *  (transient if the save failed) so callers can use the computed values. */
+    private NetWorthSnapshot persistDailySnapshot(Long userId, BigDecimal total, BigDecimal cash,
             BigDecimal investments, BigDecimal creditCards, BigDecimal loans,
             BigDecimal realEstateValue, BigDecimal realEstateEquity) {
+        LocalDate today = LocalDate.now();
+        NetWorthSnapshot snap = snapshotRepository
+                .findByUserIdAndSnapshotDate(userId, today)
+                .orElseGet(NetWorthSnapshot::new);
+        snap.setUserId(userId);
+        snap.setSnapshotDate(today);
+        snap.setTotal(total);
+        snap.setCash(cash);
+        snap.setInvestments(investments);
+        snap.setCreditCards(creditCards);
+        snap.setLoans(loans);
+        snap.setRealEstateValue(realEstateValue);
+        snap.setRealEstateEquity(realEstateEquity);
         try {
-            LocalDate today = LocalDate.now();
-            NetWorthSnapshot snap = snapshotRepository
-                    .findByUserIdAndSnapshotDate(userId, today)
-                    .orElseGet(NetWorthSnapshot::new);
-            snap.setUserId(userId);
-            snap.setSnapshotDate(today);
-            snap.setTotal(total);
-            snap.setCash(cash);
-            snap.setInvestments(investments);
-            snap.setCreditCards(creditCards);
-            snap.setLoans(loans);
-            snap.setRealEstateValue(realEstateValue);
-            snap.setRealEstateEquity(realEstateEquity);
-            snapshotRepository.save(snap);
+            return snapshotRepository.save(snap);
         } catch (Exception e) {
             log.warn("net-worth snapshot persist failed ({}); continuing", e.getMessage());
+            return snap;
         }
+    }
+
+    /** Refresh today's snapshot for one user from a background job (no request context). */
+    public void refreshDailySnapshot(Long userId, String bearerToken) {
+        computeAndPersistSnapshot(userId, bearerToken);
     }
 
     /** How many days of history a range window covers. */
