@@ -45,6 +45,9 @@ class DealServiceTest {
     @Mock
     private LeadNotifier leadNotifier;
 
+    @Mock
+    private com.mywealthmanagement.realestateservice.audit.AuditClient auditClient;
+
     @InjectMocks
     private DealService service;
 
