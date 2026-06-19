@@ -174,6 +174,15 @@ export default function App() {
       setError("");
       const response = await api.register(authForm);
       await onAuthenticated(response);
+      // Record the ToS/Privacy consent server-side now that we're authenticated.
+      // Best-effort: a ledger write must never fail the signup the user just did.
+      if (authForm.agreedToTerms) {
+        const CONSENT_VERSION = 1;
+        Promise.allSettled([
+          api.acceptDisclaimer("terms", CONSENT_VERSION),
+          api.acceptDisclaimer("privacy", CONSENT_VERSION),
+        ]);
+      }
     } catch (err) {
       setError(err.message);
     }
