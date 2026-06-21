@@ -74,8 +74,6 @@ class FinancialCoreServiceTest {
                 account("depository", new BigDecimal("500.00")),   // savings
                 account("credit", new BigDecimal("200.00"))        // credit card debt
         ));
-        when(accountAggregationClient.getTransactions(anyString())).thenReturn(List.of());
-
         SnapshotDto snapshot = service.getSnapshot("1M");
 
         // Cash = 1000 + 500; credit debt = 200; net = 1500 - 200 = 1300.
@@ -88,8 +86,6 @@ class FinancialCoreServiceTest {
     @Test
     void getSnapshot_withNoAccounts_yieldsZeroNetWorth() {
         when(accountAggregationClient.getAccounts(anyString())).thenReturn(List.of());
-        when(accountAggregationClient.getTransactions(anyString())).thenReturn(List.of());
-
         SnapshotDto snapshot = service.getSnapshot("1M");
 
         assertThat(snapshot.getNetWorth().getTotal()).isEqualByComparingTo("0");
@@ -104,8 +100,6 @@ class FinancialCoreServiceTest {
                 account("loan", new BigDecimal("3000.00")),        // loan (liability)
                 account("credit", new BigDecimal("200.00"))        // credit card (liability)
         ));
-        when(accountAggregationClient.getTransactions(anyString())).thenReturn(List.of());
-
         PropertyDto prop = new PropertyDto();
         prop.setCurrentValue(new BigDecimal("540000"));
         prop.setMortgageBalance(new BigDecimal("360000"));
