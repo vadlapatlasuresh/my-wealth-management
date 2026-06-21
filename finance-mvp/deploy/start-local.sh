@@ -47,7 +47,14 @@ start() { # name port [db]
 
 if [ "${REBUILD:-0}" = "1" ]; then
   echo "Building all services (skip tests)…"
-  JAVA_HOME=/opt/homebrew/opt/openjdk@17 mvn -q -T1C clean package -DskipTests || { echo "build failed"; exit 1; }
+  # No aggregator POM at repo root — each service is its own Maven project, so
+  # build them one by one from apps/<svc>/pom.xml.
+  for svc in api-gateway auth-service account-aggregation-service financial-core-service \
+             real-estate-service business-financials-service ai-insights-service \
+             payment-service notification-service platform-config-service audit-service; do
+    echo "  building $svc…"
+    mvn -q -f "apps/$svc/pom.xml" clean package -DskipTests || { echo "build failed: $svc"; exit 1; }
+  done
 fi
 
 echo "Stopping any running services…"

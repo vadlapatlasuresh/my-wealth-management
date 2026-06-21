@@ -446,11 +446,24 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
             <button type="button" className={!isLogin ? "active" : ""} onClick={() => setAuthMode("register")}>Create account</button>
           </div>
 
-          {error && (
+          {error && (!isLogin && /already exists/i.test(error) ? (
+            // Signup hit an email that's already registered — point them to sign in
+            // (the email they typed is preserved when we switch modes).
+            <div className="badge badge-red" style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 8, width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", marginBottom: 16 }}>
+              <span><i className="ti ti-alert-circle"></i> An account with this email already exists.</span>
+              <button
+                type="button"
+                onClick={() => { if (setError) setError(""); setAuthMode("login"); }}
+                style={{ background: "none", color: "var(--tv-forest-light)", fontWeight: 700, fontSize: 13, cursor: "pointer", padding: 0 }}
+              >
+                Sign in instead <i className="ti ti-arrow-right"></i>
+              </button>
+            </div>
+          ) : (
             <div className="badge badge-red" style={{ display: "flex", width: "100%", padding: "10px 12px", borderRadius: "var(--radius-md)", marginBottom: 16 }}>
               <i className="ti ti-alert-circle"></i> {error}
             </div>
-          )}
+          ))}
 
           <form onSubmit={handleFormSubmit}>
             {/* ───────────────────────── SIGNUP-ONLY FIELDS ───────────────────────── */}
