@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { api } from "../api";
 import ForgotPassword from "../components/ForgotPassword";
 import SocialLogin from "../components/SocialLogin";
+import LegalDoc from "../components/LegalDoc";
 
 const FEATURES = [
   { icon: "ti ti-chart-line", title: "Complete net-worth picture", sub: "Bank, cards, investments & property in one view" },
@@ -64,6 +65,7 @@ function maskPhone(v) {
 export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, setError, onSubmit, onAuthenticated }) {
   const isLogin = authMode === "login";
   const [showForgot, setShowForgot] = useState(false);
+  const [legalDoc, setLegalDoc] = useState(null); // "terms-of-service" | "privacy-policy"
 
   // Local UI-only state (not part of the submitted form).
   const [showPwd, setShowPwd] = useState(false);
@@ -998,8 +1000,18 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--tv-text-secondary)", lineHeight: 1.4 }}>
                     I agree to the{" "}
-                    <span style={{ color: "var(--tv-forest-light)", fontWeight: 600 }}>Terms of Service</span> and{" "}
-                    <span style={{ color: "var(--tv-forest-light)", fontWeight: 600 }}>Privacy Policy</span>.
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      style={{ color: "var(--tv-forest-light)", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                      onClick={(e) => { e.stopPropagation(); setLegalDoc("terms-of-service"); }}
+                    >Terms of Service</span> and{" "}
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      style={{ color: "var(--tv-forest-light)", fontWeight: 600, cursor: "pointer", textDecoration: "underline" }}
+                      onClick={(e) => { e.stopPropagation(); setLegalDoc("privacy-policy"); }}
+                    >Privacy Policy</span>.
                   </div>
                 </div>
               </div>
@@ -1039,6 +1051,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
         </div>
       </div>
       {showForgot && <ForgotPassword onClose={() => setShowForgot(false)} />}
+      {legalDoc && <LegalDoc doc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }
