@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { api, setAuthToken, getStoredEmail, getStoredName } from '../api';
 import { getTheme, applyTheme } from '../theme';
 import { getSessionTimeoutMinutes, setSessionTimeoutMinutes } from '../hooks/useIdleLogout';
+import { enablePushOnThisDevice, disablePushOnThisDevice } from '../pushClient';
 
 // Safe localStorage helpers for local-only preferences.
 function lsGet(key, fallback) {
@@ -148,14 +149,27 @@ export default function SettingsPage() {
   // Optimistic toggle for backend-backed prefs; revert + show error on failure.
   const toggleBackendPref = async (key) => {
     const prevPrefs = prefs;
-    const next = { ...prevPrefs, [key]: !prevPrefs[key] };
+    const turningOn = !prevPrefs[key];
+    const next = { ...prevPrefs, [key]: turningOn };
     setPrefs(next);
     setPrefsError('');
     try {
       await api.putNotificationPreferences(toPayload(next));
-    } catch {
+      // Turning push on also subscribes THIS device (permission + token register);
+      // turning it off unsubscribes. Failures here revert the toggle with a reason.
+      if (key === 'pushEnabled') {
+        if (turningOn) await enablePushOnThisDevice();
+        else await disablePushOnThisDevice();
+      }
+    } catch (e) {
       setPrefs(prevPrefs);
-      setPrefsError('Could not save your change. Please try again.');
+      if (key === 'pushEnabled' && turningOn) {
+        // Keep the server pref off too, since the device couldn't subscribe.
+        api.putNotificationPreferences(toPayload(prevPrefs)).catch(() => {});
+        setPrefsError(e?.message || 'Could not enable push on this device.');
+      } else {
+        setPrefsError('Could not save your change. Please try again.');
+      }
     }
   };
 

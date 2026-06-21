@@ -34,15 +34,18 @@ public class InternalNotificationController {
     private final ChannelRouter channelRouter;
     private final AuthEmailClient authEmailClient;
     private final NotificationPreferenceRepository preferenceRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
 
     public InternalNotificationController(NotificationRepository repository,
                                           ChannelRouter channelRouter,
                                           AuthEmailClient authEmailClient,
-                                          NotificationPreferenceRepository preferenceRepository) {
+                                          NotificationPreferenceRepository preferenceRepository,
+                                          DeviceTokenRepository deviceTokenRepository) {
         this.repository = repository;
         this.channelRouter = channelRouter;
         this.authEmailClient = authEmailClient;
         this.preferenceRepository = preferenceRepository;
+        this.deviceTokenRepository = deviceTokenRepository;
     }
 
     @PostMapping
@@ -79,7 +82,26 @@ public class InternalNotificationController {
         if (Boolean.parseBoolean(str(body.get("email"), "false"))) {
             sendEmail(n);
         }
+        // Push delivery (best-effort): only to users who opted in (pushEnabled) and have
+        // a registered device, and only when a real PUSH provider is active.
+        sendPush(n);
         return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    private void sendPush(Notification n) {
+        try {
+            ChannelProvider provider = channelRouter.providerFor(Channel.PUSH);
+            if (provider == null) return; // mock/none — nothing to send
+            boolean optedIn = preferenceRepository.findByUserId(n.getUserId())
+                    .map(NotificationPreference::isPushEnabled).orElse(false);
+            if (!optedIn) return; // push is opt-in (pushEnabled defaults false)
+            var tokens = deviceTokenRepository.findByUserId(n.getUserId());
+            for (DeviceToken d : tokens) {
+                provider.send(d.getToken(), n.getTitle(), n.getBody(), Map.of("type", "alert"));
+            }
+        } catch (Exception e) {
+            log.warn("push for user {} failed: {}", n.getUserId(), e.getMessage());
+        }
     }
 
     private void sendEmail(Notification n) {
