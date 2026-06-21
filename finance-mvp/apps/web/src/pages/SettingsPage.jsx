@@ -3,6 +3,7 @@ import { api, setAuthToken, getStoredEmail, getStoredName } from '../api';
 import { getTheme, applyTheme } from '../theme';
 import { getSessionTimeoutMinutes, setSessionTimeoutMinutes } from '../hooks/useIdleLogout';
 import { enablePushOnThisDevice, disablePushOnThisDevice } from '../pushClient';
+import LegalDoc from '../components/LegalDoc';
 
 // Safe localStorage helpers for local-only preferences.
 function lsGet(key, fallback) {
@@ -80,6 +81,7 @@ export default function SettingsPage() {
   }, [darkMode]);
 
   // Data & privacy UI state.
+  const [legalDoc, setLegalDoc] = useState(null); // "terms-of-service" | "privacy-policy"
   const [exportRequested, setExportRequested] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -435,6 +437,21 @@ export default function SettingsPage() {
 
           <div className="setting-row">
             <div>
+              <div className="setting-label">Legal</div>
+              <div className="setting-help">Our Terms of Service and Privacy Policy</div>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLegalDoc('terms-of-service')}>
+                <i className="ti ti-file-description"></i> Terms
+              </button>
+              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setLegalDoc('privacy-policy')}>
+                <i className="ti ti-shield-lock"></i> Privacy
+              </button>
+            </div>
+          </div>
+
+          <div className="setting-row">
+            <div>
               <div className="setting-label">Delete account</div>
               <div className="setting-help">Permanently remove your account and data</div>
               {confirmingDelete ? (
@@ -483,6 +500,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      {legalDoc && <LegalDoc doc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }
