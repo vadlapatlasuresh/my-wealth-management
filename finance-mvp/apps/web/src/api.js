@@ -383,6 +383,13 @@ export const api = {
     request("/api/v1/notifications/preferences", { method: "PUT", body: JSON.stringify(payload) }),
   testNotification: () => request("/api/v1/notifications/test", { method: "POST" }),
   markNotificationRead: (id) => request(`/api/v1/notifications/${id}/read`, { method: "POST" }),
+  // Push: server-side config (is push live + the public web-push config) + device
+  // token register/unregister for this device.
+  getPushConfig: () => request("/api/v1/notifications/push/config"),
+  registerDevice: (token, platform = "web") =>
+    request("/api/v1/notifications/devices", { method: "POST", body: JSON.stringify({ token, platform }) }),
+  unregisterDevice: (token) =>
+    request("/api/v1/notifications/devices", { method: "DELETE", body: JSON.stringify({ token }) }),
 
   // Customer Care / Support (role-gated: CARE or ADMIN)
   // Accepts either a string (free-text query) or an object with any of
