@@ -191,11 +191,13 @@ public class FinancialCoreService {
         snap.setRealEstateValue(realEstateValue);
         snap.setRealEstateEquity(realEstateEquity);
         try {
-            return snapshotRepository.save(snap);
+            snapshotRepository.save(snap);
         } catch (Exception e) {
             log.warn("net-worth snapshot persist failed ({}); continuing", e.getMessage());
-            return snap;
         }
+        // Return the populated entity (not save()'s result) so callers never depend on
+        // the repository echoing it back.
+        return snap;
     }
 
     /** Refresh today's snapshot for one user from a background job (no request context). */
