@@ -1,5 +1,6 @@
 package com.mywealthmanagement.notificationservice.internal;
 
+import com.mywealthmanagement.notificationservice.notification.DeviceTokenRepository;
 import com.mywealthmanagement.notificationservice.notification.NotificationPreferenceRepository;
 import com.mywealthmanagement.notificationservice.notification.NotificationRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,7 @@ public class InternalPurgeController {
 
     private final NotificationRepository notificationRepository;
     private final NotificationPreferenceRepository notificationPreferenceRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
@@ -32,6 +34,7 @@ public class InternalPurgeController {
         }
         notificationRepository.deleteByUserId(userId);
         notificationPreferenceRepository.deleteByUserId(userId);
+        deviceTokenRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 }
