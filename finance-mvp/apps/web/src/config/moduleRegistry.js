@@ -170,8 +170,8 @@ export const MODULE_REGISTRY = {
   },
   profile: {
     id: 'profile', title: 'Profile', icon: 'ti ti-user',
-    route: '/profile', section: null, defaultOrder: 0,
-    component: ProfilePage, inNavByDefault: false,
+    route: '/profile', section: SECTION_SETTINGS, defaultOrder: 4,
+    component: ProfilePage, inNavByDefault: true,
   },
   admin: {
     id: 'admin', title: 'Admin · Analytics', icon: 'ti ti-chart-dots',
