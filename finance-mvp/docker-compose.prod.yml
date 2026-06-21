@@ -34,9 +34,15 @@ x-java-defaults: &java-defaults
     # Centralized secret store: services fetch their scoped secrets at boot.
     SECRETS_URI: http://secrets-service:8080
     SECRETS_INTERNAL_KEY: ${SECRETS_INTERNAL_KEY:?set SECRETS_INTERNAL_KEY in .env.prod}
-    # JVM: respect container memory limits. Override via JVM_OPTS in .env.prod on
-    # small hosts (e.g. a 6GB box: SerialGC + capped metaspace shrinks each service).
-    JAVA_TOOL_OPTIONS: "${JVM_OPTS:--XX:MaxRAMPercentage=75 -XX:InitialRAMPercentage=50}"
+    # JVM sizing for a small multi-service host. The previous default
+    # (-XX:MaxRAMPercentage=75) sized EACH heap to 75% of TOTAL host RAM because no
+    # per-container mem_limit was set — so 11 JVMs cold-booting together over-committed
+    # memory and the OS OOM-killed services mid-deploy (e.g. auth restarting once).
+    # A FIXED modest heap bounds each service regardless of host size; SerialGC suits
+    # small heaps; TieredStopAtLevel=1 + disabled JMX speed cold start (less boot
+    # contention). Override per-host via JVM_OPTS in .env.prod (e.g. raise -Xmx on a
+    # big box, or lower it further on a tiny one).
+    JAVA_TOOL_OPTIONS: "${JVM_OPTS:--Xms64m -Xmx384m -XX:+UseSerialGC -XX:MaxMetaspaceSize=160m -XX:TieredStopAtLevel=1 -Dspring.jmx.enabled=false}"
     # Neon connection budget: cap each service's pool so 10 services don't exhaust
     # Postgres' connection limit (10 * 5 = 50 max). minimum-idle keeps it lean.
     SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "5"
