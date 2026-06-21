@@ -766,6 +766,22 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 }
 .wizard-switch.on .knob { transform: translateX(18px); }
 
+/* Legal document modal (Terms / Privacy) — readable long-form typography */
+.legal-body { font-size: 13.5px; color: var(--tv-text-secondary); line-height: 1.6; }
+.legal-body h1 { font-size: 20px; color: var(--tv-text-primary); margin: 4px 0 10px; }
+.legal-body h2 { font-size: 15px; color: var(--tv-text-primary); margin: 18px 0 6px; }
+.legal-body h3 { font-size: 13.5px; color: var(--tv-text-primary); margin: 12px 0 4px; }
+.legal-body p { margin: 0 0 9px; }
+.legal-body ul { margin: 0 0 9px; padding-left: 20px; }
+.legal-body li { margin: 0 0 4px; }
+.legal-body strong { color: var(--tv-text-primary); }
+.legal-body code { background: var(--tv-bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.legal-body blockquote {
+  margin: 0 0 12px; padding: 10px 12px; border-left: 3px solid var(--tv-gold);
+  background: var(--tv-gold-pale); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--tv-text-secondary); font-size: 12.5px;
+}
+
 .stepper {
   display: flex;
   align-items: center;
