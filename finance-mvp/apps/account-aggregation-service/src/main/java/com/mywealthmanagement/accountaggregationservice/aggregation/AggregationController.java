@@ -34,6 +34,7 @@ public class AggregationController {
     private final PlaidService plaidService;
     private final AccountService accountService;
     private final TransactionService transactionService;
+    private final com.mywealthmanagement.accountaggregationservice.transaction.CategoryRuleService categoryRuleService;
     private final PlaidWebhookVerifier plaidWebhookVerifier;
     private final JwtService jwtService;
 
@@ -109,6 +110,32 @@ public class AggregationController {
     @GetMapping("/recurring-bills")
     public ResponseEntity<List<com.mywealthmanagement.accountaggregationservice.transaction.RecurringBillDto>> recurringBills() {
         return ResponseEntity.ok(transactionService.getRecurringBills(getUserId()));
+    }
+
+    // ---- Auto-categorization rules ----
+    @GetMapping("/category-rules")
+    public ResponseEntity<List<com.mywealthmanagement.accountaggregationservice.transaction.CategoryRule>> listRules() {
+        return ResponseEntity.ok(categoryRuleService.list(getUserId()));
+    }
+
+    @PostMapping("/category-rules")
+    public ResponseEntity<com.mywealthmanagement.accountaggregationservice.transaction.CategoryRule> createRule(
+            @RequestBody Map<String, String> body) {
+        var b = body == null ? Map.<String, String>of() : body;
+        return ResponseEntity.ok(categoryRuleService.create(
+                getUserId(), b.get("matchType"), b.get("pattern"), b.get("category")));
+    }
+
+    @DeleteMapping("/category-rules/{id}")
+    public ResponseEntity<Void> deleteRule(@PathVariable Long id) {
+        categoryRuleService.delete(getUserId(), id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Apply all of the user's rules to their uncategorized transactions. Returns count. */
+    @PostMapping("/category-rules/apply")
+    public ResponseEntity<Map<String, Integer>> applyRules() {
+        return ResponseEntity.ok(Map.of("updated", categoryRuleService.applyRules(getUserId())));
     }
 
     /** Explicit pull-based sync (e.g. a "Refresh" button). Returns how many changed. */
