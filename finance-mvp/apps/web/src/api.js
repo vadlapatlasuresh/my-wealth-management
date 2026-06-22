@@ -195,6 +195,11 @@ export const api = {
     request("/api/v1/planning/tax/estimate", { method: "POST", body: JSON.stringify(payload) }),
   getTaxRules: (year) => request(`/api/v1/planning/tax/rules${year ? `?year=${year}` : ""}`),
   getTaxYears: () => request("/api/v1/planning/tax/years"),
+  // Phase 2: saved tax profile + income suggestion from linked accounts.
+  getTaxProfile: () => request("/api/v1/planning/tax/profile"),
+  saveTaxProfile: (payload) =>
+    request("/api/v1/planning/tax/profile", { method: "PUT", body: JSON.stringify(payload) }),
+  getTaxPrefill: () => request("/api/v1/planning/tax/prefill"),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {

@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * The result of an educational tax estimate. NOT tax advice — a simplified federal
@@ -29,4 +30,5 @@ public class TaxEstimate {
     private BigDecimal withholding;
     private BigDecimal refundOrOwed;        // withholding - taxAfterCredits (positive = refund)
     private String disclaimer;
+    private List<Insight> insights;         // deduction/credit finder tips
 }

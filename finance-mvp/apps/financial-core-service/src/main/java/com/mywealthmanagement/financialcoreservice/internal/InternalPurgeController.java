@@ -25,6 +25,7 @@ public class InternalPurgeController {
     private final DebtScenarioRepository debtScenarioRepository;
     private final GoalRepository goalRepository;
     private final NetWorthSnapshotRepository netWorthSnapshotRepository;
+    private final com.mywealthmanagement.financialcoreservice.tax.TaxProfileRepository taxProfileRepository;
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
@@ -58,6 +59,7 @@ public class InternalPurgeController {
         budgetRepository.deleteByUserId(userId);          // budget lines cascade via JPA
         goalRepository.deleteByUserId(userId);
         netWorthSnapshotRepository.deleteByUserId(userId);
+        taxProfileRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 }
