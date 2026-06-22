@@ -1,0 +1,173 @@
+import { useState } from "react";
+import { api } from "../api";
+
+const FILING = [
+  { value: "SINGLE", label: "Single" },
+  { value: "MARRIED_JOINT", label: "Married filing jointly" },
+  { value: "MARRIED_SEPARATE", label: "Married filing separately" },
+  { value: "HEAD_OF_HOUSEHOLD", label: "Head of household" },
+];
+
+const usd = (v) =>
+  v == null ? "—" : Number(v).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+const pct = (v) => (v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`);
+
+/**
+ * Tax Overview — an educational federal estimate. Sends the user's figures to the
+ * versioned estimator (financial-core) and shows the result. NOT tax advice; ends with a
+ * CTA to find a CPA (the marketplace lands in a later phase).
+ */
+export default function TaxPage() {
+  const [form, setForm] = useState({
+    year: 2025,
+    filingStatus: "SINGLE",
+    grossIncome: "",
+    adjustments: "",
+    itemizedDeductions: "",
+    dependentsUnder17: 0,
+    withholding: "",
+  });
+  const [result, setResult] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const calculate = async (e) => {
+    e?.preventDefault();
+    setBusy(true);
+    setErr("");
+    try {
+      setResult(await api.estimateTax(form));
+    } catch (e2) {
+      setErr(e2?.message || "Could not calculate the estimate.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const owed = result && Number(result.refundOrOwed) < 0;
+
+  return (
+    <div id="page-tax" className="page active">
+      <div className="page-header">
+        <div>
+          <div className="page-title">Tax Overview</div>
+          <div className="page-subtitle">An educational estimate of your federal taxes</div>
+        </div>
+      </div>
+
+      <div className="card home-guide-banner" style={{ marginBottom: 16, display: "flex", gap: 12, alignItems: "center" }}>
+        <i className="ti ti-info-circle" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
+        <div className="item-sub">
+          This is an <strong>educational estimate, not tax advice</strong>. It's a simplified federal
+          calculation (omits AMT, capital gains, self-employment tax, and most credits). For your actual
+          return, connect with a CPA.
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,360px) 1fr", gap: 16, alignItems: "start" }}>
+        {/* Inputs */}
+        <form className="card" onSubmit={calculate}>
+          <div className="card-title">Your figures ({form.year})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div>
+              <label className="form-label">Tax year</label>
+              <select className="form-select" value={form.year} onChange={set("year")}>
+                <option value={2025}>2025</option>
+                <option value={2024}>2024</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Filing status</label>
+              <select className="form-select" value={form.filingStatus} onChange={set("filingStatus")}>
+                {FILING.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+              </select>
+            </div>
+            <Field label="Gross income" value={form.grossIncome} onChange={set("grossIncome")} placeholder="80,000" />
+            <Field label="Above-the-line adjustments" value={form.adjustments} onChange={set("adjustments")} placeholder="HSA, IRA, student loan… (optional)" />
+            <Field label="Itemized deductions" value={form.itemizedDeductions} onChange={set("itemizedDeductions")} placeholder="mortgage interest, SALT, charity… (optional)" />
+            <div>
+              <label className="form-label">Dependents under 17</label>
+              <input className="form-input" type="number" min="0" value={form.dependentsUnder17} onChange={set("dependentsUnder17")} />
+            </div>
+            <Field label="Federal tax withheld" value={form.withholding} onChange={set("withholding")} placeholder="for refund vs. owed (optional)" />
+            <button type="submit" className="btn btn-primary" disabled={busy}>
+              {busy ? "Calculating…" : "Calculate estimate"}
+            </button>
+            {err && <p className="error" style={{ color: "var(--tv-negative)", fontSize: 13 }}>{err}</p>}
+          </div>
+        </form>
+
+        {/* Results */}
+        <div>
+          {!result ? (
+            <div className="card empty-state" style={{ padding: 40, textAlign: "center" }}>
+              <i className="ti ti-calculator" style={{ fontSize: 34, color: "var(--tv-text-muted)" }}></i>
+              <p>Enter your figures and calculate to see your estimate.</p>
+            </div>
+          ) : (
+            <>
+              <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 12 }}>
+                <Kpi label="Estimated federal tax" value={usd(result.taxAfterCredits)} />
+                <Kpi label={owed ? "Estimated balance due" : "Estimated refund"}
+                     value={usd(Math.abs(Number(result.refundOrOwed)))}
+                     color={owed ? "var(--tv-negative)" : "var(--tv-positive)"} />
+                <Kpi label="Effective rate" value={pct(result.effectiveRate)} />
+                <Kpi label="Marginal bracket" value={pct(result.marginalRate)} />
+              </div>
+              <div className="card">
+                <div className="card-title">How we got there</div>
+                <Row k="Gross income" v={usd(result.grossIncome)} />
+                <Row k="Adjusted gross income (AGI)" v={usd(result.agi)} />
+                <Row k={`Deduction (${result.deductionType?.toLowerCase()})`} v={`− ${usd(result.deductionUsed)}`} />
+                <Row k="Taxable income" v={usd(result.taxableIncome)} bold />
+                <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
+                {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
+                <Row k="Estimated federal tax" v={usd(result.taxAfterCredits)} bold />
+                <p className="item-sub" style={{ marginTop: 10, fontSize: 11.5 }}>{result.disclaimer}</p>
+              </div>
+              <div className="card" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
+                <i className="ti ti-user-check" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
+                <div style={{ flex: 1 }}>
+                  <div className="item-name">Want a professional to file this?</div>
+                  <div className="item-sub">Connect with a verified CPA (coming soon).</div>
+                </div>
+                <button className="btn btn-secondary btn-sm" disabled title="CPA marketplace — coming soon">
+                  Find a CPA
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Field({ label, value, onChange, placeholder }) {
+  return (
+    <div>
+      <label className="form-label">{label}</label>
+      <input className="form-input" inputMode="decimal" value={value} onChange={onChange} placeholder={placeholder} />
+    </div>
+  );
+}
+
+function Kpi({ label, value, color }) {
+  return (
+    <div className="card kpi-card" style={{ padding: 16 }}>
+      <div className="item-sub" style={{ fontSize: 12 }}>{label}</div>
+      <div className="kpi-value" style={{ fontSize: 22, color: color || "var(--tv-text-primary)" }}>{value}</div>
+    </div>
+  );
+}
+
+function Row({ k, v, bold }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
+      <span className="item-sub" style={{ fontWeight: bold ? 600 : 400, color: bold ? "var(--tv-text-primary)" : undefined }}>{k}</span>
+      <span style={{ fontWeight: bold ? 700 : 500, fontVariantNumeric: "tabular-nums" }}>{v}</span>
+    </div>
+  );
+}
