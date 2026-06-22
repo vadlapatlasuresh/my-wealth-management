@@ -1,13 +1,13 @@
 # Privacy Policy
 
-> **DRAFT — NOT LEGAL ADVICE.** Tailored to TerraVest's current data practices. **Have a
-> licensed attorney (familiar with GLBA/CCPA/CPRA/GDPR as applicable) review it before
-> relying on it.** Fill every `[BRACKETED]` placeholder and confirm each statement matches
-> your production configuration.
+> **DRAFT — NOT LEGAL ADVICE.** Tailored to TerraVest Finance LLC's data practices.
+> Company details are filled in; confirm each statement matches your production config and
+> add the mailing address. **Have a licensed attorney (GLBA/CCPA/CPRA/GDPR) review before
+> relying on it.**
 
-**Effective date:** `[EFFECTIVE DATE]`
-**Controller:** `[COMPANY LEGAL NAME]` ("TerraVest", "we"), `[ENTITY TYPE]`, `[STATE]`.
-**Contact / privacy requests:** `[PRIVACY EMAIL]`
+**Effective date:** `June 22, 2026`
+**Controller:** `TerraVest Finance LLC` ("TerraVest", "we"), `limited liability company`, `Texas`.
+**Contact / privacy requests:** `privacy@terravest.app`
 
 This policy explains what we collect, how we use and share it, and your choices.
 
@@ -37,12 +37,12 @@ We do **not** sell your personal information.
 ## 3. How we share information
 We share only as needed to run the Service, with service providers under contract:
 - **Plaid** — bank/financial data aggregation.
-- **`[Payment processor, e.g. Stripe]`** — payment processing.
-- **`[SendGrid]` / `[Twilio]` / `[FCM]`** — email / SMS / push delivery.
-- **`[AI provider, e.g. Anthropic/Google]`** — generating insights from the data you ask
+- **`Stripe`** — payment processing.
+- **`SendGrid` / `Twilio` / `Firebase Cloud Messaging (FCM)`** — email / SMS / push delivery.
+- **`Anthropic`** — generating insights from the data you ask
   us to analyze (sent only as needed to produce the result).
-- **Authentication** — `[Google / Apple]` if you use social sign-in.
-- **Hosting/infrastructure** — `[cloud provider]`.
+- **Authentication** — `Google` if you use social sign-in.
+- **Hosting/infrastructure** — `Google Cloud Platform`.
 
 We may also disclose information to comply with law, enforce our Terms, or protect rights
 and safety, and in a corporate transaction (merger/acquisition) subject to this policy.
@@ -67,7 +67,7 @@ processing. TerraVest provides self-service tools:
 - **Delete** your account and associated data (Settings → delete account).
 - Manage notification preferences and session settings in Settings.
 
-To exercise other rights or appeal a decision, contact `[PRIVACY EMAIL]`. We will not
+To exercise other rights or appeal a decision, contact `privacy@terravest.app`. We will not
 discriminate against you for exercising your rights.
 
 ## 7. Cookies & similar technologies
@@ -80,8 +80,8 @@ The Service is not directed to children under 18, and we do not knowingly collec
 personal information.
 
 ## 9. International users
-We operate in `[COUNTRY]`. If you access the Service from elsewhere, you consent to
-processing in `[COUNTRY/REGIONS]`, which may have different data-protection laws.
+We operate in `the United States`. If you access the Service from elsewhere, you consent to
+processing in `the United States`, which may have different data-protection laws.
 `[Add transfer mechanisms — e.g. SCCs — if you serve EU/UK users.]`
 
 ## 10. Changes
@@ -89,4 +89,4 @@ We may update this policy and will post the new version with an updated effectiv
 where required we will notify you or ask you to re-accept.
 
 ## 11. Contact
-Privacy questions or requests: `[PRIVACY EMAIL]`, `[COMPANY LEGAL NAME]`, `[MAILING ADDRESS]`.
+Privacy questions or requests: `privacy@terravest.app`, `TerraVest Finance LLC`, `[COMPANY MAILING ADDRESS — add before launch]`.

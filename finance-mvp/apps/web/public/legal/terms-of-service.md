@@ -1,13 +1,13 @@
 # Terms of Service
 
-> **DRAFT — NOT LEGAL ADVICE.** This is a starting template tailored to TerraVest's
-> current product (financial aggregation + tools, payments via licensed third parties,
-> no money custody, no investment advice). **Have a licensed attorney review and adapt
-> it before relying on it.** Fill every `[BRACKETED]` placeholder.
+> **DRAFT — NOT LEGAL ADVICE.** Tailored to TerraVest Finance LLC (financial aggregation
+> + tools, payments via licensed third parties, no money custody, no investment advice).
+> Company details are filled in; the mailing address and dispute-resolution clause still
+> need completion. **Have a licensed attorney review before relying on it.**
 
-**Effective date:** `[EFFECTIVE DATE]`
-**Provider:** `[COMPANY LEGAL NAME]` ("TerraVest", "we", "us"), a `[ENTITY TYPE]` organized in `[STATE]`.
-**Contact:** `[SUPPORT EMAIL]`
+**Effective date:** `June 22, 2026`
+**Provider:** `TerraVest Finance LLC` ("TerraVest", "we", "us"), a `limited liability company` organized in `Texas`.
+**Contact:** `support@terravest.app`
 
 By creating an account or using the TerraVest application and website (the "Service"),
 you agree to these Terms. If you do not agree, do not use the Service.
@@ -39,7 +39,7 @@ Plaid to access and use your account data as described in our Privacy Policy.
 
 ## 4. Payments & bill pay
 Where the Service facilitates payments or bill pay, **funds are processed by licensed
-third-party payment providers** (e.g., `[Stripe / Plaid / your processor]`). **TerraVest
+third-party payment providers** (e.g., `Stripe`). **TerraVest
 does not take custody of, hold, or transmit your funds.** Your use of those features is
 also subject to the processor's terms. You are responsible for ensuring sufficient funds
 and for the accuracy of payment details; we are not liable for processor errors, delays,
@@ -83,7 +83,7 @@ ERROR-FREE, OR THAT DATA FROM THIRD PARTIES IS CORRECT.
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, TERRAVEST AND ITS AFFILIATES WILL NOT BE LIABLE
 FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR LOST
 PROFITS OR DATA. OUR TOTAL LIABILITY FOR ANY CLAIM WILL NOT EXCEED THE GREATER OF
-`[AMOUNT, e.g. US$100]` OR THE FEES YOU PAID US IN THE 12 MONTHS BEFORE THE CLAIM.
+`US$100` OR THE FEES YOU PAID US IN THE 12 MONTHS BEFORE THE CLAIM.
 
 ## 12. Indemnification
 You agree to indemnify and hold TerraVest harmless from claims arising out of your misuse
@@ -99,9 +99,9 @@ We may update these Terms. We will post the updated version with a new effective
 where required, ask you to re-accept. Continued use after changes means you accept them.
 
 ## 15. Governing law & dispute resolution
-These Terms are governed by the laws of `[STATE]`, without regard to conflict-of-laws
+These Terms are governed by the laws of `Texas`, without regard to conflict-of-laws
 rules. `[Insert dispute-resolution / arbitration / class-action-waiver clause as advised
 by counsel.]`
 
 ## 16. Contact
-Questions about these Terms: `[SUPPORT EMAIL]`.
+Questions about these Terms: `support@terravest.app`.
