@@ -217,6 +217,22 @@ export function resolveNav(config, registry = MODULE_REGISTRY, flags = {}) {
     (buckets[sectionId] = buckets[sectionId] || []).push(item);
   }
 
+  // Union with the registry: include default-nav modules the remote config doesn't
+  // mention at all, so a NEW module (added to the registry after the stored config was
+  // written) shows up without needing a config update. Modules the config DOES list —
+  // including ones it disables — stay governed by the loop above.
+  const mentioned = new Set(cfg.modules.map((m) => m && m.id).filter(Boolean));
+  for (const [id, reg] of Object.entries(registry)) {
+    if (mentioned.has(id)) continue;            // config decides these
+    if (!reg || reg.section == null) continue;  // route-only, never in nav
+    if (reg.inNavByDefault === false) continue; // not a default sidebar item
+    if (!sectionIds.has(reg.section)) continue; // its section isn't present
+    (buckets[reg.section] = buckets[reg.section] || []).push({
+      id, to: reg.route, icon: reg.icon, label: reg.title,
+      badge: reg.badge, order: reg.defaultOrder ?? 0,
+    });
+  }
+
   const result = [];
   for (const section of orderedSections) {
     const items = buckets[section.id];
