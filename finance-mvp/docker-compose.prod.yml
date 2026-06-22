@@ -336,11 +336,15 @@ services:
     container_name: wealth-audit-service
     environment:
       <<: *java-env
-      SECRETS_SCOPES: jwt,audit
+      SECRETS_SCOPES: jwt,audit,notifications-internal
       DATABASE_URL: ${AUDIT_DATABASE_URL:?}
       DATABASE_USER: ${AUDIT_DATABASE_USER:?}
       DATABASE_PASSWORD: ${AUDIT_DATABASE_PASSWORD:?}
       API_GATEWAY_URL: http://api-gateway:8080
+      # Health monitor: polls every service + emails an admin on UP/DOWN transitions.
+      SERVICE_NOTIFICATION_URL: http://notification-service:8080
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
+      MONITOR_ALERT_ADMIN_USER_ID: ${MONITOR_ALERT_ADMIN_USER_ID:-}   # set to your admin user id to get alert emails
 
   # ---------------- Centralized secret store ----------------
   secrets-service:

@@ -30,8 +30,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/users/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/events").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/verify").permitAll()
-                // Operator analytics: admins / customer-care only.
+                // Operator analytics + the system health/alerts feed: admins / customer-care only.
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/stats").hasAnyRole("ADMIN", "CARE")
+                .requestMatchers(HttpMethod.GET, "/api/v1/audit/health/**").hasAnyRole("ADMIN", "CARE")
                 // Remaining endpoints (e.g. /me) require a valid user JWT.
                 .anyRequest().authenticated()
                 .and()
