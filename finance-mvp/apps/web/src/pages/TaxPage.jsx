@@ -1,5 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../api";
+
+const INSIGHT_STYLE = {
+  TIP:         { icon: "ti ti-bulb", color: "var(--tv-forest)", bg: "var(--tv-sage-pale)" },
+  OPPORTUNITY: { icon: "ti ti-trending-up", color: "var(--tv-gold)", bg: "var(--tv-gold-pale)" },
+  WARNING:     { icon: "ti ti-alert-triangle", color: "var(--tv-negative)", bg: "var(--tv-negative-bg)" },
+  INFO:        { icon: "ti ti-info-circle", color: "var(--tv-text-secondary)", bg: "var(--tv-bg)" },
+};
 
 const FILING = [
   { value: "SINGLE", label: "Single" },
@@ -30,8 +37,19 @@ export default function TaxPage() {
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [saved, setSaved] = useState("");
+  const [suggesting, setSuggesting] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Load a previously saved profile (404 = none yet).
+  useEffect(() => {
+    let cancelled = false;
+    api.getTaxProfile()
+      .then((p) => { if (!cancelled && p) setForm((f) => ({ ...f, ...clean(p) })); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const calculate = async (e) => {
     e?.preventDefault();
@@ -43,6 +61,30 @@ export default function TaxPage() {
       setErr(e2?.message || "Could not calculate the estimate.");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    setSaved("");
+    try {
+      await api.saveTaxProfile(form);
+      setSaved("Saved.");
+      setTimeout(() => setSaved(""), 2500);
+    } catch {
+      setSaved("Could not save.");
+    }
+  };
+
+  const useSuggestion = async () => {
+    setSuggesting(true);
+    try {
+      const s = await api.getTaxPrefill();
+      if (s && s.grossIncome != null) setForm((f) => ({ ...f, grossIncome: String(Math.round(s.grossIncome)) }));
+      else setErr("No linked-account deposits to estimate income from yet.");
+    } catch {
+      /* best-effort */
+    } finally {
+      setSuggesting(false);
     }
   };
 
@@ -84,7 +126,13 @@ export default function TaxPage() {
                 {FILING.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </div>
-            <Field label="Gross income" value={form.grossIncome} onChange={set("grossIncome")} placeholder="80,000" />
+            <div>
+              <Field label="Gross income" value={form.grossIncome} onChange={set("grossIncome")} placeholder="80,000" />
+              <button type="button" onClick={useSuggestion} disabled={suggesting}
+                style={{ background: "none", color: "var(--tv-forest-light)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0 0" }}>
+                <i className="ti ti-wand"></i> {suggesting ? "Estimating…" : "Use income from my accounts"}
+              </button>
+            </div>
             <Field label="Above-the-line adjustments" value={form.adjustments} onChange={set("adjustments")} placeholder="HSA, IRA, student loan… (optional)" />
             <Field label="Itemized deductions" value={form.itemizedDeductions} onChange={set("itemizedDeductions")} placeholder="mortgage interest, SALT, charity… (optional)" />
             <div>
@@ -92,9 +140,15 @@ export default function TaxPage() {
               <input className="form-input" type="number" min="0" value={form.dependentsUnder17} onChange={set("dependentsUnder17")} />
             </div>
             <Field label="Federal tax withheld" value={form.withholding} onChange={set("withholding")} placeholder="for refund vs. owed (optional)" />
-            <button type="submit" className="btn btn-primary" disabled={busy}>
-              {busy ? "Calculating…" : "Calculate estimate"}
-            </button>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1 }}>
+                {busy ? "Calculating…" : "Calculate estimate"}
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={saveProfile} title="Save these figures">
+                <i className="ti ti-device-floppy"></i> Save
+              </button>
+            </div>
+            {saved && <p className="item-sub" style={{ color: "var(--tv-positive)", fontSize: 12 }}>{saved}</p>}
             {err && <p className="error" style={{ color: "var(--tv-negative)", fontSize: 13 }}>{err}</p>}
           </div>
         </form>
@@ -127,6 +181,27 @@ export default function TaxPage() {
                 <Row k="Estimated federal tax" v={usd(result.taxAfterCredits)} bold />
                 <p className="item-sub" style={{ marginTop: 10, fontSize: 11.5 }}>{result.disclaimer}</p>
               </div>
+
+              {result.insights?.length > 0 && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title">Ways to understand & lower your taxes</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {result.insights.map((ins, i) => {
+                      const s = INSIGHT_STYLE[ins.type] || INSIGHT_STYLE.INFO;
+                      return (
+                        <div key={i} style={{ display: "flex", gap: 10, padding: "10px 12px", borderRadius: "var(--radius-md)", background: s.bg }}>
+                          <i className={s.icon} style={{ fontSize: 18, color: s.color, marginTop: 1 }}></i>
+                          <div>
+                            <div className="item-name" style={{ fontSize: 13.5 }}>{ins.title}</div>
+                            <div className="item-sub" style={{ fontSize: 12.5 }}>{ins.detail}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="card" style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 12 }}>
                 <i className="ti ti-user-check" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
                 <div style={{ flex: 1 }}>
@@ -143,6 +218,19 @@ export default function TaxPage() {
       </div>
     </div>
   );
+}
+
+// Map a saved tax profile (server shape) onto the form, skipping nulls.
+function clean(p) {
+  const out = {};
+  if (p.taxYear != null) out.year = p.taxYear;
+  if (p.filingStatus) out.filingStatus = p.filingStatus;
+  if (p.grossIncome != null) out.grossIncome = String(p.grossIncome);
+  if (p.adjustments != null) out.adjustments = String(p.adjustments);
+  if (p.itemizedDeductions != null) out.itemizedDeductions = String(p.itemizedDeductions);
+  if (p.dependentsUnder17 != null) out.dependentsUnder17 = p.dependentsUnder17;
+  if (p.withholding != null) out.withholding = String(p.withholding);
+  return out;
 }
 
 function Field({ label, value, onChange, placeholder }) {

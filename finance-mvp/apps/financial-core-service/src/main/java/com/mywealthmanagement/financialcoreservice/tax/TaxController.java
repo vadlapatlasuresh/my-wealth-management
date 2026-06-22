@@ -2,10 +2,12 @@ package com.mywealthmanagement.financialcoreservice.tax;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,19 +22,48 @@ import java.util.Map;
 public class TaxController {
 
     private final TaxRules taxRules;
+    private final TaxProfileService taxProfileService;
 
-    /** Estimate federal tax from the supplied figures. NOT tax advice. */
+    /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
     @PostMapping("/estimate")
     public TaxEstimate estimate(@RequestBody Map<String, Object> body) {
         TaxRuleSet rules = taxRules.forYear(intVal(body.get("year"), null));
-        TaxEstimateInput in = new TaxEstimateInput(
-                parseStatus(str(body.get("filingStatus"))),
-                num(body.get("grossIncome")),
-                num(body.get("adjustments")),
-                num(body.get("itemizedDeductions")),
-                intVal(body.get("dependentsUnder17"), 0),
-                num(body.get("withholding")));
-        return TaxEstimator.estimate(in, rules);
+        TaxEstimateInput in = inputFrom(body);
+        TaxEstimate estimate = TaxEstimator.estimate(in, rules);
+        estimate.setInsights(TaxInsights.generate(in, estimate, rules));
+        return estimate;
+    }
+
+    /** The user's saved tax profile (or 404 if none saved yet). */
+    @GetMapping("/profile")
+    public TaxProfile getProfile() {
+        return taxProfileService.get(getUserId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No tax profile saved"));
+    }
+
+    /** Create or update the user's saved tax profile. */
+    @PutMapping("/profile")
+    public TaxProfile saveProfile(@RequestBody Map<String, Object> body) {
+        TaxProfile p = new TaxProfile();
+        p.setTaxYear(intVal(body.get("taxYear"), intVal(body.get("year"), 2025)));
+        p.setFilingStatus(parseStatus(str(body.get("filingStatus"))).name());
+        p.setGrossIncome(num(body.get("grossIncome")));
+        p.setAdjustments(num(body.get("adjustments")));
+        p.setItemizedDeductions(num(body.get("itemizedDeductions")));
+        p.setDependentsUnder17(intVal(body.get("dependentsUnder17"), 0));
+        p.setWithholding(num(body.get("withholding")));
+        return taxProfileService.upsert(getUserId(), p);
+    }
+
+    /** Suggested pre-fill from the user's linked accounts (rough; the user confirms it). */
+    @GetMapping("/prefill")
+    public Map<String, Object> prefill() {
+        BigDecimal income = taxProfileService.suggestAnnualIncome(getAuthorizationHeader());
+        Map<String, Object> out = new HashMap<>();
+        out.put("grossIncome", income);
+        out.put("source", income == null ? "none" : "linked-account deposits");
+        out.put("note", "Estimated from your deposits over the available history — please verify and edit.");
+        return out;
     }
 
     /** The rule set used for a given year (brackets, standard deduction, CTC) — for education. */
@@ -45,6 +76,31 @@ public class TaxController {
     @GetMapping("/years")
     public List<Integer> years() {
         return taxRules.availableYears();
+    }
+
+    private TaxEstimateInput inputFrom(Map<String, Object> body) {
+        return new TaxEstimateInput(
+                parseStatus(str(body.get("filingStatus"))),
+                num(body.get("grossIncome")),
+                num(body.get("adjustments")),
+                num(body.get("itemizedDeductions")),
+                intVal(body.get("dependentsUnder17"), 0),
+                num(body.get("withholding")));
+    }
+
+    private static Long getUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        try { return Long.valueOf(auth.getName()); }
+        catch (NumberFormatException e) { throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid session"); }
+    }
+
+    private static String getAuthorizationHeader() {
+        Object creds = SecurityContextHolder.getContext().getAuthentication().getCredentials();
+        String token = creds != null ? creds.toString() : "";
+        return token.startsWith("Bearer ") ? token : "Bearer " + token;
     }
 
     private static FilingStatus parseStatus(String s) {
