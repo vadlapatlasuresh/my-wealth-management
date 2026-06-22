@@ -190,6 +190,11 @@ export const api = {
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Recurring bills/subscriptions detected from transaction history (upcoming first).
   getRecurringBills: () => request("/api/v1/aggregation/recurring-bills"),
+  // Tax: educational federal estimate + the rule set (brackets/deductions) for a year.
+  estimateTax: (payload) =>
+    request("/api/v1/planning/tax/estimate", { method: "POST", body: JSON.stringify(payload) }),
+  getTaxRules: (year) => request(`/api/v1/planning/tax/rules${year ? `?year=${year}` : ""}`),
+  getTaxYears: () => request("/api/v1/planning/tax/years"),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {
