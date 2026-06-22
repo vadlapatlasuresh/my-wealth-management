@@ -99,6 +99,38 @@ jobs:
         run: npm run build -w apps/web
 
   # ---------------------------------------------------------------
+  # 2b) Backend-free Playwright smoke test (PRs and main).
+  #     Builds the SPA, serves it with `vite preview` (no API), and asserts the
+  #     login screen boots cleanly. This is intentionally NOT in the `images`
+  #     job's `needs:` list, so a flaky e2e never blocks image builds/deploys —
+  #     it's a signal, not a gate. `continue-on-error` keeps a red here from
+  #     failing the overall run.
+  # ---------------------------------------------------------------
+  web-smoke:
+    name: Web smoke (Playwright)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install
+        working-directory: finance-mvp
+        run: npm install
+      - name: Build web
+        working-directory: finance-mvp
+        run: npm run build -w apps/web
+      - name: Install Playwright browser
+        working-directory: finance-mvp/apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Run smoke test (no backend)
+        working-directory: finance-mvp/apps/web
+        env:
+          E2E_PREVIEW: "1"
+        run: npm run e2e -- smoke.spec.js
+
+  # ---------------------------------------------------------------
   # 3) Build & push Docker images to GHCR (main only, after build+test pass).
   #    Tags each image with the commit SHA (immutable, promotable) and `latest`.
   #    Deploy = pull these exact SHA tags onto the VM (build once, promote).
