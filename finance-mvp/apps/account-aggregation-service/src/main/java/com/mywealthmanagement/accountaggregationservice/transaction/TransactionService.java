@@ -30,6 +30,13 @@ public class TransactionService {
                 .collect(Collectors.toList());
     }
 
+    /** Detect recurring bills/subscriptions from the user's last ~13 months of history. */
+    public List<RecurringBillDto> getRecurringBills(Long userId) {
+        java.time.LocalDate from = java.time.LocalDate.now().minusMonths(13);
+        var txns = transactionRepository.findByUserIdAndDateBetween(userId, from, java.time.LocalDate.now());
+        return RecurringBillDetector.detect(txns);
+    }
+
     /**
      * Update a transaction's category. Ownership-scoped: a transaction that does not
      * belong to the caller returns 404 (not 403) so we don't leak that the id exists.
