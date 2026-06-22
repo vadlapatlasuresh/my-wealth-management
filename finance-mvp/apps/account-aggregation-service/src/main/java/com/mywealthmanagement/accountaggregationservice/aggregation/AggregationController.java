@@ -105,6 +105,12 @@ public class AggregationController {
         return ResponseEntity.ok(transactions);
     }
 
+    /** Recurring bills/subscriptions detected from transaction history (upcoming first). */
+    @GetMapping("/recurring-bills")
+    public ResponseEntity<List<com.mywealthmanagement.accountaggregationservice.transaction.RecurringBillDto>> recurringBills() {
+        return ResponseEntity.ok(transactionService.getRecurringBills(getUserId()));
+    }
+
     /** Explicit pull-based sync (e.g. a "Refresh" button). Returns how many changed. */
     @PostMapping("/transactions/sync")
     public ResponseEntity<Map<String, Integer>> syncTransactions() {

@@ -188,6 +188,8 @@ export const api = {
     }),
   getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
+  // Recurring bills/subscriptions detected from transaction history (upcoming first).
+  getRecurringBills: () => request("/api/v1/aggregation/recurring-bills"),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {
