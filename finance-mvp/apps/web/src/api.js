@@ -218,6 +218,7 @@ export const api = {
   getPendingCpas: () => request("/api/v1/cpa/admin/pending"),
   approveCpa: (id) => request(`/api/v1/cpa/admin/${id}/approve`, { method: "POST" }),
   rejectCpa: (id) => request(`/api/v1/cpa/admin/${id}/reject`, { method: "POST" }),
+  verifyCpa: (id) => request(`/api/v1/cpa/admin/${id}/verify`, { method: "POST" }),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {

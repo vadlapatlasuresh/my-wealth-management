@@ -1,5 +1,7 @@
 package com.mywealthmanagement.financialcoreservice.cpa;
 
+import com.mywealthmanagement.financialcoreservice.cpa.verify.LicenseVerificationResult;
+import com.mywealthmanagement.financialcoreservice.cpa.verify.LicenseVerifier;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +31,7 @@ class CpaServiceTest {
     @Mock private CpaProfileRepository profileRepository;
     @Mock private CpaReviewRepository reviewRepository;
     @Mock private CpaConnectionRepository connectionRepository;
+    @Mock private LicenseVerifier licenseVerifier;
 
     @InjectMocks private CpaService service;
 
@@ -137,14 +140,38 @@ class CpaServiceTest {
     }
 
     @Test
-    void moderate_approveMakesListingVisible() {
+    void moderate_approveMakesListingVisible_andRunsVerification() {
         CpaProfile pending = cpa();
         pending.setStatus("PENDING");
+        pending.setLicenseState("TX");
+        pending.setLicenseNumber("TX-104882");
         when(profileRepository.findById(CPA_ID)).thenReturn(Optional.of(pending));
         when(profileRepository.save(any(CpaProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(licenseVerifier.verify(any(), any(), any()))
+                .thenReturn(new LicenseVerificationResult(true, "MOCK", "ok"));
 
         CpaProfile result = service.moderate(CPA_ID, true);
 
         assertThat(result.getStatus()).isEqualTo("APPROVED");
+        assertThat(result.isLicenseVerified()).isTrue();
+        assertThat(result.getVerificationSource()).isEqualTo("MOCK");
+        assertThat(result.getLicenseVerifiedAt()).isNotNull();
+    }
+
+    @Test
+    void verifyLicense_persistsOutcome_andClearsTimestampWhenUnverified() {
+        CpaProfile cpa = cpa();
+        cpa.setLicenseVerified(true);
+        cpa.setLicenseVerifiedAt(java.time.LocalDateTime.now());
+        when(profileRepository.findById(CPA_ID)).thenReturn(Optional.of(cpa));
+        when(profileRepository.save(any(CpaProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(licenseVerifier.verify(any(), any(), any()))
+                .thenReturn(new LicenseVerificationResult(false, "NASBA_CPAVERIFY", "not found"));
+
+        CpaProfile result = service.verifyLicense(CPA_ID);
+
+        assertThat(result.isLicenseVerified()).isFalse();
+        assertThat(result.getVerificationSource()).isEqualTo("NASBA_CPAVERIFY");
+        assertThat(result.getLicenseVerifiedAt()).isNull();
     }
 }

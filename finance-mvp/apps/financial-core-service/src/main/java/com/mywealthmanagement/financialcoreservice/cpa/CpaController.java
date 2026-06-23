@@ -102,6 +102,19 @@ public class CpaController {
         return Map.of("id", id, "status", cpaService.moderate(id, false).getStatus());
     }
 
+    /** Admin/care: run (or re-run) the NASBA CPAVerify license check and persist the outcome. */
+    @PostMapping("/admin/{id}/verify")
+    public Map<String, Object> verify(@PathVariable Long id) {
+        requireStaff();
+        CpaProfile c = cpaService.verifyLicense(id);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("id", c.getId());
+        out.put("licenseVerified", c.isLicenseVerified());
+        out.put("verificationSource", c.getVerificationSource());
+        out.put("licenseVerifiedAt", c.getLicenseVerifiedAt() == null ? null : c.getLicenseVerifiedAt().toString());
+        return out;
+    }
+
     /** A non-identifying view of a review: rating, comment, verified, created-at, author initial. */
     private static Map<String, Object> toReviewView(CpaReview r) {
         Map<String, Object> m = new LinkedHashMap<>();
