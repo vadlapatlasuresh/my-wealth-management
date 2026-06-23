@@ -147,8 +147,15 @@ function CpaModal({ data, onClose, onChanged }) {
         </div>
 
         {c.licenseVerified && (
-          <div className="badge badge-forest" style={{ marginBottom: 10 }}>
-            <i className="ti ti-rosette-discount-check"></i> License verified — {c.licenseState} #{c.licenseNumber}
+          <div style={{ marginBottom: 10 }}>
+            <span className="badge badge-forest">
+              <i className="ti ti-rosette-discount-check"></i> License verified — {c.licenseState} #{c.licenseNumber}
+            </span>
+            {c.licenseVerifiedAt && (
+              <span className="item-sub" style={{ fontSize: 11, marginLeft: 8 }}>
+                checked {new Date(c.licenseVerifiedAt).toLocaleDateString()}
+              </span>
+            )}
           </div>
         )}
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
