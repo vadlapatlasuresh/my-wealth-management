@@ -8,8 +8,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.util.StringUtils;
 
 /**
  * The CPA marketplace: browse verified CPAs, connect, and review. Reviewing is gated on
@@ -24,12 +26,12 @@ public class CpaService {
     private final CpaReviewRepository reviewRepository;
     private final CpaConnectionRepository connectionRepository;
 
-    /** Verified CPAs, best-rated first, optionally filtered by specialty and/or free-text query. */
+    /** Approved CPAs, best-rated first, optionally filtered by specialty and/or free-text query. */
     public List<CpaProfile> list(String specialty, String query) {
         String q = query == null ? null : query.trim().toLowerCase();
         List<CpaProfile> results = (q == null || q.isEmpty())
-                ? profileRepository.findByLicenseVerifiedTrueOrderByRatingAvgDesc()
-                : profileRepository.searchVerified(q);
+                ? profileRepository.findApproved()
+                : profileRepository.searchApproved(q);
 
         String spec = specialty == null ? null : specialty.trim().toUpperCase();
         if (spec == null || spec.isEmpty()) {
@@ -39,6 +41,54 @@ public class CpaService {
                 .filter(c -> c.getSpecialtyList().stream()
                         .anyMatch(s -> s.equalsIgnoreCase(spec)))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Register a CPA listing submitted by a member. The listing starts {@code PENDING} (invisible
+     * in the directory) and unverified until an admin reviews it. Name, credentials, license
+     * (state + number) and a contact email are required (else 400). Rating fields are ignored —
+     * a fresh listing has no reviews yet.
+     */
+    @Transactional
+    public CpaProfile register(Long userId, CpaProfile draft) {
+        require(draft.getName(), "name");
+        require(draft.getCredentials(), "credentials");
+        require(draft.getLicenseState(), "licenseState");
+        require(draft.getLicenseNumber(), "licenseNumber");
+        require(draft.getContactEmail(), "contactEmail");
+        if (draft.getGoogleRating() != null
+                && (draft.getGoogleRating().signum() < 0 || draft.getGoogleRating().compareTo(BigDecimal.valueOf(5)) > 0)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "googleRating must be between 0 and 5");
+        }
+
+        // Never trust client-supplied trust signals on a self-submitted listing.
+        draft.setId(null);
+        draft.setLicenseVerified(false);
+        draft.setStatus("PENDING");
+        draft.setRatingAvg(null);
+        draft.setReviewCount(0);
+        draft.setSubmittedByUserId(userId);
+        draft.setSubmittedAt(LocalDateTime.now());
+        return profileRepository.save(draft);
+    }
+
+    /** Pending self-registrations awaiting admin review (oldest first). Admin-only. */
+    public List<CpaProfile> listPending() {
+        return profileRepository.findPending();
+    }
+
+    /** Approve or reject a pending listing. Approving makes it publicly visible. Admin-only. */
+    @Transactional
+    public CpaProfile moderate(Long cpaId, boolean approve) {
+        CpaProfile cpa = get(cpaId);
+        cpa.setStatus(approve ? "APPROVED" : "REJECTED");
+        return profileRepository.save(cpa);
+    }
+
+    private static void require(String value, String field) {
+        if (!StringUtils.hasText(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " is required");
+        }
     }
 
     /** A single CPA profile (404 if missing). */

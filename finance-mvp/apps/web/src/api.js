@@ -213,6 +213,11 @@ export const api = {
   connectCpa: (id) => request(`/api/v1/cpa/${id}/connect`, { method: "POST" }),
   reviewCpa: (id, rating, comment) =>
     request(`/api/v1/cpa/${id}/reviews`, { method: "POST", body: JSON.stringify({ rating, comment }) }),
+  // CPA self-registration (any logged-in user) + staff moderation (ADMIN/CARE).
+  registerCpa: (payload) => request("/api/v1/cpa/register", { method: "POST", body: JSON.stringify(payload) }),
+  getPendingCpas: () => request("/api/v1/cpa/admin/pending"),
+  approveCpa: (id) => request(`/api/v1/cpa/admin/${id}/approve`, { method: "POST" }),
+  rejectCpa: (id) => request(`/api/v1/cpa/admin/${id}/reject`, { method: "POST" }),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {

@@ -76,6 +76,13 @@ public class CpaSeeder implements CommandLineRunner {
         c.setBio(bio);
         c.setRatingAvg(new BigDecimal(ratingAvg));
         c.setReviewCount(reviewCount);
+        // Seeded CPAs are pre-vetted: live in the directory, with sample business links.
+        c.setStatus("APPROVED");
+        String slug = firm.toLowerCase().replaceAll("[^a-z0-9]+", "");
+        c.setWebsiteUrl("https://www." + slug + ".com");
+        c.setGoogleReviewUrl("https://g.page/" + slug + "/review");
+        c.setGoogleRating(new BigDecimal(ratingAvg));
+        c.setContactEmail("hello@" + slug + ".com");
         return c;
     }
 }

@@ -95,4 +95,56 @@ class CpaServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("409");
     }
+
+    @Test
+    void register_createsPendingAndStripsClientTrustSignals() {
+        when(profileRepository.save(any(CpaProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // A self-submitted draft that tries to spoof verification/approval/rating.
+        CpaProfile draft = new CpaProfile();
+        draft.setId(999L);
+        draft.setName("New CPA");
+        draft.setCredentials("CPA");
+        draft.setLicenseState("TX");
+        draft.setLicenseNumber("TX-1");
+        draft.setContactEmail("new@firm.com");
+        draft.setLicenseVerified(true);
+        draft.setStatus("APPROVED");
+        draft.setRatingAvg(new BigDecimal("5.00"));
+        draft.setReviewCount(99);
+
+        CpaProfile saved = service.register(USER_ID, draft);
+
+        assertThat(saved.getStatus()).isEqualTo("PENDING");
+        assertThat(saved.isLicenseVerified()).isFalse();
+        assertThat(saved.getRatingAvg()).isNull();
+        assertThat(saved.getReviewCount()).isZero();
+        assertThat(saved.getId()).isNull();
+        assertThat(saved.getSubmittedByUserId()).isEqualTo(USER_ID);
+        assertThat(saved.getSubmittedAt()).isNotNull();
+    }
+
+    @Test
+    void register_rejectsMissingRequiredFields() {
+        CpaProfile draft = new CpaProfile();
+        draft.setName("No license");
+        draft.setCredentials("CPA");
+        // missing licenseState/licenseNumber/contactEmail
+
+        assertThatThrownBy(() -> service.register(USER_ID, draft))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("400");
+    }
+
+    @Test
+    void moderate_approveMakesListingVisible() {
+        CpaProfile pending = cpa();
+        pending.setStatus("PENDING");
+        when(profileRepository.findById(CPA_ID)).thenReturn(Optional.of(pending));
+        when(profileRepository.save(any(CpaProfile.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CpaProfile result = service.moderate(CPA_ID, true);
+
+        assertThat(result.getStatus()).isEqualTo("APPROVED");
+    }
 }
