@@ -43,6 +43,9 @@ export default function TaxPage() {
   const [suggesting, setSuggesting] = useState(false);
   const [guide, setGuide] = useState([]);
   const [guideOpen, setGuideOpen] = useState(true);
+  const [doc, setDoc] = useState(null);     // parsed W-2/1099 result
+  const [docBusy, setDocBusy] = useState(false);
+  const [docErr, setDocErr] = useState("");
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -95,6 +98,46 @@ export default function TaxPage() {
     }
   };
 
+  // Parse a W-2/1099 the user uploads or pastes, and surface the extracted figures.
+  const parseText = async (text) => {
+    if (!text || !text.trim()) return;
+    setDocErr(""); setDoc(null); setDocBusy(true);
+    try {
+      const r = await api.parseTaxDocument(text);
+      setDoc(r);
+      if (!r || (r.wages == null && r.federalWithholding == null)) {
+        setDocErr(r?.note || "Couldn't read the key figures — try pasting the text, or enter them manually.");
+      }
+    } catch (e) {
+      setDocErr(e?.message || "Couldn't read that document. You can enter the figures manually.");
+    } finally {
+      setDocBusy(false);
+    }
+  };
+
+  const onDocFile = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => parseText(String(reader.result || ""));
+    reader.onerror = () => setDocErr("Couldn't open that file — try pasting the text instead.");
+    reader.readAsText(file); // best for text/text-based PDFs; images need the live OCR provider
+    e.target.value = ""; // allow re-selecting the same file
+  };
+
+  // Apply the parsed figures to the estimate form (the user confirms by clicking).
+  const applyDoc = () => {
+    if (!doc) return;
+    setForm((f) => ({
+      ...f,
+      grossIncome: doc.wages != null ? String(Math.round(doc.wages)) : f.grossIncome,
+      withholding: doc.federalWithholding != null ? String(Math.round(doc.federalWithholding)) : f.withholding,
+      year: doc.taxYear === 2024 || doc.taxYear === 2025 ? doc.taxYear : f.year,
+    }));
+    setDoc(null);
+    setSaved("Figures from your document were filled in — review, then Calculate.");
+  };
+
   const owed = result && Number(result.refundOrOwed) < 0;
 
   return (
@@ -138,6 +181,54 @@ export default function TaxPage() {
           )}
         </div>
       )}
+
+      {/* Upload a W-2 / 1099 to auto-fill income & withholding */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-title">
+          <i className="ti ti-file-upload" style={{ color: "var(--tv-forest)" }}></i> Upload your W-2 or 1099
+        </div>
+        <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 12 }}>
+          Drop in your form and we'll read the wages and federal withholding for you. It's parsed in
+          your session and <strong>never stored</strong>. Always double-check the figures.
+        </div>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+          <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
+            <i className="ti ti-upload"></i> Choose file
+            <input type="file" accept=".txt,.csv,.pdf,image/*" onChange={onDocFile} style={{ display: "none" }} />
+          </label>
+          <span className="item-sub" style={{ fontSize: 12 }}>or paste the text from your form:</span>
+        </div>
+        <textarea className="form-input" rows={3} placeholder="Paste the contents of your W-2 / 1099 here…"
+          style={{ marginTop: 8, width: "100%", resize: "vertical" }}
+          onBlur={(e) => e.target.value.trim() && parseText(e.target.value)} />
+
+        {docBusy && <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document…</p>}
+        {docErr && <p className="item-sub" style={{ color: "var(--tv-negative)", fontSize: 12.5 }}><i className="ti ti-alert-triangle"></i> {docErr}</p>}
+
+        {doc && (doc.wages != null || doc.federalWithholding != null) && (
+          <div className="card" style={{ background: "var(--tv-sage-pale)", marginTop: 12, padding: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <div>
+                <div className="item-name" style={{ fontSize: 14 }}>
+                  {doc.documentType === "W2" ? "W-2" : doc.documentType === "1099" ? "1099" : "Document"} detected
+                  {doc.taxYear ? ` · ${doc.taxYear}` : ""}
+                  <span className="badge" style={{ marginLeft: 8, background: "var(--tv-bg)", color: "var(--tv-text-secondary)", fontSize: 10 }}>
+                    {Math.round((doc.confidence || 0) * 100)}% confidence
+                  </span>
+                </div>
+                <div className="item-sub" style={{ fontSize: 12.5, marginTop: 4 }}>
+                  {doc.wages != null && <span>Wages: <strong>{usd(doc.wages)}</strong></span>}
+                  {doc.wages != null && doc.federalWithholding != null && <span> · </span>}
+                  {doc.federalWithholding != null && <span>Withheld: <strong>{usd(doc.federalWithholding)}</strong></span>}
+                </div>
+              </div>
+              <button type="button" className="btn btn-primary btn-sm" onClick={applyDoc}>
+                <i className="ti ti-arrow-down-to-arc"></i> Use these figures
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,360px) 1fr", gap: 16, alignItems: "start" }}>
         {/* Inputs */}

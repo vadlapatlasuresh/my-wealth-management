@@ -1,5 +1,7 @@
 package com.mywealthmanagement.financialcoreservice.tax;
 
+import com.mywealthmanagement.financialcoreservice.tax.ocr.ParsedTaxDocument;
+import com.mywealthmanagement.financialcoreservice.tax.ocr.TaxDocumentParser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,6 +25,7 @@ public class TaxController {
 
     private final TaxRules taxRules;
     private final TaxProfileService taxProfileService;
+    private final TaxDocumentParser taxDocumentParser;
 
     /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
     @PostMapping("/estimate")
@@ -82,6 +85,17 @@ public class TaxController {
     @GetMapping("/guide")
     public List<TaxGuide.GuideItem> guide() {
         return TaxGuide.all();
+    }
+
+    /**
+     * Parse an uploaded W-2 / 1099 (its extracted text) into suggested figures for the estimate.
+     * Best-effort and stateless — nothing is stored; the user confirms before anything is applied.
+     * Body: {@code { "text": "<document text>" }}.
+     */
+    @PostMapping("/documents/parse")
+    public ParsedTaxDocument parseDocument(@RequestBody Map<String, Object> body) {
+        getUserId(); // require auth
+        return taxDocumentParser.parse(str(body.get("text")));
     }
 
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
