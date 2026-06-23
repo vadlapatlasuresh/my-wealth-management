@@ -24,6 +24,7 @@ export default function CpaMarketplacePage() {
   const [specialty, setSpecialty] = useState("");
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(null); // selected cpa detail { profile, reviews }
+  const [registerOpen, setRegisterOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -42,6 +43,9 @@ export default function CpaMarketplacePage() {
           <div className="page-title">Find a CPA</div>
           <div className="page-subtitle">Connect with a verified tax professional</div>
         </div>
+        <button className="btn btn-primary" onClick={() => setRegisterOpen(true)}>
+          <i className="ti ti-plus"></i> List your practice
+        </button>
       </div>
 
       <div className="card" style={{ marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -107,6 +111,7 @@ export default function CpaMarketplacePage() {
       )}
 
       {open && <CpaModal data={open} onClose={() => setOpen(null)} onChanged={async (id) => setOpen(await api.getCpa(id))} />}
+      {registerOpen && <CpaRegisterModal onClose={() => setRegisterOpen(false)} />}
     </div>
   );
 }
@@ -158,6 +163,26 @@ function CpaModal({ data, onClose, onChanged }) {
           {specialtiesOf(c).map((s) => <span key={s} className="badge" style={{ background: "var(--tv-sage-pale)", color: "var(--tv-forest)" }}>{s}</span>)}
         </div>
 
+        {(c.websiteUrl || c.googleReviewUrl) && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 14 }}>
+            {c.websiteUrl && (
+              <a className="btn btn-secondary btn-sm" href={c.websiteUrl} target="_blank" rel="noopener noreferrer">
+                <i className="ti ti-world"></i> Visit website
+              </a>
+            )}
+            {c.googleReviewUrl && (
+              <a className="btn btn-secondary btn-sm" href={c.googleReviewUrl} target="_blank" rel="noopener noreferrer">
+                <i className="ti ti-brand-google"></i> See Google reviews
+              </a>
+            )}
+            {c.googleReviewUrl && c.googleRating != null && (
+              <span className="item-sub" style={{ fontSize: 12.5 }}>
+                <span style={{ color: "var(--tv-gold)" }}>★</span> {Number(c.googleRating).toFixed(1)} on Google
+              </span>
+            )}
+          </div>
+        )}
+
         <button className="btn btn-primary" onClick={connect} disabled={connected} style={{ width: "100%", marginBottom: 8 }}>
           {connected ? "Connected ✓" : "Connect with this CPA"}
         </button>
@@ -189,6 +214,150 @@ function CpaModal({ data, onClose, onChanged }) {
           </div>
           <div className="item-sub" style={{ fontSize: 11 }}>You can review a CPA after you connect with them.</div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const REQUIRED_FIELDS = [
+  ["name", "Full name"],
+  ["credentials", "Credentials"],
+  ["licenseState", "License state"],
+  ["licenseNumber", "License number"],
+  ["contactEmail", "Contact email"],
+];
+
+function CpaRegisterModal({ onClose }) {
+  const [form, setForm] = useState({
+    name: "", firm: "", credentials: "", licenseState: "", licenseNumber: "",
+    contactEmail: "", phone: "", websiteUrl: "", googleReviewUrl: "", googleRating: "",
+    location: "", feeModel: "", yearsExperience: "", specialties: "", bio: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+  const [error, setError] = useState("");
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const missing = REQUIRED_FIELDS.filter(([k]) => !String(form[k] || "").trim()).map(([, label]) => label);
+
+  const submit = async () => {
+    setError("");
+    if (missing.length) { setError(`Please fill in: ${missing.join(", ")}.`); return; }
+    setSubmitting(true);
+    try {
+      const payload = { ...form };
+      if (payload.googleRating === "") delete payload.googleRating;
+      else payload.googleRating = Number(payload.googleRating);
+      if (payload.yearsExperience === "") delete payload.yearsExperience;
+      else payload.yearsExperience = parseInt(payload.yearsExperience, 10);
+      Object.keys(payload).forEach((k) => { if (payload[k] === "") delete payload[k]; });
+      await api.registerCpa(payload);
+      setDone(true);
+    } catch (e) {
+      setError(e?.message || "Could not submit your listing. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const overlay = { position: "fixed", inset: 0, zIndex: 1000, background: "rgba(17,29,23,.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 };
+  return (
+    <div style={overlay} onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="card" style={{ width: "100%", maxWidth: 560, maxHeight: "88vh", overflowY: "auto", padding: 24 }} role="dialog" aria-modal="true">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+          <div>
+            <h2 className="page-title" style={{ fontSize: 20, margin: 0 }}>List your practice</h2>
+            <div className="item-sub">Submit your details — our team reviews every listing before it goes live.</div>
+          </div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x"></i></button>
+        </div>
+
+        {done ? (
+          <div className="empty-state" style={{ padding: 24, textAlign: "center" }}>
+            <i className="ti ti-circle-check" style={{ fontSize: 36, color: "var(--tv-forest)" }}></i>
+            <p style={{ marginTop: 8 }}>✓ Submitted for review — we'll list your practice once our team approves it (usually within 1–2 business days).</p>
+            <button className="btn btn-primary" style={{ marginTop: 8 }} onClick={onClose}>Close</button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div>
+                <label className="form-label">Full name *</label>
+                <input className="form-input" value={form.name} onChange={set("name")} placeholder="Jane Doe" />
+              </div>
+              <div>
+                <label className="form-label">Firm</label>
+                <input className="form-input" value={form.firm} onChange={set("firm")} placeholder="Doe & Associates" />
+              </div>
+              <div>
+                <label className="form-label">Credentials *</label>
+                <input className="form-input" value={form.credentials} onChange={set("credentials")} placeholder="CPA, EA" />
+              </div>
+              <div>
+                <label className="form-label">Contact email *</label>
+                <input className="form-input" type="email" value={form.contactEmail} onChange={set("contactEmail")} placeholder="jane@firm.com" />
+              </div>
+              <div>
+                <label className="form-label">License state *</label>
+                <input className="form-input" value={form.licenseState} onChange={set("licenseState")} placeholder="TX" />
+              </div>
+              <div>
+                <label className="form-label">License number *</label>
+                <input className="form-input" value={form.licenseNumber} onChange={set("licenseNumber")} placeholder="123456" />
+              </div>
+              <div>
+                <label className="form-label">Phone</label>
+                <input className="form-input" value={form.phone} onChange={set("phone")} placeholder="(555) 123-4567" />
+              </div>
+              <div>
+                <label className="form-label">Location</label>
+                <input className="form-input" value={form.location} onChange={set("location")} placeholder="Austin, TX" />
+              </div>
+              <div>
+                <label className="form-label">Website URL</label>
+                <input className="form-input" value={form.websiteUrl} onChange={set("websiteUrl")} placeholder="https://…" />
+              </div>
+              <div>
+                <label className="form-label">Google reviews URL</label>
+                <input className="form-input" value={form.googleReviewUrl} onChange={set("googleReviewUrl")} placeholder="https://…" />
+              </div>
+              <div>
+                <label className="form-label">Google rating</label>
+                <input className="form-input" type="number" min="0" max="5" step="0.1" value={form.googleRating} onChange={set("googleRating")} placeholder="4.8" />
+              </div>
+              <div>
+                <label className="form-label">Years experience</label>
+                <input className="form-input" type="number" min="0" value={form.yearsExperience} onChange={set("yearsExperience")} placeholder="10" />
+              </div>
+              <div>
+                <label className="form-label">Fee model</label>
+                <select className="form-select" value={form.feeModel} onChange={set("feeModel")}>
+                  <option value="">Select…</option>
+                  <option value="Hourly">Hourly</option>
+                  <option value="Flat fee">Flat fee</option>
+                  <option value="Retainer">Retainer</option>
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Specialties</label>
+                <input className="form-input" value={form.specialties} onChange={set("specialties")} placeholder="SMALL_BUSINESS, REAL_ESTATE" />
+              </div>
+            </div>
+            <div style={{ marginTop: 10 }}>
+              <label className="form-label">Bio</label>
+              <textarea className="form-input" rows={3} value={form.bio} onChange={set("bio")} placeholder="Tell clients about your practice…" />
+            </div>
+
+            {error && <p className="item-sub" style={{ fontSize: 12.5, color: "var(--tv-negative)", marginTop: 8 }}>{error}</p>}
+
+            <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+              <button className="btn btn-primary" onClick={submit} disabled={submitting || missing.length > 0} style={{ flex: 1 }}>
+                {submitting ? "Submitting…" : "Submit for review"}
+              </button>
+              <button className="btn btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

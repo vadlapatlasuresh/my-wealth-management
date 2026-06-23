@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -70,6 +71,40 @@ public class CpaProfile {
 
     @Column(name = "review_count", nullable = false)
     private int reviewCount = 0;
+
+    // --- Public-facing business links (shown on the profile) ---
+
+    @Column(name = "website_url", length = 500)
+    private String websiteUrl;
+
+    // The CPA's Google Business profile / reviews link (e.g. a g.page or maps URL).
+    @Column(name = "google_review_url", length = 500)
+    private String googleReviewUrl;
+
+    // Self-reported Google rating (0.0–5.0) shown alongside the "See Google reviews" link.
+    // Not authoritative — a live Google Places integration can replace this later.
+    @Column(name = "google_rating", precision = 2, scale = 1)
+    private BigDecimal googleRating;
+
+    // --- Contact details for the listing ---
+
+    @Column(name = "contact_email", length = 200)
+    private String contactEmail;
+
+    @Column(length = 40)
+    private String phone;
+
+    // --- Moderation: self-registered listings start PENDING and are invisible until an
+    // admin approves them. Only APPROVED profiles appear in the public directory. ---
+
+    @Column(name = "status", nullable = false, length = 20)
+    private String status = "PENDING";
+
+    @Column(name = "submitted_by_user_id")
+    private Long submittedByUserId;
+
+    @Column(name = "submitted_at")
+    private LocalDateTime submittedAt;
 
     /** The comma-joined specialties exposed as a list (empty when none). */
     @Transient

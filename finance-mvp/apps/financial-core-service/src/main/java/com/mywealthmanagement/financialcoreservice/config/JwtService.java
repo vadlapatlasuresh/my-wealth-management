@@ -28,6 +28,15 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    /** Roles from the token's {@code roles} claim (e.g. ["USER","ADMIN"]); empty if absent. */
+    public java.util.List<String> extractRoles(String token) {
+        Object raw = extractClaim(token, c -> c.get("roles"));
+        if (raw instanceof java.util.List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return java.util.Collections.emptyList();
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }

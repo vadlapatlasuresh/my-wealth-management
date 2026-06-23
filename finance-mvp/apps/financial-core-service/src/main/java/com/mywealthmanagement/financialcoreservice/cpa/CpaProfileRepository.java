@@ -8,19 +8,24 @@ import java.util.List;
 
 public interface CpaProfileRepository extends JpaRepository<CpaProfile, Long> {
 
-    /** Verified CPAs, best-rated first (null ratings sort last). */
-    @Query("select c from CpaProfile c where c.licenseVerified = true " +
+    /** Approved CPAs, best-rated first (null ratings sort last). The "Verified" badge is a
+     *  separate signal (licenseVerified); approval is what makes a listing publicly visible. */
+    @Query("select c from CpaProfile c where c.status = 'APPROVED' " +
             "order by c.ratingAvg desc nulls last, c.reviewCount desc")
-    List<CpaProfile> findByLicenseVerifiedTrueOrderByRatingAvgDesc();
+    List<CpaProfile> findApproved();
 
     /**
-     * Verified CPAs whose name, firm or specialties contain the (lowercased) term,
+     * Approved CPAs whose name, firm or specialties contain the (lowercased) term,
      * best-rated first. Used for the directory search box.
      */
-    @Query("select c from CpaProfile c where c.licenseVerified = true and (" +
+    @Query("select c from CpaProfile c where c.status = 'APPROVED' and (" +
             "lower(c.name) like concat('%', :q, '%') or " +
             "lower(c.firm) like concat('%', :q, '%') or " +
             "lower(c.specialties) like concat('%', :q, '%')) " +
             "order by c.ratingAvg desc nulls last, c.reviewCount desc")
-    List<CpaProfile> searchVerified(@Param("q") String q);
+    List<CpaProfile> searchApproved(@Param("q") String q);
+
+    /** Pending self-registrations awaiting admin review, oldest first (FIFO queue). */
+    @Query("select c from CpaProfile c where c.status = 'PENDING' order by c.submittedAt asc nulls last, c.id asc")
+    List<CpaProfile> findPending();
 }

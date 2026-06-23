@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api, getStoredName, getStoredEmail, getCurrentUserId, getUserRoles } from '../api';
 import CustomerCarePage from '../pages/CustomerCarePage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
+import CpaModeration from './CpaModeration';
 
 /* Short timestamp for the session log. */
 function ts(v) {
@@ -90,6 +91,7 @@ export default function OpsPortal({ handleLogout }) {
   const NAV = [
     { key: 'customers', label: 'Customers', icon: 'ti ti-users', show: true },
     { key: 'analytics', label: 'Analytics', icon: 'ti ti-chart-dots', show: true },
+    { key: 'cpas', label: 'CPA Listings', icon: 'ti ti-user-check', show: true },
     { key: 'session', label: 'My session log', icon: 'ti ti-clipboard-check', show: true },
   ].filter((n) => n.show);
 
@@ -139,6 +141,7 @@ export default function OpsPortal({ handleLogout }) {
               <AdminDashboardPage />
             </React.Suspense>
           )}
+          {view === 'cpas' && <CpaModeration />}
           {view === 'session' && <SessionLog />}
         </main>
       </div>

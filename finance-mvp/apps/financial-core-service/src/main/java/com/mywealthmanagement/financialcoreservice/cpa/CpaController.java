@@ -53,6 +53,55 @@ public class CpaController {
         return toReviewView(saved);
     }
 
+    /**
+     * Self-registration: a member lists their (or a) CPA practice. The listing is created
+     * PENDING and stays invisible until an admin approves it. Returns the new id + status.
+     */
+    @PostMapping("/register")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Map<String, Object> register(@RequestBody Map<String, Object> body) {
+        CpaProfile draft = new CpaProfile();
+        draft.setName(str(body.get("name")));
+        draft.setFirm(str(body.get("firm")));
+        draft.setCredentials(str(body.get("credentials")));
+        draft.setLicenseState(str(body.get("licenseState")));
+        draft.setLicenseNumber(str(body.get("licenseNumber")));
+        draft.setSpecialties(specialtiesCsv(body.get("specialties")));
+        draft.setLocation(str(body.get("location")));
+        draft.setFeeModel(str(body.get("feeModel")));
+        draft.setYearsExperience(body.get("yearsExperience") == null ? 0 : optInt(body.get("yearsExperience")));
+        draft.setBio(str(body.get("bio")));
+        draft.setWebsiteUrl(str(body.get("websiteUrl")));
+        draft.setGoogleReviewUrl(str(body.get("googleReviewUrl")));
+        draft.setGoogleRating(decimal(body.get("googleRating")));
+        draft.setContactEmail(str(body.get("contactEmail")));
+        draft.setPhone(str(body.get("phone")));
+
+        CpaProfile saved = cpaService.register(getUserId(), draft);
+        return Map.of("id", saved.getId(), "status", saved.getStatus());
+    }
+
+    /** Admin/care: pending self-registrations awaiting review (oldest first). */
+    @GetMapping("/admin/pending")
+    public List<CpaProfile> pending() {
+        requireStaff();
+        return cpaService.listPending();
+    }
+
+    /** Admin/care: approve a pending listing (makes it publicly visible). */
+    @PostMapping("/admin/{id}/approve")
+    public Map<String, Object> approve(@PathVariable Long id) {
+        requireStaff();
+        return Map.of("id", id, "status", cpaService.moderate(id, true).getStatus());
+    }
+
+    /** Admin/care: reject a pending listing. */
+    @PostMapping("/admin/{id}/reject")
+    public Map<String, Object> reject(@PathVariable Long id) {
+        requireStaff();
+        return Map.of("id", id, "status", cpaService.moderate(id, false).getStatus());
+    }
+
     /** A non-identifying view of a review: rating, comment, verified, created-at, author initial. */
     private static Map<String, Object> toReviewView(CpaReview r) {
         Map<String, Object> m = new LinkedHashMap<>();
@@ -96,5 +145,52 @@ public class CpaController {
         }
         try { return Long.valueOf(auth.getName()); }
         catch (NumberFormatException e) { throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid session"); }
+    }
+
+    /** Require an ADMIN or CARE role (from the JWT) for moderation actions; else 403. */
+    private static void requireStaff() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+        }
+        boolean staff = auth.getAuthorities().stream()
+                .map(a -> a.getAuthority() == null ? "" : a.getAuthority().toUpperCase())
+                .anyMatch(a -> a.equals("ROLE_ADMIN") || a.equals("ROLE_CARE"));
+        if (!staff) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff access required");
+        }
+    }
+
+    private static String str(Object o) {
+        if (o == null) return null;
+        String s = o.toString().trim();
+        return s.isEmpty() ? null : s;
+    }
+
+    /** Accept specialties as a comma-string or a JSON array; store as an upper-cased CSV. */
+    private static String specialtiesCsv(Object o) {
+        if (o == null) return null;
+        if (o instanceof List<?> list) {
+            return list.stream().map(String::valueOf).map(String::trim)
+                    .filter(s -> !s.isEmpty()).map(String::toUpperCase)
+                    .collect(java.util.stream.Collectors.joining(","));
+        }
+        String s = o.toString().trim();
+        return s.isEmpty() ? null : s.toUpperCase();
+    }
+
+    private static int optInt(Object o) {
+        try { return Integer.parseInt(o.toString().trim()); }
+        catch (Exception e) { return 0; }
+    }
+
+    private static java.math.BigDecimal decimal(Object o) {
+        if (o == null) return null;
+        try {
+            String s = o.toString().trim();
+            return s.isEmpty() ? null : new java.math.BigDecimal(s);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "googleRating must be a number");
+        }
     }
 }
