@@ -69,6 +69,8 @@ public class CpaSeeder implements CommandLineRunner {
         c.setLicenseState(licenseState);
         c.setLicenseNumber(licenseNumber);
         c.setLicenseVerified(true);
+        c.setVerificationSource("MANUAL");
+        c.setLicenseVerifiedAt(java.time.LocalDateTime.now());
         c.setSpecialties(specialties);
         c.setLocation(location);
         c.setFeeModel(feeModel);

@@ -1,6 +1,10 @@
 package com.mywealthmanagement.financialcoreservice.cpa;
 
+import com.mywealthmanagement.financialcoreservice.cpa.verify.LicenseVerificationResult;
+import com.mywealthmanagement.financialcoreservice.cpa.verify.LicenseVerifier;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +26,12 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class CpaService {
 
+    private static final Logger log = LoggerFactory.getLogger(CpaService.class);
+
     private final CpaProfileRepository profileRepository;
     private final CpaReviewRepository reviewRepository;
     private final CpaConnectionRepository connectionRepository;
+    private final LicenseVerifier licenseVerifier;
 
     /** Approved CPAs, best-rated first, optionally filtered by specialty and/or free-text query. */
     public List<CpaProfile> list(String specialty, String query) {
@@ -77,11 +84,41 @@ public class CpaService {
         return profileRepository.findPending();
     }
 
-    /** Approve or reject a pending listing. Approving makes it publicly visible. Admin-only. */
+    /**
+     * Approve or reject a pending listing. Approving makes it publicly visible and kicks off a
+     * best-effort license check (a failed check never blocks approval). Admin-only.
+     */
     @Transactional
     public CpaProfile moderate(Long cpaId, boolean approve) {
         CpaProfile cpa = get(cpaId);
         cpa.setStatus(approve ? "APPROVED" : "REJECTED");
+        CpaProfile saved = profileRepository.save(cpa);
+        if (approve) {
+            try {
+                applyVerification(saved);
+            } catch (Exception e) {
+                log.warn("license verification on approve failed for CPA {}: {}", cpaId, e.getMessage());
+            }
+        }
+        return saved;
+    }
+
+    /**
+     * Run (or re-run) the license check for a CPA and persist the outcome. Admin-only. Returns the
+     * updated profile with {@code licenseVerified}, {@code licenseVerifiedAt} and
+     * {@code verificationSource} reflecting the latest check.
+     */
+    @Transactional
+    public CpaProfile verifyLicense(Long cpaId) {
+        return applyVerification(get(cpaId));
+    }
+
+    private CpaProfile applyVerification(CpaProfile cpa) {
+        LicenseVerificationResult result =
+                licenseVerifier.verify(cpa.getLicenseState(), cpa.getLicenseNumber(), cpa.getName());
+        cpa.setLicenseVerified(result.verified());
+        cpa.setVerificationSource(result.source());
+        cpa.setLicenseVerifiedAt(result.verified() ? LocalDateTime.now() : null);
         return profileRepository.save(cpa);
     }
 
