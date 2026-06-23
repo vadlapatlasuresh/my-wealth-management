@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 
 const INSIGHT_STYLE = {
@@ -25,6 +26,7 @@ const pct = (v) => (v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`);
  * CTA to find a CPA (the marketplace lands in a later phase).
  */
 export default function TaxPage() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     year: 2025,
     filingStatus: "SINGLE",
@@ -45,10 +47,6 @@ export default function TaxPage() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
-
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-
-  // Load a previously saved profile (404 = none yet).
   useEffect(() => {
     let cancelled = false;
     api.getTaxProfile()
@@ -239,9 +237,9 @@ export default function TaxPage() {
                 <i className="ti ti-user-check" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
                 <div style={{ flex: 1 }}>
                   <div className="item-name">Want a professional to file this?</div>
-                  <div className="item-sub">Connect with a verified CPA (coming soon).</div>
+                  <div className="item-sub">Connect with a verified CPA from our marketplace.</div>
                 </div>
-                <button className="btn btn-secondary btn-sm" disabled title="CPA marketplace — coming soon">
+                <button className="btn btn-secondary btn-sm" onClick={() => navigate("/cpa")}>
                   Find a CPA
                 </button>
               </div>

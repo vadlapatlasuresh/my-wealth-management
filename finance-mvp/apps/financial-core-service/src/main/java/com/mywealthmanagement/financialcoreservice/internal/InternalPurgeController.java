@@ -26,6 +26,8 @@ public class InternalPurgeController {
     private final GoalRepository goalRepository;
     private final NetWorthSnapshotRepository netWorthSnapshotRepository;
     private final com.mywealthmanagement.financialcoreservice.tax.TaxProfileRepository taxProfileRepository;
+    private final com.mywealthmanagement.financialcoreservice.cpa.CpaReviewRepository cpaReviewRepository;
+    private final com.mywealthmanagement.financialcoreservice.cpa.CpaConnectionRepository cpaConnectionRepository;
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
@@ -60,6 +62,8 @@ public class InternalPurgeController {
         goalRepository.deleteByUserId(userId);
         netWorthSnapshotRepository.deleteByUserId(userId);
         taxProfileRepository.deleteByUserId(userId);
+        cpaReviewRepository.deleteByUserId(userId);
+        cpaConnectionRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 }

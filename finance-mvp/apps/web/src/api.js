@@ -201,6 +201,18 @@ export const api = {
     request("/api/v1/planning/tax/profile", { method: "PUT", body: JSON.stringify(payload) }),
   getTaxPrefill: () => request("/api/v1/planning/tax/prefill"),
   getTaxGuide: () => request("/api/v1/planning/tax/guide"),
+  // CPA marketplace
+  getCpas: (specialty, q) => {
+    const p = new URLSearchParams();
+    if (specialty) p.set("specialty", specialty);
+    if (q) p.set("q", q);
+    const qs = p.toString();
+    return request(`/api/v1/cpa${qs ? `?${qs}` : ""}`);
+  },
+  getCpa: (id) => request(`/api/v1/cpa/${id}`),
+  connectCpa: (id) => request(`/api/v1/cpa/${id}/connect`, { method: "POST" }),
+  reviewCpa: (id, rating, comment) =>
+    request(`/api/v1/cpa/${id}/reviews`, { method: "POST", body: JSON.stringify({ rating, comment }) }),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {
