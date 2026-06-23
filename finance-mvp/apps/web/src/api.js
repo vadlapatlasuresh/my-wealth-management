@@ -200,6 +200,7 @@ export const api = {
   saveTaxProfile: (payload) =>
     request("/api/v1/planning/tax/profile", { method: "PUT", body: JSON.stringify(payload) }),
   getTaxPrefill: () => request("/api/v1/planning/tax/prefill"),
+  getTaxGuide: () => request("/api/v1/planning/tax/guide"),
   // Persist a transaction's category (ownership-scoped on the backend).
   categorizeTransaction: (txId, category) =>
     request(`/api/v1/aggregation/transactions/${txId}/category`, {

@@ -78,6 +78,12 @@ public class TaxController {
         return taxRules.availableYears();
     }
 
+    /** Plain-English catalog of common deductions & credits a user might be able to claim. */
+    @GetMapping("/guide")
+    public List<TaxGuide.GuideItem> guide() {
+        return TaxGuide.all();
+    }
+
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
         return new TaxEstimateInput(
                 parseStatus(str(body.get("filingStatus"))),

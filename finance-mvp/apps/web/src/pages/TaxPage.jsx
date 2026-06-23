@@ -39,14 +39,19 @@ export default function TaxPage() {
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState("");
   const [suggesting, setSuggesting] = useState(false);
+  const [guide, setGuide] = useState([]);
+  const [guideOpen, setGuideOpen] = useState(true);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  // Load a previously saved profile (404 = none yet).
+  // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
   useEffect(() => {
     let cancelled = false;
     api.getTaxProfile()
       .then((p) => { if (!cancelled && p) setForm((f) => ({ ...f, ...clean(p) })); })
+      .catch(() => {});
+    api.getTaxGuide()
+      .then((g) => { if (!cancelled && Array.isArray(g)) setGuide(g); })
       .catch(() => {});
     return () => { cancelled = true; };
   }, []);
@@ -107,6 +112,30 @@ export default function TaxPage() {
           return, connect with a CPA.
         </div>
       </div>
+
+      {/* What you may be able to claim — prominent education panel on top */}
+      {guide.length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <button type="button" onClick={() => setGuideOpen((o) => !o)}
+            style={{ background: "none", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", padding: 0 }}>
+            <span className="card-title" style={{ marginBottom: 0 }}>
+              <i className="ti ti-checklist" style={{ color: "var(--tv-gold)" }}></i> What you may be able to claim
+            </span>
+            <i className={`ti ti-chevron-${guideOpen ? "up" : "down"}`} style={{ color: "var(--tv-text-muted)" }}></i>
+          </button>
+          {guideOpen && (
+            <>
+              <div className="item-sub" style={{ fontSize: 12.5, marginTop: 4, marginBottom: 12 }}>
+                Common federal deductions & credits. Eligibility and limits vary — confirm with a CPA.
+              </div>
+              <div className="tax-guide-cols" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+                <GuideColumn title="Deductions — lower your taxable income" items={guide.filter((g) => g.type === "DEDUCTION")} />
+                <GuideColumn title="Credits — dollar-for-dollar savings" items={guide.filter((g) => g.type === "CREDIT")} />
+              </div>
+            </>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,360px) 1fr", gap: 16, alignItems: "start" }}>
         {/* Inputs */}
@@ -215,6 +244,25 @@ export default function TaxPage() {
             </>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GuideColumn({ title, items }) {
+  return (
+    <div>
+      <div className="form-label" style={{ marginBottom: 8 }}>{title}</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {items.map((it, i) => (
+          <div key={i} style={{ borderLeft: "2px solid var(--tv-sage-light)", paddingLeft: 10 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexWrap: "wrap" }}>
+              <span className="item-name" style={{ fontSize: 13 }}>{it.name}</span>
+              <span className="badge" style={{ fontSize: 9.5, background: "var(--tv-bg)", color: "var(--tv-text-muted)", padding: "1px 6px", borderRadius: 10 }}>{it.category}</span>
+            </div>
+            <div className="item-sub" style={{ fontSize: 12 }}>{it.description}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
