@@ -21,6 +21,7 @@ const MyBusinessPage  = React.lazy(() => import('../pages/MyBusinessPage'));
 const CalculatorsPage = React.lazy(() => import('../pages/CalculatorsPage'));
 const GoalsPage       = React.lazy(() => import('../pages/GoalsPage'));
 const TaxPage         = React.lazy(() => import('../pages/TaxPage'));
+const CpaMarketplacePage = React.lazy(() => import('../pages/CpaMarketplacePage'));
 const AdminDashboardPage = React.lazy(() => import('../pages/AdminDashboardPage'));
 const AIAssistantPage = React.lazy(() => import('../pages/AIAssistantPage'));
 const RealEstatePage  = React.lazy(() => import('../pages/RealEstatePage'));
@@ -118,6 +119,11 @@ export const MODULE_REGISTRY = {
     id: 'tax', title: 'Taxes', icon: 'ti ti-receipt-tax',
     route: '/tax', section: SECTION_FINANCE, defaultOrder: 12,
     component: TaxPage, inNavByDefault: true,
+  },
+  cpa: {
+    id: 'cpa', title: 'Find a CPA', icon: 'ti ti-user-check',
+    route: '/cpa', section: SECTION_FINANCE, defaultOrder: 13,
+    component: CpaMarketplacePage, inNavByDefault: true,
   },
 
   realestate: {

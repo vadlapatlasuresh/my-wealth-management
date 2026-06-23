@@ -36,6 +36,7 @@ const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
 const CalculatorsPage = MODULE_REGISTRY.calculators.component;
 const GoalsPage       = MODULE_REGISTRY.goals.component;
 const TaxPage         = MODULE_REGISTRY.tax.component;
+const CpaMarketplacePage = MODULE_REGISTRY.cpa.component;
 const FractionalLLCPage = MODULE_REGISTRY.fractional.component;
 const SecurityPage    = MODULE_REGISTRY.security.component;
 const MessagesPage    = MODULE_REGISTRY.messages.component;
@@ -55,6 +56,7 @@ const navLabels = {
   '/calculators': 'Calculators',
   '/goals': 'Goals',
   '/tax': 'Taxes',
+  '/cpa': 'Find a CPA',
   '/realestate': 'Properties',
   '/dealroom': 'Deal Room',
   '/fractional': 'Fractional LLC',
@@ -74,7 +76,7 @@ const PATH_TO_NAVID = {
   '/': 'home', '/accounts': 'accounts', '/transactions': 'transactions',
   '/budget': 'budget', '/billpay': 'billpay', '/debt': 'debt',
   '/invest': 'invest', '/mybusiness': 'mybusiness', '/ai-assistant': 'ai-assistant',
-  '/calculators': 'calculators', '/goals': 'goals', '/tax': 'tax',
+  '/calculators': 'calculators', '/goals': 'goals', '/tax': 'tax', '/cpa': 'cpa',
   '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
   '/security': 'security', '/messages': 'messages', '/settings': 'settings',
   '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/guide': 'guide',
@@ -474,6 +476,7 @@ export default function AppLayout(props) {
               <Route path="/calculators" element={<CalculatorsPage />} />
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/tax" element={<TaxPage />} />
+              <Route path="/cpa" element={<CpaMarketplacePage />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
