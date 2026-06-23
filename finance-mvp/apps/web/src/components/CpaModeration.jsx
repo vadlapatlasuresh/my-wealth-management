@@ -24,6 +24,7 @@ export default function CpaModeration() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null); // id currently being acted on
+  const [verify, setVerify] = useState({}); // id -> { verified, source, at }
 
   async function load() {
     setError('');
@@ -45,6 +46,20 @@ export default function CpaModeration() {
       setRows((rs) => (rs || []).filter((r) => r.id !== id));
     } catch (e) {
       setError(e.message || 'Action failed — please try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Run the license check without removing the row, so staff can see the result before approving.
+  async function runVerify(id) {
+    setError('');
+    setBusy(id);
+    try {
+      const r = await api.verifyCpa(id);
+      setVerify((v) => ({ ...v, [id]: r }));
+    } catch (e) {
+      setError(e.message || 'Verification failed — please try again.');
     } finally {
       setBusy(null);
     }
@@ -109,14 +124,32 @@ export default function CpaModeration() {
 
               {c.bio && <p className="item-sub" style={{ fontSize: 13, marginBottom: 12 }}>{c.bio}</p>}
 
-              <div style={{ display: 'flex', gap: 8 }}>
+              {verify[c.id] && (
+                <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
+                  {verify[c.id].licenseVerified ? (
+                    <span style={{ color: 'var(--tv-forest)' }}>
+                      <i className="ti ti-rosette-discount-check"></i> License verified via {verify[c.id].verificationSource}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--tv-negative)' }}>
+                      <i className="ti ti-alert-triangle"></i> Not verified ({verify[c.id].verificationSource})
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <button className="btn btn-primary btn-sm" disabled={busy === c.id} onClick={() => act(c.id, api.approveCpa)}>
                   <i className="ti ti-check"></i> Approve
+                </button>
+                <button className="btn btn-secondary btn-sm" disabled={busy === c.id} onClick={() => runVerify(c.id)}>
+                  <i className="ti ti-rosette-discount-check"></i> Verify license
                 </button>
                 <button className="btn btn-secondary btn-sm" disabled={busy === c.id} style={{ color: 'var(--tv-negative)' }} onClick={() => act(c.id, api.rejectCpa)}>
                   <i className="ti ti-x"></i> Reject
                 </button>
               </div>
+              <div className="item-sub" style={{ fontSize: 11, marginTop: 6 }}>Approving also runs a license check automatically.</div>
             </div>
           ))}
         </div>

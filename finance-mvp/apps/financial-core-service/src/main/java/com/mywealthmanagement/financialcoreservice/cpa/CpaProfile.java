@@ -44,6 +44,14 @@ public class CpaProfile {
     @Column(name = "license_verified", nullable = false)
     private boolean licenseVerified = false;
 
+    // When the license was last confirmed, and by which source (e.g. "NASBA_CPAVERIFY" / "MOCK").
+    // Null until a verification has run.
+    @Column(name = "license_verified_at")
+    private LocalDateTime licenseVerifiedAt;
+
+    @Column(name = "verification_source", length = 40)
+    private String verificationSource;
+
     // Comma-joined list of specialties (e.g. "SMALL_BUSINESS,REAL_ESTATE"). Exposed as a list
     // via {@link #getSpecialtyList()}.
     @Column(name = "specialties", length = 500)
