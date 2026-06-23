@@ -45,6 +45,10 @@ export default function TaxPage() {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Load a previously saved profile (404 = none yet).
   useEffect(() => {
     let cancelled = false;
     api.getTaxProfile()
