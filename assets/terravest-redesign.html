@@ -434,6 +434,8 @@ a { text-decoration: none; color: inherit; }
   cursor: default;
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
+/* Label/value row used in the tax estimate breakdown. */
+.tv-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--tv-border-light); font-size: 13px; }
 .kpi-clickable { cursor: pointer; }
 .kpi-clickable:hover { box-shadow: var(--shadow-md); border-color: var(--tv-forest-light); transform: translateY(-1px); }
 .kpi-label {
@@ -943,6 +945,9 @@ a { text-decoration: none; color: inherit; }
       <li class="nav-item" data-page="goals" onclick="navigate('goals',this)">
         <i class="ti ti-target"></i> Goals
       </li>
+      <li class="nav-item" data-page="tax" onclick="navigate('tax',this)">
+        <i class="ti ti-receipt-tax"></i> Taxes
+      </li>
 
       <div class="sidebar-section" style="margin-top:16px;">
         <div class="sidebar-section-label">Real Estate</div>
@@ -1065,14 +1070,11 @@ a { text-decoration: none; color: inherit; }
       <div class="outer-tab active" data-page="home" onclick="navigate('home', document.querySelector('[data-page=home].nav-item'))"><i class="ti ti-layout-dashboard"></i>Home</div>
       <div class="outer-tab" data-page="budget" onclick="navigate('budget', document.querySelector('[data-page=budget].nav-item'))"><i class="ti ti-chart-pie"></i>Budgets</div>
       <div class="outer-tab" data-page="billpay" onclick="navigate('billpay', document.querySelector('[data-page=billpay].nav-item'))"><i class="ti ti-receipt"></i>Bill Pay</div>
+      <div class="outer-tab" data-page="tax" onclick="navigate('tax', document.querySelector('[data-page=tax].nav-item'))"><i class="ti ti-receipt-tax"></i>Taxes</div>
       <div class="outer-tab" data-page="debt" onclick="navigate('debt', document.querySelector('[data-page=debt].nav-item'))"><i class="ti ti-trending-down"></i>Debt Lab</div>
       <div class="outer-tab" data-page="dealroom" onclick="navigate('dealroom', document.querySelector('[data-page=dealroom].nav-item'))"><i class="ti ti-briefcase"></i>Deal Room</div>
-      
       <div class="outer-tab" data-page="business" onclick="navigate('business', document.querySelector('[data-page=business].nav-item'))"><i class="ti ti-briefcase"></i>My Business</div>
       <div class="outer-tab" data-page="aiassistant" onclick="navigate('aiassistant', document.querySelector('[data-page=aiassistant].nav-item'))"><i class="ti ti-robot"></i>AI Assistant</div>
-
-      <div class="outer-tab" data-page="styleguide" onclick="navigate('styleguide', null)"><i class="ti ti-palette"></i>Style Guide</div>
-      <div class="outer-tab" data-page="flowmap" onclick="navigate('flowmap', null)"><i class="ti ti-git-merge"></i>UI Flow Map</div>
     </div>
 
     <!-- Scrollable pages -->
@@ -3576,6 +3578,227 @@ a { text-decoration: none; color: inherit; }
         </div>
       </div>
 
+      <!-- ===================== TAXES ===================== -->
+      <div id="page-tax" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">Taxes</div>
+            <div class="page-subtitle">An educational estimate of your 2025 federal taxes</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-device-floppy"></i> Save</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-calculator"></i> Calculate estimate</button>
+          </div>
+        </div>
+
+        <!-- Find a CPA — prominent entry at the top of the Taxes section -->
+        <div class="card" style="margin-bottom:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--tv-forest);border-color:var(--tv-forest);color:#fff;">
+          <i class="ti ti-user-check" style="font-size:28px;color:var(--tv-gold);"></i>
+          <div style="flex:1;min-width:180px;">
+            <div style="font-weight:600;font-size:16px;">Work with a verified CPA</div>
+            <div style="color:rgba(255,255,255,.85);font-size:13px;">Browse vetted tax professionals, read verified reviews, and connect — right from your taxes.</div>
+          </div>
+          <button class="btn" style="background:#fff;color:var(--tv-forest);font-weight:600;" onclick="navigate('cpa', document.querySelector('[data-page=tax].nav-item'))"><i class="ti ti-arrow-right"></i> Find a CPA</button>
+        </div>
+
+        <!-- Educational disclaimer -->
+        <div class="card" style="margin-bottom:16px;display:flex;gap:12px;align-items:center;">
+          <i class="ti ti-info-circle" style="font-size:22px;color:var(--tv-forest);"></i>
+          <div style="font-size:13px;color:var(--tv-text-secondary);">This is an <strong>educational estimate, not tax advice</strong> — a simplified federal calculation (now includes self-employment tax; omits AMT, NIIT, capital-gains rates, QBI). For your actual return, connect with a CPA.</div>
+        </div>
+
+        <!-- What you may be able to claim -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-checklist" style="color:var(--tv-gold);margin-right:6px;"></i> What you may be able to claim</div></div>
+          <div class="grid-2" style="gap:16px;">
+            <div>
+              <div class="form-label" style="margin-bottom:8px;">Deductions — lower your taxable income</div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
+                <div style="border-left:2px solid var(--tv-sage-light);padding-left:10px;"><strong>Mortgage interest</strong> <span class="badge badge-gray">1098</span><br><span style="color:var(--tv-text-muted);">Interest on up to $750k of home-acquisition debt.</span></div>
+                <div style="border-left:2px solid var(--tv-sage-light);padding-left:10px;"><strong>SALT</strong> <span class="badge badge-gray">capped $10k</span><br><span style="color:var(--tv-text-muted);">State/local income + property taxes, up to $10,000.</span></div>
+                <div style="border-left:2px solid var(--tv-sage-light);padding-left:10px;"><strong>Student-loan interest</strong> <span class="badge badge-gray">1098-E</span><br><span style="color:var(--tv-text-muted);">Up to $2,500 above-the-line.</span></div>
+              </div>
+            </div>
+            <div>
+              <div class="form-label" style="margin-bottom:8px;">Credits — dollar-for-dollar savings</div>
+              <div style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;">
+                <div style="border-left:2px solid var(--tv-gold);padding-left:10px;"><strong>Child tax credit</strong><br><span style="color:var(--tv-text-muted);">Up to $2,000 per qualifying child under 17.</span></div>
+                <div style="border-left:2px solid var(--tv-gold);padding-left:10px;"><strong>Education credit</strong> <span class="badge badge-gray">1098-T</span><br><span style="color:var(--tv-text-muted);">American Opportunity / Lifetime Learning.</span></div>
+                <div style="border-left:2px solid var(--tv-gold);padding-left:10px;"><strong>Saver's credit</strong><br><span style="color:var(--tv-text-muted);">For retirement contributions under the income limit.</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Upload tax forms — multi-document, auto-routed -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-file-upload" style="color:var(--tv-forest);margin-right:6px;"></i> Upload your tax forms</div></div>
+          <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:12px;">Drop in one or more forms — W-2, 1099-NEC/MISC/INT/DIV/R, 1098, 1098-E, 1098-T — and we read each figure into the right field. Parsed in your session and <strong>never stored</strong>.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-upload"></i> Choose files</button>
+            <span style="font-size:12px;color:var(--tv-text-muted);">or paste the text from a form</span>
+          </div>
+          <div class="card" style="background:var(--tv-sage-pale);margin-top:12px;padding:14px;">
+            <div class="form-label" style="margin-bottom:8px;">Extracted from your documents</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>w2-acme.pdf</strong> — W-2 (2025): Wages $84,200, Withholding $9,310 → added</div>
+              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>1099-nec.pdf</strong> — 1099-NEC (2025): Self-employment income $22,000 → added</div>
+              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>1098-mortgage.pdf</strong> — 1098: Mortgage interest $12,840 → added</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inputs + results -->
+        <div style="display:grid;grid-template-columns:minmax(0,400px) 1fr;gap:16px;align-items:start;">
+          <!-- Categorized inputs -->
+          <div class="card">
+            <div class="section-title" style="margin-bottom:12px;">Your figures (2025)</div>
+            <div class="grid-2" style="gap:10px;">
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Tax year</label><select class="form-select"><option>2025</option><option>2024</option></select></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Filing status</label><select class="form-select"><option>Single</option><option>Married filing jointly</option></select></div>
+            </div>
+
+            <div style="border-top:1px solid var(--tv-border);padding-top:12px;margin-top:4px;">
+              <div class="form-label" style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><i class="ti ti-cash" style="color:var(--tv-forest);"></i> Income</div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Wages (W-2)</label><input class="form-input" value="$84,200"></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Self-employment / 1099 income</label><input class="form-input" value="$22,000"></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Rental income</label><input class="form-input" placeholder="net rents you collected"></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Interest income <span style="color:var(--tv-text-muted);font-weight:400;">· 1099-INT</span></label><input class="form-input" value="$1,200"></div>
+              <div class="form-group" style="margin-bottom:0;"><label class="form-label">Dividend income <span style="color:var(--tv-text-muted);font-weight:400;">· 1099-DIV</span></label><input class="form-input" placeholder="optional"></div>
+            </div>
+
+            <div style="border-top:1px solid var(--tv-border);padding-top:12px;margin-top:12px;">
+              <div class="form-label" style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><i class="ti ti-arrow-down-circle" style="color:var(--tv-forest);"></i> Adjustments</div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Student-loan interest <span style="color:var(--tv-text-muted);font-weight:400;">· 1098-E</span></label><input class="form-input" value="$1,500"></div>
+              <div class="form-group" style="margin-bottom:0;"><label class="form-label">HSA / IRA contributions</label><input class="form-input" placeholder="deductible contributions"></div>
+            </div>
+
+            <div style="border-top:1px solid var(--tv-border);padding-top:12px;margin-top:12px;">
+              <div class="form-label" style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><i class="ti ti-receipt" style="color:var(--tv-forest);"></i> Itemized deductions</div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Mortgage interest <span style="color:var(--tv-text-muted);font-weight:400;">· 1098</span></label><input class="form-input" value="$12,840"></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Property + state/local taxes <span style="color:var(--tv-text-muted);font-weight:400;">· SALT $10k cap</span></label><input class="form-input" value="$9,800"></div>
+              <div class="form-group" style="margin-bottom:0;"><label class="form-label">Charitable giving</label><input class="form-input" value="$2,500"></div>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%;margin-top:14px;"><i class="ti ti-calculator"></i> Calculate estimate</button>
+          </div>
+
+          <!-- Results -->
+          <div>
+            <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-receipt-tax" style="font-size:13px;color:var(--tv-forest-light);"></i> Estimated federal tax</div><div class="kpi-value">$18,240</div></div>
+              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--tv-negative);"></i> Estimated balance due</div><div class="kpi-value" style="color:var(--tv-negative);">$3,110</div></div>
+              <div class="kpi-card"><div class="kpi-label">Effective rate</div><div class="kpi-value">15.6%</div></div>
+              <div class="kpi-card"><div class="kpi-label">Marginal bracket</div><div class="kpi-value">22%</div></div>
+            </div>
+            <div class="card" style="margin-top:12px;">
+              <div class="section-title" style="margin-bottom:8px;">How we got there</div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Gross income</span><span>$107,400</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Adjusted gross income (AGI)</span><span>$104,345</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Deduction (itemized)</span><span>− $25,140</span></div>
+              <div class="tv-row"><span style="font-weight:600;">Taxable income</span><span style="font-weight:700;">$79,205</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Income tax</span><span>$11,176</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Self-employment tax</span><span>$3,108</span></div>
+              <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Total federal tax</span><span style="font-weight:700;">$18,240</span></div>
+            </div>
+            <div class="card" style="margin-top:12px;">
+              <div class="section-title" style="margin-bottom:8px;">Ways to lower your taxes</div>
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-gold-pale);margin-bottom:8px;">
+                <i class="ti ti-trending-up" style="font-size:18px;color:var(--tv-gold);"></i>
+                <div><div style="font-weight:600;font-size:13.5px;">Pre-tax retirement contribution</div><div style="font-size:12.5px;color:var(--tv-text-muted);">A $6,000 traditional-IRA / solo-401(k) contribution could save ~$1,320 at your 22% marginal rate.</div></div>
+              </div>
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-sage-pale);">
+                <i class="ti ti-bulb" style="font-size:18px;color:var(--tv-forest);"></i>
+                <div><div style="font-weight:600;font-size:13.5px;">You're itemizing</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Your $25,140 itemized total beats the $15,000 standard deduction — keep those 1098 / SALT / charitable records.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Year-over-year history -->
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><i class="ti ti-history" style="color:var(--tv-forest);margin-right:6px;"></i> Your tax history</div>
+          <table class="tv-table" style="width:100%;margin-top:8px;">
+            <thead><tr><th>Year</th><th>Filing</th><th style="text-align:right;">AGI</th><th style="text-align:right;">Federal tax</th><th style="text-align:right;">Eff. rate</th><th style="text-align:right;">Refund / Owed</th></tr></thead>
+            <tbody>
+              <tr><td style="font-weight:600;">2025</td><td>Single</td><td style="text-align:right;">$104,345</td><td style="text-align:right;">$18,240</td><td style="text-align:right;">15.6%</td><td style="text-align:right;color:var(--tv-negative);font-weight:600;">− $3,110</td></tr>
+              <tr><td style="font-weight:600;">2024</td><td>Single</td><td style="text-align:right;">$96,800</td><td style="text-align:right;">$15,980</td><td style="text-align:right;">14.9%</td><td style="text-align:right;color:var(--tv-positive);font-weight:600;">+ $640</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ===================== FIND A CPA ===================== -->
+      <div id="page-cpa" class="page">
+        <button class="btn btn-secondary btn-sm" style="margin-bottom:12px;" onclick="navigate('tax', document.querySelector('[data-page=tax].nav-item'))"><i class="ti ti-arrow-left"></i> Back to Taxes</button>
+        <div class="page-header">
+          <div>
+            <div class="page-title">Find a CPA</div>
+            <div class="page-subtitle">Connect with a verified tax professional</div>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> List your practice</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <div style="flex:1;min-width:220px;display:flex;align-items:center;gap:8px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px 12px;">
+            <i class="ti ti-search" style="color:var(--tv-text-muted);"></i>
+            <input style="border:none;outline:none;background:none;flex:1;font-size:14px;color:var(--tv-text-primary);" placeholder="Search by name or specialty…">
+          </div>
+          <select class="form-select" style="max-width:220px;"><option>All specialties</option><option>Self-employed</option><option>Real estate</option><option>Crypto</option></select>
+          <button class="btn btn-primary btn-sm">Search</button>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;">
+          <!-- CPA card -->
+          <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;">M</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;">Maria Gonzalez</div>
+                <div style="font-size:12.5px;color:var(--tv-text-muted);">CPA, MST · Gonzalez &amp; Co. CPAs</div>
+              </div>
+              <span class="badge badge-forest"><i class="ti ti-rosette-discount-check"></i> Verified</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="color:var(--tv-gold);letter-spacing:1px;">★★★★★</span><span style="color:var(--tv-text-muted);">4.8 (27)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">SMALL BUSINESS</span><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">SELF EMPLOYED</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-map-pin"></i> Austin, TX · 14 yrs · Flat fee</div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:auto;">View profile</button>
+          </div>
+          <!-- CPA card -->
+          <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;">D</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;">David Chen</div>
+                <div style="font-size:12.5px;color:var(--tv-text-muted);">CPA · Chen Tax Advisory</div>
+              </div>
+              <span class="badge badge-forest"><i class="ti ti-rosette-discount-check"></i> Verified</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="color:var(--tv-gold);letter-spacing:1px;">★★★★★</span><span style="color:var(--tv-text-muted);">4.6 (41)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">REAL ESTATE</span><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">SMALL BUSINESS</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-map-pin"></i> San Diego, CA · 11 yrs · Hourly</div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:auto;">View profile</button>
+          </div>
+          <!-- CPA card -->
+          <div class="card" style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;gap:12px;align-items:center;">
+              <div style="width:44px;height:44px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:600;">S</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;">Sarah Olsen</div>
+                <div style="font-size:12.5px;color:var(--tv-text-muted);">CPA, CFP · Olsen Advisory Group</div>
+              </div>
+              <span class="badge badge-forest"><i class="ti ti-rosette-discount-check"></i> Verified</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:13px;"><span style="color:var(--tv-gold);letter-spacing:1px;">★★★★★</span><span style="color:var(--tv-text-muted);">4.7 (52)</span></div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;"><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">SELF EMPLOYED</span><span class="badge" style="background:var(--tv-sage-pale);color:var(--tv-forest);font-size:10.5px;">REAL ESTATE</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-map-pin"></i> Denver, CO · 18 yrs · Hourly</div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:auto;">View profile</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Admin Analytics + Customer Care moved to the dedicated Ops Portal (assets/terravest-ops-portal.html). -->
 
     </div><!-- /page-content -->
@@ -3601,7 +3824,7 @@ function navigate(pageId, navEl) {
     dealroom:'Deal Room', fractional:'Fractional LLC', security:'Security',
     messages:'Messages', settings:'Settings', styleguide:'Style Guide', flowmap:'UI Flow Map',
     business:'My Business', aiassistant:'AI Assistant', calculators:'Calculators',
-    goals:'Goals', admin:'Admin · Analytics', customercare:'Customer Care',
+    goals:'Goals', tax:'Taxes', cpa:'Find a CPA', admin:'Admin · Analytics', customercare:'Customer Care',
     profile:'Profile', auth:'Auth / KYC'
   };
   document.getElementById('topbar-label').textContent = labels[pageId] || 'TerraVest';
