@@ -248,13 +248,22 @@ function CpaRegisterModal({ onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const requiredKeys = REQUIRED_FIELDS.map(([k]) => k);
   const missing = REQUIRED_FIELDS.filter(([k]) => !String(form[k] || "").trim()).map(([, label]) => label);
+  // A required field is shown in red once the user has attempted to submit and left it empty.
+  const invalid = (k) => triedSubmit && requiredKeys.includes(k) && !String(form[k] || "").trim();
+  const fieldStyle = (k) => (invalid(k) ? { borderColor: "var(--tv-negative)", background: "var(--tv-negative-bg)" } : undefined);
 
   const submit = async () => {
     setError("");
-    if (missing.length) { setError(`Please fill in: ${missing.join(", ")}.`); return; }
+    if (missing.length) {
+      setTriedSubmit(true);
+      setError(`Please fill in the highlighted required field${missing.length > 1 ? "s" : ""}: ${missing.join(", ")}.`);
+      return;
+    }
     setSubmitting(true);
     try {
       const payload = { ...form };
@@ -266,7 +275,11 @@ function CpaRegisterModal({ onClose }) {
       await api.registerCpa(payload);
       setDone(true);
     } catch (e) {
-      setError(e?.message || "Could not submit your listing. Please try again.");
+      const msg = e?.message || "";
+      // A 404 here means the registration service isn't reachable yet (e.g. still deploying).
+      setError(/not found|404/i.test(msg)
+        ? "Couldn't reach the listing service right now — please try again in a little while."
+        : (msg || "Could not submit your listing. Please try again."));
     } finally {
       setSubmitting(false);
     }
@@ -295,7 +308,7 @@ function CpaRegisterModal({ onClose }) {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               <div>
                 <label className="form-label">Full name *</label>
-                <input className="form-input" value={form.name} onChange={set("name")} placeholder="Jane Doe" />
+                <input className="form-input" style={fieldStyle("name")} value={form.name} onChange={set("name")} placeholder="Jane Doe" />
               </div>
               <div>
                 <label className="form-label">Firm</label>
@@ -303,19 +316,19 @@ function CpaRegisterModal({ onClose }) {
               </div>
               <div>
                 <label className="form-label">Credentials *</label>
-                <input className="form-input" value={form.credentials} onChange={set("credentials")} placeholder="CPA, EA" />
+                <input className="form-input" style={fieldStyle("credentials")} value={form.credentials} onChange={set("credentials")} placeholder="CPA, EA" />
               </div>
               <div>
                 <label className="form-label">Contact email *</label>
-                <input className="form-input" type="email" value={form.contactEmail} onChange={set("contactEmail")} placeholder="jane@firm.com" />
+                <input className="form-input" style={fieldStyle("contactEmail")} type="email" value={form.contactEmail} onChange={set("contactEmail")} placeholder="jane@firm.com" />
               </div>
               <div>
                 <label className="form-label">License state *</label>
-                <input className="form-input" value={form.licenseState} onChange={set("licenseState")} placeholder="TX" />
+                <input className="form-input" style={fieldStyle("licenseState")} value={form.licenseState} onChange={set("licenseState")} placeholder="TX" />
               </div>
               <div>
                 <label className="form-label">License number *</label>
-                <input className="form-input" value={form.licenseNumber} onChange={set("licenseNumber")} placeholder="123456" />
+                <input className="form-input" style={fieldStyle("licenseNumber")} value={form.licenseNumber} onChange={set("licenseNumber")} placeholder="123456" />
               </div>
               <div>
                 <label className="form-label">Phone</label>
@@ -360,13 +373,25 @@ function CpaRegisterModal({ onClose }) {
               <textarea className="form-input" rows={3} value={form.bio} onChange={set("bio")} placeholder="Tell clients about your practice…" />
             </div>
 
-            {error && <p className="item-sub" style={{ fontSize: 12.5, color: "var(--tv-negative)", marginTop: 8 }}>{error}</p>}
+            {error && (
+              <div style={{
+                display: "flex", gap: 8, alignItems: "flex-start", marginTop: 12, padding: "10px 12px",
+                borderRadius: "var(--radius-md)", background: "var(--tv-negative-bg)",
+                border: "1px solid var(--tv-negative)", color: "var(--tv-negative)", fontSize: 12.5,
+              }}>
+                <i className="ti ti-alert-triangle" style={{ marginTop: 1 }}></i>
+                <span>{error}</span>
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-              <button className="btn btn-primary" onClick={submit} disabled={submitting || missing.length > 0} style={{ flex: 1 }}>
+              <button className="btn btn-primary" onClick={submit} disabled={submitting} style={{ flex: 1 }}>
                 {submitting ? "Submitting…" : "Submit for review"}
               </button>
               <button className="btn btn-secondary" onClick={onClose} disabled={submitting}>Cancel</button>
+            </div>
+            <div className="item-sub" style={{ fontSize: 11, marginTop: 8 }}>
+              <span style={{ color: "var(--tv-negative)" }}>*</span> Required. We review every listing before it goes live.
             </div>
           </>
         )}
