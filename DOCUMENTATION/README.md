@@ -50,6 +50,12 @@ Read in order if you're new; jump directly if you know what you need.
 | 8 | **[08-DESIGN-AND-FEATURES.md](08-DESIGN-AND-FEATURES.md)** | Read the design system and per-feature descriptions |
 | 9 | **[09-RUN-PROMPT.md](09-RUN-PROMPT.md)** | Copy a ready-to-use prompt to run/operate/rebuild the app |
 
+### Feature backlogs
+
+| Feature | Document | Read it when you want to… |
+|---|---|---|
+| Taxes | **[taxes/MVP2.md](taxes/MVP2.md)** | See the planned next-phase tax work (Textract OCR for photos/scans, QBI, capital-gains rates, quarterly estimates, …) |
+
 ---
 
 ## The most important existing documents (deep dives)
