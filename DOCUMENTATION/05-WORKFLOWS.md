@@ -98,6 +98,16 @@ cd finance-mvp
 ./deploy/deploy.sh          # uses TAG from .env.prod
 ```
 
+**Deploy a single backend change fast** (the common case after a Java/migration
+change merges — `deploy.sh` rebuilds web + *pulls* Java images, but Java images
+are built locally, so the container keeps the old image until rebuilt):
+```bash
+cd finance-mvp
+bash deploy/rebuild-service.sh financial-core-service   # pull main, rebuild that image, restart only it
+bash deploy/rebuild-service.sh web                       # web bundle only (delegates to deploy.sh)
+```
+It builds at the tag the stack already uses, so no other container is touched.
+
 > ⚠️ **Deploy gotchas** (already handled by the script — don't reintroduce):
 > one-click deploy does `git fetch + git reset --hard origin/main` (not `git pull`, which aborts
 > on dirty `target/`); `web-dist` must be rebuilt **in place** (never `rm -rf` it — Caddy
