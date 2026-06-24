@@ -104,7 +104,8 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }
 
   return (
     <aside className="sidebar" onClick={handleNavClick}>
-      <div className="sidebar-brand">
+      <NavLink to="/" className="sidebar-brand" title="Go to Home"
+        style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
         <div className="brand-mark">
           <svg viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-label="TerraVest">
             <defs>
@@ -126,7 +127,7 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }
           <div className="brand-name">TerraVest</div>
           <div className="brand-tagline">{t('brand.tagline')}</div>
         </div>
-      </div>
+      </NavLink>
 
       <ul className="sidebar-nav" style={{paddingTop:'12px'}}>
         {navSections.map((section) => (

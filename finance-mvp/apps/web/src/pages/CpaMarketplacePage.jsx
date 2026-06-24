@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 
 const specialtiesOf = (c) => {
@@ -19,6 +20,7 @@ function Stars({ value }) {
 
 /** CPA marketplace — find a verified CPA, view their profile + reviews, and connect. */
 export default function CpaMarketplacePage() {
+  const navigate = useNavigate();
   const [list, setList] = useState([]);
   const [q, setQ] = useState("");
   const [specialty, setSpecialty] = useState("");
@@ -38,6 +40,9 @@ export default function CpaMarketplacePage() {
 
   return (
     <div id="page-cpa" className="page active">
+      <button className="btn btn-secondary btn-sm" onClick={() => navigate("/tax")} style={{ marginBottom: 12 }}>
+        <i className="ti ti-arrow-left"></i> Back to Taxes
+      </button>
       <div className="page-header">
         <div>
           <div className="page-title">Find a CPA</div>
