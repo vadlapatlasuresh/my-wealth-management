@@ -52,6 +52,26 @@ class TaxDocumentParserTest {
     }
 
     @Test
+    void parsesTwoColumnW2LayoutFromPdfTextExtraction() {
+        // How pdf.js reading-order reconstruction typically renders a W-2: the two box labels on
+        // one row, their two amounts on the next. Withholding must NOT pick up the wages figure.
+        String w2 = """
+                EMPLOYER PAYROLL CO
+                Form W-2 Wage and Tax Statement 2025
+                1 Wages, tips, other compensation   2 Federal income tax withheld
+                84,200.00   9,310.00
+                3 Social security wages   4 Social security tax withheld
+                84,200.00   5,220.40
+                """;
+
+        ParsedTaxDocument r = parser.parse(w2);
+
+        assertThat(r.documentType()).isEqualTo("W2");
+        assertThat(r.wages()).isEqualByComparingTo(new BigDecimal("84200.00"));
+        assertThat(r.federalWithholding()).isEqualByComparingTo(new BigDecimal("9310.00"));
+    }
+
+    @Test
     void unreadableTextReturnsLowConfidenceNotError() {
         ParsedTaxDocument r = parser.parse("just some random scanned noise with no boxes");
         assertThat(r.wages()).isNull();
