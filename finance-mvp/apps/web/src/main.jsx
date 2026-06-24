@@ -34,6 +34,11 @@ if (isNative) {
   const updateSW = registerSW({
     immediate: true,
     onNeedRefresh() {
+      // Apply the new service worker immediately (skipWaiting, NO forced reload),
+      // so the client is never stranded waiting on a banner click — the next
+      // natural page load serves the fresh build. We still surface the banner as
+      // a one-click "reload now" for users who want it right away.
+      updateSW(false).catch(() => {});
       showReloadBanner(() => updateSW(true));
     },
     onRegisteredSW(_swUrl, reg) {
