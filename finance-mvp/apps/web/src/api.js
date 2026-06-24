@@ -201,6 +201,9 @@ export const api = {
     request("/api/v1/planning/tax/profile", { method: "PUT", body: JSON.stringify(payload) }),
   getTaxPrefill: () => request("/api/v1/planning/tax/prefill"),
   getTaxGuide: () => request("/api/v1/planning/tax/guide"),
+  // Parse an uploaded/pasted W-2 or 1099 into suggested figures (stateless; nothing stored).
+  parseTaxDocument: (text) =>
+    request("/api/v1/planning/tax/documents/parse", { method: "POST", body: JSON.stringify({ text }) }),
   // CPA marketplace
   getCpas: (specialty, q) => {
     const p = new URLSearchParams();
