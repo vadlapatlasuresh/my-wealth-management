@@ -29,7 +29,7 @@ class TaxControllerProfileTest {
     private final TaxProfileService profileService = mock(TaxProfileService.class);
     private final ObjectMapper mapper = new ObjectMapper();
     // saveProfile only needs the profile service + object mapper; the rest are unused here.
-    private final TaxController controller = new TaxController(null, profileService, null, null, mapper);
+    private final TaxController controller = new TaxController(null, profileService, null, null, null, mapper);
 
     @AfterEach
     void clearAuth() {
