@@ -311,17 +311,26 @@ function OuterTabs() {
   const getOuterTabClass = (path) =>
     `outer-tab ${location.pathname === path ? 'active' : ''}`;
 
+  // Quick-access tabs: user-facing features only (internal dev screens like the Style Guide and
+  // UI Flow Map are intentionally not surfaced here). Each tab routes straight to its screen.
+  const TABS = [
+    { to: '/',            icon: 'ti ti-layout-dashboard', label: 'Home' },
+    { to: '/budget',      icon: 'ti ti-chart-pie',        label: 'Budgets' },
+    { to: '/billpay',     icon: 'ti ti-receipt',          label: 'Bill Pay' },
+    { to: '/tax',         icon: 'ti ti-receipt-tax',      label: 'Taxes' },
+    { to: '/debt',        icon: 'ti ti-trending-down',    label: 'Debt Lab' },
+    { to: '/dealroom',    icon: 'ti ti-briefcase',        label: 'Deal Room' },
+    { to: '/mybusiness',  icon: 'ti ti-building-store',   label: 'My Business' },
+    { to: '/ai-assistant', icon: 'ti ti-sparkles',        label: 'AI Assistant' },
+  ];
+
   return (
     <div className="outer-tabs">
-      <NavLink to="/" className={getOuterTabClass('/')}><i className="ti ti-layout-dashboard"></i>Home</NavLink>
-      <NavLink to="/budget" className={getOuterTabClass('/budget')}><i className="ti ti-chart-pie"></i>Budgets</NavLink>
-      <NavLink to="/billpay" className={getOuterTabClass('/billpay')}><i className="ti ti-receipt"></i>Bill Pay</NavLink>
-      <NavLink to="/debt" className={getOuterTabClass('/debt')}><i className="ti ti-trending-down"></i>Debt Lab</NavLink>
-      <NavLink to="/dealroom" className={getOuterTabClass('/dealroom')}><i className="ti ti-briefcase"></i>Deal Room</NavLink>
-      <NavLink to="/mybusiness" className={getOuterTabClass('/mybusiness')}><i className="ti ti-building-store"></i>My Business</NavLink>
-      <NavLink to="/ai-assistant" className={getOuterTabClass('/ai-assistant')}><i className="ti ti-sparkles"></i>AI Assistant</NavLink>
-      <NavLink to="/styleguide" className={getOuterTabClass('/styleguide')}><i className="ti ti-palette"></i>Style Guide</NavLink>
-      <NavLink to="/flowmap" className={getOuterTabClass('/flowmap')}><i className="ti ti-git-merge"></i>UI Flow Map</NavLink>
+      {TABS.map((tab) => (
+        <NavLink key={tab.to} to={tab.to} className={getOuterTabClass(tab.to)}>
+          <i className={tab.icon}></i>{tab.label}
+        </NavLink>
+      ))}
     </div>
   );
 }

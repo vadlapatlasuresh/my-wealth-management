@@ -120,10 +120,12 @@ export const MODULE_REGISTRY = {
     route: '/tax', section: SECTION_FINANCE, defaultOrder: 12,
     component: TaxPage, inNavByDefault: true,
   },
+  // "Find a CPA" lives under Taxes now (surfaced prominently on the Tax page), so it's a
+  // route-only module — reachable at /cpa but not a separate sidebar item, to reduce clutter.
   cpa: {
     id: 'cpa', title: 'Find a CPA', icon: 'ti ti-user-check',
-    route: '/cpa', section: SECTION_FINANCE, defaultOrder: 13,
-    component: CpaMarketplacePage, inNavByDefault: true,
+    route: '/cpa', section: null, defaultOrder: 0,
+    component: CpaMarketplacePage, inNavByDefault: false,
   },
 
   realestate: {
