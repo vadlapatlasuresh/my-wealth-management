@@ -60,6 +60,21 @@ const addAmount = (existing, amount) => {
   return String(Math.round(prev + Number(amount)));
 };
 
+// Parse any money-ish value to a number.
+const numOf = (v) => Number(String(v ?? "").replace(/[^0-9.\-]/g, "")) || 0;
+// Small unique id for W-2 rows / document chips.
+let _uid = 0;
+const uid = () => `id${++_uid}`;
+
+// Household filers derived from filing status. "you"/"spouse" own W-2s; "household" is for shared docs.
+const filersFor = (status) => {
+  const list = [{ id: "you", name: "You" }];
+  if (status === "MARRIED_JOINT" || status === "MARRIED_SEPARATE") list.push({ id: "spouse", name: "Spouse" });
+  list.push({ id: "household", name: "Household" });
+  return list;
+};
+const filerName = (filers, id) => (filers.find((f) => f.id === id) || {}).name || "You";
+
 /**
  * Tax Overview — an educational federal estimate. Sends the user's categorized
  * figures (income / adjustments / itemized deductions) to the versioned estimator
@@ -87,8 +102,15 @@ export default function TaxPage() {
   const [guideOpen, setGuideOpen] = useState(true);
   const [docBusy, setDocBusy] = useState(false);
   const [docErr, setDocErr] = useState("");
-  const [docLog, setDocLog] = useState([]);   // running list of what each upload extracted
   const [history, setHistory] = useState([]); // year-over-year estimate snapshots
+  // Joint filing: one W-2 entry per form (per filer); uploaded docs tracked for delete.
+  const [w2s, setW2s] = useState([{ id: uid(), filerId: "you", employer: "", wages: "", withholding: "" }]);
+  const [docs, setDocs] = useState([]); // { id, fileName, docType, filerId, applied:[{key,amount}], w2Id }
+
+  const filers = filersFor(form.filingStatus);
+  const personFilers = filers.filter((f) => f.id !== "household"); // W-2s belong to a person
+  const totalW2Wages = w2s.reduce((s, w) => s + numOf(w.wages), 0);
+  const totalW2Withholding = w2s.reduce((s, w) => s + numOf(w.withholding), 0);
 
   // Collapsible input sections (Basics always visible; the rest start open).
   const [openSection, setOpenSection] = useState({ income: true, adjustments: true, itemized: true });
@@ -96,11 +118,81 @@ export default function TaxPage() {
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
+  // --- W-2 entries ---
+  const addW2 = () => setW2s((xs) => [...xs, { id: uid(), filerId: personFilers[0]?.id || "you", employer: "", wages: "", withholding: "" }]);
+  const updateW2 = (id, k, v) => setW2s((xs) => xs.map((w) => (w.id === id ? { ...w, [k]: v } : w)));
+  const removeW2 = (id) => setW2s((xs) => (xs.length > 1
+    ? xs.filter((w) => w.id !== id)
+    : xs.map((w) => (w.id === id ? { ...w, employer: "", wages: "", withholding: "" } : w))));
+  // Duplicate guard: same filer + employer + wages.
+  const isDupW2 = (w) => numOf(w.wages) > 0 && w.employer.trim() &&
+    w2s.some((o) => o.id !== w.id && o.filerId === w.filerId && o.employer.trim() === w.employer.trim() && numOf(o.wages) === numOf(w.wages));
+
+  // Filing status: keep filers consistent — reassign spouse data to "you" when not married.
+  const onFilingStatusChange = (e) => {
+    const v = e.target.value;
+    setForm((f) => ({ ...f, filingStatus: v }));
+    if (v !== "MARRIED_JOINT" && v !== "MARRIED_SEPARATE") {
+      setW2s((xs) => xs.map((w) => (w.filerId === "spouse" ? { ...w, filerId: "you" } : w)));
+      setDocs((ds) => ds.map((d) => (d.filerId === "spouse" ? { ...d, filerId: "you" } : d)));
+    }
+  };
+
+  // Remove an uploaded document and reverse whatever it applied.
+  const removeDoc = (id) => {
+    const doc = docs.find((d) => d.id === id);
+    if (!doc) return;
+    if (doc.w2Id) setW2s((xs) => (xs.length > 1 ? xs.filter((w) => w.id !== doc.w2Id) : xs));
+    else if (doc.applied?.length) setForm((f) => {
+      const next = { ...f };
+      for (const a of doc.applied) next[a.key] = String(Math.max(0, Math.round(numOf(next[a.key]) - numOf(a.amount))));
+      return next;
+    });
+    setDocs((ds) => ds.filter((d) => d.id !== id));
+  };
+  const retagDoc = (id, filerId) => setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, filerId } : d)));
+  const docSummary = (d) => {
+    if (d.w2Id) {
+      const w = w2s.find((x) => x.id === d.w2Id);
+      return w ? `Wages ${usd(numOf(w.wages))}${numOf(w.withholding) ? ` · Withheld ${usd(numOf(w.withholding))}` : ""} → applied` : "W-2 removed";
+    }
+    if (d.applied?.length) return `${d.applied.map((a) => `${FIELD_LABELS[a.key] || a.key} ${usd(a.amount)}`).join(" · ")} → applied`;
+    return "applied";
+  };
+
+  // Estimator/profile payload: W-2s summed into wages/withholding; collections sent for persistence.
+  const buildPayload = () => ({
+    ...form,
+    wages: String(totalW2Wages),
+    withholding: String(totalW2Withholding + numOf(form.withholding)),
+    w2s: w2s.filter((w) => numOf(w.wages) > 0 || w.employer.trim()).map((w) => ({
+      filerId: w.filerId, employer: w.employer.trim(), wages: numOf(w.wages), federalWithholding: numOf(w.withholding),
+    })),
+    filers,
+    documents: docs.map((d) => ({ fileName: d.fileName, docType: d.docType, filerId: d.filerId })),
+  });
+
   // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
   useEffect(() => {
     let cancelled = false;
     api.getTaxProfile()
-      .then((p) => { if (!cancelled && p) setForm((f) => ({ ...f, ...clean(p) })); })
+      .then((p) => {
+        if (cancelled || !p) return;
+        setForm((f) => ({ ...f, ...clean(p) }));
+        // Restore saved W-2 entries (the source of truth for wages); documents stay session-scoped.
+        if (p.detailsJson) {
+          try {
+            const d = JSON.parse(p.detailsJson);
+            if (Array.isArray(d.w2s) && d.w2s.length) {
+              setW2s(d.w2s.map((w) => ({
+                id: uid(), filerId: w.filerId || "you", employer: w.employer || "",
+                wages: w.wages != null ? String(w.wages) : "",
+                withholding: w.federalWithholding != null ? String(w.federalWithholding) : "",
+              })));
+            }
+          } catch { /* ignore malformed json */ }
+        }
+      })
       .catch(() => {});
     api.getTaxGuide()
       .then((g) => { if (!cancelled && Array.isArray(g)) setGuide(g); })
@@ -120,7 +212,7 @@ export default function TaxPage() {
     setBusy(true);
     setErr("");
     try {
-      setResult(await api.estimateTax(form));
+      setResult(await api.estimateTax(buildPayload()));
       loadHistory(); // the estimate is persisted server-side; refresh the year-over-year view
     } catch (e2) {
       setErr(e2?.message || "Could not calculate the estimate.");
@@ -132,7 +224,7 @@ export default function TaxPage() {
   const saveProfile = async () => {
     setSaved("");
     try {
-      await api.saveTaxProfile(form);
+      await api.saveTaxProfile(buildPayload());
       setSaved("Saved.");
       setTimeout(() => setSaved(""), 2500);
     } catch {
@@ -144,8 +236,10 @@ export default function TaxPage() {
     setSuggesting(true);
     try {
       const s = await api.getTaxPrefill();
-      if (s && s.grossIncome != null) setForm((f) => ({ ...f, wages: String(Math.round(s.grossIncome)) }));
-      else setErr("No linked-account deposits to estimate income from yet.");
+      if (s && s.grossIncome != null) {
+        const v = String(Math.round(s.grossIncome));
+        setW2s((xs) => (xs.length ? xs.map((w, i) => (i === 0 ? { ...w, wages: v } : w)) : [{ id: uid(), filerId: "you", employer: "", wages: v, withholding: "" }]));
+      } else setErr("No linked-account deposits to estimate income from yet.");
     } catch {
       /* best-effort */
     } finally {
@@ -159,49 +253,48 @@ export default function TaxPage() {
     if (!text || !text.trim()) return null;
     const r = await api.parseTaxDocument(text);
     const fields = Array.isArray(r?.fields) ? r.fields : [];
-    const landed = [];   // { key, label, amount } to apply to the form
-    const notes = [];    // info-only items (e.g. tuition → education credit)
+    const docType = r?.documentType || "UNKNOWN";
+    if (r?.taxYear === 2024 || r?.taxYear === 2025) setForm((f) => ({ ...f, year: r.taxYear }));
+    const get = (k) => { const f = fields.find((x) => x.key === k); return f ? numOf(f.amount) : 0; };
 
-    // Decide what lands BEFORE touching state — the functional setForm updater runs later, so we
-    // can't read these arrays back if we populate them inside it.
+    // A W-2 becomes its own W-2 entry (tagged to the primary filer; the user can re-tag it).
+    if (docType === "W2") {
+      const wages = get("wages"), wh = get("withholding");
+      if (wages > 0 || wh > 0) {
+        const w2Id = uid();
+        setW2s((xs) => {
+          const entry = { id: w2Id, filerId: "you", employer: "", wages: String(Math.round(wages)), withholding: String(Math.round(wh)) };
+          const blankIdx = xs.findIndex((w) => !numOf(w.wages) && !numOf(w.withholding) && !w.employer.trim());
+          if (blankIdx >= 0) { const copy = [...xs]; copy[blankIdx] = entry; return copy; }
+          return [...xs, entry];
+        });
+        setDocs((ds) => [{ id: uid(), fileName, docType, filerId: "you", w2Id }, ...ds]);
+        return { ok: true, name: fileName, text: `W-2: Wages ${usd(wages)}${wh ? `, Withheld ${usd(wh)}` : ""} → added as a W-2` };
+      }
+    }
+
+    // Any other form routes its figures into the matching category fields.
+    const applied = [];
+    const notes = [];
     for (const fld of fields) {
       if (fld == null || fld.amount == null) continue;
       const key = fld.key;
-      if (key === "tuition") {
-        notes.push(`Tuition ${usd(fld.amount)} — you may qualify for an education credit`);
-        continue;
-      }
-      // Only route keys that exist on the form (income/adjustments/itemized + withholding).
+      if (key === "tuition") { notes.push(`Tuition ${usd(fld.amount)} — you may qualify for an education credit`); continue; }
       if (key === "withholding" || CATEGORY_FIELDS.includes(key)) {
-        landed.push({ key, label: FIELD_LABELS[key] || fld.label || key, amount: fld.amount });
+        applied.push({ key, label: FIELD_LABELS[key] || fld.label || key, amount: fld.amount });
       }
     }
+    if (applied.length) setForm((f) => {
+      const next = { ...f };
+      for (const a of applied) next[a.key] = addAmount(next[a.key], a.amount);
+      return next;
+    });
 
-    // Apply the routed amounts (accumulating across multiple documents) + adopt a valid tax year.
-    const adoptYear = r?.taxYear === 2024 || r?.taxYear === 2025;
-    if (landed.length || adoptYear) {
-      setForm((f) => {
-        const next = { ...f };
-        for (const l of landed) next[l.key] = addAmount(next[l.key], l.amount);
-        if (adoptYear) next.year = r.taxYear;
-        return next;
-      });
-    }
-
-    const docLabel = DOC_LABELS[r?.documentType] || "Document";
-    if (landed.length === 0 && notes.length === 0) {
-      return { ok: false, name: fileName, text: `${docLabel}: couldn't read any figures` };
-    }
-    const parts = landed.map((l) => `${l.label} ${usd(l.amount)}`);
-    const yearStr = r?.taxYear ? ` (${r.taxYear})` : "";
-    return {
-      ok: true,
-      name: fileName,
-      text: landed.length
-        ? `${docLabel}${yearStr}: ${parts.join(", ")} → added`
-        : `${docLabel}${yearStr}: ${notes.join("; ")}`,
-      notes,
-    };
+    const docLabel = DOC_LABELS[docType] || "Document";
+    if (!applied.length && !notes.length) return { ok: false, name: fileName, text: `${docLabel}: couldn't read any figures` };
+    setDocs((ds) => [{ id: uid(), fileName, docType, filerId: docType === "1098" ? "household" : "you", applied }, ...ds]);
+    const parts = applied.map((a) => `${a.label} ${usd(a.amount)}`);
+    return { ok: true, name: fileName, text: applied.length ? `${docLabel}: ${parts.join(", ")} → added` : `${docLabel}: ${notes.join("; ")}` };
   };
 
   // Pull text out of one File depending on its type. Returns "" if it needs OCR.
@@ -229,22 +322,18 @@ export default function TaxPage() {
     e.target.value = ""; // allow re-selecting the same files
     setDocErr("");
     setDocBusy(true);
-    const newEntries = [];
-    let anyError = "";
+    let anyError = "", anyOk = false;
     for (const file of files) {
       try {
-        const text = await extractFileText(file);
-        const entry = await parseAndRoute(text, file.name);
-        if (entry) newEntries.push(entry);
+        const entry = await parseAndRoute(await extractFileText(file), file.name);
+        if (entry?.ok) anyOk = true; else if (entry) anyError = entry.text;
       } catch (e2) {
         anyError = e2?.message || `Couldn't read ${file.name}.`;
-        newEntries.push({ ok: false, name: file.name, text: anyError });
       }
     }
-    if (newEntries.length) setDocLog((log) => [...newEntries, ...log]);
-    if (anyError && !newEntries.some((x) => x.ok)) setDocErr(anyError);
+    if (anyError && !anyOk) setDocErr(anyError);
     setDocBusy(false);
-    setSaved("Figures from your document(s) were filled in — review, then Calculate.");
+    if (anyOk) setSaved("Documents read — review the figures, then Calculate.");
   };
 
   // Paste-text box: parse + route the same way as an uploaded file.
@@ -254,11 +343,8 @@ export default function TaxPage() {
     setDocBusy(true);
     try {
       const entry = await parseAndRoute(text, "Pasted text");
-      if (entry) {
-        setDocLog((log) => [entry, ...log]);
-        if (!entry.ok) setDocErr("Couldn't read the key figures — try the form fields below.");
-        else setSaved("Figures were filled in — review, then Calculate.");
-      }
+      if (entry && !entry.ok) setDocErr("Couldn't read the key figures — try the form fields below.");
+      else if (entry?.ok) setSaved("Figures were filled in — review, then Calculate.");
     } catch (e2) {
       setDocErr(e2?.message || "Couldn't read that text.");
     } finally {
@@ -334,9 +420,9 @@ export default function TaxPage() {
           <i className="ti ti-file-upload" style={{ color: "var(--tv-forest)" }}></i> Upload your tax forms
         </div>
         <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 12 }}>
-          Drop in one or more forms — W-2, 1099-NEC/MISC/INT/DIV/R, 1098, 1098-E, 1098-T — and we'll read
-          the figures and drop each into the right field. Parsed in your session and <strong>never stored</strong>.
-          Always double-check the numbers.
+          Drop in one or more forms for everyone in your household — W-2, 1099-NEC/MISC/INT/DIV/R, 1098,
+          1098-E, 1098-T. Each W-2 becomes its own entry; tag every file to a filer and delete any to
+          remove its figures. Parsed in your session and <strong>never stored</strong>.
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
@@ -352,18 +438,40 @@ export default function TaxPage() {
         {docBusy && <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document(s)…</p>}
         {docErr && <p className="item-sub" style={{ color: "var(--tv-negative)", fontSize: 12.5 }}><i className="ti ti-alert-triangle"></i> {docErr}</p>}
 
-        {docLog.length > 0 && (
+        {docs.length > 0 && (
           <div className="card" style={{ background: "var(--tv-sage-pale)", marginTop: 12, padding: 14 }}>
-            <div className="form-label" style={{ marginBottom: 8 }}>Extracted from your documents</div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              {docLog.map((entry, i) => (
-                <div key={i} className="item-sub" style={{ fontSize: 12.5, display: "flex", gap: 8, alignItems: "baseline" }}>
-                  <i className={entry.ok ? "ti ti-circle-check" : "ti ti-alert-triangle"}
-                     style={{ color: entry.ok ? "var(--tv-positive)" : "var(--tv-negative)" }}></i>
-                  <span><strong>{entry.name}</strong> — {entry.text}</span>
-                </div>
-              ))}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div className="form-label" style={{ marginBottom: 0 }}>Your documents <span className="badge badge-gray">{docs.length}</span></div>
+              <span className="item-sub" style={{ fontSize: 11 }}>Tag each to a filer · delete removes its figures</span>
             </div>
+            {filers.map((flr) => {
+              const group = docs.filter((d) => d.filerId === flr.id);
+              if (!group.length) return null;
+              return (
+                <div key={flr.id} style={{ marginBottom: 8 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 700, color: "var(--tv-forest)", margin: "2px 0 6px" }}>
+                    <i className={flr.id === "household" ? "ti ti-home" : "ti ti-user"}></i> {flr.name}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {group.map((d) => (
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--tv-card)", border: "1px solid var(--tv-border)", borderRadius: "var(--radius-md)", padding: "8px 10px" }}>
+                        <i className="ti ti-file-text" style={{ color: "var(--tv-forest)" }}></i>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="item-name" style={{ fontSize: 12.5 }}>{d.fileName} <span className="badge badge-gray">{DOC_LABELS[d.docType] || d.docType}</span></div>
+                          <div className="item-sub" style={{ fontSize: 11.5 }}>{docSummary(d)}</div>
+                        </div>
+                        <select className="form-select" style={{ maxWidth: 104, fontSize: 12, padding: "4px 8px" }} value={d.filerId} onChange={(e) => retagDoc(d.id, e.target.value)}>
+                          {filers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                        </select>
+                        <button type="button" className="btn btn-secondary btn-sm" title="Delete file" style={{ color: "var(--tv-negative)", padding: "4px 8px" }} onClick={() => removeDoc(d.id)}>
+                          <i className="ti ti-trash"></i>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -383,7 +491,7 @@ export default function TaxPage() {
             </div>
             <div>
               <label className="form-label">Filing status</label>
-              <select className="form-select" value={form.filingStatus} onChange={set("filingStatus")}>
+              <select className="form-select" value={form.filingStatus} onChange={onFilingStatusChange}>
                 {FILING.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
               </select>
             </div>
@@ -391,15 +499,53 @@ export default function TaxPage() {
               <label className="form-label">Dependents under 17</label>
               <input className="form-input" type="number" min="0" value={form.dependentsUnder17} onChange={set("dependentsUnder17")} />
             </div>
-            <Field label="Federal tax withheld" value={form.withholding} onChange={set("withholding")} placeholder="for refund vs. owed (optional)" />
+            <Field label="Other federal withholding (non-W-2)" value={form.withholding} onChange={set("withholding")} placeholder="1099-R, estimated payments… (W-2 withholding comes from your W-2s)" />
 
             {/* Income */}
             <Section title="Income" icon="ti ti-cash" open={openSection.income} onToggle={() => toggleSection("income")}
               helper="Everything you earned this year — we add it up into your gross income.">
+              {/* W-2 wages — one entry per W-2 (per filer); combined for joint returns */}
               <div>
-                <Field label="Wages (W-2)" value={form.wages} onChange={set("wages")} placeholder="from your W-2 (Box 1)" />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label className="form-label" style={{ marginBottom: 0 }}>W-2 wages</label>
+                  <button type="button" className="btn btn-secondary btn-sm" style={{ padding: "3px 8px", fontSize: 11.5 }} onClick={addW2}>
+                    <i className="ti ti-plus"></i> Add W-2
+                  </button>
+                </div>
+                {w2s.map((w) => (
+                  <div key={w.id} style={{ border: `1px solid ${isDupW2(w) ? "var(--tv-negative)" : "var(--tv-border)"}`, borderRadius: "var(--radius-md)", padding: 8, marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
+                      <select className="form-select" style={{ maxWidth: 104, fontSize: 12, padding: "4px 8px" }}
+                        value={w.filerId} onChange={(e) => updateW2(w.id, "filerId", e.target.value)}>
+                        {personFilers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                      </select>
+                      <input className="form-input" style={{ flex: 1, padding: "5px 8px" }} placeholder="Employer"
+                        value={w.employer} onChange={(e) => updateW2(w.id, "employer", e.target.value)} />
+                      <button type="button" className="btn btn-secondary btn-sm" title="Remove W-2"
+                        style={{ color: "var(--tv-negative)", padding: "4px 8px" }} onClick={() => removeW2(w.id)}>
+                        <i className="ti ti-x"></i>
+                      </button>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                      <input className="form-input" style={{ padding: "5px 8px" }} inputMode="decimal" placeholder="Wages (Box 1)"
+                        value={w.wages} onChange={(e) => updateW2(w.id, "wages", e.target.value)} />
+                      <input className="form-input" style={{ padding: "5px 8px" }} inputMode="decimal" placeholder="Withheld (Box 2)"
+                        value={w.withholding} onChange={(e) => updateW2(w.id, "withholding", e.target.value)} />
+                    </div>
+                    {isDupW2(w) && <div className="item-sub" style={{ fontSize: 11, color: "var(--tv-negative)", marginTop: 4 }}><i className="ti ti-alert-triangle"></i> Looks like a duplicate of another W-2.</div>}
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12.5, padding: "5px 2px 0", borderTop: "1px dashed var(--tv-border)" }}>
+                  <span className="item-sub">Combined wages · withheld ({w2s.length} W-2{w2s.length === 1 ? "" : "s"})</span>
+                  <span style={{ fontWeight: 700 }}>{usd(totalW2Wages)} · {usd(totalW2Withholding)}</span>
+                </div>
+                {form.filingStatus === "MARRIED_JOINT" && totalW2Wages > 0 && !w2s.some((w) => w.filerId === "spouse" && numOf(w.wages) > 0) && (
+                  <div className="item-sub" style={{ fontSize: 11.5, color: "var(--tv-gold)", marginTop: 6 }}>
+                    <i className="ti ti-info-circle"></i> Filing jointly — add your spouse's W-2s (tag them “Spouse”), or switch filing status.
+                  </div>
+                )}
                 <button type="button" onClick={useSuggestion} disabled={suggesting}
-                  style={{ background: "none", color: "var(--tv-forest-light)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0 0" }}>
+                  style={{ background: "none", color: "var(--tv-forest-light)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "6px 0 0" }}>
                   <i className="ti ti-wand"></i> {suggesting ? "Estimating…" : "Use income from my accounts"}
                 </button>
               </div>
@@ -460,6 +606,45 @@ export default function TaxPage() {
                 <Kpi label="Effective rate" value={pct(result.effectiveRate)} />
                 <Kpi label="Marginal bracket" value={pct(result.marginalRate)} />
               </div>
+              {w2s.some((w) => numOf(w.wages) > 0 || numOf(w.withholding) > 0) && (
+                <div className="card" style={{ marginBottom: 12 }}>
+                  <div className="card-title"><i className="ti ti-users" style={{ color: "var(--tv-forest)" }}></i> Income by W-2</div>
+                  <div className="table-scroll">
+                    <table className="tv-table" style={{ width: "100%" }}>
+                      <thead><tr><th>Filer</th><th>Employer</th><th style={{ textAlign: "right" }}>Wages</th><th style={{ textAlign: "right" }}>Fed. tax withheld</th></tr></thead>
+                      <tbody>
+                        {w2s.filter((w) => numOf(w.wages) > 0 || numOf(w.withholding) > 0).map((w) => (
+                          <tr key={w.id}>
+                            <td>{filerName(filers, w.filerId)}</td>
+                            <td className="item-sub">{w.employer || "—"}</td>
+                            <td style={{ textAlign: "right" }}>{usd(numOf(w.wages))}</td>
+                            <td style={{ textAlign: "right" }}>{usd(numOf(w.withholding))}</td>
+                          </tr>
+                        ))}
+                        <tr style={{ fontWeight: 700 }}>
+                          <td>Combined</td><td></td>
+                          <td style={{ textAlign: "right" }}>{usd(totalW2Wages)}</td>
+                          <td style={{ textAlign: "right" }}>{usd(totalW2Withholding)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  {(() => {
+                    const byFiler = personFilers
+                      .map((f) => ({ name: f.name, wages: w2s.filter((w) => w.filerId === f.id).reduce((s, w) => s + numOf(w.wages), 0) }))
+                      .filter((x) => x.wages > 0);
+                    if (form.filingStatus !== "MARRIED_JOINT" || byFiler.length < 2 || totalW2Wages <= 0) return null;
+                    const tot = Number(result.totalTax) || 0;
+                    return (
+                      <div className="item-sub" style={{ fontSize: 12, marginTop: 8 }}>
+                        <strong>Approximate</strong> share of the {usd(tot)} total tax, by income: {byFiler.map((x) => `${x.name} ${usd(tot * x.wages / totalW2Wages)}`).join(" · ")}
+                        <div style={{ fontSize: 11, color: "var(--tv-text-muted)", marginTop: 2 }}>Joint tax is figured on combined income — this split is illustrative only. The "withheld" column is each W-2's actual Box 2.</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
+
               <div className="card">
                 <div className="card-title">How we got there</div>
                 <Row k="Gross income" v={usd(result.grossIncome)} />

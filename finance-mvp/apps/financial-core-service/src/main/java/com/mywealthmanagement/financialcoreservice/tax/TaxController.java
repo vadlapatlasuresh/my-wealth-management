@@ -83,13 +83,23 @@ public class TaxController {
         return taxProfileService.upsert(getUserId(), p);
     }
 
-    /** Serialize just the known categorized fields (present + numeric) to a compact JSON object. */
+    /** Structured collections persisted alongside the scalar fields (joint filing / household docs). */
+    private static final List<String> DETAIL_COLLECTIONS = List.of("filers", "w2s", "documents");
+
+    /** Serialize the known categorized fields + the joint-filing collections to a compact JSON object. */
     private String detailsJson(Map<String, Object> body) {
         Map<String, Object> details = new java.util.LinkedHashMap<>();
         for (String key : DETAIL_FIELDS) {
             Object v = body.get(key);
             if (v != null && !v.toString().isBlank()) {
                 details.put(key, num(v));
+            }
+        }
+        // W-2 entries, filers and document metadata round-trip as-is (lists of objects).
+        for (String key : DETAIL_COLLECTIONS) {
+            Object v = body.get(key);
+            if (v instanceof List<?> list && !list.isEmpty()) {
+                details.put(key, v);
             }
         }
         try {
