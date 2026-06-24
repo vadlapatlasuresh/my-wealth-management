@@ -251,9 +251,10 @@ export default function TaxPage() {
 
   // Parse a single document's text, route each extracted field into the form, and
   // return a short summary line for the extraction log (or null if nothing landed).
-  const parseAndRoute = async (text, fileName) => {
-    if (!text || !text.trim()) return null;
-    const r = await api.parseTaxDocument(text);
+  const parseAndRoute = async (payload, fileName) => {
+    const p = typeof payload === "string" ? { text: payload } : (payload || {});
+    if (!p.text?.trim() && !p.contentBase64) return null;
+    const r = await api.parseTaxDocument(p);
     const fields = Array.isArray(r?.fields) ? r.fields : [];
     const docType = r?.documentType || "UNKNOWN";
     if (r?.taxYear === 2024 || r?.taxYear === 2025) setForm((f) => ({ ...f, year: r.taxYear }));
@@ -304,25 +305,31 @@ export default function TaxPage() {
     return { ok: true };
   };
 
-  // Pull text out of one File depending on its type. Returns "" if it needs OCR.
-  const extractFileText = async (file) => {
+  // Best-effort text from a file (never throws). PDFs → pdf.js text; images → "" (Textract reads
+  // the bytes when enabled); text/CSV → raw. The raw bytes are always sent too, so the backend can
+  // OCR with Textract regardless.
+  const safeText = async (file) => {
     const type = file.type || "";
     const name = (file.name || "").toLowerCase();
-    if (type.startsWith("image/")) {
-      throw new Error("Photos and scans need OCR, which isn't enabled yet — paste the text instead.");
-    }
-    if (type === "application/pdf" || name.endsWith(".pdf")) {
-      const text = await extractPdfText(file);
-      if (!text || !text.trim()) {
-        throw new Error("Scanned PDF with no text layer — paste the text or enter the figures manually.");
-      }
-      return text;
-    }
-    // Plain text / CSV.
-    return await file.text();
+    try {
+      if (type === "application/pdf" || name.endsWith(".pdf")) return await extractPdfText(file);
+      if (type.startsWith("image/")) return "";
+      return await file.text();
+    } catch { return ""; }
   };
 
-  // Multi-file uploader: read + parse + route each selected file in turn.
+  // Read a file as a base64 data URL (so the backend can hand the bytes to Textract). Skips very
+  // large files to keep the request small — those rely on the text path.
+  const fileToBase64 = (file) =>
+    new Promise((resolve) => {
+      if (!file || file.size > 8 * 1024 * 1024) return resolve("");
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+
+  // Multi-file uploader: read text + bytes, parse + route each selected file independently.
   const onDocFiles = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -332,10 +339,14 @@ export default function TaxPage() {
     // Each file is handled independently — one tricky file must never block the rest.
     for (const file of files) {
       try {
-        const text = await extractFileText(file);
-        await parseAndRoute(text, file.name);
+        const [text, contentBase64] = await Promise.all([safeText(file), fileToBase64(file)]);
+        const entry = await parseAndRoute({ text, contentBase64, contentType: file.type, filename: file.name }, file.name);
+        if (entry == null) {
+          // Nothing readable at all — still list the file so it's never lost.
+          setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
+            status: "unreadable", note: "Couldn't read this file — enter the figures manually." }, ...ds]);
+        }
       } catch (e2) {
-        // Couldn't read it (image/scanned PDF, parse error) — still list the file so it's never lost.
         setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
           status: "unreadable", note: e2?.message || "Couldn't read this file — enter the figures manually." }, ...ds]);
       }

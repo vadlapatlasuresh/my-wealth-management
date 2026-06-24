@@ -27,6 +27,7 @@ public class TaxController {
     private final TaxProfileService taxProfileService;
     private final TaxDocumentParser taxDocumentParser;
     private final TaxEstimateHistoryService taxEstimateHistoryService;
+    private final com.mywealthmanagement.financialcoreservice.tax.ocr.TextractReader textractReader;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
@@ -139,14 +140,33 @@ public class TaxController {
     }
 
     /**
-     * Parse an uploaded W-2 / 1099 (its extracted text) into suggested figures for the estimate.
-     * Best-effort and stateless — nothing is stored; the user confirms before anything is applied.
-     * Body: {@code { "text": "<document text>" }}.
+     * Parse an uploaded W-2 / 1099 / 1098 into suggested figures for the estimate. When AWS Textract
+     * is enabled and the raw file bytes are provided, it OCRs the document (any layout, incl. scans);
+     * otherwise it falls back to the text parser. Best-effort and stateless — nothing is stored.
+     * Body: {@code { "text": "...", "contentBase64": "<file bytes>", "contentType": "..." }}.
      */
     @PostMapping("/documents/parse")
     public ParsedTaxDocument parseDocument(@RequestBody Map<String, Object> body) {
         getUserId(); // require auth
+        String base64 = str(body.get("contentBase64"));
+        if (textractReader.isEnabled() && base64 != null) {
+            try {
+                byte[] bytes = java.util.Base64.getDecoder().decode(stripDataUrl(base64));
+                var kv = textractReader.extractKeyValues(bytes);
+                if (!kv.isEmpty()) {
+                    return taxDocumentParser.parseKeyValues(kv);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // malformed base64 — fall through to the text parser
+            }
+        }
         return taxDocumentParser.parse(str(body.get("text")));
+    }
+
+    /** Strip a {@code data:<mime>;base64,} prefix if the client sent a data URL. */
+    private static String stripDataUrl(String s) {
+        int comma = s.indexOf(',');
+        return (s.startsWith("data:") && comma >= 0) ? s.substring(comma + 1) : s;
     }
 
     /** SALT (state/local + property taxes) itemized deduction is capped at $10,000. */
