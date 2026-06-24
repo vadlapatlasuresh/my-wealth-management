@@ -278,6 +278,24 @@ export default function TaxPage() {
         </div>
       </div>
 
+      {/* Find a CPA — prominent entry at the top of the Taxes section */}
+      <div className="card" style={{
+        marginBottom: 16, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
+        background: "var(--tv-forest)", borderColor: "var(--tv-forest)", color: "#fff",
+      }}>
+        <i className="ti ti-user-check" style={{ fontSize: 28, color: "var(--tv-gold)" }}></i>
+        <div style={{ flex: 1, minWidth: 180 }}>
+          <div className="item-name" style={{ color: "#fff", fontSize: 16 }}>Work with a verified CPA</div>
+          <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
+            Browse vetted tax professionals, read verified reviews, and connect — right from your taxes.
+          </div>
+        </div>
+        <button className="btn" style={{ background: "#fff", color: "var(--tv-forest)", fontWeight: 600 }}
+          onClick={() => navigate("/cpa")}>
+          <i className="ti ti-arrow-right"></i> Find a CPA
+        </button>
+      </div>
+
       <div className="card home-guide-banner" style={{ marginBottom: 16, display: "flex", gap: 12, alignItems: "center" }}>
         <i className="ti ti-info-circle" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
         <div className="item-sub">
