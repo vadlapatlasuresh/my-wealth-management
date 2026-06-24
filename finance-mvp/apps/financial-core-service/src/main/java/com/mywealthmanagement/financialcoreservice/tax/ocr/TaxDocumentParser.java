@@ -100,10 +100,11 @@ public class TaxDocumentParser {
         return switch (type) {
             case "W2" -> List.of(
                     new FieldSpec("wages", "Wages (Box 1)", false,
-                            "wages, tips", "wages,tips", "wages tips", "box 1", "box1", "1 wages"),
+                            "wages, tips, other", "wages, tips", "wages,tips", "wages tips",
+                            "box 1", "box1", "1 wages", "1 wages, tips"),
                     new FieldSpec("withholding", "Federal tax withheld (Box 2)", true,
                             "federal income tax withheld", "fed income tax withheld", "federal tax withheld",
-                            "box 2", "box2", "2 federal"));
+                            "income tax withheld", "box 2", "box2", "2 federal"));
             case "1099-NEC" -> List.of(
                     new FieldSpec("selfEmploymentIncome", "Nonemployee compensation (Box 1)", false,
                             "nonemployee compensation", "box 1", "box1"),
@@ -130,9 +131,10 @@ public class TaxDocumentParser {
                             "federal income tax withheld", "box 4", "box4"));
             case "1098" -> List.of(
                     new FieldSpec("mortgageInterest", "Mortgage interest (Box 1)", false,
-                            "mortgage interest received", "mortgage interest", "box 1", "box1"),
+                            "mortgage interest received from", "mortgage interest received", "mortgage interest",
+                            "interest received from payer", "box 1", "box1", "1 mortgage"),
                     new FieldSpec("propertyTaxes", "Real estate / property taxes", false,
-                            "real estate taxes", "property tax", "property taxes"));
+                            "real estate taxes", "property taxes paid", "property tax", "property taxes"));
             case "1098-E" -> List.of(
                     // "received" targets the box, not the form's "Student Loan Interest Statement" title.
                     new FieldSpec("studentLoanInterest", "Student loan interest (Box 1)", false,
@@ -187,7 +189,7 @@ public class TaxDocumentParser {
             int idx = lower.indexOf(label);
             while (idx >= 0) {
                 int from = idx + label.length();
-                int to = Math.min(text.length(), from + 100);
+                int to = Math.min(text.length(), from + 160); // value can sit a couple boxes away
                 Matcher m = AMOUNT.matcher(text.substring(from, to));
                 while (m.find()) {
                     BigDecimal amt = toAmount(m.group(1));

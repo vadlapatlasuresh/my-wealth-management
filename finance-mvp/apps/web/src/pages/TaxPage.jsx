@@ -329,17 +329,16 @@ export default function TaxPage() {
     e.target.value = ""; // allow re-selecting the same files
     setDocErr("");
     setDocBusy(true);
+    // Each file is handled independently — one tricky file must never block the rest.
     for (const file of files) {
-      let text = "";
       try {
-        text = await extractFileText(file);
+        const text = await extractFileText(file);
+        await parseAndRoute(text, file.name);
       } catch (e2) {
-        // Couldn't even get text (image/scanned PDF) — still list the file so it's never lost.
+        // Couldn't read it (image/scanned PDF, parse error) — still list the file so it's never lost.
         setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
           status: "unreadable", note: e2?.message || "Couldn't read this file — enter the figures manually." }, ...ds]);
-        continue;
       }
-      await parseAndRoute(text, file.name);
     }
     setDocBusy(false);
     setSaved("Files added — review the figures (some may need manual entry), then Calculate.");
