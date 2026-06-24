@@ -26,6 +26,7 @@ public class InternalPurgeController {
     private final GoalRepository goalRepository;
     private final NetWorthSnapshotRepository netWorthSnapshotRepository;
     private final com.mywealthmanagement.financialcoreservice.tax.TaxProfileRepository taxProfileRepository;
+    private final com.mywealthmanagement.financialcoreservice.tax.TaxEstimateSnapshotRepository taxEstimateSnapshotRepository;
     private final com.mywealthmanagement.financialcoreservice.cpa.CpaReviewRepository cpaReviewRepository;
     private final com.mywealthmanagement.financialcoreservice.cpa.CpaConnectionRepository cpaConnectionRepository;
 
@@ -62,6 +63,7 @@ public class InternalPurgeController {
         goalRepository.deleteByUserId(userId);
         netWorthSnapshotRepository.deleteByUserId(userId);
         taxProfileRepository.deleteByUserId(userId);
+        taxEstimateSnapshotRepository.deleteByUserId(userId);
         cpaReviewRepository.deleteByUserId(userId);
         cpaConnectionRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();

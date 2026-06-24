@@ -26,6 +26,7 @@ public class TaxController {
     private final TaxRules taxRules;
     private final TaxProfileService taxProfileService;
     private final TaxDocumentParser taxDocumentParser;
+    private final TaxEstimateHistoryService taxEstimateHistoryService;
 
     /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
     @PostMapping("/estimate")
@@ -34,7 +35,20 @@ public class TaxController {
         TaxEstimateInput in = inputFrom(body);
         TaxEstimate estimate = TaxEstimator.estimate(in, rules);
         estimate.setInsights(TaxInsights.generate(in, estimate, rules));
+        // Persist this year's latest estimate for the history view (best-effort — never fail the
+        // estimate over a history write).
+        try {
+            taxEstimateHistoryService.record(getUserId(), estimate);
+        } catch (Exception ignored) {
+            // history is a convenience; the estimate itself must always succeed
+        }
         return estimate;
+    }
+
+    /** The user's year-over-year estimate history (most recent tax year first). */
+    @GetMapping("/estimates")
+    public List<TaxEstimateSnapshot> history() {
+        return taxEstimateHistoryService.list(getUserId());
     }
 
     /** The user's saved tax profile (or 404 if none saved yet). */

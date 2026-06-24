@@ -204,6 +204,8 @@ export const api = {
   // Parse an uploaded/pasted W-2 or 1099 into suggested figures (stateless; nothing stored).
   parseTaxDocument: (text) =>
     request("/api/v1/planning/tax/documents/parse", { method: "POST", body: JSON.stringify({ text }) }),
+  // Year-over-year estimate history (latest estimate per tax year, persisted on each calculate).
+  getTaxHistory: () => request("/api/v1/planning/tax/estimates"),
   // CPA marketplace
   getCpas: (specialty, q) => {
     const p = new URLSearchParams();

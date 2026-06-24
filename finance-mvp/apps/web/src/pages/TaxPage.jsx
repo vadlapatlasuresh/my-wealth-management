@@ -46,6 +46,7 @@ export default function TaxPage() {
   const [doc, setDoc] = useState(null);     // parsed W-2/1099 result
   const [docBusy, setDocBusy] = useState(false);
   const [docErr, setDocErr] = useState("");
+  const [history, setHistory] = useState([]); // year-over-year estimate snapshots
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -58,8 +59,15 @@ export default function TaxPage() {
     api.getTaxGuide()
       .then((g) => { if (!cancelled && Array.isArray(g)) setGuide(g); })
       .catch(() => {});
+    api.getTaxHistory()
+      .then((h) => { if (!cancelled && Array.isArray(h)) setHistory(h); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
+
+  const loadHistory = () => {
+    api.getTaxHistory().then((h) => Array.isArray(h) && setHistory(h)).catch(() => {});
+  };
 
   const calculate = async (e) => {
     e?.preventDefault();
@@ -67,6 +75,7 @@ export default function TaxPage() {
     setErr("");
     try {
       setResult(await api.estimateTax(form));
+      loadHistory(); // the estimate is persisted server-side; refresh the year-over-year view
     } catch (e2) {
       setErr(e2?.message || "Could not calculate the estimate.");
     } finally {
@@ -338,6 +347,47 @@ export default function TaxPage() {
           )}
         </div>
       </div>
+
+      {history.length > 0 && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card-title">
+            <i className="ti ti-history" style={{ color: "var(--tv-forest)" }}></i> Your tax history
+          </div>
+          <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 10 }}>
+            The latest estimate you ran for each year — see how your effective rate and refund trend over time.
+          </div>
+          <div className="table-scroll">
+            <table className="tv-table" style={{ width: "100%" }}>
+              <thead>
+                <tr>
+                  <th>Year</th><th>Filing</th>
+                  <th style={{ textAlign: "right" }}>AGI</th>
+                  <th style={{ textAlign: "right" }}>Federal tax</th>
+                  <th style={{ textAlign: "right" }}>Eff. rate</th>
+                  <th style={{ textAlign: "right" }}>Refund / Owed</th>
+                </tr>
+              </thead>
+              <tbody>
+                {history.map((h) => {
+                  const refund = Number(h.refundOrOwed) >= 0;
+                  return (
+                    <tr key={h.taxYear}>
+                      <td style={{ fontWeight: 600 }}>{h.taxYear}</td>
+                      <td className="item-sub">{FILING.find((f) => f.value === h.filingStatus)?.label || h.filingStatus || "—"}</td>
+                      <td style={{ textAlign: "right" }}>{usd(h.agi)}</td>
+                      <td style={{ textAlign: "right" }}>{usd(h.totalTax)}</td>
+                      <td style={{ textAlign: "right" }}>{pct(h.effectiveRate)}</td>
+                      <td style={{ textAlign: "right", color: refund ? "var(--tv-positive)" : "var(--tv-negative)", fontWeight: 600 }}>
+                        {refund ? "+" : "−"}{usd(Math.abs(Number(h.refundOrOwed)))}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
