@@ -40,6 +40,7 @@ public class TaxProfileService {
         p.setItemizedDeductions(incoming.getItemizedDeductions());
         p.setDependentsUnder17(incoming.getDependentsUnder17());
         p.setWithholding(incoming.getWithholding());
+        p.setDetailsJson(incoming.getDetailsJson());
         return repository.save(p);
     }
 

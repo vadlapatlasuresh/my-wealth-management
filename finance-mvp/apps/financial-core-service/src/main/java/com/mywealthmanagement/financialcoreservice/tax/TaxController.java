@@ -27,6 +27,7 @@ public class TaxController {
     private final TaxProfileService taxProfileService;
     private final TaxDocumentParser taxDocumentParser;
     private final TaxEstimateHistoryService taxEstimateHistoryService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
     @PostMapping("/estimate")
@@ -58,18 +59,44 @@ public class TaxController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No tax profile saved"));
     }
 
-    /** Create or update the user's saved tax profile. */
+    /** The full set of categorized form fields persisted verbatim so the breakdown round-trips. */
+    private static final List<String> DETAIL_FIELDS = List.of(
+            "wages", "selfEmploymentIncome", "rentalIncome", "interestIncome", "dividendIncome",
+            "retirementIncome", "otherIncome", "studentLoanInterest", "hsaContribution",
+            "iraContribution", "otherAdjustments", "mortgageInterest", "propertyTaxes",
+            "stateLocalTaxes", "charitable", "medicalExpenses");
+
+    /** Create or update the user's saved tax profile. Stores both the aggregate columns (back-compat)
+     *  and the full categorized breakdown as JSON so the detailed form repopulates on reload. */
     @PutMapping("/profile")
     public TaxProfile saveProfile(@RequestBody Map<String, Object> body) {
+        TaxEstimateInput agg = inputFrom(body); // same aggregation the estimate uses
         TaxProfile p = new TaxProfile();
         p.setTaxYear(intVal(body.get("taxYear"), intVal(body.get("year"), 2025)));
         p.setFilingStatus(parseStatus(str(body.get("filingStatus"))).name());
-        p.setGrossIncome(num(body.get("grossIncome")));
-        p.setAdjustments(num(body.get("adjustments")));
-        p.setItemizedDeductions(num(body.get("itemizedDeductions")));
+        p.setGrossIncome(agg.grossIncome());
+        p.setAdjustments(agg.adjustments());
+        p.setItemizedDeductions(agg.itemizedDeductions());
         p.setDependentsUnder17(intVal(body.get("dependentsUnder17"), 0));
         p.setWithholding(num(body.get("withholding")));
+        p.setDetailsJson(detailsJson(body));
         return taxProfileService.upsert(getUserId(), p);
+    }
+
+    /** Serialize just the known categorized fields (present + numeric) to a compact JSON object. */
+    private String detailsJson(Map<String, Object> body) {
+        Map<String, Object> details = new java.util.LinkedHashMap<>();
+        for (String key : DETAIL_FIELDS) {
+            Object v = body.get(key);
+            if (v != null && !v.toString().isBlank()) {
+                details.put(key, num(v));
+            }
+        }
+        try {
+            return objectMapper.writeValueAsString(details);
+        } catch (Exception e) {
+            return null; // details are a convenience; never fail the save over them
+        }
     }
 
     /** Suggested pre-fill from the user's linked accounts (rough; the user confirms it). */
@@ -112,14 +139,50 @@ public class TaxController {
         return taxDocumentParser.parse(str(body.get("text")));
     }
 
+    /** SALT (state/local + property taxes) itemized deduction is capped at $10,000. */
+    private static final BigDecimal SALT_CAP = BigDecimal.valueOf(10000);
+
+    /**
+     * Build the estimator input from the request body. Income, adjustments and itemized deductions
+     * are each summed from their categories (with the SALT cap applied), so the estimator stays
+     * simple. Legacy single-figure fields (grossIncome / adjustments / itemizedDeductions) are still
+     * accepted and added in, so older callers keep working.
+     */
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
+        BigDecimal selfEmployment = num(body.get("selfEmploymentIncome"));
+        BigDecimal grossIncome = sum(
+                num(body.get("wages")), selfEmployment, num(body.get("rentalIncome")),
+                num(body.get("interestIncome")), num(body.get("dividendIncome")),
+                num(body.get("retirementIncome")), num(body.get("otherIncome")),
+                num(body.get("grossIncome"))); // legacy single field
+
+        BigDecimal adjustments = sum(
+                num(body.get("studentLoanInterest")), num(body.get("hsaContribution")),
+                num(body.get("iraContribution")), num(body.get("otherAdjustments")),
+                num(body.get("adjustments"))); // legacy single field
+
+        BigDecimal salt = num(body.get("propertyTaxes")).add(num(body.get("stateLocalTaxes"))).min(SALT_CAP);
+        BigDecimal itemized = sum(
+                num(body.get("mortgageInterest")), salt, num(body.get("charitable")),
+                num(body.get("medicalExpenses")),
+                num(body.get("itemizedDeductions"))); // legacy single field
+
         return new TaxEstimateInput(
                 parseStatus(str(body.get("filingStatus"))),
-                num(body.get("grossIncome")),
-                num(body.get("adjustments")),
-                num(body.get("itemizedDeductions")),
+                grossIncome,
+                adjustments,
+                itemized,
                 intVal(body.get("dependentsUnder17"), 0),
-                num(body.get("withholding")));
+                num(body.get("withholding")),
+                selfEmployment);
+    }
+
+    private static BigDecimal sum(BigDecimal... values) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (BigDecimal v : values) {
+            if (v != null) total = total.add(v);
+        }
+        return total;
     }
 
     private static Long getUserId() {

@@ -24,7 +24,7 @@ public class TaxEstimateHistoryService {
         s.setGrossIncome(est.getGrossIncome());
         s.setAgi(est.getAgi());
         s.setTaxableIncome(est.getTaxableIncome());
-        s.setTotalTax(est.getTaxAfterCredits());
+        s.setTotalTax(est.getTotalTax());
         s.setEffectiveRate(est.getEffectiveRate());
         s.setMarginalRate(est.getMarginalRate());
         s.setWithholding(est.getWithholding());

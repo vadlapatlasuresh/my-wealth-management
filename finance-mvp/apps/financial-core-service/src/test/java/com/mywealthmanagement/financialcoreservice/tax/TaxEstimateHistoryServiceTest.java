@@ -31,6 +31,7 @@ class TaxEstimateHistoryServiceTest {
         e.setAgi(new BigDecimal("84000"));
         e.setTaxableIncome(new BigDecimal("69000"));
         e.setTaxAfterCredits(new BigDecimal(tax));
+        e.setTotalTax(new BigDecimal(tax)); // headline figure persisted to history
         e.setEffectiveRate(new BigDecimal("0.12"));
         e.setMarginalRate(new BigDecimal("0.22"));
         e.setWithholding(new BigDecimal("10000"));

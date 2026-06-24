@@ -34,6 +34,11 @@ public class TaxProfile {
     @Column(name = "dependents_under_17")   private Integer dependentsUnder17;
     @Column(name = "withholding")           private BigDecimal withholding;
 
+    // The full categorized breakdown (wages, rental, mortgage interest, ...) as a JSON object, so
+    // the detailed form repopulates on reload. The columns above remain the aggregates.
+    @Column(name = "details_json", columnDefinition = "text")
+    private String detailsJson;
+
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

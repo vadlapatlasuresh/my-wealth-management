@@ -17,25 +17,66 @@ const FILING = [
   { value: "HEAD_OF_HOUSEHOLD", label: "Head of household" },
 ];
 
+// The categorized money fields the estimator accepts (default "" in the form).
+const INCOME_FIELDS = [
+  "wages", "selfEmploymentIncome", "rentalIncome", "interestIncome",
+  "dividendIncome", "retirementIncome", "otherIncome",
+];
+const ADJUSTMENT_FIELDS = [
+  "studentLoanInterest", "hsaContribution", "iraContribution", "otherAdjustments",
+];
+const ITEMIZED_FIELDS = [
+  "mortgageInterest", "propertyTaxes", "stateLocalTaxes", "charitable", "medicalExpenses",
+];
+const CATEGORY_FIELDS = [...INCOME_FIELDS, ...ADJUSTMENT_FIELDS, ...ITEMIZED_FIELDS];
+
+// Friendly labels for a parsed document field key (used in the extraction log).
+const FIELD_LABELS = {
+  wages: "Wages",
+  withholding: "Withholding",
+  selfEmploymentIncome: "Self-employment income",
+  rentalIncome: "Rental income",
+  interestIncome: "Interest income",
+  dividendIncome: "Dividend income",
+  retirementIncome: "Retirement income",
+  mortgageInterest: "Mortgage interest",
+  propertyTaxes: "Property taxes",
+  studentLoanInterest: "Student loan interest",
+};
+
+const DOC_LABELS = {
+  "W2": "W-2", "1099-NEC": "1099-NEC", "1099-MISC": "1099-MISC", "1099-INT": "1099-INT",
+  "1099-DIV": "1099-DIV", "1099-R": "1099-R", "1098": "1098", "1098-E": "1098-E",
+  "1098-T": "1098-T", "UNKNOWN": "Document",
+};
+
 const usd = (v) =>
   v == null ? "—" : Number(v).toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
 const pct = (v) => (v == null ? "—" : `${(Number(v) * 100).toFixed(1)}%`);
 
+// Add a numeric amount onto whatever's already in a form field (multiple docs stack).
+const addAmount = (existing, amount) => {
+  const prev = Number(String(existing).replace(/[^0-9.\-]/g, "")) || 0;
+  return String(Math.round(prev + Number(amount)));
+};
+
 /**
- * Tax Overview — an educational federal estimate. Sends the user's figures to the
- * versioned estimator (financial-core) and shows the result. NOT tax advice; ends with a
- * CTA to find a CPA (the marketplace lands in a later phase).
+ * Tax Overview — an educational federal estimate. Sends the user's categorized
+ * figures (income / adjustments / itemized deductions) to the versioned estimator
+ * (financial-core) and shows the result. NOT tax advice; ends with a CTA to find a CPA.
  */
 export default function TaxPage() {
   const navigate = useNavigate();
   const [form, setForm] = useState({
     year: 2025,
     filingStatus: "SINGLE",
-    grossIncome: "",
-    adjustments: "",
-    itemizedDeductions: "",
     dependentsUnder17: 0,
     withholding: "",
+    // categorized income / adjustments / itemized — all default ""
+    wages: "", selfEmploymentIncome: "", rentalIncome: "", interestIncome: "",
+    dividendIncome: "", retirementIncome: "", otherIncome: "",
+    studentLoanInterest: "", hsaContribution: "", iraContribution: "", otherAdjustments: "",
+    mortgageInterest: "", propertyTaxes: "", stateLocalTaxes: "", charitable: "", medicalExpenses: "",
   });
   const [result, setResult] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -44,10 +85,14 @@ export default function TaxPage() {
   const [suggesting, setSuggesting] = useState(false);
   const [guide, setGuide] = useState([]);
   const [guideOpen, setGuideOpen] = useState(true);
-  const [doc, setDoc] = useState(null);     // parsed W-2/1099 result
   const [docBusy, setDocBusy] = useState(false);
   const [docErr, setDocErr] = useState("");
+  const [docLog, setDocLog] = useState([]);   // running list of what each upload extracted
   const [history, setHistory] = useState([]); // year-over-year estimate snapshots
+
+  // Collapsible input sections (Basics always visible; the rest start open).
+  const [openSection, setOpenSection] = useState({ income: true, adjustments: true, itemized: true });
+  const toggleSection = (k) => setOpenSection((s) => ({ ...s, [k]: !s[k] }));
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -99,7 +144,7 @@ export default function TaxPage() {
     setSuggesting(true);
     try {
       const s = await api.getTaxPrefill();
-      if (s && s.grossIncome != null) setForm((f) => ({ ...f, grossIncome: String(Math.round(s.grossIncome)) }));
+      if (s && s.grossIncome != null) setForm((f) => ({ ...f, wages: String(Math.round(s.grossIncome)) }));
       else setErr("No linked-account deposits to estimate income from yet.");
     } catch {
       /* best-effort */
@@ -108,75 +153,121 @@ export default function TaxPage() {
     }
   };
 
-  // Parse a W-2/1099 the user uploads or pastes, and surface the extracted figures.
-  const parseText = async (text) => {
-    if (!text || !text.trim()) return;
-    setDocErr(""); setDoc(null); setDocBusy(true);
-    try {
-      const r = await api.parseTaxDocument(text);
-      setDoc(r);
-      if (!r || (r.wages == null && r.federalWithholding == null)) {
-        setDocErr(r?.note || "Couldn't read the key figures — try pasting the text, or enter them manually.");
+  // Parse a single document's text, route each extracted field into the form, and
+  // return a short summary line for the extraction log (or null if nothing landed).
+  const parseAndRoute = async (text, fileName) => {
+    if (!text || !text.trim()) return null;
+    const r = await api.parseTaxDocument(text);
+    const fields = Array.isArray(r?.fields) ? r.fields : [];
+    const landed = [];   // { key, label, amount } to apply to the form
+    const notes = [];    // info-only items (e.g. tuition → education credit)
+
+    // Decide what lands BEFORE touching state — the functional setForm updater runs later, so we
+    // can't read these arrays back if we populate them inside it.
+    for (const fld of fields) {
+      if (fld == null || fld.amount == null) continue;
+      const key = fld.key;
+      if (key === "tuition") {
+        notes.push(`Tuition ${usd(fld.amount)} — you may qualify for an education credit`);
+        continue;
       }
-    } catch (e) {
-      setDocErr(e?.message || "Couldn't read that document. You can enter the figures manually.");
+      // Only route keys that exist on the form (income/adjustments/itemized + withholding).
+      if (key === "withholding" || CATEGORY_FIELDS.includes(key)) {
+        landed.push({ key, label: FIELD_LABELS[key] || fld.label || key, amount: fld.amount });
+      }
+    }
+
+    // Apply the routed amounts (accumulating across multiple documents) + adopt a valid tax year.
+    const adoptYear = r?.taxYear === 2024 || r?.taxYear === 2025;
+    if (landed.length || adoptYear) {
+      setForm((f) => {
+        const next = { ...f };
+        for (const l of landed) next[l.key] = addAmount(next[l.key], l.amount);
+        if (adoptYear) next.year = r.taxYear;
+        return next;
+      });
+    }
+
+    const docLabel = DOC_LABELS[r?.documentType] || "Document";
+    if (landed.length === 0 && notes.length === 0) {
+      return { ok: false, name: fileName, text: `${docLabel}: couldn't read any figures` };
+    }
+    const parts = landed.map((l) => `${l.label} ${usd(l.amount)}`);
+    const yearStr = r?.taxYear ? ` (${r.taxYear})` : "";
+    return {
+      ok: true,
+      name: fileName,
+      text: landed.length
+        ? `${docLabel}${yearStr}: ${parts.join(", ")} → added`
+        : `${docLabel}${yearStr}: ${notes.join("; ")}`,
+      notes,
+    };
+  };
+
+  // Pull text out of one File depending on its type. Returns "" if it needs OCR.
+  const extractFileText = async (file) => {
+    const type = file.type || "";
+    const name = (file.name || "").toLowerCase();
+    if (type.startsWith("image/")) {
+      throw new Error("Photos and scans need OCR, which isn't enabled yet — paste the text instead.");
+    }
+    if (type === "application/pdf" || name.endsWith(".pdf")) {
+      const text = await extractPdfText(file);
+      if (!text || !text.trim()) {
+        throw new Error("Scanned PDF with no text layer — paste the text or enter the figures manually.");
+      }
+      return text;
+    }
+    // Plain text / CSV.
+    return await file.text();
+  };
+
+  // Multi-file uploader: read + parse + route each selected file in turn.
+  const onDocFiles = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    e.target.value = ""; // allow re-selecting the same files
+    setDocErr("");
+    setDocBusy(true);
+    const newEntries = [];
+    let anyError = "";
+    for (const file of files) {
+      try {
+        const text = await extractFileText(file);
+        const entry = await parseAndRoute(text, file.name);
+        if (entry) newEntries.push(entry);
+      } catch (e2) {
+        anyError = e2?.message || `Couldn't read ${file.name}.`;
+        newEntries.push({ ok: false, name: file.name, text: anyError });
+      }
+    }
+    if (newEntries.length) setDocLog((log) => [...newEntries, ...log]);
+    if (anyError && !newEntries.some((x) => x.ok)) setDocErr(anyError);
+    setDocBusy(false);
+    setSaved("Figures from your document(s) were filled in — review, then Calculate.");
+  };
+
+  // Paste-text box: parse + route the same way as an uploaded file.
+  const onPasteParse = async (text) => {
+    if (!text || !text.trim()) return;
+    setDocErr("");
+    setDocBusy(true);
+    try {
+      const entry = await parseAndRoute(text, "Pasted text");
+      if (entry) {
+        setDocLog((log) => [entry, ...log]);
+        if (!entry.ok) setDocErr("Couldn't read the key figures — try the form fields below.");
+        else setSaved("Figures were filled in — review, then Calculate.");
+      }
+    } catch (e2) {
+      setDocErr(e2?.message || "Couldn't read that text.");
     } finally {
       setDocBusy(false);
     }
   };
 
-  const onDocFile = async (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    e.target.value = ""; // allow re-selecting the same file
-    const type = file.type || "";
-    const name = (file.name || "").toLowerCase();
-    setDocErr(""); setDoc(null);
-
-    // Photos/scans carry no text layer — they need the OCR provider (not enabled by default).
-    if (type.startsWith("image/")) {
-      setDocErr("Photos and scans need OCR, which isn't enabled yet. Open your form, copy the text, and paste it below — or enter the figures into the form.");
-      return;
-    }
-
-    if (type === "application/pdf" || name.endsWith(".pdf")) {
-      setDocBusy(true);
-      try {
-        const text = await extractPdfText(file);
-        if (text && text.trim()) {
-          await parseText(text);
-        } else {
-          setDocErr("This looks like a scanned PDF with no text layer — paste the text or enter the figures manually.");
-        }
-      } catch {
-        setDocErr("Couldn't read that PDF — try pasting the text instead.");
-      } finally {
-        setDocBusy(false);
-      }
-      return;
-    }
-
-    // Plain text / CSV.
-    const reader = new FileReader();
-    reader.onload = () => parseText(String(reader.result || ""));
-    reader.onerror = () => setDocErr("Couldn't open that file — try pasting the text instead.");
-    reader.readAsText(file);
-  };
-
-  // Apply the parsed figures to the estimate form (the user confirms by clicking).
-  const applyDoc = () => {
-    if (!doc) return;
-    setForm((f) => ({
-      ...f,
-      grossIncome: doc.wages != null ? String(Math.round(doc.wages)) : f.grossIncome,
-      withholding: doc.federalWithholding != null ? String(Math.round(doc.federalWithholding)) : f.withholding,
-      year: doc.taxYear === 2024 || doc.taxYear === 2025 ? doc.taxYear : f.year,
-    }));
-    setDoc(null);
-    setSaved("Figures from your document were filled in — review, then Calculate.");
-  };
-
   const owed = result && Number(result.refundOrOwed) < 0;
+  const seTax = result ? Number(result.selfEmploymentTax) || 0 : 0;
 
   return (
     <div id="page-tax" className="page active">
@@ -191,8 +282,7 @@ export default function TaxPage() {
         <i className="ti ti-info-circle" style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
         <div className="item-sub">
           This is an <strong>educational estimate, not tax advice</strong>. It's a simplified federal
-          calculation (omits AMT, capital gains, self-employment tax, and most credits). For your actual
-          return, connect with a CPA.
+          calculation (omits AMT, capital gains, and most credits). For your actual return, connect with a CPA.
         </div>
       </div>
 
@@ -220,59 +310,52 @@ export default function TaxPage() {
         </div>
       )}
 
-      {/* Upload a W-2 / 1099 to auto-fill income & withholding */}
+      {/* Upload W-2s / 1099s / 1098s — multi-file, auto-routed into the right fields */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-title">
-          <i className="ti ti-file-upload" style={{ color: "var(--tv-forest)" }}></i> Upload your W-2 or 1099
+          <i className="ti ti-file-upload" style={{ color: "var(--tv-forest)" }}></i> Upload your tax forms
         </div>
         <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 12 }}>
-          Drop in your form and we'll read the wages and federal withholding for you. It's parsed in
-          your session and <strong>never stored</strong>. Always double-check the figures.
+          Drop in one or more forms — W-2, 1099-NEC/MISC/INT/DIV/R, 1098, 1098-E, 1098-T — and we'll read
+          the figures and drop each into the right field. Parsed in your session and <strong>never stored</strong>.
+          Always double-check the numbers.
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
-            <i className="ti ti-upload"></i> Choose file
-            <input type="file" accept=".txt,.csv,.pdf,image/*" onChange={onDocFile} style={{ display: "none" }} />
+            <i className="ti ti-upload"></i> Choose files
+            <input type="file" multiple accept=".txt,.csv,.pdf,image/*" onChange={onDocFiles} style={{ display: "none" }} />
           </label>
-          <span className="item-sub" style={{ fontSize: 12 }}>or paste the text from your form:</span>
+          <span className="item-sub" style={{ fontSize: 12 }}>or paste the text from a form:</span>
         </div>
-        <textarea className="form-input" rows={3} placeholder="Paste the contents of your W-2 / 1099 here…"
+        <textarea className="form-input" rows={3} placeholder="Paste the contents of a W-2 / 1099 / 1098 here…"
           style={{ marginTop: 8, width: "100%", resize: "vertical" }}
-          onBlur={(e) => e.target.value.trim() && parseText(e.target.value)} />
+          onBlur={(e) => { if (e.target.value.trim()) { onPasteParse(e.target.value); e.target.value = ""; } }} />
 
-        {docBusy && <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document…</p>}
+        {docBusy && <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document(s)…</p>}
         {docErr && <p className="item-sub" style={{ color: "var(--tv-negative)", fontSize: 12.5 }}><i className="ti ti-alert-triangle"></i> {docErr}</p>}
 
-        {doc && (doc.wages != null || doc.federalWithholding != null) && (
+        {docLog.length > 0 && (
           <div className="card" style={{ background: "var(--tv-sage-pale)", marginTop: 12, padding: 14 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-              <div>
-                <div className="item-name" style={{ fontSize: 14 }}>
-                  {doc.documentType === "W2" ? "W-2" : doc.documentType === "1099" ? "1099" : "Document"} detected
-                  {doc.taxYear ? ` · ${doc.taxYear}` : ""}
-                  <span className="badge" style={{ marginLeft: 8, background: "var(--tv-bg)", color: "var(--tv-text-secondary)", fontSize: 10 }}>
-                    {Math.round((doc.confidence || 0) * 100)}% confidence
-                  </span>
+            <div className="form-label" style={{ marginBottom: 8 }}>Extracted from your documents</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {docLog.map((entry, i) => (
+                <div key={i} className="item-sub" style={{ fontSize: 12.5, display: "flex", gap: 8, alignItems: "baseline" }}>
+                  <i className={entry.ok ? "ti ti-circle-check" : "ti ti-alert-triangle"}
+                     style={{ color: entry.ok ? "var(--tv-positive)" : "var(--tv-negative)" }}></i>
+                  <span><strong>{entry.name}</strong> — {entry.text}</span>
                 </div>
-                <div className="item-sub" style={{ fontSize: 12.5, marginTop: 4 }}>
-                  {doc.wages != null && <span>Wages: <strong>{usd(doc.wages)}</strong></span>}
-                  {doc.wages != null && doc.federalWithholding != null && <span> · </span>}
-                  {doc.federalWithholding != null && <span>Withheld: <strong>{usd(doc.federalWithholding)}</strong></span>}
-                </div>
-              </div>
-              <button type="button" className="btn btn-primary btn-sm" onClick={applyDoc}>
-                <i className="ti ti-arrow-down-to-arc"></i> Use these figures
-              </button>
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,360px) 1fr", gap: 16, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0,400px) 1fr", gap: 16, alignItems: "start" }}>
         {/* Inputs */}
         <form className="card" onSubmit={calculate}>
           <div className="card-title">Your figures ({form.year})</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Basics — always visible */}
             <div>
               <label className="form-label">Tax year</label>
               <select className="form-select" value={form.year} onChange={set("year")}>
@@ -287,19 +370,48 @@ export default function TaxPage() {
               </select>
             </div>
             <div>
-              <Field label="Gross income" value={form.grossIncome} onChange={set("grossIncome")} placeholder="80,000" />
-              <button type="button" onClick={useSuggestion} disabled={suggesting}
-                style={{ background: "none", color: "var(--tv-forest-light)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0 0" }}>
-                <i className="ti ti-wand"></i> {suggesting ? "Estimating…" : "Use income from my accounts"}
-              </button>
-            </div>
-            <Field label="Above-the-line adjustments" value={form.adjustments} onChange={set("adjustments")} placeholder="HSA, IRA, student loan… (optional)" />
-            <Field label="Itemized deductions" value={form.itemizedDeductions} onChange={set("itemizedDeductions")} placeholder="mortgage interest, SALT, charity… (optional)" />
-            <div>
               <label className="form-label">Dependents under 17</label>
               <input className="form-input" type="number" min="0" value={form.dependentsUnder17} onChange={set("dependentsUnder17")} />
             </div>
             <Field label="Federal tax withheld" value={form.withholding} onChange={set("withholding")} placeholder="for refund vs. owed (optional)" />
+
+            {/* Income */}
+            <Section title="Income" icon="ti ti-cash" open={openSection.income} onToggle={() => toggleSection("income")}
+              helper="Everything you earned this year — we add it up into your gross income.">
+              <div>
+                <Field label="Wages (W-2)" value={form.wages} onChange={set("wages")} placeholder="from your W-2 (Box 1)" />
+                <button type="button" onClick={useSuggestion} disabled={suggesting}
+                  style={{ background: "none", color: "var(--tv-forest-light)", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: "4px 0 0" }}>
+                  <i className="ti ti-wand"></i> {suggesting ? "Estimating…" : "Use income from my accounts"}
+                </button>
+              </div>
+              <Field label="Self-employment / 1099 income" value={form.selfEmploymentIncome} onChange={set("selfEmploymentIncome")} placeholder="from your 1099-NEC / 1099-MISC" />
+              <Field label="Rental income" value={form.rentalIncome} onChange={set("rentalIncome")} placeholder="net rents you collected" />
+              <Field label="Interest income" value={form.interestIncome} onChange={set("interestIncome")} placeholder="from your 1099-INT" />
+              <Field label="Dividend income" value={form.dividendIncome} onChange={set("dividendIncome")} placeholder="from your 1099-DIV" />
+              <Field label="Retirement income" value={form.retirementIncome} onChange={set("retirementIncome")} placeholder="from your 1099-R" />
+              <Field label="Other income" value={form.otherIncome} onChange={set("otherIncome")} placeholder="anything else (optional)" />
+            </Section>
+
+            {/* Adjustments */}
+            <Section title="Adjustments (above-the-line)" icon="ti ti-arrow-down-circle" open={openSection.adjustments} onToggle={() => toggleSection("adjustments")}
+              helper="These lower your taxable income before deductions.">
+              <Field label="Student loan interest" value={form.studentLoanInterest} onChange={set("studentLoanInterest")} placeholder="from your 1098-E" />
+              <Field label="HSA contribution" value={form.hsaContribution} onChange={set("hsaContribution")} placeholder="your own (non-payroll) HSA deposits" />
+              <Field label="IRA contribution" value={form.iraContribution} onChange={set("iraContribution")} placeholder="deductible traditional IRA" />
+              <Field label="Other adjustments" value={form.otherAdjustments} onChange={set("otherAdjustments")} placeholder="SE tax deduction, etc. (optional)" />
+            </Section>
+
+            {/* Itemized deductions */}
+            <Section title="Itemized deductions" icon="ti ti-receipt" open={openSection.itemized} onToggle={() => toggleSection("itemized")}
+              helper="We compare these to the standard deduction and use whichever saves more (SALT capped at $10,000).">
+              <Field label="Mortgage interest" value={form.mortgageInterest} onChange={set("mortgageInterest")} placeholder="from your 1098" />
+              <Field label="Property taxes" value={form.propertyTaxes} onChange={set("propertyTaxes")} placeholder="real-estate taxes you paid" />
+              <Field label="State & local income/sales tax" value={form.stateLocalTaxes} onChange={set("stateLocalTaxes")} placeholder="part of the $10k SALT cap" />
+              <Field label="Charitable giving" value={form.charitable} onChange={set("charitable")} placeholder="cash & non-cash donations" />
+              <Field label="Medical expenses" value={form.medicalExpenses} onChange={set("medicalExpenses")} placeholder="only the part over 7.5% of AGI counts" />
+            </Section>
+
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button type="submit" className="btn btn-primary" disabled={busy} style={{ flex: 1 }}>
                 {busy ? "Calculating…" : "Calculate estimate"}
@@ -323,7 +435,7 @@ export default function TaxPage() {
           ) : (
             <>
               <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 12 }}>
-                <Kpi label="Estimated federal tax" value={usd(result.taxAfterCredits)} />
+                <Kpi label="Estimated federal tax" value={usd(result.totalTax)} />
                 <Kpi label={owed ? "Estimated balance due" : "Estimated refund"}
                      value={usd(Math.abs(Number(result.refundOrOwed)))}
                      color={owed ? "var(--tv-negative)" : "var(--tv-positive)"} />
@@ -338,7 +450,15 @@ export default function TaxPage() {
                 <Row k="Taxable income" v={usd(result.taxableIncome)} bold />
                 <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
                 {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
-                <Row k="Estimated federal tax" v={usd(result.taxAfterCredits)} bold />
+                {seTax > 0 ? (
+                  <>
+                    <Row k="Income tax" v={usd(result.taxAfterCredits)} />
+                    <Row k="Self-employment tax" v={usd(result.selfEmploymentTax)} />
+                    <Row k="Total federal tax" v={usd(result.totalTax)} bold />
+                  </>
+                ) : (
+                  <Row k="Estimated federal tax" v={usd(result.totalTax)} bold />
+                )}
                 <p className="item-sub" style={{ marginTop: 10, fontSize: 11.5 }}>{result.disclaimer}</p>
               </div>
 
@@ -421,6 +541,27 @@ export default function TaxPage() {
   );
 }
 
+// A collapsible group of form fields, matching the page's guide-panel pattern.
+function Section({ title, icon, helper, open, onToggle, children }) {
+  return (
+    <div style={{ borderTop: "1px solid var(--tv-border)", paddingTop: 12 }}>
+      <button type="button" onClick={onToggle}
+        style={{ background: "none", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", padding: 0 }}>
+        <span className="form-label" style={{ marginBottom: 0, display: "flex", alignItems: "center", gap: 6 }}>
+          <i className={icon} style={{ color: "var(--tv-forest)" }}></i> {title}
+        </span>
+        <i className={`ti ti-chevron-${open ? "up" : "down"}`} style={{ color: "var(--tv-text-muted)" }}></i>
+      </button>
+      {open && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, marginTop: 10 }}>
+          {helper && <div className="item-sub" style={{ fontSize: 12 }}>{helper}</div>}
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function GuideColumn({ title, items }) {
   return (
     <div>
@@ -440,16 +581,22 @@ function GuideColumn({ title, items }) {
   );
 }
 
-// Map a saved tax profile (server shape) onto the form, skipping nulls.
+// Map a saved tax profile (server shape) onto the form, skipping nulls. Parses the
+// categorized fields out of detailsJson so income/adjustments/itemized persist.
 function clean(p) {
   const out = {};
   if (p.taxYear != null) out.year = p.taxYear;
   if (p.filingStatus) out.filingStatus = p.filingStatus;
-  if (p.grossIncome != null) out.grossIncome = String(p.grossIncome);
-  if (p.adjustments != null) out.adjustments = String(p.adjustments);
-  if (p.itemizedDeductions != null) out.itemizedDeductions = String(p.itemizedDeductions);
   if (p.dependentsUnder17 != null) out.dependentsUnder17 = p.dependentsUnder17;
   if (p.withholding != null) out.withholding = String(p.withholding);
+  if (p.detailsJson) {
+    try {
+      const details = JSON.parse(p.detailsJson);
+      for (const k of CATEGORY_FIELDS) {
+        if (details[k] != null) out[k] = String(details[k]);
+      }
+    } catch { /* ignore malformed json */ }
+  }
   return out;
 }
 
