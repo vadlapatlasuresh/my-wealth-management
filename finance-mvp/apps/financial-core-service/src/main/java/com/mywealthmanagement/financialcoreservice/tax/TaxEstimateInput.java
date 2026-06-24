@@ -26,11 +26,20 @@ public record TaxEstimateInput(
         BigDecimal itemizedDeductions,
         int dependentsUnder17,
         BigDecimal withholding,
-        BigDecimal selfEmploymentIncome) {
+        BigDecimal selfEmploymentIncome,
+        BigDecimal qualifiedBusinessIncome) {
 
-    /** Back-compat constructor for callers without self-employment income (treated as zero). */
+    /** Back-compat constructor for callers without SE / QBI income (treated as zero). */
     public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding) {
-        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null);
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null, null);
+    }
+
+    /** Back-compat constructor without QBI income (treated as zero). */
+    public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
+                            BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
+                            BigDecimal selfEmploymentIncome) {
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
+                selfEmploymentIncome, null);
     }
 }

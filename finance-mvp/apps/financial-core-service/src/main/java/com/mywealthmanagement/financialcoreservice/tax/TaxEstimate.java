@@ -21,6 +21,7 @@ public class TaxEstimate {
     private BigDecimal agi;                 // gross - adjustments
     private String deductionType;           // STANDARD | ITEMIZED
     private BigDecimal deductionUsed;
+    private BigDecimal qbiDeduction;        // Section 199A 20% QBI deduction (rental/business)
     private BigDecimal taxableIncome;
     private BigDecimal taxBeforeCredits;
     private BigDecimal childTaxCredit;

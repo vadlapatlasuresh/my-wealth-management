@@ -103,6 +103,10 @@ public class TaxController {
                 details.put(key, v);
             }
         }
+        // The rental (Schedule E) worksheet round-trips as an object.
+        if (body.get("rental") instanceof Map<?, ?> rental && !rental.isEmpty()) {
+            details.put("rental", rental);
+        }
         try {
             return objectMapper.writeValueAsString(details);
         } catch (Exception e) {
@@ -180,11 +184,15 @@ public class TaxController {
      */
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
         BigDecimal selfEmployment = num(body.get("selfEmploymentIncome"));
+        BigDecimal rental = num(body.get("rentalIncome"));
         BigDecimal grossIncome = sum(
-                num(body.get("wages")), selfEmployment, num(body.get("rentalIncome")),
+                num(body.get("wages")), selfEmployment, rental,
                 num(body.get("interestIncome")), num(body.get("dividendIncome")),
                 num(body.get("retirementIncome")), num(body.get("otherIncome")),
                 num(body.get("grossIncome"))); // legacy single field
+
+        // QBI-eligible income: self-employment + positive rental (a rental trade/business).
+        BigDecimal qbiIncome = selfEmployment.add(rental.max(BigDecimal.ZERO));
 
         BigDecimal adjustments = sum(
                 num(body.get("studentLoanInterest")), num(body.get("hsaContribution")),
@@ -204,7 +212,8 @@ public class TaxController {
                 itemized,
                 intVal(body.get("dependentsUnder17"), 0),
                 num(body.get("withholding")),
-                selfEmployment);
+                selfEmployment,
+                qbiIncome);
     }
 
     private static BigDecimal sum(BigDecimal... values) {
