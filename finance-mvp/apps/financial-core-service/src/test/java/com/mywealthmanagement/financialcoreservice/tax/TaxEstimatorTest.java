@@ -49,6 +49,20 @@ class TaxEstimatorTest {
     }
 
     @Test
+    void selfEmployed2025_addsSelfEmploymentTax() {
+        // $50k net self-employment, no other income. SE base = 50,000 × 0.9235 = 46,175.
+        // SE tax = 46,175 × (0.124 + 0.029) = 7,064.78. Half ($3,532.39) is an above-the-line
+        // adjustment, so AGI = 46,467.61; taxable (− 15k std) = 31,467.61; income tax = 3,537.61.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("50000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, new BigDecimal("50000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getSelfEmploymentTax()).isEqualByComparingTo("7064.78");
+        assertThat(e.getTaxAfterCredits()).isEqualByComparingTo("3537.61"); // income tax only
+        assertThat(e.getTotalTax()).isEqualByComparingTo("10602.39");       // income + SE tax
+        assertThat(e.getRefundOrOwed()).isEqualByComparingTo("-10602.39");  // owes (no withholding)
+    }
+
+    @Test
     void zeroIncomeYieldsZeroTax() {
         var e = TaxEstimator.estimate(in(FilingStatus.SINGLE, "0", "0", "0", 0, "0"), rules.forYear(2025));
         assertThat(e.getTaxableIncome()).isEqualByComparingTo("0.00");

@@ -24,11 +24,13 @@ public class TaxEstimate {
     private BigDecimal taxableIncome;
     private BigDecimal taxBeforeCredits;
     private BigDecimal childTaxCredit;
-    private BigDecimal taxAfterCredits;     // estimated federal tax owed
-    private BigDecimal effectiveRate;       // taxAfterCredits / grossIncome
-    private BigDecimal marginalRate;        // top bracket rate hit
+    private BigDecimal taxAfterCredits;     // income tax after credits (excludes SE tax)
+    private BigDecimal selfEmploymentTax;   // SE tax on net self-employment income
+    private BigDecimal totalTax;            // taxAfterCredits + selfEmploymentTax (headline figure)
+    private BigDecimal effectiveRate;       // totalTax / grossIncome
+    private BigDecimal marginalRate;        // top income-tax bracket rate hit
     private BigDecimal withholding;
-    private BigDecimal refundOrOwed;        // withholding - taxAfterCredits (positive = refund)
+    private BigDecimal refundOrOwed;        // withholding - totalTax (positive = refund)
     private String disclaimer;
     private List<Insight> insights;         // deduction/credit finder tips
 }
