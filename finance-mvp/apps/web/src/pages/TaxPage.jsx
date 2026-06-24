@@ -152,11 +152,13 @@ export default function TaxPage() {
   };
   const retagDoc = (id, filerId) => setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, filerId } : d)));
   const docSummary = (d) => {
+    if (d.status === "unreadable") return d.note || "Couldn't read — enter the figures manually.";
     if (d.w2Id) {
       const w = w2s.find((x) => x.id === d.w2Id);
       return w ? `Wages ${usd(numOf(w.wages))}${numOf(w.withholding) ? ` · Withheld ${usd(numOf(w.withholding))}` : ""} → applied` : "W-2 removed";
     }
     if (d.applied?.length) return `${d.applied.map((a) => `${FIELD_LABELS[a.key] || a.key} ${usd(a.amount)}`).join(" · ")} → applied`;
+    if (d.note) return d.note;
     return "applied";
   };
 
@@ -268,8 +270,8 @@ export default function TaxPage() {
           if (blankIdx >= 0) { const copy = [...xs]; copy[blankIdx] = entry; return copy; }
           return [...xs, entry];
         });
-        setDocs((ds) => [{ id: uid(), fileName, docType, filerId: "you", w2Id }, ...ds]);
-        return { ok: true, name: fileName, text: `W-2: Wages ${usd(wages)}${wh ? `, Withheld ${usd(wh)}` : ""} → added as a W-2` };
+        setDocs((ds) => [{ id: uid(), fileName, docType, filerId: "you", w2Id, status: "ok" }, ...ds]);
+        return { ok: true };
       }
     }
 
@@ -291,10 +293,15 @@ export default function TaxPage() {
     });
 
     const docLabel = DOC_LABELS[docType] || "Document";
-    if (!applied.length && !notes.length) return { ok: false, name: fileName, text: `${docLabel}: couldn't read any figures` };
-    setDocs((ds) => [{ id: uid(), fileName, docType, filerId: docType === "1098" ? "household" : "you", applied }, ...ds]);
-    const parts = applied.map((a) => `${a.label} ${usd(a.amount)}`);
-    return { ok: true, name: fileName, text: applied.length ? `${docLabel}: ${parts.join(", ")} → added` : `${docLabel}: ${notes.join("; ")}` };
+    // Always show the file in the manager — even when we couldn't read it — so nothing silently vanishes.
+    if (!applied.length && !notes.length) {
+      setDocs((ds) => [{ id: uid(), fileName, docType, filerId: "you", applied: [], status: "unreadable",
+        note: `Couldn't read figures from this ${docLabel} — enter them manually below, or delete it.` }, ...ds]);
+      return { ok: false };
+    }
+    setDocs((ds) => [{ id: uid(), fileName, docType, filerId: docType === "1098" ? "household" : "you",
+      applied, note: notes.join("; ") || null, status: "ok" }, ...ds]);
+    return { ok: true };
   };
 
   // Pull text out of one File depending on its type. Returns "" if it needs OCR.
@@ -322,18 +329,20 @@ export default function TaxPage() {
     e.target.value = ""; // allow re-selecting the same files
     setDocErr("");
     setDocBusy(true);
-    let anyError = "", anyOk = false;
     for (const file of files) {
+      let text = "";
       try {
-        const entry = await parseAndRoute(await extractFileText(file), file.name);
-        if (entry?.ok) anyOk = true; else if (entry) anyError = entry.text;
+        text = await extractFileText(file);
       } catch (e2) {
-        anyError = e2?.message || `Couldn't read ${file.name}.`;
+        // Couldn't even get text (image/scanned PDF) — still list the file so it's never lost.
+        setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
+          status: "unreadable", note: e2?.message || "Couldn't read this file — enter the figures manually." }, ...ds]);
+        continue;
       }
+      await parseAndRoute(text, file.name);
     }
-    if (anyError && !anyOk) setDocErr(anyError);
     setDocBusy(false);
-    if (anyOk) setSaved("Documents read — review the figures, then Calculate.");
+    setSaved("Files added — review the figures (some may need manual entry), then Calculate.");
   };
 
   // Paste-text box: parse + route the same way as an uploaded file.
@@ -354,6 +363,9 @@ export default function TaxPage() {
 
   const owed = result && Number(result.refundOrOwed) < 0;
   const seTax = result ? Number(result.selfEmploymentTax) || 0 : 0;
+  // The shown estimate (and the history row) reflect the LAST calculation — flag when the
+  // filing status has changed since, so the user knows to recalculate.
+  const filingChangedSinceCalc = result && result.filingStatus && result.filingStatus !== form.filingStatus;
 
   return (
     <div id="page-tax" className="page active">
@@ -454,11 +466,11 @@ export default function TaxPage() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {group.map((d) => (
-                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--tv-card)", border: "1px solid var(--tv-border)", borderRadius: "var(--radius-md)", padding: "8px 10px" }}>
-                        <i className="ti ti-file-text" style={{ color: "var(--tv-forest)" }}></i>
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--tv-card)", border: `1px solid ${d.status === "unreadable" ? "var(--tv-negative)" : "var(--tv-border)"}`, borderRadius: "var(--radius-md)", padding: "8px 10px" }}>
+                        <i className={d.status === "unreadable" ? "ti ti-alert-triangle" : "ti ti-file-text"} style={{ color: d.status === "unreadable" ? "var(--tv-negative)" : "var(--tv-forest)" }}></i>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="item-name" style={{ fontSize: 12.5 }}>{d.fileName} <span className="badge badge-gray">{DOC_LABELS[d.docType] || d.docType}</span></div>
-                          <div className="item-sub" style={{ fontSize: 11.5 }}>{docSummary(d)}</div>
+                          <div className="item-sub" style={{ fontSize: 11.5, color: d.status === "unreadable" ? "var(--tv-negative)" : undefined }}>{docSummary(d)}</div>
                         </div>
                         <select className="form-select" style={{ maxWidth: 104, fontSize: 12, padding: "4px 8px" }} value={d.filerId} onChange={(e) => retagDoc(d.id, e.target.value)}>
                           {filers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
@@ -598,6 +610,15 @@ export default function TaxPage() {
             </div>
           ) : (
             <>
+              {filingChangedSinceCalc && (
+                <div className="card" style={{ marginBottom: 12, display: "flex", gap: 10, alignItems: "center", borderColor: "var(--tv-gold)", background: "var(--tv-gold-pale)" }}>
+                  <i className="ti ti-refresh" style={{ color: "var(--tv-gold)", fontSize: 18 }}></i>
+                  <div className="item-sub" style={{ fontSize: 12.5 }}>
+                    This estimate (and your tax history) was calculated as <strong>{FILING.find((f) => f.value === result.filingStatus)?.label || result.filingStatus}</strong>. You changed it to <strong>{FILING.find((f) => f.value === form.filingStatus)?.label || form.filingStatus}</strong> — recalculate to update both.
+                  </div>
+                </div>
+              )}
+
               <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, marginBottom: 12 }}>
                 <Kpi label="Estimated federal tax" value={usd(result.totalTax)} />
                 <Kpi label={owed ? "Estimated balance due" : "Estimated refund"}
