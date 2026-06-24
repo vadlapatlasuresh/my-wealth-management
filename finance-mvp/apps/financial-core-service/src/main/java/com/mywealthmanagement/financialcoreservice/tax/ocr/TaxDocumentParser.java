@@ -61,10 +61,14 @@ public class TaxDocumentParser {
         String lower = text.toLowerCase();
         String type = detectType(lower);
 
-        BigDecimal wages = amountNear(text, lower,
-                "wages, tips", "wages,tips", "box 1", "box1", "nonemployee compensation", "gross distribution");
-        BigDecimal withholding = amountNear(text, lower,
-                "federal income tax withheld", "federal income tax", "box 2", "box2", "fed income tax withheld");
+        BigDecimal wages = amountNear(text, lower, null,
+                "wages, tips", "wages,tips", "wages tips", "box 1", "box1", "1 wages",
+                "nonemployee compensation", "gross distribution");
+        // Exclude the wages value: in the two-column W-2 layout both labels sit above the same
+        // amounts row, so the first amount after the withholding label is often the wages figure.
+        BigDecimal withholding = amountNear(text, lower, wages,
+                "federal income tax withheld", "fed income tax withheld", "federal tax withheld",
+                "federal income tax", "box 2", "box2", "2 federal");
         Integer year = year(text);
         String payer = firstLine(text);
 
@@ -120,20 +124,22 @@ public class TaxDocumentParser {
     }
 
     /**
-     * Find the first dollar amount that appears within ~60 chars after any of the given labels
+     * Find the first dollar amount that appears within ~100 chars after any of the given labels
      * (labels tried in order). Labels match case-insensitively against {@code lower}; the amount is
-     * read from the original {@code text} at the same offset.
+     * read from the original {@code text} at the same offset. An amount equal to {@code exclude}
+     * (when non-null) is skipped — used so the withholding label doesn't pick up the wages figure
+     * that shares its amounts row in the two-column W-2 layout.
      */
-    private BigDecimal amountNear(String text, String lower, String... labels) {
+    private BigDecimal amountNear(String text, String lower, BigDecimal exclude, String... labels) {
         for (String label : labels) {
             int idx = lower.indexOf(label);
             while (idx >= 0) {
                 int from = idx + label.length();
-                int to = Math.min(text.length(), from + 60);
+                int to = Math.min(text.length(), from + 100);
                 Matcher m = AMOUNT.matcher(text.substring(from, to));
                 while (m.find()) {
                     BigDecimal amt = toAmount(m.group(1));
-                    if (amt != null) {
+                    if (amt != null && (exclude == null || amt.compareTo(exclude) != 0)) {
                         return amt;
                     }
                 }

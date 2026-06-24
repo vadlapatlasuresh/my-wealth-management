@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import { extractPdfText } from "../utils/pdfText";
 
 const INSIGHT_STYLE = {
   TIP:         { icon: "ti ti-bulb", color: "var(--tv-forest)", bg: "var(--tv-sage-pale)" },
@@ -124,14 +125,42 @@ export default function TaxPage() {
     }
   };
 
-  const onDocFile = (e) => {
+  const onDocFile = async (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
+    e.target.value = ""; // allow re-selecting the same file
+    const type = file.type || "";
+    const name = (file.name || "").toLowerCase();
+    setDocErr(""); setDoc(null);
+
+    // Photos/scans carry no text layer — they need the OCR provider (not enabled by default).
+    if (type.startsWith("image/")) {
+      setDocErr("Photos and scans need OCR, which isn't enabled yet. Open your form, copy the text, and paste it below — or enter the figures into the form.");
+      return;
+    }
+
+    if (type === "application/pdf" || name.endsWith(".pdf")) {
+      setDocBusy(true);
+      try {
+        const text = await extractPdfText(file);
+        if (text && text.trim()) {
+          await parseText(text);
+        } else {
+          setDocErr("This looks like a scanned PDF with no text layer — paste the text or enter the figures manually.");
+        }
+      } catch {
+        setDocErr("Couldn't read that PDF — try pasting the text instead.");
+      } finally {
+        setDocBusy(false);
+      }
+      return;
+    }
+
+    // Plain text / CSV.
     const reader = new FileReader();
     reader.onload = () => parseText(String(reader.result || ""));
     reader.onerror = () => setDocErr("Couldn't open that file — try pasting the text instead.");
-    reader.readAsText(file); // best for text/text-based PDFs; images need the live OCR provider
-    e.target.value = ""; // allow re-selecting the same file
+    reader.readAsText(file);
   };
 
   // Apply the parsed figures to the estimate form (the user confirms by clicking).
