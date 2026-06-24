@@ -3633,17 +3633,53 @@ a { text-decoration: none; color: inherit; }
         <!-- Upload tax forms — multi-document, auto-routed -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title"><i class="ti ti-file-upload" style="color:var(--tv-forest);margin-right:6px;"></i> Upload your tax forms</div></div>
-          <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:12px;">Drop in one or more forms — W-2, 1099-NEC/MISC/INT/DIV/R, 1098, 1098-E, 1098-T — and we read each figure into the right field. Parsed in your session and <strong>never stored</strong>.</div>
+          <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:12px;">Drop in one or more forms for everyone in your household — W-2, 1099-NEC/MISC/INT/DIV/R, 1098, 1098-E, 1098-T. We read each figure into the right field; tag every file to a filer, and delete any to remove its figures. Parsed in your session and <strong>never stored</strong>.</div>
           <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
             <button class="btn btn-secondary btn-sm"><i class="ti ti-upload"></i> Choose files</button>
-            <span style="font-size:12px;color:var(--tv-text-muted);">or paste the text from a form</span>
+            <span style="font-size:12px;color:var(--tv-text-muted);">multiple files supported · or paste a form's text</span>
           </div>
+
+          <!-- Document manager — grouped by filer, each file deletable -->
           <div class="card" style="background:var(--tv-sage-pale);margin-top:12px;padding:14px;">
-            <div class="form-label" style="margin-bottom:8px;">Extracted from your documents</div>
-            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
-              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>w2-acme.pdf</strong> — W-2 (2025): Wages $84,200, Withholding $9,310 → added</div>
-              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>1099-nec.pdf</strong> — 1099-NEC (2025): Self-employment income $22,000 → added</div>
-              <div><i class="ti ti-circle-check" style="color:var(--tv-positive);"></i> <strong>1098-mortgage.pdf</strong> — 1098: Mortgage interest $12,840 → added</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+              <div class="form-label" style="margin-bottom:0;">Your documents <span class="badge badge-gray">4 files</span></div>
+              <span style="font-size:11.5px;color:var(--tv-text-muted);">Tag each to a filer · delete removes its figures</span>
+            </div>
+
+            <div style="font-size:11.5px;font-weight:700;color:var(--tv-forest);margin:2px 0 6px;"><i class="ti ti-user"></i> You</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:8px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px 10px;">
+                <i class="ti ti-file-text" style="color:var(--tv-forest);"></i>
+                <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;">w2-acme.pdf <span class="badge badge-gray">W-2</span></div><div style="font-size:11.5px;color:var(--tv-text-muted);">Wages $84,200 · Withheld $9,310 → applied</div></div>
+                <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option>You</option><option>Spouse</option></select>
+                <button class="btn btn-secondary btn-sm" title="Delete file" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-trash"></i></button>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px 10px;">
+                <i class="ti ti-file-text" style="color:var(--tv-forest);"></i>
+                <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;">1099-nec.pdf <span class="badge badge-gray">1099-NEC</span></div><div style="font-size:11.5px;color:var(--tv-text-muted);">Self-employment $22,000 → applied</div></div>
+                <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option>You</option><option>Spouse</option></select>
+                <button class="btn btn-secondary btn-sm" title="Delete file" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+
+            <div style="font-size:11.5px;font-weight:700;color:var(--tv-forest);margin:2px 0 6px;"><i class="ti ti-user"></i> Spouse</div>
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+              <div style="display:flex;align-items:center;gap:8px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px 10px;">
+                <i class="ti ti-file-text" style="color:var(--tv-forest);"></i>
+                <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;">w2-globex.pdf <span class="badge badge-gray">W-2</span></div><div style="font-size:11.5px;color:var(--tv-text-muted);">Wages $61,000 · Withheld $6,400 → applied</div></div>
+                <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option selected>Spouse</option><option>You</option></select>
+                <button class="btn btn-secondary btn-sm" title="Delete file" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
+
+            <div style="font-size:11.5px;font-weight:700;color:var(--tv-forest);margin:2px 0 6px;"><i class="ti ti-home"></i> Household (shared)</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <div style="display:flex;align-items:center;gap:8px;background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px 10px;">
+                <i class="ti ti-file-text" style="color:var(--tv-forest);"></i>
+                <div style="flex:1;min-width:0;"><div style="font-size:12.5px;font-weight:600;">1098-mortgage.pdf <span class="badge badge-gray">1098</span></div><div style="font-size:11.5px;color:var(--tv-text-muted);">Mortgage interest $12,840 → applied</div></div>
+                <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option selected>Household</option><option>You</option><option>Spouse</option></select>
+                <button class="btn btn-secondary btn-sm" title="Delete file" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-trash"></i></button>
+              </div>
             </div>
           </div>
         </div>
@@ -3655,12 +3691,47 @@ a { text-decoration: none; color: inherit; }
             <div class="section-title" style="margin-bottom:12px;">Your figures (2025)</div>
             <div class="grid-2" style="gap:10px;">
               <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Tax year</label><select class="form-select"><option>2025</option><option>2024</option></select></div>
-              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Filing status</label><select class="form-select"><option>Single</option><option>Married filing jointly</option></select></div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Filing status</label><select class="form-select"><option selected>Married filing jointly</option><option>Single</option><option>Head of household</option></select></div>
             </div>
 
             <div style="border-top:1px solid var(--tv-border);padding-top:12px;margin-top:4px;">
               <div class="form-label" style="display:flex;align-items:center;gap:6px;margin-bottom:10px;"><i class="ti ti-cash" style="color:var(--tv-forest);"></i> Income</div>
-              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Wages (W-2)</label><input class="form-input" value="$84,200"></div>
+
+              <!-- W-2 income — one entry per W-2; combined for joint filers -->
+              <div style="margin-bottom:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <label class="form-label" style="margin-bottom:0;">W-2 wages</label>
+                  <button class="btn btn-secondary btn-sm" style="padding:3px 8px;font-size:11.5px;"><i class="ti ti-plus"></i> Add W-2</button>
+                </div>
+                <!-- Entry: You -->
+                <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px;margin-bottom:6px;">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                    <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option>You</option><option>Spouse</option></select>
+                    <input class="form-input" style="flex:1;padding:5px 8px;" value="Acme Corp" placeholder="Employer">
+                    <button class="btn btn-secondary btn-sm" title="Remove W-2" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-x"></i></button>
+                  </div>
+                  <div class="grid-2" style="gap:6px;">
+                    <input class="form-input" style="padding:5px 8px;" value="$84,200" placeholder="Wages (Box 1)">
+                    <input class="form-input" style="padding:5px 8px;" value="$9,310" placeholder="Withheld (Box 2)">
+                  </div>
+                </div>
+                <!-- Entry: Spouse -->
+                <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:8px;margin-bottom:6px;">
+                  <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+                    <select class="form-select" style="max-width:104px;font-size:12px;padding:4px 8px;"><option selected>Spouse</option><option>You</option></select>
+                    <input class="form-input" style="flex:1;padding:5px 8px;" value="Globex Inc" placeholder="Employer">
+                    <button class="btn btn-secondary btn-sm" title="Remove W-2" style="color:var(--tv-negative);padding:4px 8px;"><i class="ti ti-x"></i></button>
+                  </div>
+                  <div class="grid-2" style="gap:6px;">
+                    <input class="form-input" style="padding:5px 8px;" value="$61,000" placeholder="Wages (Box 1)">
+                    <input class="form-input" style="padding:5px 8px;" value="$6,400" placeholder="Withheld (Box 2)">
+                  </div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 2px 0;border-top:1px dashed var(--tv-border);">
+                  <span style="color:var(--tv-text-muted);">Combined wages · withheld (2 W-2s)</span>
+                  <span style="font-weight:700;">$145,200 · $15,710</span>
+                </div>
+              </div>
               <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Self-employment / 1099 income</label><input class="form-input" value="$22,000"></div>
               <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Rental income</label><input class="form-input" placeholder="net rents you collected"></div>
               <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Interest income <span style="color:var(--tv-text-muted);font-weight:400;">· 1099-INT</span></label><input class="form-input" value="$1,200"></div>
@@ -3686,20 +3757,35 @@ a { text-decoration: none; color: inherit; }
           <!-- Results -->
           <div>
             <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
-              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-receipt-tax" style="font-size:13px;color:var(--tv-forest-light);"></i> Estimated federal tax</div><div class="kpi-value">$18,240</div></div>
-              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--tv-negative);"></i> Estimated balance due</div><div class="kpi-value" style="color:var(--tv-negative);">$3,110</div></div>
-              <div class="kpi-card"><div class="kpi-label">Effective rate</div><div class="kpi-value">15.6%</div></div>
+              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-receipt-tax" style="font-size:13px;color:var(--tv-forest-light);"></i> Estimated federal tax</div><div class="kpi-value">$22,713</div></div>
+              <div class="kpi-card"><div class="kpi-label"><i class="ti ti-alert-triangle" style="font-size:13px;color:var(--tv-negative);"></i> Estimated balance due</div><div class="kpi-value" style="color:var(--tv-negative);">$7,003</div></div>
+              <div class="kpi-card"><div class="kpi-label">Effective rate</div><div class="kpi-value">13.5%</div></div>
               <div class="kpi-card"><div class="kpi-label">Marginal bracket</div><div class="kpi-value">22%</div></div>
             </div>
+
+            <!-- Per-W-2 transparency: individual income + withheld, then combined -->
+            <div class="card" style="margin-top:12px;">
+              <div class="section-title" style="margin-bottom:8px;"><i class="ti ti-users" style="color:var(--tv-forest);margin-right:6px;"></i> Income by W-2 (joint)</div>
+              <table class="tv-table" style="width:100%;">
+                <thead><tr><th>Filer</th><th>Employer</th><th style="text-align:right;">Wages</th><th style="text-align:right;">Fed. tax withheld</th></tr></thead>
+                <tbody>
+                  <tr><td>You</td><td>Acme Corp</td><td style="text-align:right;">$84,200</td><td style="text-align:right;">$9,310</td></tr>
+                  <tr><td>Spouse</td><td>Globex Inc</td><td style="text-align:right;">$61,000</td><td style="text-align:right;">$6,400</td></tr>
+                  <tr style="font-weight:700;"><td>Combined</td><td></td><td style="text-align:right;">$145,200</td><td style="text-align:right;">$15,710</td></tr>
+                </tbody>
+              </table>
+              <div style="font-size:11px;color:var(--tv-text-muted);margin-top:6px;">On a joint return, tax is figured on combined income — withheld amounts are each W-2's actual Box 2.</div>
+            </div>
+
             <div class="card" style="margin-top:12px;">
               <div class="section-title" style="margin-bottom:8px;">How we got there</div>
-              <div class="tv-row"><span style="color:var(--tv-text-muted);">Gross income</span><span>$107,400</span></div>
-              <div class="tv-row"><span style="color:var(--tv-text-muted);">Adjusted gross income (AGI)</span><span>$104,345</span></div>
-              <div class="tv-row"><span style="color:var(--tv-text-muted);">Deduction (itemized)</span><span>− $25,140</span></div>
-              <div class="tv-row"><span style="font-weight:600;">Taxable income</span><span style="font-weight:700;">$79,205</span></div>
-              <div class="tv-row"><span style="color:var(--tv-text-muted);">Income tax</span><span>$11,176</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Gross income (combined)</span><span>$168,400</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Adjusted gross income (AGI)</span><span>$165,346</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Deduction (standard, joint)</span><span>− $30,000</span></div>
+              <div class="tv-row"><span style="font-weight:600;">Taxable income</span><span style="font-weight:700;">$135,346</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Income tax (joint brackets)</span><span>$19,605</span></div>
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Self-employment tax</span><span>$3,108</span></div>
-              <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Total federal tax</span><span style="font-weight:700;">$18,240</span></div>
+              <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Total federal tax</span><span style="font-weight:700;">$22,713</span></div>
             </div>
             <div class="card" style="margin-top:12px;">
               <div class="section-title" style="margin-bottom:8px;">Ways to lower your taxes</div>
@@ -3709,7 +3795,7 @@ a { text-decoration: none; color: inherit; }
               </div>
               <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-sage-pale);">
                 <i class="ti ti-bulb" style="font-size:18px;color:var(--tv-forest);"></i>
-                <div><div style="font-weight:600;font-size:13.5px;">You're itemizing</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Your $25,140 itemized total beats the $15,000 standard deduction — keep those 1098 / SALT / charitable records.</div></div>
+                <div><div style="font-weight:600;font-size:13.5px;">Standard deduction wins</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Your $25,140 itemized total is below the $30,000 joint standard deduction — we used the standard for you. You'd need more deductible expenses to benefit from itemizing.</div></div>
               </div>
             </div>
           </div>
@@ -3721,8 +3807,8 @@ a { text-decoration: none; color: inherit; }
           <table class="tv-table" style="width:100%;margin-top:8px;">
             <thead><tr><th>Year</th><th>Filing</th><th style="text-align:right;">AGI</th><th style="text-align:right;">Federal tax</th><th style="text-align:right;">Eff. rate</th><th style="text-align:right;">Refund / Owed</th></tr></thead>
             <tbody>
-              <tr><td style="font-weight:600;">2025</td><td>Single</td><td style="text-align:right;">$104,345</td><td style="text-align:right;">$18,240</td><td style="text-align:right;">15.6%</td><td style="text-align:right;color:var(--tv-negative);font-weight:600;">− $3,110</td></tr>
-              <tr><td style="font-weight:600;">2024</td><td>Single</td><td style="text-align:right;">$96,800</td><td style="text-align:right;">$15,980</td><td style="text-align:right;">14.9%</td><td style="text-align:right;color:var(--tv-positive);font-weight:600;">+ $640</td></tr>
+              <tr><td style="font-weight:600;">2025</td><td>Married joint</td><td style="text-align:right;">$165,346</td><td style="text-align:right;">$22,713</td><td style="text-align:right;">13.5%</td><td style="text-align:right;color:var(--tv-negative);font-weight:600;">− $7,003</td></tr>
+              <tr><td style="font-weight:600;">2024</td><td>Married joint</td><td style="text-align:right;">$151,200</td><td style="text-align:right;">$19,540</td><td style="text-align:right;">12.9%</td><td style="text-align:right;color:var(--tv-positive);font-weight:600;">+ $1,180</td></tr>
             </tbody>
           </table>
         </div>
