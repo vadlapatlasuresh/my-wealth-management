@@ -30,19 +30,25 @@ public class TaxController {
     private final com.mywealthmanagement.financialcoreservice.tax.ocr.TextractReader textractReader;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
+    /**
+     * Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice.
+     * {@code record=false} skips the history snapshot — used for what-if comparisons (e.g. MFJ vs
+     * MFS) so they don't overwrite the user's saved year-over-year row.
+     */
     @PostMapping("/estimate")
-    public TaxEstimate estimate(@RequestBody Map<String, Object> body) {
+    public TaxEstimate estimate(@RequestBody Map<String, Object> body,
+                                @RequestParam(name = "record", defaultValue = "true") boolean record) {
         TaxRuleSet rules = taxRules.forYear(intVal(body.get("year"), null));
         TaxEstimateInput in = inputFrom(body);
         TaxEstimate estimate = TaxEstimator.estimate(in, rules);
         estimate.setInsights(TaxInsights.generate(in, estimate, rules));
-        // Persist this year's latest estimate for the history view (best-effort — never fail the
-        // estimate over a history write).
-        try {
-            taxEstimateHistoryService.record(getUserId(), estimate);
-        } catch (Exception ignored) {
-            // history is a convenience; the estimate itself must always succeed
+        if (record) {
+            // Persist this year's latest estimate for the history view (best-effort).
+            try {
+                taxEstimateHistoryService.record(getUserId(), estimate);
+            } catch (Exception ignored) {
+                // history is a convenience; the estimate itself must always succeed
+            }
         }
         return estimate;
     }
