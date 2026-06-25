@@ -99,6 +99,13 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- AWS Textract for real W-2/1099/1098 OCR (flag-gated via tax.ocr.provider=textract;
+             the client is built only when enabled, so no AWS creds are needed otherwise). -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>textract</artifactId>
+            <version>2.25.60</version>
+        </dependency>
     </dependencies>
 
     <dependencyManagement>

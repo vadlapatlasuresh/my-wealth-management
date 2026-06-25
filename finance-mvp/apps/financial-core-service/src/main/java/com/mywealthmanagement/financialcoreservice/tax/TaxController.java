@@ -27,21 +27,28 @@ public class TaxController {
     private final TaxProfileService taxProfileService;
     private final TaxDocumentParser taxDocumentParser;
     private final TaxEstimateHistoryService taxEstimateHistoryService;
+    private final com.mywealthmanagement.financialcoreservice.tax.ocr.TextractReader textractReader;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
-    /** Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice. */
+    /**
+     * Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice.
+     * {@code record=false} skips the history snapshot — used for what-if comparisons (e.g. MFJ vs
+     * MFS) so they don't overwrite the user's saved year-over-year row.
+     */
     @PostMapping("/estimate")
-    public TaxEstimate estimate(@RequestBody Map<String, Object> body) {
+    public TaxEstimate estimate(@RequestBody Map<String, Object> body,
+                                @RequestParam(name = "record", defaultValue = "true") boolean record) {
         TaxRuleSet rules = taxRules.forYear(intVal(body.get("year"), null));
         TaxEstimateInput in = inputFrom(body);
         TaxEstimate estimate = TaxEstimator.estimate(in, rules);
         estimate.setInsights(TaxInsights.generate(in, estimate, rules));
-        // Persist this year's latest estimate for the history view (best-effort — never fail the
-        // estimate over a history write).
-        try {
-            taxEstimateHistoryService.record(getUserId(), estimate);
-        } catch (Exception ignored) {
-            // history is a convenience; the estimate itself must always succeed
+        if (record) {
+            // Persist this year's latest estimate for the history view (best-effort).
+            try {
+                taxEstimateHistoryService.record(getUserId(), estimate);
+            } catch (Exception ignored) {
+                // history is a convenience; the estimate itself must always succeed
+            }
         }
         return estimate;
     }
@@ -102,6 +109,10 @@ public class TaxController {
                 details.put(key, v);
             }
         }
+        // The rental (Schedule E) worksheet round-trips as an object.
+        if (body.get("rental") instanceof Map<?, ?> rental && !rental.isEmpty()) {
+            details.put("rental", rental);
+        }
         try {
             return objectMapper.writeValueAsString(details);
         } catch (Exception e) {
@@ -139,14 +150,33 @@ public class TaxController {
     }
 
     /**
-     * Parse an uploaded W-2 / 1099 (its extracted text) into suggested figures for the estimate.
-     * Best-effort and stateless — nothing is stored; the user confirms before anything is applied.
-     * Body: {@code { "text": "<document text>" }}.
+     * Parse an uploaded W-2 / 1099 / 1098 into suggested figures for the estimate. When AWS Textract
+     * is enabled and the raw file bytes are provided, it OCRs the document (any layout, incl. scans);
+     * otherwise it falls back to the text parser. Best-effort and stateless — nothing is stored.
+     * Body: {@code { "text": "...", "contentBase64": "<file bytes>", "contentType": "..." }}.
      */
     @PostMapping("/documents/parse")
     public ParsedTaxDocument parseDocument(@RequestBody Map<String, Object> body) {
         getUserId(); // require auth
+        String base64 = str(body.get("contentBase64"));
+        if (textractReader.isEnabled() && base64 != null) {
+            try {
+                byte[] bytes = java.util.Base64.getDecoder().decode(stripDataUrl(base64));
+                var kv = textractReader.extractKeyValues(bytes);
+                if (!kv.isEmpty()) {
+                    return taxDocumentParser.parseKeyValues(kv);
+                }
+            } catch (IllegalArgumentException ignored) {
+                // malformed base64 — fall through to the text parser
+            }
+        }
         return taxDocumentParser.parse(str(body.get("text")));
+    }
+
+    /** Strip a {@code data:<mime>;base64,} prefix if the client sent a data URL. */
+    private static String stripDataUrl(String s) {
+        int comma = s.indexOf(',');
+        return (s.startsWith("data:") && comma >= 0) ? s.substring(comma + 1) : s;
     }
 
     /** SALT (state/local + property taxes) itemized deduction is capped at $10,000. */
@@ -160,11 +190,15 @@ public class TaxController {
      */
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
         BigDecimal selfEmployment = num(body.get("selfEmploymentIncome"));
+        BigDecimal rental = num(body.get("rentalIncome"));
         BigDecimal grossIncome = sum(
-                num(body.get("wages")), selfEmployment, num(body.get("rentalIncome")),
+                num(body.get("wages")), selfEmployment, rental,
                 num(body.get("interestIncome")), num(body.get("dividendIncome")),
                 num(body.get("retirementIncome")), num(body.get("otherIncome")),
                 num(body.get("grossIncome"))); // legacy single field
+
+        // QBI-eligible income: self-employment + positive rental (a rental trade/business).
+        BigDecimal qbiIncome = selfEmployment.add(rental.max(BigDecimal.ZERO));
 
         BigDecimal adjustments = sum(
                 num(body.get("studentLoanInterest")), num(body.get("hsaContribution")),
@@ -184,7 +218,8 @@ public class TaxController {
                 itemized,
                 intVal(body.get("dependentsUnder17"), 0),
                 num(body.get("withholding")),
-                selfEmployment);
+                selfEmployment,
+                qbiIncome);
     }
 
     private static BigDecimal sum(BigDecimal... values) {

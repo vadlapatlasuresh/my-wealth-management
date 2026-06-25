@@ -4,6 +4,8 @@ import com.mywealthmanagement.financialcoreservice.tax.ocr.ParsedTaxDocument.Ext
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -97,6 +99,36 @@ class TaxDocumentParserTest {
         assertThat(r.fields()).isEmpty();
         assertThat(r.confidence()).isLessThan(0.5);
         assertThat(r.note()).isNotBlank();
+    }
+
+    @Test
+    void parseKeyValues_w2FromTextractForms() {
+        Map<String, String> kv = new LinkedHashMap<>();
+        kv.put("Wages, tips, other compensation", "84,200.00");
+        kv.put("Federal income tax withheld", "9,310.00");
+        ParsedTaxDocument r = parser.parseKeyValues(kv);
+        assertThat(r.documentType()).isEqualTo("W2");
+        assertThat(r.source()).isEqualTo(TaxDocumentParser.SOURCE_TEXTRACT);
+        assertThat(field(r, "wages")).isEqualByComparingTo("84200.00");
+        assertThat(field(r, "withholding")).isEqualByComparingTo("9310.00");
+    }
+
+    @Test
+    void parseKeyValues_1098FromTextractForms() {
+        Map<String, String> kv = new LinkedHashMap<>();
+        kv.put("Mortgage interest received from payer(s)/borrower(s)", "$12,840.55");
+        kv.put("Real estate taxes", "6,200.00");
+        ParsedTaxDocument r = parser.parseKeyValues(kv);
+        assertThat(r.documentType()).isEqualTo("1098");
+        assertThat(field(r, "mortgageInterest")).isEqualByComparingTo("12840.55");
+        assertThat(field(r, "propertyTaxes")).isEqualByComparingTo("6200.00");
+    }
+
+    @Test
+    void parseKeyValues_emptyDegradesGracefully() {
+        ParsedTaxDocument r = parser.parseKeyValues(Map.of());
+        assertThat(r.documentType()).isEqualTo("UNKNOWN");
+        assertThat(r.fields()).isEmpty();
     }
 
     @Test

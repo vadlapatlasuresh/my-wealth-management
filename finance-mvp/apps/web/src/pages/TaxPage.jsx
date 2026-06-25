@@ -112,6 +112,24 @@ export default function TaxPage() {
   const totalW2Wages = w2s.reduce((s, w) => s + numOf(w.wages), 0);
   const totalW2Withholding = w2s.reduce((s, w) => s + numOf(w.withholding), 0);
 
+  // Rental properties (Schedule E): gross rents − expenses − depreciation = net (can be a loss).
+  const [rental, setRental] = useState({
+    grossRents: "", mortgageInterest: "", propertyTax: "", insurance: "", repairs: "", management: "",
+    otherExp: "", costBasis: "", landValue: "",
+  });
+  const setR = (k) => (e) => setRental((r) => ({ ...r, [k]: e.target.value }));
+  const rentalActive = ["grossRents", "mortgageInterest", "propertyTax", "insurance", "repairs", "management", "otherExp", "costBasis"]
+    .some((k) => numOf(rental[k]) > 0);
+  const rentalDepreciation = Math.max(0, numOf(rental.costBasis) - numOf(rental.landValue)) / 27.5;
+  const rentalExpenses = numOf(rental.mortgageInterest) + numOf(rental.propertyTax) + numOf(rental.insurance)
+    + numOf(rental.repairs) + numOf(rental.management) + numOf(rental.otherExp);
+  const rentalNet = numOf(rental.grossRents) - rentalExpenses - rentalDepreciation;
+  // Passive rental losses are limited to $25,000/yr (phasing out between $100k–$150k AGI).
+  const rentalForEstimate = rentalNet < 0 ? Math.max(rentalNet, -25000) : rentalNet;
+
+  const [mfs, setMfs] = useState(null); // MFJ-vs-MFS comparison result
+  const [mfsBusy, setMfsBusy] = useState(false);
+
   // Collapsible input sections (Basics always visible; the rest start open).
   const [openSection, setOpenSection] = useState({ income: true, adjustments: true, itemized: true });
   const toggleSection = (k) => setOpenSection((s) => ({ ...s, [k]: !s[k] }));
@@ -162,17 +180,50 @@ export default function TaxPage() {
     return "applied";
   };
 
-  // Estimator/profile payload: W-2s summed into wages/withholding; collections sent for persistence.
+  // Estimator/profile payload: W-2s summed into wages/withholding; rental net from the worksheet;
+  // collections sent for persistence.
   const buildPayload = () => ({
     ...form,
     wages: String(totalW2Wages),
     withholding: String(totalW2Withholding + numOf(form.withholding)),
+    rentalIncome: rentalActive ? String(Math.round(rentalForEstimate)) : form.rentalIncome,
     w2s: w2s.filter((w) => numOf(w.wages) > 0 || w.employer.trim()).map((w) => ({
       filerId: w.filerId, employer: w.employer.trim(), wages: numOf(w.wages), federalWithholding: numOf(w.withholding),
     })),
     filers,
     documents: docs.map((d) => ({ fileName: d.fileName, docType: d.docType, filerId: d.filerId })),
+    rental: rentalActive ? rental : undefined,
   });
+
+  const spouseHasIncome = w2s.some((w) => w.filerId === "spouse" && numOf(w.wages) > 0);
+
+  // Compare Married-Filing-Jointly vs Married-Filing-Separately (what-if; not saved to history).
+  // MFS split: each spouse keeps their own W-2; all shared items (other income, deductions,
+  // dependents) are assigned to the primary filer — a reasonable illustrative split.
+  const compareFilingStatus = async () => {
+    setMfsBusy(true);
+    try {
+      const base = buildPayload();
+      const sum = (id, k) => w2s.filter((w) => w.filerId === id).reduce((s, w) => s + numOf(w[k]), 0);
+      const joint = await api.estimateTaxPreview({ ...base, filingStatus: "MARRIED_JOINT" });
+      const youSep = await api.estimateTaxPreview({
+        ...base, filingStatus: "MARRIED_SEPARATE",
+        wages: String(sum("you", "wages")),
+        withholding: String(sum("you", "withholding") + numOf(form.withholding)),
+      });
+      const spouseSep = await api.estimateTaxPreview({
+        year: form.year, filingStatus: "MARRIED_SEPARATE",
+        wages: String(sum("spouse", "wages")), withholding: String(sum("spouse", "withholding")),
+      });
+      setMfs({
+        joint: Number(joint.totalTax) || 0,
+        you: Number(youSep.totalTax) || 0,
+        spouse: Number(spouseSep.totalTax) || 0,
+        sepTotal: (Number(youSep.totalTax) || 0) + (Number(spouseSep.totalTax) || 0),
+      });
+    } catch { setMfs(null); }
+    finally { setMfsBusy(false); }
+  };
 
   // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
   useEffect(() => {
@@ -191,6 +242,9 @@ export default function TaxPage() {
                 wages: w.wages != null ? String(w.wages) : "",
                 withholding: w.federalWithholding != null ? String(w.federalWithholding) : "",
               })));
+            }
+            if (d.rental && typeof d.rental === "object") {
+              setRental((r) => ({ ...r, ...Object.fromEntries(Object.entries(d.rental).map(([k, v]) => [k, v == null ? "" : String(v)])) }));
             }
           } catch { /* ignore malformed json */ }
         }
@@ -251,9 +305,10 @@ export default function TaxPage() {
 
   // Parse a single document's text, route each extracted field into the form, and
   // return a short summary line for the extraction log (or null if nothing landed).
-  const parseAndRoute = async (text, fileName) => {
-    if (!text || !text.trim()) return null;
-    const r = await api.parseTaxDocument(text);
+  const parseAndRoute = async (payload, fileName) => {
+    const p = typeof payload === "string" ? { text: payload } : (payload || {});
+    if (!p.text?.trim() && !p.contentBase64) return null;
+    const r = await api.parseTaxDocument(p);
     const fields = Array.isArray(r?.fields) ? r.fields : [];
     const docType = r?.documentType || "UNKNOWN";
     if (r?.taxYear === 2024 || r?.taxYear === 2025) setForm((f) => ({ ...f, year: r.taxYear }));
@@ -304,25 +359,31 @@ export default function TaxPage() {
     return { ok: true };
   };
 
-  // Pull text out of one File depending on its type. Returns "" if it needs OCR.
-  const extractFileText = async (file) => {
+  // Best-effort text from a file (never throws). PDFs → pdf.js text; images → "" (Textract reads
+  // the bytes when enabled); text/CSV → raw. The raw bytes are always sent too, so the backend can
+  // OCR with Textract regardless.
+  const safeText = async (file) => {
     const type = file.type || "";
     const name = (file.name || "").toLowerCase();
-    if (type.startsWith("image/")) {
-      throw new Error("Photos and scans need OCR, which isn't enabled yet — paste the text instead.");
-    }
-    if (type === "application/pdf" || name.endsWith(".pdf")) {
-      const text = await extractPdfText(file);
-      if (!text || !text.trim()) {
-        throw new Error("Scanned PDF with no text layer — paste the text or enter the figures manually.");
-      }
-      return text;
-    }
-    // Plain text / CSV.
-    return await file.text();
+    try {
+      if (type === "application/pdf" || name.endsWith(".pdf")) return await extractPdfText(file);
+      if (type.startsWith("image/")) return "";
+      return await file.text();
+    } catch { return ""; }
   };
 
-  // Multi-file uploader: read + parse + route each selected file in turn.
+  // Read a file as a base64 data URL (so the backend can hand the bytes to Textract). Skips very
+  // large files to keep the request small — those rely on the text path.
+  const fileToBase64 = (file) =>
+    new Promise((resolve) => {
+      if (!file || file.size > 8 * 1024 * 1024) return resolve("");
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => resolve("");
+      reader.readAsDataURL(file);
+    });
+
+  // Multi-file uploader: read text + bytes, parse + route each selected file independently.
   const onDocFiles = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -332,10 +393,14 @@ export default function TaxPage() {
     // Each file is handled independently — one tricky file must never block the rest.
     for (const file of files) {
       try {
-        const text = await extractFileText(file);
-        await parseAndRoute(text, file.name);
+        const [text, contentBase64] = await Promise.all([safeText(file), fileToBase64(file)]);
+        const entry = await parseAndRoute({ text, contentBase64, contentType: file.type, filename: file.name }, file.name);
+        if (entry == null) {
+          // Nothing readable at all — still list the file so it's never lost.
+          setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
+            status: "unreadable", note: "Couldn't read this file — enter the figures manually." }, ...ds]);
+        }
       } catch (e2) {
-        // Couldn't read it (image/scanned PDF, parse error) — still list the file so it's never lost.
         setDocs((ds) => [{ id: uid(), fileName: file.name, docType: "UNKNOWN", filerId: "you", applied: [],
           status: "unreadable", note: e2?.message || "Couldn't read this file — enter the figures manually." }, ...ds]);
       }
@@ -365,6 +430,49 @@ export default function TaxPage() {
   // The shown estimate (and the history row) reflect the LAST calculation — flag when the
   // filing status has changed since, so the user knows to recalculate.
   const filingChangedSinceCalc = result && result.filingStatus && result.filingStatus !== form.filingStatus;
+
+  // Quarterly estimated taxes: cover the projected balance due when income isn't withheld.
+  const quarterlyShortfall = result ? Math.max(0, Number(result.totalTax) - Number(result.withholding)) : 0;
+  const hasUnwithheldIncome = numOf(form.selfEmploymentIncome) > 0 || rentalNet > 0;
+  const showQuarterly = result && quarterlyShortfall > 1000 && hasUnwithheldIncome;
+  const quarterlyAmount = Math.ceil(quarterlyShortfall / 4 / 25) * 25;
+
+  // CPA-style "maximize your refund" suggestions — personalized + dollar-quantified from the inputs.
+  const refundTips = () => {
+    if (!result) return [];
+    const tips = [];
+    const marginal = Number(result.marginalRate) || 0;
+    const joint = form.filingStatus === "MARRIED_JOINT";
+    // 1) Rental depreciation — the biggest commonly-missed write-off.
+    if (rentalActive && numOf(rental.grossRents) > 0 && rentalDepreciation === 0) {
+      tips.push({ pri: 1, icon: "ti ti-building-estate", title: "Claim rental depreciation",
+        detail: "Enter your property's cost basis (minus land) in the rental worksheet — you can depreciate the building over 27.5 years. It's often a landlord's single biggest deduction." });
+    }
+    // 2) QBI win (auto-applied when there's qualified income).
+    if (Number(result.qbiDeduction) > 0) {
+      tips.push({ pri: 3, icon: "ti ti-discount", title: "20% QBI deduction applied",
+        detail: `You're getting a ${usd(result.qbiDeduction)} qualified-business-income deduction on your rental/self-employment income — already reflected above.` });
+    }
+    // 3) Retirement maxing — quantified at the marginal rate.
+    if (marginal >= 0.12 && numOf(form.iraContribution) + numOf(form.hsaContribution) < 5000) {
+      tips.push({ pri: 2, icon: "ti ti-pig-money", title: "Max out tax-advantaged accounts",
+        detail: `Every $1,000 you defer into a pre-tax 401(k)/traditional IRA/HSA cuts your tax by about ${usd(1000 * marginal)} at your ${pct(marginal)} bracket.${joint ? " A couple can defer up to ~$47,000 across two 401(k)s." : ""}` });
+    }
+    // 4) Dependent care credit.
+    if (Number(form.dependentsUnder17) > 0) {
+      tips.push({ pri: 3, icon: "ti ti-baby-carriage", title: "Child & Dependent Care Credit",
+        detail: "If you pay for daycare/after-care so you can work, you can claim 20–35% of up to $6,000 of expenses (two+ kids) — worth up to ~$1,200." });
+    }
+    // 5) Estimated payments for un-withheld income.
+    if (owed && (rentalNet > 0 || numOf(form.selfEmploymentIncome) > 0)) {
+      tips.push({ pri: 2, icon: "ti ti-calendar-dollar", title: "Make quarterly estimated payments",
+        detail: "Rental and 1099 income isn't withheld, so a balance due can trigger an underpayment penalty. Pay 1040-ES quarterly (Apr/Jun/Sep/Jan) to stay safe." });
+    }
+    // 6) Energy / EV credits (general but high-value).
+    tips.push({ pri: 4, icon: "ti ti-bolt", title: "Home energy & EV credits",
+      detail: "Solar, batteries or a heat pump → 30% back (Residential Clean Energy Credit). New/used clean vehicle → up to $7,500 / $4,000." });
+    return tips.sort((a, b) => a.pri - b.pri).slice(0, 6);
+  };
 
   return (
     <div id="page-tax" className="page active">
@@ -561,7 +669,52 @@ export default function TaxPage() {
                 </button>
               </div>
               <Field label="Self-employment / 1099 income" value={form.selfEmploymentIncome} onChange={set("selfEmploymentIncome")} placeholder="from your 1099-NEC / 1099-MISC" />
-              <Field label="Rental income" value={form.rentalIncome} onChange={set("rentalIncome")} placeholder="net rents you collected" />
+              {/* Rental properties — Schedule E worksheet with depreciation */}
+              <div style={{ border: "1px solid var(--tv-border)", borderRadius: "var(--radius-md)", padding: 10 }}>
+                <button type="button" onClick={() => toggleSection("rental")}
+                  style={{ background: "none", width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", padding: 0 }}>
+                  <span className="form-label" style={{ marginBottom: 0, display: "flex", alignItems: "center", gap: 6 }}>
+                    <i className="ti ti-building-estate" style={{ color: "var(--tv-forest)" }}></i> Rental properties (Schedule E)
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    {rentalActive && <span className="item-sub" style={{ fontSize: 12, fontWeight: 700, color: rentalNet < 0 ? "var(--tv-positive)" : "var(--tv-text-primary)" }}>{usd(rentalNet)}</span>}
+                    <i className={`ti ti-chevron-${openSection.rental ? "up" : "down"}`} style={{ color: "var(--tv-text-muted)" }}></i>
+                  </span>
+                </button>
+                {openSection.rental && (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>
+                    <div className="item-sub" style={{ fontSize: 11.5 }}>Capture rents, expenses and depreciation — most landlords leave depreciation (often the biggest write-off) on the table.</div>
+                    <Field label="Gross rents collected" value={rental.grossRents} onChange={setR("grossRents")} placeholder="total rent received" />
+                    <div className="form-label" style={{ marginBottom: 0, marginTop: 4 }}>Expenses</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <Field label="Mortgage interest" value={rental.mortgageInterest} onChange={setR("mortgageInterest")} placeholder="rental loan" />
+                      <Field label="Property tax" value={rental.propertyTax} onChange={setR("propertyTax")} placeholder="on the rental" />
+                      <Field label="Insurance" value={rental.insurance} onChange={setR("insurance")} placeholder="landlord policy" />
+                      <Field label="Repairs & maintenance" value={rental.repairs} onChange={setR("repairs")} placeholder="" />
+                      <Field label="Management & fees" value={rental.management} onChange={setR("management")} placeholder="PM, HOA, legal" />
+                      <Field label="Other expenses" value={rental.otherExp} onChange={setR("otherExp")} placeholder="utilities, travel…" />
+                    </div>
+                    <div className="form-label" style={{ marginBottom: 0, marginTop: 4 }}>Depreciation <span style={{ fontWeight: 400, color: "var(--tv-text-muted)" }}>(building cost ÷ 27.5 yrs)</span></div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+                      <Field label="Property cost basis" value={rental.costBasis} onChange={setR("costBasis")} placeholder="purchase + improvements" />
+                      <Field label="Land value" value={rental.landValue} onChange={setR("landValue")} placeholder="not depreciable" />
+                    </div>
+                    {rentalActive && (
+                      <div style={{ background: "var(--tv-sage-pale)", borderRadius: "var(--radius-md)", padding: 10, fontSize: 12.5 }}>
+                        <Row k="Gross rents" v={usd(numOf(rental.grossRents))} />
+                        <Row k="− Expenses" v={usd(rentalExpenses)} />
+                        <Row k="− Depreciation" v={usd(rentalDepreciation)} />
+                        <Row k="Net rental income/loss" v={usd(rentalNet)} bold />
+                        {rentalNet < 0 && (
+                          <div className="item-sub" style={{ fontSize: 11, marginTop: 4 }}>
+                            Passive losses are deductible up to $25,000/yr (phasing out between $100k–$150k AGI){rentalForEstimate !== rentalNet ? ` — capped to ${usd(rentalForEstimate)} here` : ""}.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
               <Field label="Interest income" value={form.interestIncome} onChange={set("interestIncome")} placeholder="from your 1099-INT" />
               <Field label="Dividend income" value={form.dividendIncome} onChange={set("dividendIncome")} placeholder="from your 1099-DIV" />
               <Field label="Retirement income" value={form.retirementIncome} onChange={set("retirementIncome")} placeholder="from your 1099-R" />
@@ -670,6 +823,7 @@ export default function TaxPage() {
                 <Row k="Gross income" v={usd(result.grossIncome)} />
                 <Row k="Adjusted gross income (AGI)" v={usd(result.agi)} />
                 <Row k={`Deduction (${result.deductionType?.toLowerCase()})`} v={`− ${usd(result.deductionUsed)}`} />
+                {Number(result.qbiDeduction) > 0 && <Row k="QBI deduction (20% · §199A)" v={`− ${usd(result.qbiDeduction)}`} />}
                 <Row k="Taxable income" v={usd(result.taxableIncome)} bold />
                 <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
                 {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
@@ -684,6 +838,75 @@ export default function TaxPage() {
                 )}
                 <p className="item-sub" style={{ marginTop: 10, fontSize: 11.5 }}>{result.disclaimer}</p>
               </div>
+
+              {/* Maximize your refund — personalized, quantified next steps */}
+              {refundTips().length > 0 && (
+                <div className="card" style={{ marginTop: 12, borderColor: "var(--tv-gold)" }}>
+                  <div className="card-title">
+                    <i className="ti ti-rosette-discount-check" style={{ color: "var(--tv-gold)" }}></i> Ways to maximize your refund
+                  </div>
+                  <div className="item-sub" style={{ fontSize: 12, marginBottom: 10 }}>Tailored to what you entered. Talk to a CPA before acting.</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                    {refundTips().map((t, i) => (
+                      <div key={i} style={{ display: "flex", gap: 10, padding: "10px 12px", borderRadius: "var(--radius-md)", background: "var(--tv-gold-pale)" }}>
+                        <i className={t.icon} style={{ fontSize: 18, color: "var(--tv-gold)", marginTop: 1 }}></i>
+                        <div>
+                          <div className="item-name" style={{ fontSize: 13.5 }}>{t.title}</div>
+                          <div className="item-sub" style={{ fontSize: 12.5 }}>{t.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Quarterly estimated-tax calculator (un-withheld rental/1099 income) */}
+              {showQuarterly && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title"><i className="ti ti-calendar-dollar" style={{ color: "var(--tv-forest)" }}></i> Quarterly estimated taxes</div>
+                  <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                    You're projected to owe <strong>{usd(quarterlyShortfall)}</strong> that isn't covered by withholding. Rental/1099 income has no withholding, so paying quarterly (Form 1040-ES) avoids an underpayment penalty.
+                  </div>
+                  <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                    <Kpi label="Pay each quarter" value={usd(quarterlyAmount)} />
+                    <Kpi label="Annual (4 payments)" value={usd(quarterlyAmount * 4)} />
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    {["Apr 15", "Jun 16", "Sep 15", "Jan 15"].map((d) => (
+                      <Row key={d} k={`Due ${d}`} v={usd(quarterlyAmount)} />
+                    ))}
+                  </div>
+                  <div className="item-sub" style={{ fontSize: 11, marginTop: 6 }}>Safe harbor: you avoid a penalty if you pay 90% of this year's tax, or 100% of last year's (110% if AGI &gt; $150k).</div>
+                </div>
+              )}
+
+              {/* Married filing jointly vs separately — what-if comparison */}
+              {form.filingStatus === "MARRIED_JOINT" && spouseHasIncome && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title"><i className="ti ti-arrows-split" style={{ color: "var(--tv-forest)" }}></i> Jointly vs separately</div>
+                  {!mfs ? (
+                    <>
+                      <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 8 }}>See whether filing separately would cost you more or less. (Jointly is usually better, but worth checking.)</div>
+                      <button type="button" className="btn btn-secondary btn-sm" disabled={mfsBusy} onClick={compareFilingStatus}>
+                        {mfsBusy ? "Comparing…" : "Compare jointly vs separately"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Row k="Married filing jointly — total tax" v={usd(mfs.joint)} bold />
+                      <Row k="Filing separately — you" v={usd(mfs.you)} />
+                      <Row k="Filing separately — spouse" v={usd(mfs.spouse)} />
+                      <Row k="Filing separately — combined" v={usd(mfs.sepTotal)} bold />
+                      <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: "var(--radius-md)", background: "var(--tv-sage-pale)", fontSize: 13 }}>
+                        {mfs.sepTotal >= mfs.joint
+                          ? <span><i className="ti ti-check" style={{ color: "var(--tv-positive)" }}></i> <strong>Filing jointly saves you {usd(mfs.sepTotal - mfs.joint)}.</strong> Stay joint.</span>
+                          : <span><i className="ti ti-info-circle" style={{ color: "var(--tv-gold)" }}></i> <strong>Filing separately could save {usd(mfs.joint - mfs.sepTotal)}</strong> — rare, but worth confirming with a CPA (it can affect credits, IRAs and student-loan plans).</span>}
+                      </div>
+                      <div className="item-sub" style={{ fontSize: 11, marginTop: 6 }}>Illustrative split: each spouse keeps their own W-2; shared income & deductions go to the primary filer.</div>
+                    </>
+                  )}
+                </div>
+              )}
 
               {result.insights?.length > 0 && (
                 <div className="card" style={{ marginTop: 12 }}>

@@ -8,6 +8,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -27,6 +28,7 @@ import java.util.regex.Pattern;
 public class TaxDocumentParser {
 
     public static final String SOURCE_MOCK = "MOCK_REGEX";
+    public static final String SOURCE_TEXTRACT = "AWS_TEXTRACT";
 
     // Either a comma-grouped number (84,200.00) OR a plain run of digits (2025). The grouped
     // alternative requires at least one comma group, so "2025" isn't truncated to "202".
@@ -80,6 +82,66 @@ public class TaxDocumentParser {
         return new ParsedTaxDocument(type, year, fields, confidence, SOURCE_MOCK, note);
     }
 
+    /**
+     * Parse from Textract FORMS key/value pairs (key = box label, value = box amount). Because
+     * Textract pairs each label with its value regardless of 2-D position, this reads any layout —
+     * matching the same field labels against the KV keys instead of a sliding text window.
+     */
+    public ParsedTaxDocument parseKeyValues(Map<String, String> kv) {
+        if (kv == null || kv.isEmpty()) {
+            return new ParsedTaxDocument("UNKNOWN", null, List.of(), 0.0, SOURCE_TEXTRACT,
+                    "Couldn't read this document — please enter the figures manually.");
+        }
+        String combined = String.join(" \n ", kv.keySet()).toLowerCase();
+        String type = detectType(combined);
+        List<FieldSpec> specs = specsFor(type);
+
+        List<ExtractedField> fields = new ArrayList<>();
+        BigDecimal primary = null;
+        for (FieldSpec spec : specs) {
+            BigDecimal amt = amountForLabels(kv, spec.excludePriorValue() ? primary : null, spec.labels());
+            if (amt != null) {
+                fields.add(new ExtractedField(spec.key(), spec.label(), amt));
+                if (!spec.excludePriorValue() && primary == null) {
+                    primary = amt;
+                }
+            }
+        }
+
+        Integer year = year(combined + " " + String.join(" ", kv.values()));
+        double confidence = fields.isEmpty() ? 0.2 : (fields.size() >= expectedFor(type) ? 0.95 : 0.7);
+        String note = note(type, fields);
+        return new ParsedTaxDocument(type, year, fields, confidence, SOURCE_TEXTRACT, note);
+    }
+
+    /** The amount from the first KV entry whose key contains one of the labels (skipping {@code exclude}). */
+    private BigDecimal amountForLabels(Map<String, String> kv, BigDecimal exclude, String... labels) {
+        for (String label : labels) {
+            for (Map.Entry<String, String> e : kv.entrySet()) {
+                if (e.getKey().toLowerCase().contains(label)) {
+                    BigDecimal amt = firstAmount(e.getValue());
+                    if (amt != null && (exclude == null || amt.compareTo(exclude) != 0)) {
+                        return amt;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Parse the first number out of a Textract value cell (no minimum — the value IS the box amount). */
+    private BigDecimal firstAmount(String value) {
+        Matcher m = AMOUNT.matcher(value == null ? "" : value);
+        if (m.find()) {
+            try {
+                return new BigDecimal(m.group(1).replace(",", "").trim());
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
     private String detectType(String lower) {
         // Order matters: more specific markers first.
         if (lower.contains("1098-e") || lower.contains("student loan interest")) return "1098-E";
@@ -91,7 +153,8 @@ public class TaxDocumentParser {
         if (lower.contains("1099-r")) return "1099-R";
         if (lower.contains("1098") || lower.contains("mortgage interest")) return "1098";
         if (lower.contains("1099")) return "1099-MISC"; // generic 1099 → treat as misc income
-        if (lower.contains("w-2") || lower.contains("w2") || lower.contains("wage and tax statement")) return "W2";
+        if (lower.contains("w-2") || lower.contains("w2") || lower.contains("wage and tax statement")
+                || lower.contains("wages, tips") || lower.contains("wages tips")) return "W2";
         return "UNKNOWN";
     }
 

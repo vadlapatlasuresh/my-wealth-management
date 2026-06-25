@@ -16,12 +16,14 @@ public final class TaxEstimator {
     private TaxEstimator() {}
 
     private static final String DISCLAIMER =
-            "Educational estimate only — not tax advice. Simplified federal calculation; "
-            + "omits AMT, NIIT, capital-gains rates, QBI, and most credits. Self-employment tax "
-            + "uses the standard 15.3% (Social Security capped at the annual wage base) and ignores "
-            + "Social Security wages already withheld on a W-2. Consult a CPA for your actual return.";
+            "Educational estimate only — not tax advice. Simplified federal calculation; omits AMT, "
+            + "NIIT and capital-gains rates. The QBI (199A) deduction is the basic 20% and omits the "
+            + "SSTB phase-out and W-2/UBIA limits for high earners; self-employment tax uses the "
+            + "standard 15.3% (Social Security capped at the wage base) and ignores SS wages already "
+            + "withheld on a W-2. Consult a CPA for your actual return.";
 
     // Self-employment tax constants (IRS Schedule SE).
+    private static final BigDecimal QBI_RATE = new BigDecimal("0.20");        // Section 199A 20%
     private static final BigDecimal SE_NET_FACTOR = new BigDecimal("0.9235"); // 92.35% of net SE earnings
     private static final BigDecimal SS_RATE = new BigDecimal("0.124");        // Social Security portion
     private static final BigDecimal MEDICARE_RATE = new BigDecimal("0.029");  // Medicare portion (uncapped)
@@ -43,7 +45,15 @@ public final class TaxEstimator {
         boolean itemize = itemized.compareTo(standard) > 0;
         BigDecimal deduction = itemize ? itemized : standard;
 
-        BigDecimal taxable = agi.subtract(deduction).max(BigDecimal.ZERO);
+        BigDecimal taxableBeforeQbi = agi.subtract(deduction).max(BigDecimal.ZERO);
+
+        // QBI (Section 199A): 20% of qualified business/rental income, capped at 20% of taxable
+        // income. Simplified — omits the SSTB phase-out and W-2/UBIA limits for high earners.
+        BigDecimal qbiIncome = nz(in.qualifiedBusinessIncome()).max(BigDecimal.ZERO);
+        BigDecimal qbiDeduction = qbiIncome.multiply(QBI_RATE)
+                .min(taxableBeforeQbi.multiply(QBI_RATE))
+                .max(BigDecimal.ZERO);
+        BigDecimal taxable = taxableBeforeQbi.subtract(qbiDeduction).max(BigDecimal.ZERO);
 
         List<TaxRuleSet.Bracket> brackets = rules.brackets().get(status);
         BigDecimal taxBefore = applyBrackets(taxable, brackets);
@@ -65,6 +75,7 @@ public final class TaxEstimator {
         e.setAgi(money(agi));
         e.setDeductionType(itemize ? "ITEMIZED" : "STANDARD");
         e.setDeductionUsed(money(deduction));
+        e.setQbiDeduction(money(qbiDeduction));
         e.setTaxableIncome(money(taxable));
         e.setTaxBeforeCredits(money(taxBefore));
         e.setChildTaxCredit(money(ctc));

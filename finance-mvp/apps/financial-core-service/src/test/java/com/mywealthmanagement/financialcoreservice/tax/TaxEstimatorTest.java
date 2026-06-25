@@ -63,6 +63,17 @@ class TaxEstimatorTest {
     }
 
     @Test
+    void qbiDeduction_isTwentyPercentCappedByTaxableIncome() {
+        // $100k qualified rental income, single, std deduction $15k → taxable-before-QBI $85k.
+        // QBI = min(20% × 100,000 = 20,000, 20% × 85,000 = 17,000) = 17,000 → taxable 68,000.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("100000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, BigDecimal.ZERO, new BigDecimal("100000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getQbiDeduction()).isEqualByComparingTo("17000.00");
+        assertThat(e.getTaxableIncome()).isEqualByComparingTo("68000.00");
+    }
+
+    @Test
     void zeroIncomeYieldsZeroTax() {
         var e = TaxEstimator.estimate(in(FilingStatus.SINGLE, "0", "0", "0", 0, "0"), rules.forYear(2025));
         assertThat(e.getTaxableIncome()).isEqualByComparingTo("0.00");

@@ -193,6 +193,9 @@ export const api = {
   // Tax: educational federal estimate + the rule set (brackets/deductions) for a year.
   estimateTax: (payload) =>
     request("/api/v1/planning/tax/estimate", { method: "POST", body: JSON.stringify(payload) }),
+  // What-if estimate that is NOT saved to history (used for MFJ-vs-MFS comparisons).
+  estimateTaxPreview: (payload) =>
+    request("/api/v1/planning/tax/estimate?record=false", { method: "POST", body: JSON.stringify(payload) }),
   getTaxRules: (year) => request(`/api/v1/planning/tax/rules${year ? `?year=${year}` : ""}`),
   getTaxYears: () => request("/api/v1/planning/tax/years"),
   // Phase 2: saved tax profile + income suggestion from linked accounts.
@@ -201,9 +204,14 @@ export const api = {
     request("/api/v1/planning/tax/profile", { method: "PUT", body: JSON.stringify(payload) }),
   getTaxPrefill: () => request("/api/v1/planning/tax/prefill"),
   getTaxGuide: () => request("/api/v1/planning/tax/guide"),
-  // Parse an uploaded/pasted W-2 or 1099 into suggested figures (stateless; nothing stored).
-  parseTaxDocument: (text) =>
-    request("/api/v1/planning/tax/documents/parse", { method: "POST", body: JSON.stringify({ text }) }),
+  // Parse an uploaded/pasted W-2 / 1099 / 1098 into suggested figures (stateless; nothing stored).
+  // Accepts a string (pasted text) or { text, contentBase64, contentType, filename } so the backend
+  // can OCR the raw bytes with Textract when enabled, falling back to the text parser.
+  parseTaxDocument: (payload) =>
+    request("/api/v1/planning/tax/documents/parse", {
+      method: "POST",
+      body: JSON.stringify(typeof payload === "string" ? { text: payload } : payload),
+    }),
   // Year-over-year estimate history (latest estimate per tax year, persisted on each calculate).
   getTaxHistory: () => request("/api/v1/planning/tax/estimates"),
   // CPA marketplace
