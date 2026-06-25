@@ -115,17 +115,31 @@ export default function TaxPage() {
   // Rental properties (Schedule E): gross rents − expenses − depreciation = net (can be a loss).
   const [rental, setRental] = useState({
     grossRents: "", mortgageInterest: "", propertyTax: "", insurance: "", repairs: "", management: "",
-    otherExp: "", costBasis: "", landValue: "",
+    otherExp: "", costBasis: "", landValue: "", priorCarryforward: "",
   });
   const setR = (k) => (e) => setRental((r) => ({ ...r, [k]: e.target.value }));
-  const rentalActive = ["grossRents", "mortgageInterest", "propertyTax", "insurance", "repairs", "management", "otherExp", "costBasis"]
+  const rentalActive = ["grossRents", "mortgageInterest", "propertyTax", "insurance", "repairs", "management", "otherExp", "costBasis", "priorCarryforward"]
     .some((k) => numOf(rental[k]) > 0);
   const rentalDepreciation = Math.max(0, numOf(rental.costBasis) - numOf(rental.landValue)) / 27.5;
   const rentalExpenses = numOf(rental.mortgageInterest) + numOf(rental.propertyTax) + numOf(rental.insurance)
     + numOf(rental.repairs) + numOf(rental.management) + numOf(rental.otherExp);
   const rentalNet = numOf(rental.grossRents) - rentalExpenses - rentalDepreciation;
-  // Passive rental losses are limited to $25,000/yr (phasing out between $100k–$150k AGI).
-  const rentalForEstimate = rentalNet < 0 ? Math.max(rentalNet, -25000) : rentalNet;
+
+  // Passive-activity loss rules with carryforward of suspended (disallowed) losses:
+  //  • A current-year loss is deductible against ordinary income up to $25,000/yr (the active-
+  //    participation allowance; phases out $100k–$150k AGI). The excess is SUSPENDED and carries
+  //    forward.
+  //  • Prior suspended losses are released against current-year rental PROFIT (passive income).
+  const priorCarryforward = numOf(rental.priorCarryforward);
+  let rentalForEstimate, carryforwardUsed = 0, carryforwardAdded = 0;
+  if (rentalNet >= 0) {
+    carryforwardUsed = Math.min(priorCarryforward, rentalNet); // prior losses offset this year's profit
+    rentalForEstimate = rentalNet - carryforwardUsed;
+  } else {
+    rentalForEstimate = Math.max(rentalNet, -25000);            // deductible loss, capped at $25k
+    carryforwardAdded = Math.max(0, -rentalNet - 25000);        // the rest is suspended
+  }
+  const carryforwardOut = priorCarryforward - carryforwardUsed + carryforwardAdded;
 
   const [mfs, setMfs] = useState(null); // MFJ-vs-MFS comparison result
   const [mfsBusy, setMfsBusy] = useState(false);
@@ -448,6 +462,11 @@ export default function TaxPage() {
       tips.push({ pri: 1, icon: "ti ti-building-estate", title: "Claim rental depreciation",
         detail: "Enter your property's cost basis (minus land) in the rental worksheet — you can depreciate the building over 27.5 years. It's often a landlord's single biggest deduction." });
     }
+    // 1b) Suspended rental losses carrying forward.
+    if (carryforwardOut > 0) {
+      tips.push({ pri: 2, icon: "ti ti-clock-dollar", title: "Track your suspended rental losses",
+        detail: `${usd(carryforwardOut)} of rental loss is suspended and carries to next year — it offsets future rental profit, or releases in full when you sell the property. Don't lose track of it.` });
+    }
     // 2) QBI win (auto-applied when there's qualified income).
     if (Number(result.qbiDeduction) > 0) {
       tips.push({ pri: 3, icon: "ti ti-discount", title: "20% QBI deduction applied",
@@ -699,15 +718,28 @@ export default function TaxPage() {
                       <Field label="Property cost basis" value={rental.costBasis} onChange={setR("costBasis")} placeholder="purchase + improvements" />
                       <Field label="Land value" value={rental.landValue} onChange={setR("landValue")} placeholder="not depreciable" />
                     </div>
+                    <Field label="Prior-year suspended loss (carryforward)" value={rental.priorCarryforward} onChange={setR("priorCarryforward")} placeholder="disallowed loss from last year, if any" />
                     {rentalActive && (
                       <div style={{ background: "var(--tv-sage-pale)", borderRadius: "var(--radius-md)", padding: 10, fontSize: 12.5 }}>
                         <Row k="Gross rents" v={usd(numOf(rental.grossRents))} />
                         <Row k="− Expenses" v={usd(rentalExpenses)} />
                         <Row k="− Depreciation" v={usd(rentalDepreciation)} />
                         <Row k="Net rental income/loss" v={usd(rentalNet)} bold />
-                        {rentalNet < 0 && (
+                        {carryforwardUsed > 0 && <Row k="− Prior suspended loss used" v={`− ${usd(carryforwardUsed)}`} />}
+                        {(carryforwardUsed > 0 || carryforwardAdded > 0 || rentalForEstimate !== rentalNet) && (
+                          <Row k="Counted in this estimate" v={usd(rentalForEstimate)} bold />
+                        )}
+                        {carryforwardOut > 0 && (
+                          <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--tv-border-light)" }}>
+                            <Row k="Suspended loss carried to next year" v={usd(carryforwardOut)} bold />
+                            <div className="item-sub" style={{ fontSize: 11, marginTop: 4 }}>
+                              Enter this as next year's prior carryforward. Suspended losses are released against future rental profit, or in full when you sell the property.
+                            </div>
+                          </div>
+                        )}
+                        {rentalNet < 0 && carryforwardAdded === 0 && (
                           <div className="item-sub" style={{ fontSize: 11, marginTop: 4 }}>
-                            Passive losses are deductible up to $25,000/yr (phasing out between $100k–$150k AGI){rentalForEstimate !== rentalNet ? ` — capped to ${usd(rentalForEstimate)} here` : ""}.
+                            Active-participation losses are deductible up to $25,000/yr (phasing out $100k–$150k AGI).
                           </div>
                         )}
                       </div>
