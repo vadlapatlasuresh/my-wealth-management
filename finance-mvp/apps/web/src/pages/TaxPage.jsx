@@ -127,6 +127,9 @@ export default function TaxPage() {
   // Passive rental losses are limited to $25,000/yr (phasing out between $100k–$150k AGI).
   const rentalForEstimate = rentalNet < 0 ? Math.max(rentalNet, -25000) : rentalNet;
 
+  const [mfs, setMfs] = useState(null); // MFJ-vs-MFS comparison result
+  const [mfsBusy, setMfsBusy] = useState(false);
+
   // Collapsible input sections (Basics always visible; the rest start open).
   const [openSection, setOpenSection] = useState({ income: true, adjustments: true, itemized: true });
   const toggleSection = (k) => setOpenSection((s) => ({ ...s, [k]: !s[k] }));
@@ -191,6 +194,36 @@ export default function TaxPage() {
     documents: docs.map((d) => ({ fileName: d.fileName, docType: d.docType, filerId: d.filerId })),
     rental: rentalActive ? rental : undefined,
   });
+
+  const spouseHasIncome = w2s.some((w) => w.filerId === "spouse" && numOf(w.wages) > 0);
+
+  // Compare Married-Filing-Jointly vs Married-Filing-Separately (what-if; not saved to history).
+  // MFS split: each spouse keeps their own W-2; all shared items (other income, deductions,
+  // dependents) are assigned to the primary filer — a reasonable illustrative split.
+  const compareFilingStatus = async () => {
+    setMfsBusy(true);
+    try {
+      const base = buildPayload();
+      const sum = (id, k) => w2s.filter((w) => w.filerId === id).reduce((s, w) => s + numOf(w[k]), 0);
+      const joint = await api.estimateTaxPreview({ ...base, filingStatus: "MARRIED_JOINT" });
+      const youSep = await api.estimateTaxPreview({
+        ...base, filingStatus: "MARRIED_SEPARATE",
+        wages: String(sum("you", "wages")),
+        withholding: String(sum("you", "withholding") + numOf(form.withholding)),
+      });
+      const spouseSep = await api.estimateTaxPreview({
+        year: form.year, filingStatus: "MARRIED_SEPARATE",
+        wages: String(sum("spouse", "wages")), withholding: String(sum("spouse", "withholding")),
+      });
+      setMfs({
+        joint: Number(joint.totalTax) || 0,
+        you: Number(youSep.totalTax) || 0,
+        spouse: Number(spouseSep.totalTax) || 0,
+        sepTotal: (Number(youSep.totalTax) || 0) + (Number(spouseSep.totalTax) || 0),
+      });
+    } catch { setMfs(null); }
+    finally { setMfsBusy(false); }
+  };
 
   // Load a previously saved profile (404 = none yet) + the deductions/credits guide.
   useEffect(() => {
@@ -397,6 +430,12 @@ export default function TaxPage() {
   // The shown estimate (and the history row) reflect the LAST calculation — flag when the
   // filing status has changed since, so the user knows to recalculate.
   const filingChangedSinceCalc = result && result.filingStatus && result.filingStatus !== form.filingStatus;
+
+  // Quarterly estimated taxes: cover the projected balance due when income isn't withheld.
+  const quarterlyShortfall = result ? Math.max(0, Number(result.totalTax) - Number(result.withholding)) : 0;
+  const hasUnwithheldIncome = numOf(form.selfEmploymentIncome) > 0 || rentalNet > 0;
+  const showQuarterly = result && quarterlyShortfall > 1000 && hasUnwithheldIncome;
+  const quarterlyAmount = Math.ceil(quarterlyShortfall / 4 / 25) * 25;
 
   // CPA-style "maximize your refund" suggestions — personalized + dollar-quantified from the inputs.
   const refundTips = () => {
@@ -818,6 +857,54 @@ export default function TaxPage() {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Quarterly estimated-tax calculator (un-withheld rental/1099 income) */}
+              {showQuarterly && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title"><i className="ti ti-calendar-dollar" style={{ color: "var(--tv-forest)" }}></i> Quarterly estimated taxes</div>
+                  <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 8 }}>
+                    You're projected to owe <strong>{usd(quarterlyShortfall)}</strong> that isn't covered by withholding. Rental/1099 income has no withholding, so paying quarterly (Form 1040-ES) avoids an underpayment penalty.
+                  </div>
+                  <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+                    <Kpi label="Pay each quarter" value={usd(quarterlyAmount)} />
+                    <Kpi label="Annual (4 payments)" value={usd(quarterlyAmount * 4)} />
+                  </div>
+                  <div style={{ marginTop: 8 }}>
+                    {["Apr 15", "Jun 16", "Sep 15", "Jan 15"].map((d) => (
+                      <Row key={d} k={`Due ${d}`} v={usd(quarterlyAmount)} />
+                    ))}
+                  </div>
+                  <div className="item-sub" style={{ fontSize: 11, marginTop: 6 }}>Safe harbor: you avoid a penalty if you pay 90% of this year's tax, or 100% of last year's (110% if AGI &gt; $150k).</div>
+                </div>
+              )}
+
+              {/* Married filing jointly vs separately — what-if comparison */}
+              {form.filingStatus === "MARRIED_JOINT" && spouseHasIncome && (
+                <div className="card" style={{ marginTop: 12 }}>
+                  <div className="card-title"><i className="ti ti-arrows-split" style={{ color: "var(--tv-forest)" }}></i> Jointly vs separately</div>
+                  {!mfs ? (
+                    <>
+                      <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 8 }}>See whether filing separately would cost you more or less. (Jointly is usually better, but worth checking.)</div>
+                      <button type="button" className="btn btn-secondary btn-sm" disabled={mfsBusy} onClick={compareFilingStatus}>
+                        {mfsBusy ? "Comparing…" : "Compare jointly vs separately"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Row k="Married filing jointly — total tax" v={usd(mfs.joint)} bold />
+                      <Row k="Filing separately — you" v={usd(mfs.you)} />
+                      <Row k="Filing separately — spouse" v={usd(mfs.spouse)} />
+                      <Row k="Filing separately — combined" v={usd(mfs.sepTotal)} bold />
+                      <div style={{ marginTop: 8, padding: "10px 12px", borderRadius: "var(--radius-md)", background: "var(--tv-sage-pale)", fontSize: 13 }}>
+                        {mfs.sepTotal >= mfs.joint
+                          ? <span><i className="ti ti-check" style={{ color: "var(--tv-positive)" }}></i> <strong>Filing jointly saves you {usd(mfs.sepTotal - mfs.joint)}.</strong> Stay joint.</span>
+                          : <span><i className="ti ti-info-circle" style={{ color: "var(--tv-gold)" }}></i> <strong>Filing separately could save {usd(mfs.joint - mfs.sepTotal)}</strong> — rare, but worth confirming with a CPA (it can affect credits, IRAs and student-loan plans).</span>}
+                      </div>
+                      <div className="item-sub" style={{ fontSize: 11, marginTop: 6 }}>Illustrative split: each spouse keeps their own W-2; shared income & deductions go to the primary filer.</div>
+                    </>
+                  )}
                 </div>
               )}
 

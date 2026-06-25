@@ -193,6 +193,9 @@ export const api = {
   // Tax: educational federal estimate + the rule set (brackets/deductions) for a year.
   estimateTax: (payload) =>
     request("/api/v1/planning/tax/estimate", { method: "POST", body: JSON.stringify(payload) }),
+  // What-if estimate that is NOT saved to history (used for MFJ-vs-MFS comparisons).
+  estimateTaxPreview: (payload) =>
+    request("/api/v1/planning/tax/estimate?record=false", { method: "POST", body: JSON.stringify(payload) }),
   getTaxRules: (year) => request(`/api/v1/planning/tax/rules${year ? `?year=${year}` : ""}`),
   getTaxYears: () => request("/api/v1/planning/tax/years"),
   // Phase 2: saved tax profile + income suggestion from linked accounts.
