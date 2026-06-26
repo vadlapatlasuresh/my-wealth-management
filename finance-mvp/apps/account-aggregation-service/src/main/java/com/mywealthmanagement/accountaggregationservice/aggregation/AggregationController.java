@@ -2,6 +2,8 @@ package com.mywealthmanagement.accountaggregationservice.aggregation;
 
 import com.mywealthmanagement.accountaggregationservice.account.AccountService;
 import com.mywealthmanagement.accountaggregationservice.account.dto.AccountDto;
+import com.mywealthmanagement.accountaggregationservice.holding.HoldingService;
+import com.mywealthmanagement.accountaggregationservice.holding.dto.HoldingDto;
 import com.mywealthmanagement.accountaggregationservice.plaid.PlaidService;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
@@ -33,6 +35,7 @@ public class AggregationController {
 
     private final PlaidService plaidService;
     private final AccountService accountService;
+    private final HoldingService holdingService;
     private final TransactionService transactionService;
     private final com.mywealthmanagement.accountaggregationservice.transaction.CategoryRuleService categoryRuleService;
     private final PlaidWebhookVerifier plaidWebhookVerifier;
@@ -88,6 +91,12 @@ public class AggregationController {
     public ResponseEntity<List<AccountDto>> getAccounts() {
         List<AccountDto> accounts = accountService.getAccountsByUserId(getUserId());
         return ResponseEntity.ok(accounts);
+    }
+
+    /** Brokerage positions synced from Plaid Investments (largest value first). */
+    @GetMapping("/holdings")
+    public ResponseEntity<List<HoldingDto>> getHoldings() {
+        return ResponseEntity.ok(holdingService.getHoldingsByUserId(getUserId()));
     }
 
     @GetMapping("/transactions")

@@ -187,6 +187,8 @@ export const api = {
       body: JSON.stringify({ publicToken })
     }),
   getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
+  // Brokerage positions synced from Plaid Investments (powers the Investments tab).
+  getHoldings: () => request("/api/v1/aggregation/holdings"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Recurring bills/subscriptions detected from transaction history (upcoming first).
   getRecurringBills: () => request("/api/v1/aggregation/recurring-bills"),

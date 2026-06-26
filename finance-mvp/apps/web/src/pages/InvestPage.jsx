@@ -3,6 +3,7 @@ import { currency } from '../utils/format';
 import { api } from '../api';
 import Sparkline from '../components/Sparkline';
 import LastRefreshed from '../components/LastRefreshed';
+import PlaidLinkButton from '../components/PlaidLinkButton';
 import { BROKERS, getBroker } from '../config/brokers';
 
 /* ------------------------------------------------------------------ *
@@ -67,7 +68,6 @@ function syncedLabel(iso) {
 
 export default function InvestPage({ snapshot }) {
   const totalInvested = snapshot?.components?.investments ?? 0;
-  const holdings = snapshot?.holdings || EMPTY_HOLDINGS;
   const series = snapshot?.series || null;
 
   /* Active sub-tab */
@@ -85,14 +85,32 @@ export default function InvestPage({ snapshot }) {
   /* Server-persisted alternative investments — start empty; the user adds their own. */
   const [alts, setAlts] = useState([]);
 
-  /* Load the user's linked brokers + alternatives from the backend on mount. */
+  /* Real brokerage positions synced from Plaid Investments (via the aggregation
+     service). Falls back to snapshot.holdings if the endpoint has nothing yet. */
+  const [syncedHoldings, setSyncedHoldings] = useState([]);
+  const holdings = syncedHoldings.length ? syncedHoldings : (snapshot?.holdings || EMPTY_HOLDINGS);
+
+  /* Re-pull brokerage positions (after a Plaid link or a manual refresh). */
+  const reloadHoldings = async () => {
+    try {
+      const h = await api.getHoldings();
+      setSyncedHoldings(Array.isArray(h) ? h : []);
+    } catch { /* keep what we have */ }
+  };
+
+  /* Load the user's linked brokers + alternatives + holdings from the backend on mount. */
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [b, a] = await Promise.allSettled([api.getBrokerAccounts(), api.getAltInvestments()]);
+      const [b, a, h] = await Promise.allSettled([
+        api.getBrokerAccounts(),
+        api.getAltInvestments(),
+        api.getHoldings(),
+      ]);
       if (cancelled) return;
       if (b.status === 'fulfilled') setBrokers(Array.isArray(b.value) ? b.value : []);
       if (a.status === 'fulfilled') setAlts(Array.isArray(a.value) ? a.value : []);
+      if (h.status === 'fulfilled') setSyncedHoldings(Array.isArray(h.value) ? h.value : []);
     })();
     return () => { cancelled = true; };
   }, []);
@@ -524,6 +542,29 @@ export default function InvestPage({ snapshot }) {
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-cash" style={{ color: 'var(--tv-gold)' }}></i> Total Brokerage Value</div>
               <div className="kpi-value">{currency(brokersTotal)}</div>
+            </div>
+          </div>
+
+          {/* ---- Real linking via Plaid: pulls live holdings into Stocks & ETFs ---- */}
+          <div className="card" style={{ marginBottom: 24, border: '1px solid var(--tv-forest)', background: 'var(--tv-sage-pale)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="item-icon icon-forest" style={{ width: 46, height: 46, fontSize: 22 }}>
+                <i className="ti ti-building-bank"></i>
+              </div>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>Link a brokerage securely with Plaid</div>
+                <div style={{ fontSize: 13, color: 'var(--tv-text-muted)' }}>
+                  Connect Fidelity, Schwab, Robinhood, Vanguard and 12,000+ institutions. Your
+                  positions sync automatically and appear under <strong>Stocks &amp; ETFs</strong>.
+                </div>
+              </div>
+              <PlaidLinkButton onLinkSuccess={reloadHoldings}>
+                <i className="ti ti-plus"></i> Link brokerage
+              </PlaidLinkButton>
+            </div>
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--tv-text-muted)' }}>
+              <i className="ti ti-shield-check" style={{ color: 'var(--tv-forest-light)' }}></i>{' '}
+              Read-only and secured by Plaid — we never see your brokerage password.
             </div>
           </div>
 
