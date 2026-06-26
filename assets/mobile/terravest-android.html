@@ -638,8 +638,8 @@ svg{display:block;}
       </div>
       <div class="section-title">Credit cards · −$4,030</div>
       <div class="m-card" style="padding:6px 16px;">
-        <div class="lrow"><div class="inst" style="background:#016FD0;">AX</div><div class="grow"><div class="t1">Amex Gold</div><div class="t2">•••• 3007</div></div><div style="font-weight:700; color:var(--tv-negative);">−$2,140</div></div>
-        <div class="lrow"><div class="inst" style="background:#1A1F71;">VI</div><div class="grow"><div class="t1">Visa Signature</div><div class="t2">•••• 6612</div></div><div style="font-weight:700; color:var(--tv-negative);">−$1,890</div></div>
+        <div class="lrow"><div class="inst" style="background:#016FD0;">AX</div><div class="grow"><div class="t1">Amex Gold</div><div class="t2">•••• 3007 · <span style="color:#B7791F;font-weight:600;"><i class="ti ti-calendar-due" style="font-size:11px;"></i> Min $35 · due in 4d</span></div></div><div style="font-weight:700; color:var(--tv-negative);">−$2,140</div></div>
+        <div class="lrow"><div class="inst" style="background:#1A1F71;">VI</div><div class="grow"><div class="t1">Visa Signature</div><div class="t2">•••• 6612 · <span style="color:#B7791F;font-weight:600;"><i class="ti ti-calendar-due" style="font-size:11px;"></i> Min $40 · due in 12d</span></div></div><div style="font-weight:700; color:var(--tv-negative);">−$1,890</div></div>
       </div>
       <div class="section-title">Investments · $86,300</div>
       <div class="m-card" style="padding:6px 16px;">
@@ -751,6 +751,11 @@ svg{display:block;}
         <div class="step"><div class="num">2</div><div class="stxt">Review</div></div>
         <div class="step-line"></div>
         <div class="step"><div class="num">3</div><div class="stxt">Done</div></div>
+      </div>
+      <div class="section-title" style="margin-top:6px;"><i class="ti ti-bell-ringing" style="color:var(--tv-gold);"></i> Upcoming bills</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Capital One ····4321</div><div class="t2" style="color:#B7791F;font-weight:600;">Due in 4 days · Jul 5 · min $35</div></div><button class="btn-pay">Pay</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Chase Sapphire ····7788</div><div class="t2">Due in 12 days · Jul 13 · min $40</div></div><button class="btn-pay">Pay</button></div>
       </div>
       <div class="lbl" style="margin-bottom:8px;">Payee</div>
       <div class="segmented" style="margin-bottom:18px;">
@@ -889,6 +894,12 @@ svg{display:block;}
         <div class="lrow"><div class="inst" style="background:#000;">A</div><div class="grow"><div class="t1">AAPL</div><div class="t2">42 sh · Fidelity</div></div><div style="text-align:right;"><div style="font-weight:700;">$8,190</div><div class="tiny delta-up">+0.8%</div></div></div>
         <div class="lrow"><div class="inst" style="background:#76B900;">N</div><div class="grow"><div class="t1">NVDA</div><div class="t2">18 sh · Robinhood</div></div><div style="text-align:right;"><div style="font-weight:700;">$22,140</div><div class="tiny delta-up">+2.3%</div></div></div>
         <div class="lrow"><div class="inst" style="background:#8B0000;">V</div><div class="grow"><div class="t1">VTI</div><div class="t2">95 sh · Schwab</div></div><div style="text-align:right;"><div style="font-weight:700;">$26,500</div><div class="tiny delta-down">−0.2%</div></div></div>
+      </div>
+      <div class="section-title">Recent activity</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-arrow-down-left"></i></div><div class="grow"><div class="t1"><span class="chip green chip-round" style="height:20px; font-size:10px;">Buy</span> AAPL</div><div class="t2">Apple Inc · 15 sh · Jun 24</div></div><div style="font-weight:700;">$3,222</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-arrow-up-right"></i></div><div class="grow"><div class="t1"><span class="chip red-emph chip-round" style="height:20px; font-size:10px;">Sell</span> VTI</div><div class="t2">Total Stock Mkt · 10 sh · Jun 21</div></div><div style="font-weight:700;">$2,684</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-cash"></i></div><div class="grow"><div class="t1"><span class="chip chip-round" style="height:20px; font-size:10px;">Dividend</span> SCHD</div><div class="t2">US Dividend Equity · Jun 18</div></div><div style="font-weight:700;">$182.40</div></div>
       </div>
     </div></div>
     <div class="bottom-nav">
@@ -1072,23 +1083,20 @@ svg{display:block;}
     <div class="m-tabs"><div class="tab">Holdings</div><div class="tab act">Brokers</div><div class="tab">Alt</div><div class="tab">Market</div></div>
     <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
       <div class="kpi-grid">
-        <div class="kpi"><div class="k-lbl">Brokers Linked</div><div class="k-val">3</div></div>
-        <div class="kpi"><div class="k-lbl">Total Brokerage Value</div><div class="k-val">$86,300</div></div>
+        <div class="kpi"><div class="k-lbl">Brokers Linked</div><div class="k-val">2</div></div>
+        <div class="kpi"><div class="k-lbl">Total Brokerage Value</div><div class="k-val">$161,260</div></div>
       </div>
-      <div class="section-title">Connected brokers · 3 linked</div>
+      <div class="section-title">Link a brokerage</div>
+      <div class="m-card" style="border:1px solid var(--tv-forest); background:var(--tv-sage-pale);">
+        <div class="lrow" style="border:none; padding:0;"><div class="cat-icon" style="background:var(--tv-forest); color:#fff;"><i class="ti ti-building-bank"></i></div><div class="grow"><div class="t1">Link a brokerage securely with Plaid</div></div></div>
+        <div class="t2 secondary" style="margin-top:8px; line-height:1.45;">Connect Fidelity, Schwab, Robinhood, Vanguard and 12,000+ institutions. Your positions sync automatically and appear under Holdings.</div>
+        <button class="btn-filled" style="margin-top:12px;"><i class="ti ti-plus"></i> Link brokerage</button>
+        <div class="t2 secondary" style="margin-top:8px;"><i class="ti ti-shield-check" style="color:var(--tv-forest);"></i> Read-only and secured by Plaid — we never see your brokerage password.</div>
+      </div>
+      <div class="section-title">Your brokerages · 2 linked</div>
       <div class="m-card" style="padding:6px 16px;">
-        <div class="lrow"><div class="inst" style="background:#00C805;">RH</div><div class="grow"><div class="t1">Robinhood <span class="chip green chip-round tiny" style="height:22px; padding:0 8px;">Margin</span></div><div class="t2">Connected · Last synced 2m ago</div></div><div style="text-align:right;"><div style="font-weight:700;">$32,000</div><div class="row gap8" style="justify-content:flex-end; color:var(--tv-text-muted); margin-top:2px;"><i class="ti ti-refresh tiny"></i><i class="ti ti-trash tiny"></i></div></div></div>
-        <div class="lrow"><div class="inst" style="background:#00805B;">FD</div><div class="grow"><div class="t1">Fidelity</div><div class="t2">Connected · Last synced 1h ago</div></div><div style="text-align:right;"><div style="font-weight:700;">$54,300</div><div class="row gap8" style="justify-content:flex-end; color:var(--tv-text-muted); margin-top:2px;"><i class="ti ti-refresh tiny"></i><i class="ti ti-trash tiny"></i></div></div></div>
-      </div>
-      <div class="section-title">Available brokers · 6 supported</div>
-      <div class="kpi-grid">
-        <div class="kpi" style="text-align:center;"><i class="ti ti-building-bank" style="font-size:24px; color:var(--tv-forest);"></i><div class="t1" style="margin:6px 0 4px;">Schwab</div><span class="chip chip-round tiny" style="height:22px;">OAuth</span></div>
-        <div class="kpi" style="text-align:center;"><i class="ti ti-building-bank" style="font-size:24px; color:var(--tv-forest);"></i><div class="t1" style="margin:6px 0 4px;">E*TRADE</div><span class="chip chip-round tiny" style="height:22px;">Credentials</span></div>
-      </div>
-      <div class="m-card" style="margin-top:12px;">
-        <div style="font-weight:700; margin-bottom:8px;">Connect Schwab</div>
-        <button class="btn-filled" style="height:46px;"><i class="ti ti-external-link"></i> Continue to Schwab</button>
-        <div class="tiny muted" style="text-align:center; margin-top:10px;">Demo mode — no real redirect. 256-bit encrypted · read-only.</div>
+        <div class="lrow"><div class="inst" style="background:#00805B;">FD</div><div class="grow"><div class="t1">Fidelity Investments</div><div class="t2"><span class="chip green chip-round" style="height:20px; font-size:10px;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Linked via Plaid</span> · 3 positions</div></div><div style="font-weight:700;">$60,755</div></div>
+        <div class="lrow"><div class="inst" style="background:#96151D;">VG</div><div class="grow"><div class="t1">Vanguard</div><div class="t2"><span class="chip green chip-round" style="height:20px; font-size:10px;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Linked via Plaid</span> · 4 positions</div></div><div style="font-weight:700;">$100,505</div></div>
       </div>
     </div></div>
     <div class="bottom-nav">
