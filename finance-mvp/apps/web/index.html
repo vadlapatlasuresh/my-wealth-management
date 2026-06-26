@@ -15,7 +15,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,640;1,9..144,400&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+    <!-- Self-hosted Tabler icon webfont (previously loaded from a third-party CDN).
+         Same-origin so icons — including the hamburger/menu button — render reliably even
+         when that CDN is blocked/slow/offline; the woff2 + css are precached by the PWA. -->
+    <link rel="stylesheet" href="/vendor/tabler/tabler-icons.min.css">
   </head>
   <body>
     <div id="root"></div>
