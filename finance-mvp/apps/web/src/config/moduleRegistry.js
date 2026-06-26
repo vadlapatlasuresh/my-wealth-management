@@ -197,7 +197,7 @@ export const MODULE_REGISTRY = {
 /* DEFAULT_MODULES: ordered list of ids that appear in the sidebar today,
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
-  [SECTION_FINANCE]:    ['home', 'accounts', 'transactions', 'budget', 'billpay', 'debt', 'invest', 'mybusiness', 'ai-assistant', 'calculators', 'goals'],
+  [SECTION_FINANCE]:    ['home', 'accounts', 'transactions', 'budget', 'billpay', 'debt', 'invest', 'mybusiness', 'ai-assistant', 'calculators', 'goals', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
   [SECTION_SETTINGS]:   ['security', 'messages', 'settings'],
 };
