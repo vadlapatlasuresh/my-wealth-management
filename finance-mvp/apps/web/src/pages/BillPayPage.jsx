@@ -84,8 +84,36 @@ export default function BillPayPage({
   const next = () => { if (stepValid(step)) setStep(Math.min(step + 1, STEPS.length - 1)); };
   const back = () => setStep(Math.max(step - 1, 0));
 
-  // Quick-amount chips when paying a card.
+  // ---- Upcoming-bill reminders (credit cards with a due date / minimum payment) ----
+  const daysUntil = (iso) => {
+    if (!iso) return null;
+    const due = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(due.getTime())) return null;
+    const t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((due - t) / 86400000);
+  };
+  const dueCards = creditCards
+    .filter((c) => c.nextPaymentDueDate || c.minPayment != null)
+    .map((c) => ({ ...c, days: daysUntil(c.nextPaymentDueDate) }))
+    .sort((a, b) => (a.days ?? 9999) - (b.days ?? 9999));
+
+  // Jump straight into the wizard to pay a specific card (preselects + suggests min due).
+  const payCard = (c) => {
+    setBillPayForm((p) => ({
+      ...p,
+      payee_kind: "card",
+      card_account_id: c.id,
+      amount: c.minPayment != null ? c.minPayment : (c.lastStatementBalance ?? c.balance ?? ""),
+    }));
+    setStep(0);
+  };
+
+  // Quick-amount chips when paying a card. Prefer the real statement balance from
+  // Plaid Liabilities for the "statement balance" chip; fall back to current balance.
   const cardBalance = Number(selectedCard?.balance || 0);
+  const statementBalance = selectedCard?.lastStatementBalance != null
+    ? Number(selectedCard.lastStatementBalance)
+    : cardBalance;
   const minDue = selectedCard?.minPayment != null
     ? Number(selectedCard.minPayment)
     : Math.max(25, Math.round(cardBalance * 0.02));
@@ -105,6 +133,55 @@ export default function BillPayPage({
           </div>
         )}
       </div>
+
+      {/* Upcoming credit-card bills — reminders, all in one place */}
+      {step === 0 && dueCards.length > 0 && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="section-header" style={{ marginBottom: 12 }}>
+            <div className="section-title" style={{ marginBottom: 0 }}>
+              <i className="ti ti-bell-ringing" style={{ color: "var(--tv-gold)", marginRight: 6 }}></i>
+              Upcoming bills
+            </div>
+            <span style={{ fontSize: 12.5, color: "var(--tv-text-muted)" }}>
+              {dueCards.length} card{dueCards.length === 1 ? "" : "s"}
+            </span>
+          </div>
+          <div style={{ display: "grid", gap: 10 }}>
+            {dueCards.map((c) => {
+              const overdue = c.days != null && c.days < 0;
+              const soon = c.days != null && c.days >= 0 && c.days <= 7;
+              const tone = overdue ? "var(--tv-negative)" : soon ? "#B7791F" : "var(--tv-text-muted)";
+              const whenText =
+                c.days == null ? "Payment due"
+                  : overdue ? `${Math.abs(c.days)} days overdue`
+                  : c.days === 0 ? "Due today"
+                  : `Due in ${c.days} day${c.days === 1 ? "" : "s"}`;
+              return (
+                <div key={c.id} className="list-item" style={{ alignItems: "center" }}>
+                  <div className="item-icon icon-red" style={{ width: 40, height: 40, fontSize: 19 }}>
+                    <i className="ti ti-credit-card"></i>
+                  </div>
+                  <div className="item-main">
+                    <div className="item-name">{acctLabel(c)} ····{mask4(c)}</div>
+                    <div className="item-sub" style={{ color: tone, fontWeight: overdue || soon ? 600 : 400 }}>
+                      {whenText}
+                      {c.nextPaymentDueDate ? ` · ${formatDate(new Date(`${c.nextPaymentDueDate}T00:00:00`))}` : ""}
+                      {c.minPayment != null ? ` · min ${currency(c.minPayment)}` : ""}
+                    </div>
+                  </div>
+                  <div className="item-right" style={{ marginRight: 12, textAlign: "right" }}>
+                    <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)" }}>Balance</div>
+                    <div style={{ fontWeight: 600 }}>{currency(c.lastStatementBalance ?? c.balance)}</div>
+                  </div>
+                  <button className="btn btn-primary btn-sm" onClick={() => payCard(c)}>
+                    <i className="ti ti-bolt"></i> Pay
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Stepper */}
       <div className="stepper" style={{ maxWidth: 640, marginBottom: 20 }}>
@@ -199,7 +276,7 @@ export default function BillPayPage({
           {isCard && selectedCard && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => update("amount", minDue)}>Minimum {currency(minDue)}</button>
-              <button className="btn btn-secondary btn-sm" onClick={() => update("amount", cardBalance)}>Statement balance {currency(cardBalance)}</button>
+              <button className="btn btn-secondary btn-sm" onClick={() => update("amount", statementBalance)}>Statement balance {currency(statementBalance)}</button>
             </div>
           )}
           <div className="form-group" style={{ maxWidth: 280 }}>

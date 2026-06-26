@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor
@@ -14,9 +15,16 @@ public class AccountDto {
     private String plaidAccountId;
     private String name;
     private String officialName;
+    private String mask;
     private String subtype;
     private String type;
     private BigDecimal currentBalance;
     private BigDecimal availableBalance;
     private String currency;
+    // Credit-card / liability details (null for non-credit accounts).
+    private BigDecimal creditLimit;
+    private BigDecimal lastStatementBalance;
+    private BigDecimal minimumPayment;
+    private LocalDate nextPaymentDueDate;
+    private BigDecimal aprPercentage;
 }

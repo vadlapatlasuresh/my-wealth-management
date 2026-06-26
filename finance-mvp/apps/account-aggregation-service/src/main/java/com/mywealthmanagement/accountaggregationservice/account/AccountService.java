@@ -25,11 +25,17 @@ public class AccountService {
                 account.getPlaidAccountId(),
                 account.getName(),
                 account.getOfficialName(),
+                account.getMask(),
                 account.getSubtype(),
                 account.getType(),
                 account.getCurrentBalance(),
                 account.getAvailableBalance(),
-                account.getCurrency()
+                account.getCurrency(),
+                account.getCreditLimit(),
+                account.getLastStatementBalance(),
+                account.getMinimumPayment(),
+                account.getNextPaymentDueDate(),
+                account.getAprPercentage()
         );
     }
 }

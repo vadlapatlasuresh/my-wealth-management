@@ -10,8 +10,11 @@ import com.plaid.client.model.AccountBase;
 import com.plaid.client.model.AccountsGetRequest;
 import com.plaid.client.model.AccountsGetResponse;
 import com.plaid.client.model.CountryCode;
+import com.plaid.client.model.CreditCardLiability;
 import com.plaid.client.model.ItemPublicTokenExchangeRequest;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
+import com.plaid.client.model.LiabilitiesGetRequest;
+import com.plaid.client.model.LiabilitiesGetResponse;
 import com.plaid.client.model.LinkTokenCreateRequest;
 import com.plaid.client.model.LinkTokenCreateRequestUser;
 import com.plaid.client.model.LinkTokenCreateResponse;
@@ -54,12 +57,22 @@ public class PlaidService {
         LinkTokenCreateRequestUser user = new LinkTokenCreateRequestUser()
                 .clientUserId(request.getUserId().toString());
 
+        // TRANSACTIONS is supported by every account type (depository, credit, loan,
+        // investment), so it's the only *required* product — this is what lets the user
+        // link credit cards, loans and brokerage accounts, not just checking/savings.
+        //
+        // AUTH (bank account/routing for ACH) is depository-only: when it's required,
+        // Plaid Link hides every non-depository account, which is exactly why credit
+        // cards previously couldn't be linked. LIABILITIES powers credit-card due dates
+        // and minimum payments for bill reminders. Both go in optionalProducts so they're
+        // collected when the account supports them but never restrict what can be linked.
         LinkTokenCreateRequest linkRequest = new LinkTokenCreateRequest()
                 .user(user)
                 .clientName(plaidClientName)
                 .language("en")
                 .countryCodes(List.of(CountryCode.US))
-                .products(List.of(Products.AUTH, Products.TRANSACTIONS));
+                .products(List.of(Products.TRANSACTIONS))
+                .optionalProducts(List.of(Products.AUTH, Products.LIABILITIES));
 
         if (plaidWebhookUrl != null && !plaidWebhookUrl.isBlank()) {
             linkRequest.webhook(plaidWebhookUrl);
@@ -91,6 +104,16 @@ public class PlaidService {
         plaidItemRepository.save(plaidItem);
 
         fetchAccounts(request.getUserId(), plaidItem);
+        // Enrich any credit-card accounts with statement balance / minimum payment /
+        // next due date for bill reminders. Best-effort: LIABILITIES is optional, so an
+        // item with no credit cards (or where the product isn't ready yet) must not fail
+        // the link.
+        try {
+            fetchLiabilities(request.getUserId(), plaidItem);
+        } catch (Exception e) {
+            log.warn("Liabilities fetch deferred for item {}: {}",
+                    plaidItem.getPlaidItemId(), e.getMessage());
+        }
         // Transactions are frequently PRODUCT_NOT_READY right after linking — Plaid
         // fires a TRANSACTIONS webhook when they're available, and the next sync/read
         // picks them up. Don't fail the whole link if they're not ready yet.
@@ -116,6 +139,51 @@ public class PlaidService {
                 .collect(Collectors.toList());
 
         return accountRepository.saveAll(accounts);
+    }
+
+    /**
+     * Pull credit-card liability details (statement balance, minimum payment, next due
+     * date, purchase APR) for the item's credit accounts and persist them onto the
+     * matching {@link Account} rows. Powers the bill-pay quick-amounts and due-date
+     * reminders. No-op when the item has no credit cards or LIABILITIES isn't ready.
+     */
+    public void fetchLiabilities(Long userId, PlaidItem plaidItem) throws IOException {
+        LiabilitiesGetRequest request = new LiabilitiesGetRequest()
+                .accessToken(plaidItem.getAccessToken());
+
+        Response<LiabilitiesGetResponse> response = plaidApi.liabilitiesGet(request).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch liabilities: " + errorBody(response));
+        }
+
+        var liabilities = response.body().getLiabilities();
+        if (liabilities == null || liabilities.getCredit() == null) {
+            return;
+        }
+
+        for (CreditCardLiability card : liabilities.getCredit()) {
+            accountRepository.findByPlaidAccountId(card.getAccountId()).ifPresent(account -> {
+                account.setLastStatementBalance(toBigDecimalOrNull(card.getLastStatementBalance()));
+                account.setMinimumPayment(toBigDecimalOrNull(card.getMinimumPaymentAmount()));
+                account.setNextPaymentDueDate(card.getNextPaymentDueDate());
+                account.setAprPercentage(purchaseApr(card));
+                accountRepository.save(account);
+            });
+        }
+    }
+
+    /** Purchase APR for the card if present, else the first APR, else null. */
+    private static BigDecimal purchaseApr(CreditCardLiability card) {
+        if (card.getAprs() == null || card.getAprs().isEmpty()) {
+            return null;
+        }
+        return card.getAprs().stream()
+                .filter(a -> a.getAprType() != null
+                        && String.valueOf(a.getAprType().getValue()).toLowerCase().contains("purchase"))
+                .findFirst()
+                .or(() -> card.getAprs().stream().findFirst())
+                .map(a -> toBigDecimalOrNull(a.getAprPercentage()))
+                .orElse(null);
     }
 
     public List<Transaction> fetchTransactions(Long userId, PlaidItem plaidItem) throws IOException {
@@ -203,6 +271,9 @@ public class PlaidService {
         account.setPlaidItem(plaidItem);
         account.setName(plaidAccount.getName());
         account.setOfficialName(plaidAccount.getOfficialName());
+        account.setMask(plaidAccount.getMask());
+        // For credit cards/lines, balances.limit is the credit limit (powers utilization).
+        account.setCreditLimit(toBigDecimalOrNull(plaidAccount.getBalances().getLimit()));
         account.setSubtype(plaidAccount.getSubtype() != null ? plaidAccount.getSubtype().getValue() : "other");
         account.setType(plaidAccount.getType() != null ? plaidAccount.getType().getValue() : "other");
         account.setCurrentBalance(toBigDecimal(plaidAccount.getBalances().getCurrent()));
@@ -269,6 +340,11 @@ public class PlaidService {
 
     private static BigDecimal toBigDecimal(Double value) {
         return value != null ? BigDecimal.valueOf(value) : BigDecimal.ZERO;
+    }
+
+    /** Like {@link #toBigDecimal} but preserves null (for optional liability fields). */
+    private static BigDecimal toBigDecimalOrNull(Double value) {
+        return value != null ? BigDecimal.valueOf(value) : null;
     }
 
     private static String errorBody(Response<?> response) throws IOException {

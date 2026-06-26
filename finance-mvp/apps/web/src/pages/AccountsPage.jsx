@@ -26,6 +26,46 @@ function titleCase(text) {
   return text.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/* Days from today until an ISO date (yyyy-mm-dd); negative = past due. */
+function daysUntil(isoDate) {
+  if (!isoDate) return null;
+  const due = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(due.getTime())) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due - today) / 86400000);
+}
+
+function shortDate(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00`);
+  return Number.isNaN(d.getTime())
+    ? ''
+    : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/* Payment reminder badge for a credit card: minimum payment + when it's due,
+   colored by urgency. Renders nothing when Plaid gave us no liability details. */
+function DueBadge({ account }) {
+  const due = account.nextPaymentDueDate;
+  const min = account.minimumPayment != null ? Number(account.minimumPayment) : null;
+  if (!due && min == null) return null;
+
+  const days = daysUntil(due);
+  let cls = 'badge-gold';
+  let when = due ? `due ${shortDate(due)}` : 'payment due';
+  if (days != null) {
+    if (days < 0) { cls = 'badge-red'; when = `${Math.abs(days)}d overdue`; }
+    else if (days === 0) { cls = 'badge-red'; when = 'due today'; }
+    else if (days <= 7) { cls = 'badge-amber'; when = `due in ${days}d`; }
+  }
+  const minText = min != null ? `Min $${min.toLocaleString('en-US', { minimumFractionDigits: 0 })} · ` : '';
+  return (
+    <span className={`badge ${cls}`} title={due ? `Next payment due ${shortDate(due)}` : 'Payment due'}>
+      <i className="ti ti-calendar-due" style={{ fontSize: 10 }}></i> {minText}{when}
+    </span>
+  );
+}
+
 function InfoTip({ text }) {
   return (
     <span className="info-tip" tabIndex={0} role="img" aria-label={text} title={text}>
@@ -218,6 +258,7 @@ export default function AccountsPage({ accounts = [], loadAll }) {
                           <span className="badge badge-gray">
                             <i className="ti ti-lock" style={{ fontSize: 10 }}></i> Plaid
                           </span>
+                          {group.key === 'credit' && <DueBadge account={account} />}
                         </div>
                       </div>
                       <div className="item-right">

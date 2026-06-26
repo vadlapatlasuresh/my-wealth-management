@@ -36,6 +36,10 @@ public class Account {
     @Column(name = "official_name")
     private String officialName;
 
+    /** Last 2–4 digits of the account number, from Plaid (e.g. "4321"). */
+    @Column(name = "mask")
+    private String mask;
+
     @Column(nullable = false)
     private String subtype;
 
@@ -50,6 +54,28 @@ public class Account {
 
     @Column(nullable = false)
     private String currency;
+
+    // --- Credit-card / liability details (nullable; populated via Plaid Liabilities) ---
+
+    /** Credit limit for cards/lines of credit (Plaid balances.limit). */
+    @Column(name = "credit_limit")
+    private BigDecimal creditLimit;
+
+    /** Most recent statement balance on a credit card. */
+    @Column(name = "last_statement_balance")
+    private BigDecimal lastStatementBalance;
+
+    /** Minimum payment due on a credit card this cycle. */
+    @Column(name = "minimum_payment")
+    private BigDecimal minimumPayment;
+
+    /** Next payment due date for a credit card — drives bill reminders. */
+    @Column(name = "next_payment_due_date")
+    private java.time.LocalDate nextPaymentDueDate;
+
+    /** Purchase APR (percent, e.g. 22.99) for a credit card. */
+    @Column(name = "apr_percentage")
+    private BigDecimal aprPercentage;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

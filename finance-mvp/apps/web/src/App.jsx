@@ -44,12 +44,48 @@ export default function App() {
   const [lastBillPayIntent, setLastBillPayIntent] = useState(null);
   const [properties, setProperties] = useState([]);
 
+  // Plaid account `type` is lowercase (depository | credit | loan | investment) and
+  // `subtype` is the granular kind (checking | savings | credit card | …). Bill Pay
+  // needs credit cards to pay and depository accounts to fund from — and it reads
+  // camelCase fields (balance/minPayment/creditLimit/mask), so we normalize here.
   const creditCards = useMemo(
-    () => accounts.filter((item) => item.type === "CREDIT_CARD"),
+    () =>
+      accounts
+        .filter((a) => (a.type || "").toLowerCase() === "credit")
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          institution: a.officialName || "",
+          mask: a.mask || "",
+          balance: Number(a.currentBalance) || 0,
+          creditLimit: a.creditLimit != null ? Number(a.creditLimit) : null,
+          minPayment: a.minimumPayment != null ? Number(a.minimumPayment) : null,
+          lastStatementBalance:
+            a.lastStatementBalance != null ? Number(a.lastStatementBalance) : null,
+          nextPaymentDueDate: a.nextPaymentDueDate || null,
+          apr: a.aprPercentage != null ? Number(a.aprPercentage) : null,
+        })),
     [accounts]
   );
   const fundingAccounts = useMemo(
-    () => accounts.filter((item) => item.type === "CHECKING" || item.type === "SAVINGS"),
+    () =>
+      accounts
+        .filter((a) => {
+          const t = (a.type || "").toLowerCase();
+          const s = (a.subtype || "").toLowerCase();
+          return t === "depository" && (s === "checking" || s === "savings" || s === "");
+        })
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          institution: a.officialName || "",
+          mask: a.mask || "",
+          balance: Number(a.currentBalance) || 0,
+          available:
+            a.availableBalance != null
+              ? Number(a.availableBalance)
+              : Number(a.currentBalance) || 0,
+        })),
     [accounts]
   );
 
