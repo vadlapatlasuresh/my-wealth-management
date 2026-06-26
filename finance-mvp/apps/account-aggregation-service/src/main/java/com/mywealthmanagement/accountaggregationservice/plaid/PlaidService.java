@@ -21,6 +21,7 @@ import com.plaid.client.model.InvestmentsTransactionsGetRequest;
 import com.plaid.client.model.InvestmentsTransactionsGetResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeRequest;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
+import com.plaid.client.model.ItemRemoveRequest;
 import com.plaid.client.model.LiabilitiesGetRequest;
 import com.plaid.client.model.LiabilitiesGetResponse;
 import com.plaid.client.model.LinkTokenCreateRequest;
@@ -36,7 +37,10 @@ import com.plaid.client.model.RemovedTransaction;
 import com.plaid.client.request.PlaidApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import retrofit2.Response;
 
 import java.io.IOException;
@@ -149,6 +153,36 @@ public class PlaidService {
             log.warn("Initial transactions fetch deferred for item {} (will sync on webhook/next read): {}",
                     plaidItem.getPlaidItemId(), e.getMessage());
         }
+    }
+
+    /**
+     * Unlink (disconnect) a Plaid item — the institution connection behind one or more
+     * accounts. Purges the item's holdings + investment transactions (not FK-cascaded),
+     * revokes the access token at Plaid (best-effort), then deletes the item, which
+     * cascades its accounts and their transactions. Scoped to the owning user.
+     */
+    @Transactional
+    public void unlinkItem(Long userId, String plaidItemId) {
+        PlaidItem item = plaidItemRepository.findByUserIdAndPlaidItemId(userId, plaidItemId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Linked connection not found"));
+
+        List<String> plaidAccountIds = accountRepository.findByPlaidItemPlaidItemId(plaidItemId)
+                .stream().map(Account::getPlaidAccountId).collect(Collectors.toList());
+        if (!plaidAccountIds.isEmpty()) {
+            holdingRepository.deleteByPlaidAccountIdIn(plaidAccountIds);
+            investmentTransactionRepository.deleteByPlaidAccountIdIn(plaidAccountIds);
+        }
+
+        try {
+            plaidApi.itemRemove(new ItemRemoveRequest().accessToken(item.getAccessToken())).execute();
+        } catch (Exception e) {
+            log.warn("Plaid itemRemove failed for item {} (removing locally anyway): {}",
+                    plaidItemId, e.getMessage());
+        }
+
+        // FK ON DELETE CASCADE removes the item's accounts, and in turn their transactions.
+        plaidItemRepository.delete(item);
     }
 
     public List<Account> fetchAccounts(Long userId, PlaidItem plaidItem) throws IOException {

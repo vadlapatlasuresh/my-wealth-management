@@ -187,6 +187,9 @@ export const api = {
       body: JSON.stringify({ publicToken })
     }),
   getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
+  // Unlink (disconnect) a Plaid connection — removes its accounts, transactions & holdings.
+  unlinkItem: (plaidItemId) =>
+    request(`/api/v1/aggregation/items/${encodeURIComponent(plaidItemId)}`, { method: "DELETE" }),
   // Brokerage positions + trade activity synced from Plaid Investments (Investments tab).
   getHoldings: () => request("/api/v1/aggregation/holdings"),
   getInvestmentTransactions: () => request("/api/v1/aggregation/investment-transactions"),
