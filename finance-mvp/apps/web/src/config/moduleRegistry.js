@@ -185,7 +185,10 @@ export const MODULE_REGISTRY = {
   profile: {
     id: 'profile', title: 'Profile', icon: 'ti ti-user',
     route: '/profile', section: SECTION_SETTINGS, defaultOrder: 4,
-    component: ProfilePage, inNavByDefault: true,
+    // Rendered as the sidebar footer user-card (avatar + name), so it's NOT a default
+    // section nav item — otherwise resolveNav's union pass lists it under Settings too,
+    // showing Profile twice. Reachable via the footer card and /profile route.
+    component: ProfilePage, inNavByDefault: false,
   },
   admin: {
     id: 'admin', title: 'Admin · Analytics', icon: 'ti ti-chart-dots',
