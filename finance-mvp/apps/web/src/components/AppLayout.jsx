@@ -480,7 +480,7 @@ export default function AppLayout(props) {
                   formatDate={formatDate}
                 />
               } />
-              <Route path="/invest" element={<InvestPage snapshot={snapshot} />} />
+              <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} />} />
               <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} />} />
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/calculators" element={<CalculatorsPage />} />

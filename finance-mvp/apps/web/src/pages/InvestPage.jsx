@@ -48,7 +48,18 @@ function altMeta(type) {
  * Page
  * ================================================================== */
 
-export default function InvestPage({ snapshot }) {
+/* Format a Plaid investment subtype for display: "roth ira" -> "Roth IRA",
+   "brokerage" -> "Brokerage", "sep ira" -> "SEP IRA", "401k" -> "401k". */
+function fmtSubtype(s) {
+  if (!s) return '';
+  return String(s).split(/[\s_]+/).map((w) => {
+    if (/^\d/.test(w)) return w;                 // 401k, 403b, 529
+    if (w.length <= 3) return w.toUpperCase();   // ira, sep, isa, hsa
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  }).join(' ');
+}
+
+export default function InvestPage({ snapshot, accounts = [] }) {
   const totalInvested = snapshot?.components?.investments ?? 0;
   const series = snapshot?.series || null;
 
@@ -101,18 +112,32 @@ export default function InvestPage({ snapshot }) {
 
   /* Linked brokerages are derived from real synced holdings (grouped by broker),
      so there's no separate "connect" step — linking happens via Plaid above. */
+  // Linked brokerage ACCOUNTS come from the user's investment-type accounts — so each
+  // account shows with its details even before (or without) any synced positions, which
+  // is the common case right after linking or when the Investments product is still
+  // populating. Enrich with a per-broker position count from holdings when available.
   const brokerAccounts = useMemo(() => {
-    const map = new Map();
+    const posByBroker = {};
     for (const h of holdings) {
-      const name = h.broker || 'Brokerage';
-      const value = Number(h.value) || (Number(h.qty) || 0) * (Number(h.price) || 0);
-      const cur = map.get(name) || { name, value: 0, positions: 0 };
-      cur.value += value;
-      cur.positions += 1;
-      map.set(name, cur);
+      const k = (h.broker || '').trim();
+      if (k) posByBroker[k] = (posByBroker[k] || 0) + 1;
     }
-    return Array.from(map.values()).sort((a, b) => b.value - a.value);
-  }, [holdings]);
+    return (accounts || [])
+      .filter((a) => (a.type || '').toLowerCase() === 'investment')
+      .map((a) => {
+        const institution = a.officialName || '';
+        return {
+          id: a.id,
+          name: a.name || institution || 'Brokerage account',
+          institution,
+          subtype: a.subtype || '',
+          mask: a.mask || '',
+          value: Number(a.currentBalance) || 0,
+          positions: posByBroker[institution] || posByBroker[a.name] || 0,
+        };
+      })
+      .sort((x, y) => y.value - x.value);
+  }, [accounts, holdings]);
 
   /* ---- Alternatives form state ---- */
   const [altForm, setAltForm] = useState(null); // null = hidden; {id?} present when editing
@@ -496,7 +521,7 @@ export default function InvestPage({ snapshot }) {
           {/* KPI row */}
           <div className="kpi-grid">
             <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-building-bank" style={{ color: 'var(--tv-forest-light)' }}></i> Brokers Linked</div>
+              <div className="kpi-label"><i className="ti ti-building-bank" style={{ color: 'var(--tv-forest-light)' }}></i> Accounts linked</div>
               <div className="kpi-value">{brokerAccounts.length}</div>
             </div>
             <div className="kpi-card">
@@ -528,20 +553,20 @@ export default function InvestPage({ snapshot }) {
             </div>
           </div>
 
-          {/* ---- Your brokerages (derived from real synced holdings) ---- */}
+          {/* ---- Your brokerage accounts (the linked investment accounts) ---- */}
           <div className="section-header">
-            <div className="section-title" style={{ marginBottom: 0 }}>Your brokerages</div>
+            <div className="section-title" style={{ marginBottom: 0 }}>Your brokerage accounts</div>
             <span className="badge badge-gray">{brokerAccounts.length} linked</span>
           </div>
           {brokerAccounts.length === 0 ? (
             <div className="empty-state">
               <i className="ti ti-building-bank"></i>
-              <p>No brokerages linked yet. Use <strong>Link brokerage</strong> above to securely connect one with Plaid — your positions then appear here automatically.</p>
+              <p>No brokerage accounts linked yet. Use <strong>Link brokerage</strong> above to securely connect one with Plaid — each linked account appears here with its details.</p>
             </div>
           ) : (
             <div className="card-grid">
               {brokerAccounts.map((b) => (
-                <div key={b.name} className="card">
+                <div key={b.id} className="card">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
                     <span
                       className="item-icon icon-forest"
@@ -552,20 +577,28 @@ export default function InvestPage({ snapshot }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--tv-text-primary)' }}>
                         {b.name}
+                        {b.mask ? <span style={{ color: 'var(--tv-text-muted)', fontSize: 13, fontWeight: 400 }}> ····{b.mask}</span> : null}
                       </div>
-                      <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                        {b.subtype ? <span className="badge badge-forest">{fmtSubtype(b.subtype)}</span> : null}
                         <span className="badge badge-green"><i className="ti ti-circle-check"></i> Linked via Plaid</span>
                       </div>
+                      {b.institution ? (
+                        <div style={{ fontSize: 12, color: 'var(--tv-text-muted)', marginTop: 4 }}>{b.institution}</div>
+                      ) : null}
                     </div>
                   </div>
 
                   <div className="stat-tile" style={{ marginBottom: 12 }}>
-                    <div className="stat-tile-label">Holdings value</div>
+                    <div className="stat-tile-label">Account value</div>
                     <div className="stat-tile-value">{currency(b.value)}</div>
                   </div>
 
                   <div style={{ fontSize: 12, color: 'var(--tv-text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <i className="ti ti-list-details"></i> {b.positions} position{b.positions === 1 ? '' : 's'}
+                    <i className="ti ti-list-details"></i>
+                    {b.positions > 0
+                      ? `${b.positions} position${b.positions === 1 ? '' : 's'}`
+                      : 'Positions sync shortly after linking'}
                   </div>
                 </div>
               ))}
