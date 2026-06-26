@@ -3,13 +3,13 @@ import { currency } from '../utils/format';
 import { api } from '../api';
 import Sparkline from '../components/Sparkline';
 import LastRefreshed from '../components/LastRefreshed';
-import { BROKERS, getBroker } from '../config/brokers';
+import PlaidLinkButton from '../components/PlaidLinkButton';
 
 /* ------------------------------------------------------------------ *
  * Static data / fallbacks
  * ------------------------------------------------------------------ */
 
-/* Holdings start empty and are populated by real synced data via `snapshot.holdings`. */
+/* Holdings start empty and are populated by real synced data from Plaid. */
 const EMPTY_HOLDINGS = [];
 
 /* Sub-tabs for the page. */
@@ -19,12 +19,6 @@ const TABS = [
   { id: 'alts', label: 'Alternatives', icon: 'ti-diamond' },
   { id: 'market', label: 'Marketplace', icon: 'ti-map-2' }
 ];
-
-/* NOTE: The available-broker list is no longer hardcoded here — it is
- * fully config-driven and imported from src/config/brokers.js (BROKERS).
- * To add a broker, edit that file only. */
-
-const ACCOUNT_TYPES = ['Individual', 'Joint', 'Roth IRA', 'Traditional IRA', '401(k)', 'Custodial', 'Other'];
 
 /* Alternative-investment categories, each with an icon + accent for the cards. */
 const ALT_TYPES = [
@@ -50,24 +44,12 @@ function altMeta(type) {
   return ALT_TYPES.find((t) => t.value === type) || ALT_TYPES[ALT_TYPES.length - 1];
 }
 
-/* Format an ISO timestamp into a short "last synced" string. */
-function syncedLabel(iso) {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit'
-  });
-}
-
 /* ================================================================== *
  * Page
  * ================================================================== */
 
 export default function InvestPage({ snapshot }) {
   const totalInvested = snapshot?.components?.investments ?? 0;
-  const holdings = snapshot?.holdings || EMPTY_HOLDINGS;
   const series = snapshot?.series || null;
 
   /* Active sub-tab */
@@ -79,106 +61,58 @@ export default function InvestPage({ snapshot }) {
   /* Stocks tab — broker filter */
   const [brokerFilter, setBrokerFilter] = useState('all');
 
-  /* Server-persisted broker accounts — start empty; the user links real accounts. */
-  const [brokers, setBrokers] = useState([]);
-
   /* Server-persisted alternative investments — start empty; the user adds their own. */
   const [alts, setAlts] = useState([]);
 
-  /* Load the user's linked brokers + alternatives from the backend on mount. */
+  /* Real brokerage positions + trade activity synced from Plaid Investments (via the
+     aggregation service). Holdings fall back to snapshot.holdings if none yet. */
+  const [syncedHoldings, setSyncedHoldings] = useState([]);
+  const [activity, setActivity] = useState([]);
+  const holdings = syncedHoldings.length ? syncedHoldings : (snapshot?.holdings || EMPTY_HOLDINGS);
+
+  /* Re-pull brokerage positions + activity (after a Plaid link or a manual refresh). */
+  const reloadHoldings = async () => {
+    try {
+      const [h, act] = await Promise.allSettled([
+        api.getHoldings(),
+        api.getInvestmentTransactions(),
+      ]);
+      if (h.status === 'fulfilled') setSyncedHoldings(Array.isArray(h.value) ? h.value : []);
+      if (act.status === 'fulfilled') setActivity(Array.isArray(act.value) ? act.value : []);
+    } catch { /* keep what we have */ }
+  };
+
+  /* Load the user's alternatives + synced holdings + brokerage activity on mount. */
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [b, a] = await Promise.allSettled([api.getBrokerAccounts(), api.getAltInvestments()]);
+      const [a, h, act] = await Promise.allSettled([
+        api.getAltInvestments(),
+        api.getHoldings(),
+        api.getInvestmentTransactions(),
+      ]);
       if (cancelled) return;
-      if (b.status === 'fulfilled') setBrokers(Array.isArray(b.value) ? b.value : []);
       if (a.status === 'fulfilled') setAlts(Array.isArray(a.value) ? a.value : []);
+      if (h.status === 'fulfilled') setSyncedHoldings(Array.isArray(h.value) ? h.value : []);
+      if (act.status === 'fulfilled') setActivity(Array.isArray(act.value) ? act.value : []);
     })();
     return () => { cancelled = true; };
   }, []);
 
-  /* ---- Broker connect flow state (config-driven) ----
-   * `connectBrokerId` holds the id of the broker whose connect panel is open
-   * (null = closed). `credInputs` holds the per-field values typed into a
-   * credentials form. `showSecrets` toggles visibility of password fields.
-   * `connectError` surfaces a required-field validation message. */
-  const [connectBrokerId, setConnectBrokerId] = useState(null);
-  const [credInputs, setCredInputs] = useState({});
-  const [showSecrets, setShowSecrets] = useState({});
-  const [connectError, setConnectError] = useState('');
-
-  const activeBroker = connectBrokerId ? getBroker(connectBrokerId) : null;
-
-  /* Open the connect panel for a given broker; reset any prior form state. */
-  const openConnect = (brokerId) => {
-    setConnectBrokerId(brokerId);
-    setCredInputs({});
-    setShowSecrets({});
-    setConnectError('');
-  };
-
-  const closeConnect = () => {
-    setConnectBrokerId(null);
-    setCredInputs({});
-    setShowSecrets({});
-    setConnectError('');
-  };
-
-  /* Persist a newly connected broker. We deliberately store ONLY connected
-   * metadata — never the entered credentials/passwords. The "name" prefers a
-   * user-supplied broker name (the generic "Other" form) and falls back to the
-   * config display name. A newly linked account shows $0 until real data syncs. */
-  const finalizeConnect = async (broker, inputs = {}) => {
-    const displayName = (inputs.name && inputs.name.trim()) || broker.name;
-    try {
-      // We send ONLY connected metadata — never the entered credentials/passwords.
-      const created = await api.linkBrokerAccount({
-        brokerId: broker.id,
-        name: displayName,
-        accountType: ACCOUNT_TYPES[0],
-        value: 0,
-      });
-      setBrokers((prev) => [created, ...prev]);
-      closeConnect();
-    } catch (e) {
-      setConnectError(e?.message || 'Could not link account.');
+  /* Linked brokerages are derived from real synced holdings (grouped by broker),
+     so there's no separate "connect" step — linking happens via Plaid above. */
+  const brokerAccounts = useMemo(() => {
+    const map = new Map();
+    for (const h of holdings) {
+      const name = h.broker || 'Brokerage';
+      const value = Number(h.value) || (Number(h.qty) || 0) * (Number(h.price) || 0);
+      const cur = map.get(name) || { name, value: 0, positions: 0 };
+      cur.value += value;
+      cur.positions += 1;
+      map.set(name, cur);
     }
-  };
-
-  /* OAuth path — simulated authorize step, then mark connected. */
-  const confirmOauth = () => {
-    if (!activeBroker) return;
-    finalizeConnect(activeBroker);
-  };
-
-  /* Credentials path — validate required fields, then mark connected.
-   * Entered values are used only to validate the form; they are NOT stored
-   * (except a user-supplied broker name on the generic "Other" entry). */
-  const confirmCredentials = () => {
-    if (!activeBroker) return;
-    const fields = activeBroker.fields || [];
-    const missing = fields.find((f) => f.required && !String(credInputs[f.key] || '').trim());
-    if (missing) {
-      setConnectError(`${missing.label} is required.`);
-      return;
-    }
-    finalizeConnect(activeBroker, credInputs);
-  };
-
-  const disconnectBroker = async (id) => {
-    try {
-      await api.deleteBrokerAccount(id);
-      setBrokers((prev) => prev.filter((b) => b.id !== id));
-    } catch { /* keep the row if the delete fails */ }
-  };
-
-  /* Re-sync — stamps a fresh linkedAt server-side so "last synced" updates. */
-  const syncBroker = async (id) => {
-    try {
-      const updated = await api.syncBrokerAccount(id);
-      setBrokers((prev) => prev.map((b) => (b.id === id ? updated : b)));
-    } catch { /* ignore transient sync failure */ }
-  };
+    return Array.from(map.values()).sort((a, b) => b.value - a.value);
+  }, [holdings]);
 
   /* ---- Alternatives form state ---- */
   const [altForm, setAltForm] = useState(null); // null = hidden; {id?} present when editing
@@ -241,7 +175,7 @@ export default function InvestPage({ snapshot }) {
     return holdings.filter((h) => (h.broker || '') === brokerFilter);
   }, [holdings, brokerFilter]);
 
-  const brokersTotal = brokers.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
+  const brokersTotal = brokerAccounts.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
   const altsTotal = alts.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
 
   /* Day change derived from real holdings (no fabricated number). */
@@ -507,6 +441,50 @@ export default function InvestPage({ snapshot }) {
               </table>
             </div>
           </div>
+
+          {/* ---- Brokerage activity (synced trade history from Plaid Investments) ---- */}
+          {activity.length > 0 && (
+            <div className="card" style={{ marginTop: 20 }}>
+              <div className="section-header" style={{ marginBottom: 4 }}>
+                <div className="section-title" style={{ marginBottom: 0 }}>Recent activity</div>
+                <span style={{ fontSize: 12.5, color: 'var(--tv-text-muted)' }}>{activity.length} transactions</span>
+              </div>
+              <div className="table-scroll">
+                <table className="tv-table" style={{ marginTop: 12 }}>
+                  <thead>
+                    <tr>
+                      <th>Date</th><th>Activity</th><th>Security</th>
+                      <th className="num">Qty</th><th className="num">Price</th><th className="num">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activity.slice(0, 100).map((t, i) => {
+                      const raw = (t.subtype || t.type || '').replace(/_/g, ' ');
+                      const label = raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : '—';
+                      const isBuy = (t.type || '').toLowerCase() === 'buy';
+                      const isSell = (t.type || '').toLowerCase() === 'sell';
+                      const badgeCls = isBuy ? 'badge-green' : isSell ? 'badge-red' : 'badge-gray';
+                      const amt = Number(t.amount) || 0;
+                      return (
+                        <tr key={`${t.date}-${i}`}>
+                          <td style={{ whiteSpace: 'nowrap', color: 'var(--tv-text-muted)' }}>{t.date}</td>
+                          <td><span className={`badge ${badgeCls}`}>{label}</span></td>
+                          <td>
+                            <strong>{t.symbol || '—'}</strong>
+                            {t.name ? <span style={{ color: 'var(--tv-text-muted)' }}> · {t.name}</span> : null}
+                            {t.broker ? <div style={{ fontSize: 11.5, color: 'var(--tv-text-muted)' }}>{t.broker}</div> : null}
+                          </td>
+                          <td className="num">{t.quantity != null ? Number(t.quantity) : '—'}</td>
+                          <td className="num">{t.price != null ? currency(t.price) : '—'}</td>
+                          <td className="num" style={{ fontWeight: 600 }}>{currency(amt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -519,7 +497,7 @@ export default function InvestPage({ snapshot }) {
           <div className="kpi-grid">
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-building-bank" style={{ color: 'var(--tv-forest-light)' }}></i> Brokers Linked</div>
-              <div className="kpi-value">{brokers.length}</div>
+              <div className="kpi-value">{brokerAccounts.length}</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-cash" style={{ color: 'var(--tv-gold)' }}></i> Total Brokerage Value</div>
@@ -527,233 +505,70 @@ export default function InvestPage({ snapshot }) {
             </div>
           </div>
 
-          {/* ---- Available brokers (config-driven from BROKERS) ---- */}
-          <div className="card" style={{ marginBottom: 24 }}>
-            <div className="section-header">
-              <div className="section-title" style={{ marginBottom: 0 }}>Available brokers</div>
-              <span className="badge badge-gray">{BROKERS.length} supported</span>
-            </div>
-
-            {/* Inline connect panel rendered DYNAMICALLY from the broker's config.
-              * Shown above the grid when a broker is selected to connect. */}
-            {activeBroker && (
-              <div
-                className="card"
-                style={{
-                  marginTop: 16,
-                  marginBottom: 8,
-                  border: `1px solid var(--tv-border)`,
-                  background: 'var(--tv-sage-pale)'
-                }}
-              >
-                {/* Panel header — broker identity + close */}
-                <div className="section-header">
-                  <div className="section-title" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span
-                      className="item-icon"
-                      style={{
-                        width: 36,
-                        height: 36,
-                        fontSize: 18,
-                        background: `${activeBroker.color}1a`, // ~10% tint
-                        color: activeBroker.color
-                      }}
-                    >
-                      <i className={activeBroker.icon}></i>
-                    </span>
-                    Connect {activeBroker.name}
-                  </div>
-                  <button className="icon-btn" onClick={closeConnect} title="Cancel">
-                    <i className="ti ti-x"></i>
-                  </button>
-                </div>
-
-                {/* --- authType: oauth --- simulated authorize screen --- */}
-                {activeBroker.authType === 'oauth' && (
-                  <div style={{ marginTop: 14 }}>
-                    <p style={{ fontSize: 14, color: 'var(--tv-text-secondary)', marginBottom: 16 }}>
-                      You'll be securely redirected to {activeBroker.name} to authorize{' '}
-                      <strong>read-only</strong> access to your account balances and holdings.
-                      TerraVest never sees your login credentials.
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={confirmOauth}
-                        style={{ background: activeBroker.color, borderColor: activeBroker.color }}
-                      >
-                        <i className="ti ti-external-link"></i> Continue to {activeBroker.name}
-                      </button>
-                      <span style={{ fontSize: 12, color: 'var(--tv-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <i className="ti ti-flask"></i> Demo mode — no real redirect
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* --- authType: credentials --- one input PER config field --- */}
-                {activeBroker.authType === 'credentials' && (
-                  <div style={{ marginTop: 14 }}>
-                    <div className="grid-2">
-                      {(activeBroker.fields || []).map((f) => {
-                        const isSecret = f.type === 'password';
-                        const revealed = !!showSecrets[f.key];
-                        return (
-                          <div className="form-group" key={f.key}>
-                            <label className="form-label">
-                              {f.label}{f.required ? ' *' : ''}
-                            </label>
-                            <div style={{ position: 'relative' }}>
-                              <input
-                                className="form-input"
-                                type={isSecret && !revealed ? 'password' : 'text'}
-                                placeholder={f.label}
-                                required={f.required}
-                                value={credInputs[f.key] || ''}
-                                onChange={(e) => {
-                                  setConnectError('');
-                                  setCredInputs({ ...credInputs, [f.key]: e.target.value });
-                                }}
-                                style={isSecret ? { paddingRight: 38 } : undefined}
-                              />
-                              {/* show/hide toggle for password fields */}
-                              {isSecret && (
-                                <button
-                                  type="button"
-                                  className="icon-btn"
-                                  onClick={() => setShowSecrets({ ...showSecrets, [f.key]: !revealed })}
-                                  title={revealed ? 'Hide' : 'Show'}
-                                  style={{ position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)' }}
-                                >
-                                  <i className={revealed ? 'ti ti-eye-off' : 'ti ti-eye'}></i>
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {connectError && (
-                      <div style={{ fontSize: 13, color: 'var(--tv-negative)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <i className="ti ti-alert-circle"></i> {connectError}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                      <button className="btn btn-primary btn-sm" onClick={confirmCredentials}>
-                        <i className="ti ti-lock"></i> Connect securely
-                      </button>
-                      <span style={{ fontSize: 12, color: 'var(--tv-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <i className="ti ti-shield-lock"></i> 256-bit encrypted · read-only · credentials never stored
-                      </span>
-                    </div>
-                  </div>
-                )}
+          {/* ---- Real linking via Plaid: pulls live holdings into Stocks & ETFs ---- */}
+          <div className="card" style={{ marginBottom: 24, border: '1px solid var(--tv-forest)', background: 'var(--tv-sage-pale)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+              <div className="item-icon icon-forest" style={{ width: 46, height: 46, fontSize: 22 }}>
+                <i className="ti ti-building-bank"></i>
               </div>
-            )}
-
-            {/* The grid itself — one tile per configured broker. */}
-            <div className="grid-3" style={{ marginTop: 16 }}>
-              {BROKERS.map((cfg) => (
-                <div
-                  key={cfg.id}
-                  className="card"
-                  style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span
-                      className="item-icon"
-                      style={{
-                        width: 42,
-                        height: 42,
-                        fontSize: 20,
-                        background: `${cfg.color}1a`, // ~10% tint of brand color
-                        color: cfg.color
-                      }}
-                    >
-                      <i className={cfg.icon}></i>
-                    </span>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 15, color: 'var(--tv-text-primary)' }}>
-                        {cfg.name}
-                      </div>
-                      <span className={`badge ${cfg.authType === 'oauth' ? 'badge-forest' : 'badge-gold'}`}>
-                        {cfg.authType === 'oauth' ? 'OAuth' : 'Credentials'}
-                      </span>
-                    </div>
-                  </div>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => openConnect(cfg.id)}
-                    style={{ width: '100%', justifyContent: 'center' }}
-                  >
-                    <i className="ti ti-link"></i> Connect
-                  </button>
+              <div style={{ flex: 1, minWidth: 220 }}>
+                <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 2 }}>Link a brokerage securely with Plaid</div>
+                <div style={{ fontSize: 13, color: 'var(--tv-text-muted)' }}>
+                  Connect Fidelity, Schwab, Robinhood, Vanguard and 12,000+ institutions. Your
+                  positions sync automatically and appear under <strong>Stocks &amp; ETFs</strong>.
                 </div>
-              ))}
+              </div>
+              <PlaidLinkButton onLinkSuccess={reloadHoldings}>
+                <i className="ti ti-plus"></i> Link brokerage
+              </PlaidLinkButton>
+            </div>
+            <div style={{ marginTop: 12, fontSize: 12, color: 'var(--tv-text-muted)' }}>
+              <i className="ti ti-shield-check" style={{ color: 'var(--tv-forest-light)' }}></i>{' '}
+              Read-only and secured by Plaid — we never see your brokerage password.
             </div>
           </div>
 
-          {/* ---- Connected brokers ---- */}
+          {/* ---- Your brokerages (derived from real synced holdings) ---- */}
           <div className="section-header">
-            <div className="section-title" style={{ marginBottom: 0 }}>Connected brokers</div>
-            <span className="badge badge-gray">{brokers.length} linked</span>
+            <div className="section-title" style={{ marginBottom: 0 }}>Your brokerages</div>
+            <span className="badge badge-gray">{brokerAccounts.length} linked</span>
           </div>
-          {brokers.length === 0 ? (
+          {brokerAccounts.length === 0 ? (
             <div className="empty-state">
               <i className="ti ti-building-bank"></i>
-              <p>No brokers connected yet. Pick a broker above to securely link an account.</p>
+              <p>No brokerages linked yet. Use <strong>Link brokerage</strong> above to securely connect one with Plaid — your positions then appear here automatically.</p>
             </div>
           ) : (
             <div className="card-grid">
-              {brokers.map((b) => {
-                /* Resolve the broker's config (icon/color) via getBroker().
-                 * Fall back gracefully for legacy entries without a brokerId. */
-                const cfg = getBroker(b.brokerId);
-                const accent = cfg?.color || 'var(--tv-forest)';
-                const icon = cfg?.icon || 'ti ti-building-bank';
-                return (
-                  <div key={b.id} className="card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-                      <span
-                        className="item-icon"
-                        style={{ width: 42, height: 42, fontSize: 20, background: `${accent}1a`, color: accent }}
-                      >
-                        <i className={icon}></i>
-                      </span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--tv-text-primary)' }}>
-                          {b.name}
-                        </div>
-                        <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-                          <span className="badge badge-gray">{b.accountType}</span>
-                          <span className="badge badge-green"><i className="ti ti-circle-check"></i> Connected</span>
-                        </div>
+              {brokerAccounts.map((b) => (
+                <div key={b.name} className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+                    <span
+                      className="item-icon icon-forest"
+                      style={{ width: 42, height: 42, fontSize: 20 }}
+                    >
+                      <i className="ti ti-building-bank"></i>
+                    </span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'var(--tv-text-primary)' }}>
+                        {b.name}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
+                        <span className="badge badge-green"><i className="ti ti-circle-check"></i> Linked via Plaid</span>
                       </div>
                     </div>
-
-                    <div className="stat-tile" style={{ marginBottom: 12 }}>
-                      <div className="stat-tile-label">Account value</div>
-                      <div className="stat-tile-value">{currency(b.value)}</div>
-                    </div>
-
-                    <div style={{ fontSize: 12, color: 'var(--tv-text-muted)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
-                      <i className="ti ti-clock"></i> Last synced {syncedLabel(b.linkedAt)}
-                    </div>
-
-                    <hr className="divider" />
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="btn btn-secondary btn-sm" onClick={() => syncBroker(b.id)} title="Refresh last-synced time">
-                        <i className="ti ti-refresh"></i> Sync
-                      </button>
-                      <button className="icon-btn" onClick={() => disconnectBroker(b.id)} title="Disconnect">
-                        <i className="ti ti-trash"></i>
-                      </button>
-                    </div>
                   </div>
-                );
-              })}
+
+                  <div className="stat-tile" style={{ marginBottom: 12 }}>
+                    <div className="stat-tile-label">Holdings value</div>
+                    <div className="stat-tile-value">{currency(b.value)}</div>
+                  </div>
+
+                  <div style={{ fontSize: 12, color: 'var(--tv-text-muted)', display: 'flex', alignItems: 'center', gap: 5 }}>
+                    <i className="ti ti-list-details"></i> {b.positions} position{b.positions === 1 ? '' : 's'}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </>

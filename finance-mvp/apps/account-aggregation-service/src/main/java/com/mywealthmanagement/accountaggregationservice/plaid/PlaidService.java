@@ -2,6 +2,10 @@ package com.mywealthmanagement.accountaggregationservice.plaid;
 
 import com.mywealthmanagement.accountaggregationservice.account.Account;
 import com.mywealthmanagement.accountaggregationservice.account.AccountRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.Holding;
+import com.mywealthmanagement.accountaggregationservice.holding.HoldingRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransaction;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransactionRepository;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
 import com.mywealthmanagement.accountaggregationservice.transaction.Transaction;
@@ -11,11 +15,16 @@ import com.plaid.client.model.AccountsGetRequest;
 import com.plaid.client.model.AccountsGetResponse;
 import com.plaid.client.model.CountryCode;
 import com.plaid.client.model.CreditCardLiability;
+import com.plaid.client.model.InvestmentsHoldingsGetRequest;
+import com.plaid.client.model.InvestmentsHoldingsGetResponse;
+import com.plaid.client.model.InvestmentsTransactionsGetRequest;
+import com.plaid.client.model.InvestmentsTransactionsGetResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeRequest;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LiabilitiesGetRequest;
 import com.plaid.client.model.LiabilitiesGetResponse;
 import com.plaid.client.model.LinkTokenCreateRequest;
+import com.plaid.client.model.Security;
 import com.plaid.client.model.LinkTokenCreateRequestUser;
 import com.plaid.client.model.LinkTokenCreateResponse;
 import com.plaid.client.model.Products;
@@ -46,6 +55,8 @@ public class PlaidService {
     private final PlaidItemRepository plaidItemRepository;
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
+    private final HoldingRepository holdingRepository;
+    private final InvestmentTransactionRepository investmentTransactionRepository;
 
     @Value("${plaid.client-name}")
     private String plaidClientName;
@@ -64,7 +75,8 @@ public class PlaidService {
         // AUTH (bank account/routing for ACH) is depository-only: when it's required,
         // Plaid Link hides every non-depository account, which is exactly why credit
         // cards previously couldn't be linked. LIABILITIES powers credit-card due dates
-        // and minimum payments for bill reminders. Both go in optionalProducts so they're
+        // and minimum payments for bill reminders; INVESTMENTS pulls brokerage holdings
+        // (positions, quantities, prices). All three go in optionalProducts so they're
         // collected when the account supports them but never restrict what can be linked.
         LinkTokenCreateRequest linkRequest = new LinkTokenCreateRequest()
                 .user(user)
@@ -72,7 +84,7 @@ public class PlaidService {
                 .language("en")
                 .countryCodes(List.of(CountryCode.US))
                 .products(List.of(Products.TRANSACTIONS))
-                .optionalProducts(List.of(Products.AUTH, Products.LIABILITIES));
+                .optionalProducts(List.of(Products.AUTH, Products.LIABILITIES, Products.INVESTMENTS));
 
         if (plaidWebhookUrl != null && !plaidWebhookUrl.isBlank()) {
             linkRequest.webhook(plaidWebhookUrl);
@@ -112,6 +124,20 @@ public class PlaidService {
             fetchLiabilities(request.getUserId(), plaidItem);
         } catch (Exception e) {
             log.warn("Liabilities fetch deferred for item {}: {}",
+                    plaidItem.getPlaidItemId(), e.getMessage());
+        }
+        // Pull brokerage positions for any investment accounts. Best-effort: INVESTMENTS
+        // is optional, so an item with no brokerage accounts must not fail the link.
+        try {
+            fetchHoldings(request.getUserId(), plaidItem);
+        } catch (Exception e) {
+            log.warn("Holdings fetch deferred for item {}: {}",
+                    plaidItem.getPlaidItemId(), e.getMessage());
+        }
+        try {
+            fetchInvestmentTransactions(request.getUserId(), plaidItem);
+        } catch (Exception e) {
+            log.warn("Investment transactions fetch deferred for item {}: {}",
                     plaidItem.getPlaidItemId(), e.getMessage());
         }
         // Transactions are frequently PRODUCT_NOT_READY right after linking — Plaid
@@ -183,6 +209,128 @@ public class PlaidService {
                 .findFirst()
                 .or(() -> card.getAprs().stream().findFirst())
                 .map(a -> toBigDecimalOrNull(a.getAprPercentage()))
+                .orElse(null);
+    }
+
+    /**
+     * Pull brokerage positions for the item's investment accounts via Plaid Investments
+     * and upsert them as {@link Holding} rows (ticker, name, quantity, price, value,
+     * cost basis) for the Investments tab. No-op when the item has no investment
+     * accounts or the product isn't ready yet.
+     */
+    public void fetchHoldings(Long userId, PlaidItem plaidItem) throws IOException {
+        InvestmentsHoldingsGetRequest request = new InvestmentsHoldingsGetRequest()
+                .accessToken(plaidItem.getAccessToken());
+
+        Response<InvestmentsHoldingsGetResponse> response = plaidApi.investmentsHoldingsGet(request).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch holdings: " + errorBody(response));
+        }
+
+        InvestmentsHoldingsGetResponse body = response.body();
+        if (body.getHoldings() == null || body.getHoldings().isEmpty()) {
+            return;
+        }
+
+        // security_id -> Security, so each holding can be enriched with ticker/name/type.
+        java.util.Map<String, Security> securities = new java.util.HashMap<>();
+        if (body.getSecurities() != null) {
+            for (Security s : body.getSecurities()) {
+                securities.put(s.getSecurityId(), s);
+            }
+        }
+
+        for (com.plaid.client.model.Holding plaidHolding : body.getHoldings()) {
+            Security security = securities.get(plaidHolding.getSecurityId());
+            Holding holding = holdingRepository
+                    .findByUserIdAndPlaidAccountIdAndSecurityId(
+                            userId, plaidHolding.getAccountId(), plaidHolding.getSecurityId())
+                    .orElseGet(Holding::new);
+
+            holding.setUserId(userId);
+            holding.setPlaidAccountId(plaidHolding.getAccountId());
+            holding.setSecurityId(plaidHolding.getSecurityId());
+            if (security != null) {
+                holding.setSymbol(security.getTickerSymbol());
+                holding.setName(security.getName());
+                holding.setSecurityType(security.getType());
+            }
+            holding.setBroker(brokerNameFor(plaidHolding.getAccountId()));
+            holding.setQuantity(toBigDecimalOrNull(plaidHolding.getQuantity()));
+            holding.setPrice(toBigDecimalOrNull(plaidHolding.getInstitutionPrice()));
+            holding.setValue(toBigDecimalOrNull(plaidHolding.getInstitutionValue()));
+            holding.setCostBasis(toBigDecimalOrNull(plaidHolding.getCostBasis()));
+            holding.setCurrency(plaidHolding.getIsoCurrencyCode() != null
+                    ? plaidHolding.getIsoCurrencyCode() : "USD");
+
+            holdingRepository.save(holding);
+        }
+    }
+
+    /**
+     * Pull brokerage trade/activity history (buys, sells, dividends, fees) for the last
+     * two years via Plaid Investments transactions and upsert them as
+     * {@link InvestmentTransaction} rows for the Activity view. No-op when the item has
+     * no investment accounts.
+     */
+    public void fetchInvestmentTransactions(Long userId, PlaidItem plaidItem) throws IOException {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusYears(2);
+
+        InvestmentsTransactionsGetRequest request = new InvestmentsTransactionsGetRequest()
+                .accessToken(plaidItem.getAccessToken())
+                .startDate(startDate)
+                .endDate(endDate);
+
+        Response<InvestmentsTransactionsGetResponse> response =
+                plaidApi.investmentsTransactionsGet(request).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch investment transactions: " + errorBody(response));
+        }
+
+        InvestmentsTransactionsGetResponse body = response.body();
+        if (body.getInvestmentTransactions() == null || body.getInvestmentTransactions().isEmpty()) {
+            return;
+        }
+
+        java.util.Map<String, Security> securities = new java.util.HashMap<>();
+        if (body.getSecurities() != null) {
+            for (Security s : body.getSecurities()) {
+                securities.put(s.getSecurityId(), s);
+            }
+        }
+
+        for (com.plaid.client.model.InvestmentTransaction t : body.getInvestmentTransactions()) {
+            Security security = securities.get(t.getSecurityId());
+            InvestmentTransaction txn = investmentTransactionRepository
+                    .findByPlaidInvestmentTxnId(t.getInvestmentTransactionId())
+                    .orElseGet(InvestmentTransaction::new);
+
+            txn.setUserId(userId);
+            txn.setPlaidInvestmentTxnId(t.getInvestmentTransactionId());
+            txn.setPlaidAccountId(t.getAccountId());
+            txn.setSecurityId(t.getSecurityId());
+            txn.setSymbol(security != null ? security.getTickerSymbol() : null);
+            txn.setName(t.getName());
+            txn.setBroker(brokerNameFor(t.getAccountId()));
+            txn.setType(t.getType() != null ? String.valueOf(t.getType().getValue()) : null);
+            txn.setSubtype(t.getSubtype() != null ? String.valueOf(t.getSubtype().getValue()) : null);
+            txn.setDate(t.getDate());
+            txn.setQuantity(toBigDecimalOrNull(t.getQuantity()));
+            txn.setPrice(toBigDecimalOrNull(t.getPrice()));
+            txn.setAmount(toBigDecimalOrNull(t.getAmount()));
+            txn.setFees(toBigDecimalOrNull(t.getFees()));
+            txn.setCurrency(t.getIsoCurrencyCode() != null ? t.getIsoCurrencyCode() : "USD");
+
+            investmentTransactionRepository.save(txn);
+        }
+    }
+
+    /** Display name of the institution holding an account (for the broker filter). */
+    private String brokerNameFor(String plaidAccountId) {
+        return accountRepository.findByPlaidAccountId(plaidAccountId)
+                .map(a -> a.getOfficialName() != null && !a.getOfficialName().isBlank()
+                        ? a.getOfficialName() : a.getName())
                 .orElse(null);
     }
 

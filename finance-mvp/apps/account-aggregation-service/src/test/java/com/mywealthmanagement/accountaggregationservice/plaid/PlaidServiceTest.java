@@ -1,6 +1,8 @@
 package com.mywealthmanagement.accountaggregationservice.plaid;
 
 import com.mywealthmanagement.accountaggregationservice.account.AccountRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.HoldingRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransactionRepository;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.transaction.TransactionRepository;
 import com.plaid.client.model.LinkTokenCreateRequest;
@@ -40,6 +42,12 @@ class PlaidServiceTest {
     @Mock
     private TransactionRepository transactionRepository;
 
+    @Mock
+    private HoldingRepository holdingRepository;
+
+    @Mock
+    private InvestmentTransactionRepository investmentTransactionRepository;
+
     private PlaidService plaidService;
 
     @BeforeEach
@@ -48,7 +56,9 @@ class PlaidServiceTest {
                 plaidApi,
                 plaidItemRepository,
                 accountRepository,
-                transactionRepository
+                transactionRepository,
+                holdingRepository,
+                investmentTransactionRepository
         );
         ReflectionTestUtils.setField(plaidService, "plaidClientName", "My Wealth Management");
         ReflectionTestUtils.setField(plaidService, "plaidWebhookUrl", "");
@@ -92,8 +102,10 @@ class PlaidServiceTest {
         assertEquals(java.util.List.of(Products.TRANSACTIONS), sent.getProducts());
         assertFalse(sent.getProducts().contains(Products.AUTH),
                 "AUTH must not be a required product or non-depository accounts can't be linked");
-        // AUTH (ACH details) and LIABILITIES (card due dates) are collected when available.
+        // AUTH (ACH details), LIABILITIES (card due dates) and INVESTMENTS (brokerage
+        // holdings) are collected when the account supports them.
         assertTrue(sent.getOptionalProducts().contains(Products.AUTH));
         assertTrue(sent.getOptionalProducts().contains(Products.LIABILITIES));
+        assertTrue(sent.getOptionalProducts().contains(Products.INVESTMENTS));
     }
 }
