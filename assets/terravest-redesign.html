@@ -3751,6 +3751,30 @@ a { text-decoration: none; color: inherit; }
               <div class="form-group" style="margin-bottom:0;"><label class="form-label">Charitable giving</label><input class="form-input" value="$2,500"></div>
             </div>
 
+            <!-- Rental properties — Schedule E worksheet with depreciation + carryforward -->
+            <div style="border-top:1px solid var(--tv-border);padding-top:12px;margin-top:12px;">
+              <div class="form-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                <span style="display:flex;align-items:center;gap:6px;"><i class="ti ti-building-estate" style="color:var(--tv-forest);"></i> Rental properties (Schedule E)</span>
+                <span style="font-weight:700;">net $3,464</span>
+              </div>
+              <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Gross rents collected</label><input class="form-input" value="$36,000"></div>
+              <div class="grid-3" style="gap:8px;">
+                <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Mortgage interest</label><input class="form-input" value="$11,400"></div>
+                <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Property tax</label><input class="form-input" value="$4,200"></div>
+                <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Other expenses</label><input class="form-input" value="$5,300"></div>
+              </div>
+              <div class="grid-2" style="gap:8px;">
+                <div class="form-group" style="margin-bottom:10px;"><label class="form-label">Property cost basis</label><input class="form-input" value="$400,000"></div>
+                <div class="form-group" style="margin-bottom:0;"><label class="form-label">Land value <span style="color:var(--tv-text-muted);font-weight:400;">· not depreciable</span></label><input class="form-input" value="$80,000"></div>
+              </div>
+              <div style="background:var(--tv-sage-pale);border-radius:var(--radius-md);padding:10px;margin-top:10px;font-size:12.5px;">
+                <div class="tv-row"><span style="color:var(--tv-text-muted);">− Expenses</span><span>$20,900</span></div>
+                <div class="tv-row"><span style="color:var(--tv-text-muted);">− Depreciation <span style="font-size:11px;">(($400k−$80k)÷27.5)</span></span><span>$11,636</span></div>
+                <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Net rental income</span><span style="font-weight:700;">$3,464</span></div>
+                <div style="font-size:11px;color:var(--tv-text-muted);margin-top:4px;">Losses are deductible up to $25,000/yr; the excess is suspended and carries forward.</div>
+              </div>
+            </div>
+
             <button class="btn btn-primary" style="width:100%;margin-top:14px;"><i class="ti ti-calculator"></i> Calculate estimate</button>
           </div>
 
@@ -3782,21 +3806,50 @@ a { text-decoration: none; color: inherit; }
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Gross income (combined)</span><span>$168,400</span></div>
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Adjusted gross income (AGI)</span><span>$165,346</span></div>
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Deduction (standard, joint)</span><span>− $30,000</span></div>
-              <div class="tv-row"><span style="font-weight:600;">Taxable income</span><span style="font-weight:700;">$135,346</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">QBI deduction (20% · §199A)</span><span>− $5,090</span></div>
+              <div class="tv-row"><span style="font-weight:600;">Taxable income</span><span style="font-weight:700;">$130,256</span></div>
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Income tax (joint brackets)</span><span>$19,605</span></div>
               <div class="tv-row"><span style="color:var(--tv-text-muted);">Self-employment tax</span><span>$3,108</span></div>
               <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Total federal tax</span><span style="font-weight:700;">$22,713</span></div>
             </div>
-            <div class="card" style="margin-top:12px;">
-              <div class="section-title" style="margin-bottom:8px;">Ways to lower your taxes</div>
+            <!-- Maximize your refund — personalized, quantified -->
+            <div class="card" style="margin-top:12px;border-color:var(--tv-gold);">
+              <div class="section-title" style="margin-bottom:4px;"><i class="ti ti-rosette-discount-check" style="color:var(--tv-gold);margin-right:6px;"></i> Ways to maximize your refund</div>
+              <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:10px;">Tailored to what you entered. Talk to a CPA before acting.</div>
               <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-gold-pale);margin-bottom:8px;">
-                <i class="ti ti-trending-up" style="font-size:18px;color:var(--tv-gold);"></i>
-                <div><div style="font-weight:600;font-size:13.5px;">Pre-tax retirement contribution</div><div style="font-size:12.5px;color:var(--tv-text-muted);">A $6,000 traditional-IRA / solo-401(k) contribution could save ~$1,320 at your 22% marginal rate.</div></div>
+                <i class="ti ti-building-estate" style="font-size:18px;color:var(--tv-gold);"></i>
+                <div><div style="font-weight:600;font-size:13.5px;">Rental depreciation is working for you</div><div style="font-size:12.5px;color:var(--tv-text-muted);">$11,636/yr of depreciation turns a cash-positive rental into a ~$3.5k taxable figure — keep your cost-basis records.</div></div>
               </div>
-              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-sage-pale);">
-                <i class="ti ti-bulb" style="font-size:18px;color:var(--tv-forest);"></i>
-                <div><div style="font-weight:600;font-size:13.5px;">Standard deduction wins</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Your $25,140 itemized total is below the $30,000 joint standard deduction — we used the standard for you. You'd need more deductible expenses to benefit from itemizing.</div></div>
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-gold-pale);margin-bottom:8px;">
+                <i class="ti ti-pig-money" style="font-size:18px;color:var(--tv-gold);"></i>
+                <div><div style="font-weight:600;font-size:13.5px;">Max out tax-advantaged accounts</div><div style="font-size:12.5px;color:var(--tv-text-muted);">A couple can defer ~$47,000 across two 401(k)s — every $1,000 pre-tax saves ~$220 at your 22% bracket.</div></div>
               </div>
+              <div style="display:flex;gap:10px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-gold-pale);">
+                <i class="ti ti-discount" style="font-size:18px;color:var(--tv-gold);"></i>
+                <div><div style="font-weight:600;font-size:13.5px;">20% QBI deduction applied</div><div style="font-size:12.5px;color:var(--tv-text-muted);">You're getting a $5,090 qualified-business-income deduction on your rental/self-employment income.</div></div>
+              </div>
+            </div>
+
+            <!-- Quarterly estimated taxes -->
+            <div class="card" style="margin-top:12px;">
+              <div class="section-title" style="margin-bottom:6px;"><i class="ti ti-calendar-dollar" style="color:var(--tv-forest);margin-right:6px;"></i> Quarterly estimated taxes</div>
+              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:8px;">$7,003 isn't covered by withholding — rental/1099 income has none. Pay 1040-ES quarterly to avoid a penalty.</div>
+              <div class="grid-2" style="gap:8px;margin-bottom:8px;">
+                <div class="kpi-card" style="padding:12px;"><div class="kpi-label">Pay each quarter</div><div class="kpi-value">$1,575</div></div>
+                <div class="kpi-card" style="padding:12px;"><div class="kpi-label">Annual (4 payments)</div><div class="kpi-value">$6,300</div></div>
+              </div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Due Apr 15 · Jun 16 · Sep 15 · Jan 15</span><span>$1,575 ea.</span></div>
+              <div style="font-size:11px;color:var(--tv-text-muted);margin-top:6px;">Safe harbor: no penalty if you pay 90% of this year's tax (or 100–110% of last year's).</div>
+            </div>
+
+            <!-- Married filing jointly vs separately -->
+            <div class="card" style="margin-top:12px;">
+              <div class="section-title" style="margin-bottom:6px;"><i class="ti ti-arrows-split" style="color:var(--tv-forest);margin-right:6px;"></i> Jointly vs separately</div>
+              <div class="tv-row"><span style="font-weight:600;">Married filing jointly — total tax</span><span style="font-weight:700;">$22,713</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Separately — you</span><span>$13,490</span></div>
+              <div class="tv-row"><span style="color:var(--tv-text-muted);">Separately — spouse</span><span>$10,210</span></div>
+              <div class="tv-row" style="border-bottom:none;"><span style="font-weight:600;">Separately — combined</span><span style="font-weight:700;">$23,700</span></div>
+              <div style="margin-top:8px;padding:10px 12px;border-radius:var(--radius-md);background:var(--tv-sage-pale);font-size:13px;"><i class="ti ti-check" style="color:var(--tv-positive);"></i> <strong>Filing jointly saves you $987.</strong> Stay joint.</div>
             </div>
           </div>
         </div>
