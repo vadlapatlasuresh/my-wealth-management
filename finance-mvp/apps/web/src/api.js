@@ -187,8 +187,9 @@ export const api = {
       body: JSON.stringify({ publicToken })
     }),
   getAccounts: () => request("/api/v1/aggregation/accounts"), // Updated to use new service
-  // Brokerage positions synced from Plaid Investments (powers the Investments tab).
+  // Brokerage positions + trade activity synced from Plaid Investments (Investments tab).
   getHoldings: () => request("/api/v1/aggregation/holdings"),
+  getInvestmentTransactions: () => request("/api/v1/aggregation/investment-transactions"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Recurring bills/subscriptions detected from transaction history (upcoming first).
   getRecurringBills: () => request("/api/v1/aggregation/recurring-bills"),
@@ -280,14 +281,8 @@ export const api = {
   deleteGoal: (id) =>
     request(`/api/v1/planning/goals/${id}`, { method: "DELETE" }),
 
-  // Invest holdings (financial-core): linked brokers + alternative investments
-  getBrokerAccounts: () => request("/api/v1/invest/brokers"),
-  linkBrokerAccount: (payload) =>
-    request("/api/v1/invest/brokers", { method: "POST", body: JSON.stringify(payload) }),
-  syncBrokerAccount: (id) =>
-    request(`/api/v1/invest/brokers/${id}/sync`, { method: "POST" }),
-  deleteBrokerAccount: (id) =>
-    request(`/api/v1/invest/brokers/${id}`, { method: "DELETE" }),
+  // Alternative investments (financial-core). Real brokerage linking now goes through
+  // Plaid (see getHoldings / getInvestmentTransactions above) rather than a manual flow.
   getAltInvestments: () => request("/api/v1/invest/alts"),
   createAltInvestment: (payload) =>
     request("/api/v1/invest/alts", { method: "POST", body: JSON.stringify(payload) }),

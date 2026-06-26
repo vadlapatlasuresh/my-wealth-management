@@ -4,6 +4,8 @@ import com.mywealthmanagement.accountaggregationservice.account.Account;
 import com.mywealthmanagement.accountaggregationservice.account.AccountRepository;
 import com.mywealthmanagement.accountaggregationservice.holding.Holding;
 import com.mywealthmanagement.accountaggregationservice.holding.HoldingRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransaction;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransactionRepository;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
 import com.mywealthmanagement.accountaggregationservice.transaction.Transaction;
@@ -15,6 +17,8 @@ import com.plaid.client.model.CountryCode;
 import com.plaid.client.model.CreditCardLiability;
 import com.plaid.client.model.InvestmentsHoldingsGetRequest;
 import com.plaid.client.model.InvestmentsHoldingsGetResponse;
+import com.plaid.client.model.InvestmentsTransactionsGetRequest;
+import com.plaid.client.model.InvestmentsTransactionsGetResponse;
 import com.plaid.client.model.ItemPublicTokenExchangeRequest;
 import com.plaid.client.model.ItemPublicTokenExchangeResponse;
 import com.plaid.client.model.LiabilitiesGetRequest;
@@ -52,6 +56,7 @@ public class PlaidService {
     private final AccountRepository accountRepository;
     private final TransactionRepository transactionRepository;
     private final HoldingRepository holdingRepository;
+    private final InvestmentTransactionRepository investmentTransactionRepository;
 
     @Value("${plaid.client-name}")
     private String plaidClientName;
@@ -127,6 +132,12 @@ public class PlaidService {
             fetchHoldings(request.getUserId(), plaidItem);
         } catch (Exception e) {
             log.warn("Holdings fetch deferred for item {}: {}",
+                    plaidItem.getPlaidItemId(), e.getMessage());
+        }
+        try {
+            fetchInvestmentTransactions(request.getUserId(), plaidItem);
+        } catch (Exception e) {
+            log.warn("Investment transactions fetch deferred for item {}: {}",
                     plaidItem.getPlaidItemId(), e.getMessage());
         }
         // Transactions are frequently PRODUCT_NOT_READY right after linking — Plaid
@@ -253,6 +264,65 @@ public class PlaidService {
                     ? plaidHolding.getIsoCurrencyCode() : "USD");
 
             holdingRepository.save(holding);
+        }
+    }
+
+    /**
+     * Pull brokerage trade/activity history (buys, sells, dividends, fees) for the last
+     * two years via Plaid Investments transactions and upsert them as
+     * {@link InvestmentTransaction} rows for the Activity view. No-op when the item has
+     * no investment accounts.
+     */
+    public void fetchInvestmentTransactions(Long userId, PlaidItem plaidItem) throws IOException {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusYears(2);
+
+        InvestmentsTransactionsGetRequest request = new InvestmentsTransactionsGetRequest()
+                .accessToken(plaidItem.getAccessToken())
+                .startDate(startDate)
+                .endDate(endDate);
+
+        Response<InvestmentsTransactionsGetResponse> response =
+                plaidApi.investmentsTransactionsGet(request).execute();
+        if (!response.isSuccessful() || response.body() == null) {
+            throw new IOException("Failed to fetch investment transactions: " + errorBody(response));
+        }
+
+        InvestmentsTransactionsGetResponse body = response.body();
+        if (body.getInvestmentTransactions() == null || body.getInvestmentTransactions().isEmpty()) {
+            return;
+        }
+
+        java.util.Map<String, Security> securities = new java.util.HashMap<>();
+        if (body.getSecurities() != null) {
+            for (Security s : body.getSecurities()) {
+                securities.put(s.getSecurityId(), s);
+            }
+        }
+
+        for (com.plaid.client.model.InvestmentTransaction t : body.getInvestmentTransactions()) {
+            Security security = securities.get(t.getSecurityId());
+            InvestmentTransaction txn = investmentTransactionRepository
+                    .findByPlaidInvestmentTxnId(t.getInvestmentTransactionId())
+                    .orElseGet(InvestmentTransaction::new);
+
+            txn.setUserId(userId);
+            txn.setPlaidInvestmentTxnId(t.getInvestmentTransactionId());
+            txn.setPlaidAccountId(t.getAccountId());
+            txn.setSecurityId(t.getSecurityId());
+            txn.setSymbol(security != null ? security.getTickerSymbol() : null);
+            txn.setName(t.getName());
+            txn.setBroker(brokerNameFor(t.getAccountId()));
+            txn.setType(t.getType() != null ? String.valueOf(t.getType().getValue()) : null);
+            txn.setSubtype(t.getSubtype() != null ? String.valueOf(t.getSubtype().getValue()) : null);
+            txn.setDate(t.getDate());
+            txn.setQuantity(toBigDecimalOrNull(t.getQuantity()));
+            txn.setPrice(toBigDecimalOrNull(t.getPrice()));
+            txn.setAmount(toBigDecimalOrNull(t.getAmount()));
+            txn.setFees(toBigDecimalOrNull(t.getFees()));
+            txn.setCurrency(t.getIsoCurrencyCode() != null ? t.getIsoCurrencyCode() : "USD");
+
+            investmentTransactionRepository.save(txn);
         }
     }
 

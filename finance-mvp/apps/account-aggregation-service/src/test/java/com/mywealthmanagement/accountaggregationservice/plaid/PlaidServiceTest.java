@@ -2,6 +2,7 @@ package com.mywealthmanagement.accountaggregationservice.plaid;
 
 import com.mywealthmanagement.accountaggregationservice.account.AccountRepository;
 import com.mywealthmanagement.accountaggregationservice.holding.HoldingRepository;
+import com.mywealthmanagement.accountaggregationservice.holding.InvestmentTransactionRepository;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.transaction.TransactionRepository;
 import com.plaid.client.model.LinkTokenCreateRequest;
@@ -44,6 +45,9 @@ class PlaidServiceTest {
     @Mock
     private HoldingRepository holdingRepository;
 
+    @Mock
+    private InvestmentTransactionRepository investmentTransactionRepository;
+
     private PlaidService plaidService;
 
     @BeforeEach
@@ -53,7 +57,8 @@ class PlaidServiceTest {
                 plaidItemRepository,
                 accountRepository,
                 transactionRepository,
-                holdingRepository
+                holdingRepository,
+                investmentTransactionRepository
         );
         ReflectionTestUtils.setField(plaidService, "plaidClientName", "My Wealth Management");
         ReflectionTestUtils.setField(plaidService, "plaidWebhookUrl", "");

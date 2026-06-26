@@ -4,6 +4,7 @@ import com.mywealthmanagement.accountaggregationservice.account.AccountService;
 import com.mywealthmanagement.accountaggregationservice.account.dto.AccountDto;
 import com.mywealthmanagement.accountaggregationservice.holding.HoldingService;
 import com.mywealthmanagement.accountaggregationservice.holding.dto.HoldingDto;
+import com.mywealthmanagement.accountaggregationservice.holding.dto.InvestmentTransactionDto;
 import com.mywealthmanagement.accountaggregationservice.plaid.PlaidService;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.LinkTokenRequest;
 import com.mywealthmanagement.accountaggregationservice.plaid.dto.PublicTokenExchangeRequest;
@@ -97,6 +98,12 @@ public class AggregationController {
     @GetMapping("/holdings")
     public ResponseEntity<List<HoldingDto>> getHoldings() {
         return ResponseEntity.ok(holdingService.getHoldingsByUserId(getUserId()));
+    }
+
+    /** Brokerage trade/activity history synced from Plaid Investments (newest first). */
+    @GetMapping("/investment-transactions")
+    public ResponseEntity<List<InvestmentTransactionDto>> getInvestmentTransactions() {
+        return ResponseEntity.ok(holdingService.getInvestmentTransactionsByUserId(getUserId()));
     }
 
     @GetMapping("/transactions")
