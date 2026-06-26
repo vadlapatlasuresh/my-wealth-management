@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { currency } from '../utils/format';
+import { api } from '../api';
 import PlaidLinkButton from '../components/PlaidLinkButton';
 import LastRefreshed from '../components/LastRefreshed';
 
@@ -77,6 +78,7 @@ function InfoTip({ text }) {
 export default function AccountsPage({ accounts = [], loadAll }) {
   const navigate = useNavigate();
   const [refreshing, setRefreshing] = useState(false);
+  const [unlinkingId, setUnlinkingId] = useState(null);
 
   const handleRefresh = async () => {
     if (!loadAll) return;
@@ -85,6 +87,29 @@ export default function AccountsPage({ accounts = [], loadAll }) {
       await loadAll();
     } finally {
       setRefreshing(false);
+    }
+  };
+
+  // Unlink the Plaid connection this account belongs to. Removing a connection (Plaid
+  // "item") disconnects every account linked under that same institution login — the
+  // confirm makes that explicit. Use this to clear out duplicate/old links.
+  const handleUnlink = async (account) => {
+    const itemId = account.plaidItemId;
+    if (!itemId) return;
+    const label = account.officialName || account.name || 'this institution';
+    const ok = window.confirm(
+      `Unlink ${label}?\n\nThis disconnects the institution and removes its linked account(s) ` +
+      `— including any others under the same login — from TerraVest. You can re-link anytime.`
+    );
+    if (!ok) return;
+    setUnlinkingId(account.id);
+    try {
+      await api.unlinkItem(itemId);
+      if (loadAll) await loadAll();
+    } catch (e) {
+      window.alert(`Couldn't unlink: ${e?.message || 'please try again.'}`);
+    } finally {
+      setUnlinkingId(null);
     }
   };
 
@@ -274,6 +299,16 @@ export default function AccountsPage({ accounts = [], loadAll }) {
                             : cur}
                         </div>
                       </div>
+                      {account.plaidItemId && (
+                        <button
+                          className="icon-btn account-action"
+                          title={`Unlink ${account.officialName || account.name || 'this institution'}`}
+                          disabled={unlinkingId === account.id}
+                          onClick={() => handleUnlink(account)}
+                        >
+                          <i className={`ti ${unlinkingId === account.id ? 'ti-loader spin' : 'ti-unlink'}`}></i>
+                        </button>
+                      )}
                       <button
                         className="icon-btn account-action"
                         title={`View ${account.name || 'account'} transactions`}

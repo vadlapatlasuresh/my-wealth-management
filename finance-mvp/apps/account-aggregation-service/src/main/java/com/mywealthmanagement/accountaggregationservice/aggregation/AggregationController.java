@@ -106,6 +106,13 @@ public class AggregationController {
         return ResponseEntity.ok(holdingService.getInvestmentTransactionsByUserId(getUserId()));
     }
 
+    /** Unlink (disconnect) a Plaid item and remove its accounts, transactions & holdings. */
+    @DeleteMapping("/items/{plaidItemId}")
+    public ResponseEntity<Void> unlinkItem(@PathVariable String plaidItemId) {
+        plaidService.unlinkItem(getUserId(), plaidItemId);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/transactions")
     public ResponseEntity<List<TransactionDto>> getTransactions() {
         Long userId = getUserId();

@@ -59,7 +59,7 @@ function fmtSubtype(s) {
   }).join(' ');
 }
 
-export default function InvestPage({ snapshot, accounts = [] }) {
+export default function InvestPage({ snapshot, accounts = [], loadAll }) {
   const totalInvested = snapshot?.components?.investments ?? 0;
   const series = snapshot?.series || null;
 
@@ -82,6 +82,28 @@ export default function InvestPage({ snapshot, accounts = [] }) {
   const holdings = syncedHoldings.length ? syncedHoldings : (snapshot?.holdings || EMPTY_HOLDINGS);
 
   /* Re-pull brokerage positions + activity (after a Plaid link or a manual refresh). */
+  /* Unlink the Plaid connection behind a brokerage account, then refresh. */
+  const [unlinkingId, setUnlinkingId] = useState(null);
+  const unlinkBroker = async (b) => {
+    if (!b.plaidItemId) return;
+    const label = b.institution || b.name || 'this brokerage';
+    const ok = window.confirm(
+      `Unlink ${label}?\n\nThis disconnects the brokerage and removes its linked account(s) ` +
+      `and synced holdings from TerraVest. You can re-link anytime.`
+    );
+    if (!ok) return;
+    setUnlinkingId(b.id);
+    try {
+      await api.unlinkItem(b.plaidItemId);
+      if (loadAll) await loadAll();
+      await reloadHoldings();
+    } catch (e) {
+      window.alert(`Couldn't unlink: ${e?.message || 'please try again.'}`);
+    } finally {
+      setUnlinkingId(null);
+    }
+  };
+
   const reloadHoldings = async () => {
     try {
       const [h, act] = await Promise.allSettled([
@@ -128,6 +150,7 @@ export default function InvestPage({ snapshot, accounts = [] }) {
         const institution = a.officialName || '';
         return {
           id: a.id,
+          plaidItemId: a.plaidItemId || null,
           name: a.name || institution || 'Brokerage account',
           institution,
           subtype: a.subtype || '',
@@ -600,6 +623,21 @@ export default function InvestPage({ snapshot, accounts = [] }) {
                       ? `${b.positions} position${b.positions === 1 ? '' : 's'}`
                       : 'Positions sync shortly after linking'}
                   </div>
+
+                  {b.plaidItemId ? (
+                    <>
+                      <hr style={{ border: 'none', borderTop: '1px solid var(--tv-border-light)', margin: '12px 0' }} />
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        style={{ width: '100%', justifyContent: 'center' }}
+                        disabled={unlinkingId === b.id}
+                        onClick={() => unlinkBroker(b)}
+                      >
+                        <i className={`ti ${unlinkingId === b.id ? 'ti-loader spin' : 'ti-unlink'}`}></i>
+                        {unlinkingId === b.id ? 'Unlinking…' : 'Unlink'}
+                      </button>
+                    </>
+                  ) : null}
                 </div>
               ))}
             </div>

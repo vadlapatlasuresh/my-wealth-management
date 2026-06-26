@@ -27,4 +27,6 @@ public class AccountDto {
     private BigDecimal minimumPayment;
     private LocalDate nextPaymentDueDate;
     private BigDecimal aprPercentage;
+    // The Plaid item (institution connection) this account belongs to — used to unlink.
+    private String plaidItemId;
 }
