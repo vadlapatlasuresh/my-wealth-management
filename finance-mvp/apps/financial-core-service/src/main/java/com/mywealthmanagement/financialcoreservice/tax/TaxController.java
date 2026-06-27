@@ -228,7 +228,8 @@ public class TaxController {
                 selfEmployment,
                 qbiIncome,
                 capitalGains,
-                netInvestmentIncome);
+                netInvestmentIncome,
+                num(body.get("educationExpenses")).max(BigDecimal.ZERO));
     }
 
     private static BigDecimal sum(BigDecimal... values) {

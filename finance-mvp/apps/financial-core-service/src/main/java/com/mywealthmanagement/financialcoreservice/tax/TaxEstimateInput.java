@@ -31,12 +31,14 @@ public record TaxEstimateInput(
         // Long-term capital gains included in grossIncome but taxed at preferential rates.
         BigDecimal longTermCapitalGains,
         // Net investment income (interest + dividends + capital gains + passive rental) for NIIT.
-        BigDecimal netInvestmentIncome) {
+        BigDecimal netInvestmentIncome,
+        // Qualified education expenses (1098-T tuition) for the American Opportunity credit.
+        BigDecimal educationExpenses) {
 
     /** Back-compat constructor for callers without SE / QBI income (treated as zero). */
     public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding) {
-        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null, null, null, null);
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null, null, null, null, null);
     }
 
     /** Back-compat constructor without QBI income (treated as zero). */
@@ -44,7 +46,7 @@ public record TaxEstimateInput(
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
                             BigDecimal selfEmploymentIncome) {
         this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
-                selfEmploymentIncome, null, null, null);
+                selfEmploymentIncome, null, null, null, null);
     }
 
     /** Back-compat constructor without long-term capital gains (treated as zero). */
@@ -52,7 +54,7 @@ public record TaxEstimateInput(
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
                             BigDecimal selfEmploymentIncome, BigDecimal qualifiedBusinessIncome) {
         this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
-                selfEmploymentIncome, qualifiedBusinessIncome, null, null);
+                selfEmploymentIncome, qualifiedBusinessIncome, null, null, null);
     }
 
     /** Back-compat constructor without net investment income / NIIT (treated as zero). */
@@ -61,6 +63,15 @@ public record TaxEstimateInput(
                             BigDecimal selfEmploymentIncome, BigDecimal qualifiedBusinessIncome,
                             BigDecimal longTermCapitalGains) {
         this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
-                selfEmploymentIncome, qualifiedBusinessIncome, longTermCapitalGains, null);
+                selfEmploymentIncome, qualifiedBusinessIncome, longTermCapitalGains, null, null);
+    }
+
+    /** Back-compat constructor without education expenses (treated as zero). */
+    public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
+                            BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
+                            BigDecimal selfEmploymentIncome, BigDecimal qualifiedBusinessIncome,
+                            BigDecimal longTermCapitalGains, BigDecimal netInvestmentIncome) {
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
+                selfEmploymentIncome, qualifiedBusinessIncome, longTermCapitalGains, netInvestmentIncome, null);
     }
 }

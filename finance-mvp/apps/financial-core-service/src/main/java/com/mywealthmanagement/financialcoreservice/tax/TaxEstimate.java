@@ -27,6 +27,7 @@ public class TaxEstimate {
     private BigDecimal taxableIncome;
     private BigDecimal taxBeforeCredits;
     private BigDecimal childTaxCredit;
+    private BigDecimal educationCredit;     // American Opportunity credit (1098-T tuition)
     private BigDecimal taxAfterCredits;     // income tax after credits (excludes SE tax)
     private BigDecimal selfEmploymentTax;   // SE tax on net self-employment income
     private BigDecimal totalTax;            // taxAfterCredits + selfEmploymentTax (headline figure)

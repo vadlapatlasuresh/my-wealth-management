@@ -59,7 +59,13 @@ public class TaxRules {
                 FilingStatus.MARRIED_SEPARATE, bd("291850"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("551350")),
             Map.of( // NIIT 3.8% MAGI threshold (statutory)
                 FilingStatus.SINGLE, bd("200000"), FilingStatus.MARRIED_JOINT, bd("250000"),
-                FilingStatus.MARRIED_SEPARATE, bd("125000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")));
+                FilingStatus.MARRIED_SEPARATE, bd("125000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")),
+            Map.of( // AOTC phase-out start (statutory; MFS ineligible -> 0)
+                FilingStatus.SINGLE, bd("80000"), FilingStatus.MARRIED_JOINT, bd("160000"),
+                FilingStatus.MARRIED_SEPARATE, bd("0"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("80000")),
+            Map.of( // AOTC phase-out end
+                FilingStatus.SINGLE, bd("90000"), FilingStatus.MARRIED_JOINT, bd("180000"),
+                FilingStatus.MARRIED_SEPARATE, bd("0"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("90000")));
 
     // ---- 2025 (Rev. Proc. 2024-40) ----
     private static final TaxRuleSet Y2025 = new TaxRuleSet(
@@ -92,7 +98,13 @@ public class TaxRules {
                 FilingStatus.MARRIED_SEPARATE, bd("300000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("566700")),
             Map.of( // NIIT 3.8% MAGI threshold (statutory)
                 FilingStatus.SINGLE, bd("200000"), FilingStatus.MARRIED_JOINT, bd("250000"),
-                FilingStatus.MARRIED_SEPARATE, bd("125000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")));
+                FilingStatus.MARRIED_SEPARATE, bd("125000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")),
+            Map.of( // AOTC phase-out start (statutory; MFS ineligible -> 0)
+                FilingStatus.SINGLE, bd("80000"), FilingStatus.MARRIED_JOINT, bd("160000"),
+                FilingStatus.MARRIED_SEPARATE, bd("0"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("80000")),
+            Map.of( // AOTC phase-out end
+                FilingStatus.SINGLE, bd("90000"), FilingStatus.MARRIED_JOINT, bd("180000"),
+                FilingStatus.MARRIED_SEPARATE, bd("0"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("90000")));
 
     private static final Map<Integer, TaxRuleSet> BY_YEAR = Map.of(2024, Y2024, 2025, Y2025);
     private static final int LATEST = 2025;

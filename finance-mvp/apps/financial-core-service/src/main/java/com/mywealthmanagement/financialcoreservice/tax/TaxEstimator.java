@@ -67,7 +67,9 @@ public final class TaxEstimator {
         BigDecimal marginal = marginalRate(ordinaryTaxable, brackets);
 
         BigDecimal ctc = childTaxCredit(in.dependentsUnder17(), agi, status, rules);
-        BigDecimal incomeTax = taxBefore.subtract(ctc).max(BigDecimal.ZERO);
+        // American Opportunity education credit from qualified tuition, MAGI-phased.
+        BigDecimal educationCredit = educationCredit(nz(in.educationExpenses()), agi, status, rules);
+        BigDecimal incomeTax = taxBefore.subtract(ctc).subtract(educationCredit).max(BigDecimal.ZERO);
 
         // Net Investment Income Tax: 3.8% on the lesser of net investment income or MAGI (≈ AGI
         // here) over the statutory threshold.
@@ -89,6 +91,7 @@ public final class TaxEstimator {
         e.setQbiDeduction(money(qbiDeduction));
         e.setCapitalGainsTax(money(capitalGainsTax));
         e.setNetInvestmentIncomeTax(money(niit));
+        e.setEducationCredit(money(educationCredit));
         e.setTaxableIncome(money(taxable));
         e.setTaxBeforeCredits(money(taxBefore));
         e.setChildTaxCredit(money(ctc));
@@ -187,6 +190,37 @@ public final class TaxEstimator {
     /** v constrained to [lo, hi]. */
     private static BigDecimal clamp(BigDecimal v, BigDecimal lo, BigDecimal hi) {
         return v.max(lo).min(hi);
+    }
+
+    private static final BigDecimal AOTC_TIER = new BigDecimal("2000"); // each $2,000 tier
+    private static final BigDecimal AOTC_SECOND_RATE = new BigDecimal("0.25");
+
+    /**
+     * American Opportunity Tax Credit: 100% of the first $2,000 of qualified expenses + 25% of the
+     * next $2,000 (max $2,500), phased out linearly across the filing-status MAGI range. Simplified:
+     * one student's expenses, and treated as non-refundable here (the estimate floors tax at zero,
+     * matching how the child tax credit is modeled).
+     */
+    private static BigDecimal educationCredit(BigDecimal expenses, BigDecimal magi,
+                                              FilingStatus status, TaxRuleSet rules) {
+        if (expenses.signum() <= 0) return BigDecimal.ZERO;
+        BigDecimal first = expenses.min(AOTC_TIER);
+        BigDecimal second = expenses.subtract(AOTC_TIER).max(BigDecimal.ZERO).min(AOTC_TIER);
+        BigDecimal tentative = first.add(second.multiply(AOTC_SECOND_RATE)); // max 2,500
+
+        BigDecimal start = rules.educationPhaseoutStart().getOrDefault(status, BigDecimal.ZERO);
+        BigDecimal end = rules.educationPhaseoutEnd().getOrDefault(status, BigDecimal.ZERO);
+        BigDecimal factor;
+        if (end.compareTo(start) <= 0) {                 // MFS (0..0) or no range -> all-or-nothing
+            factor = magi.compareTo(start) <= 0 ? BigDecimal.ONE : BigDecimal.ZERO;
+        } else if (magi.compareTo(start) <= 0) {
+            factor = BigDecimal.ONE;
+        } else if (magi.compareTo(end) >= 0) {
+            factor = BigDecimal.ZERO;
+        } else {
+            factor = end.subtract(magi).divide(end.subtract(start), 6, RoundingMode.HALF_UP);
+        }
+        return tentative.multiply(factor);
     }
 
     private static final BigDecimal NIIT_RATE = new BigDecimal("0.038");

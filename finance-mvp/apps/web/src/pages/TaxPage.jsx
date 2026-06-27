@@ -44,6 +44,7 @@ const FIELD_LABELS = {
   mortgageInterest: "Mortgage interest",
   propertyTaxes: "Property taxes",
   studentLoanInterest: "Student loan interest",
+  educationExpenses: "Qualified tuition (1098-T)",
 };
 
 const DOC_LABELS = {
@@ -92,7 +93,7 @@ export default function TaxPage() {
     // categorized income / adjustments / itemized — all default ""
     wages: "", selfEmploymentIncome: "", rentalIncome: "", capitalGains: "", interestIncome: "",
     dividendIncome: "", retirementIncome: "", otherIncome: "",
-    studentLoanInterest: "", hsaContribution: "", iraContribution: "", otherAdjustments: "",
+    studentLoanInterest: "", hsaContribution: "", iraContribution: "", otherAdjustments: "", educationExpenses: "",
     mortgageInterest: "", propertyTaxes: "", stateLocalTaxes: "", charitable: "", medicalExpenses: "",
   });
   const [result, setResult] = useState(null);
@@ -364,7 +365,11 @@ export default function TaxPage() {
     for (const fld of fields) {
       if (fld == null || fld.amount == null) continue;
       const key = fld.key;
-      if (key === "tuition") { notes.push(`Tuition ${usd(fld.amount)} — you may qualify for an education credit`); continue; }
+      if (key === "tuition") {
+        applied.push({ key: "educationExpenses", label: FIELD_LABELS.educationExpenses, amount: fld.amount });
+        notes.push(`Tuition ${usd(fld.amount)} — applied toward the American Opportunity credit`);
+        continue;
+      }
       if (key === "withholding" || CATEGORY_FIELDS.includes(key)) {
         applied.push({ key, label: FIELD_LABELS[key] || fld.label || key, amount: fld.amount });
       }
@@ -787,6 +792,7 @@ export default function TaxPage() {
               <Field label="Student loan interest" value={form.studentLoanInterest} onChange={set("studentLoanInterest")} placeholder="from your 1098-E" />
               <Field label="HSA contribution" value={form.hsaContribution} onChange={set("hsaContribution")} placeholder="your own (non-payroll) HSA deposits" />
               <Field label="IRA contribution" value={form.iraContribution} onChange={set("iraContribution")} placeholder="deductible traditional IRA" />
+              <Field label="Qualified tuition (1098-T)" value={form.educationExpenses} onChange={set("educationExpenses")} placeholder="for the American Opportunity credit (up to $2,500)" />
               <Field label="Other adjustments" value={form.otherAdjustments} onChange={set("otherAdjustments")} placeholder="SE tax deduction, etc. (optional)" />
             </Section>
 
@@ -888,6 +894,7 @@ export default function TaxPage() {
                 <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
                 {Number(result.capitalGainsTax) > 0 && <Row k="↳ incl. long-term capital gains (0/15/20%)" v={usd(result.capitalGainsTax)} />}
                 {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
+                {Number(result.educationCredit) > 0 && <Row k="Education credit (American Opportunity)" v={`− ${usd(result.educationCredit)}`} />}
                 {(seTax > 0 || Number(result.netInvestmentIncomeTax) > 0) ? (
                   <>
                     <Row k="Income tax" v={usd(result.taxAfterCredits)} />
