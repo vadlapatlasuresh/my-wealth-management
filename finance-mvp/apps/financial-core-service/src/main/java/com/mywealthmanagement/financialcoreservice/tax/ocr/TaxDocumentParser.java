@@ -60,14 +60,18 @@ public class TaxDocumentParser {
                     "No readable text found — please enter the figures manually.");
         }
 
-        String lower = text.toLowerCase();
+        // Collapse irregular PDF whitespace (runs of spaces, mid-label newlines from boxed
+        // layouts) into single spaces so multi-word labels like "wages, tips, other" still
+        // match and the value can be found even when it sat on a different visual line.
+        String norm = text.replaceAll("\\s+", " ");
+        String lower = norm.toLowerCase(java.util.Locale.ROOT);
         String type = detectType(lower);
         List<FieldSpec> specs = specsFor(type);
 
         List<ExtractedField> fields = new ArrayList<>();
         BigDecimal primary = null; // the form's main income figure, so withholding doesn't reuse it
         for (FieldSpec spec : specs) {
-            BigDecimal amt = amountNear(text, lower, spec.excludePriorValue() ? primary : null, spec.labels());
+            BigDecimal amt = amountNear(norm, lower, spec.excludePriorValue() ? primary : null, spec.labels());
             if (amt != null) {
                 fields.add(new ExtractedField(spec.key(), spec.label(), amt));
                 if (!spec.excludePriorValue() && primary == null) {
@@ -76,7 +80,7 @@ public class TaxDocumentParser {
             }
         }
 
-        Integer year = year(text);
+        Integer year = year(norm);
         double confidence = fields.isEmpty() ? 0.2 : (fields.size() >= expectedFor(type) ? 0.9 : 0.6);
         String note = note(type, fields);
         return new ParsedTaxDocument(type, year, fields, confidence, SOURCE_MOCK, note);
@@ -243,27 +247,60 @@ public class TaxDocumentParser {
     }
 
     /**
-     * First dollar amount within ~100 chars after any of the labels (labels tried in order). An
-     * amount equal to {@code exclude} is skipped — so withholding doesn't grab the income figure
-     * that shares its amounts row in a two-column layout.
+     * The dollar amount nearest a label. Two passes over the labels (tried in order):
+     * <ol>
+     *   <li>the first money-like amount in the ~200 chars <em>after</em> the label — the usual
+     *       reading order, where the box value follows or sits below its caption; then</li>
+     *   <li>the nearest money-like amount in the ~80 chars <em>before</em> the label — for the
+     *       value-above-label layouts some W-2/1099 PDFs extract to.</li>
+     * </ol>
+     * An amount equal to {@code exclude} is skipped so withholding doesn't grab the income figure
+     * that shares its row; box numbers and other sub-$100 tokens are dropped by {@link #toAmount}.
      */
     private BigDecimal amountNear(String text, String lower, BigDecimal exclude, String... labels) {
+        // Pass 1 — after the label.
         for (String label : labels) {
             int idx = lower.indexOf(label);
             while (idx >= 0) {
                 int from = idx + label.length();
-                int to = Math.min(text.length(), from + 160); // value can sit a couple boxes away
-                Matcher m = AMOUNT.matcher(text.substring(from, to));
-                while (m.find()) {
-                    BigDecimal amt = toAmount(m.group(1));
-                    if (amt != null && (exclude == null || amt.compareTo(exclude) != 0)) {
-                        return amt;
-                    }
-                }
+                int to = Math.min(text.length(), from + 200);
+                BigDecimal amt = firstAmount(text.substring(from, to), exclude);
+                if (amt != null) return amt;
+                idx = lower.indexOf(label, idx + 1);
+            }
+        }
+        // Pass 2 — fall back to the closest amount before the label.
+        for (String label : labels) {
+            int idx = lower.indexOf(label);
+            while (idx >= 0) {
+                int from = Math.max(0, idx - 80);
+                BigDecimal amt = lastAmount(text.substring(from, idx), exclude);
+                if (amt != null) return amt;
                 idx = lower.indexOf(label, idx + 1);
             }
         }
         return null;
+    }
+
+    /** First money-like amount in {@code window} that isn't {@code exclude}. */
+    private BigDecimal firstAmount(String window, BigDecimal exclude) {
+        Matcher m = AMOUNT.matcher(window);
+        while (m.find()) {
+            BigDecimal amt = toAmount(m.group(1));
+            if (amt != null && (exclude == null || amt.compareTo(exclude) != 0)) return amt;
+        }
+        return null;
+    }
+
+    /** Last money-like amount in {@code window} that isn't {@code exclude} (closest before a label). */
+    private BigDecimal lastAmount(String window, BigDecimal exclude) {
+        Matcher m = AMOUNT.matcher(window);
+        BigDecimal last = null;
+        while (m.find()) {
+            BigDecimal amt = toAmount(m.group(1));
+            if (amt != null && (exclude == null || amt.compareTo(exclude) != 0)) last = amt;
+        }
+        return last;
     }
 
     private BigDecimal toAmount(String raw) {
