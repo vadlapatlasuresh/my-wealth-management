@@ -331,9 +331,19 @@ export default function PlanPage({
   const [review, setReview] = useState(null);
   const [reviewMode, setReviewMode] = useState("merge"); // "replace" | "merge"
   const [expandedLine, setExpandedLine] = useState(null); // review line id whose transactions are shown
+<<<<<<< Updated upstream
   // Phase 5 — keep-it-current: when live spending drifts from the saved budget, nudge to re-sync.
   const [drift, setDrift] = useState(null);             // { newCats:[], changed:[] } or null
   const [driftDismissed, setDriftDismissed] = useState(false);
+=======
+  // Transactions viewer — let the user see exactly what was spent (all of it, or one category).
+  const [txnModal, setTxnModal] = useState(null);   // null = closed | { category: "all" | <name> }
+  const [allTxns, setAllTxns] = useState([]);        // raw transactions, fetched lazily on first open
+  const [txnsLoaded, setTxnsLoaded] = useState(false);
+  const [txnsLoading, setTxnsLoading] = useState(false);
+  const [txnSearch, setTxnSearch] = useState("");
+  const [txnSort, setTxnSort] = useState("recent"); // "recent" | "amount"
+>>>>>>> Stashed changes
 
   // Lightweight categorized spend for the current period, honoring the auto-fill filters
   // (account scope, excludes, renames). Used by the drift check + "Refresh actuals". Keep the
@@ -377,6 +387,42 @@ export default function PlanPage({
     setBudgetLines(await applyLiveActuals(budgetLines));
     setDrift(null);
     setNotice("Actuals refreshed from your latest transactions.");
+  }
+
+  // Map a raw transaction category to the label shown in the budget (honors the rename map).
+  function txnCategory(t) {
+    const raw = (t.category || "Uncategorized").trim() || "Uncategorized";
+    return afSettings.map[raw.toLowerCase()] || raw;
+  }
+
+  // Transactions for the selected period (single month, or the YTD / 12-mo range), honoring the
+  // account-scope filter so the list matches what the budget is built from.
+  function periodTxns() {
+    const months = monthsForPeriod();
+    let use = allTxns.filter((t) => months.some((mo) => String(t.date || "").startsWith(mo)));
+    if (Array.isArray(afSettings.accounts) && afSettings.accounts.length) {
+      use = use.filter((t) => afSettings.accounts.includes(t.accountId));
+    }
+    return use;
+  }
+
+  // Open the transactions viewer (optionally pre-filtered to one category). Transactions are
+  // fetched lazily on first open and cached for the session.
+  async function openTransactions(category = "all") {
+    setTxnModal({ category });
+    setTxnSearch("");
+    if (txnsLoaded) return;
+    setTxnsLoading(true);
+    try {
+      const txns = await api.getTransactions();
+      setAllTxns(Array.isArray(txns) ? txns : []);
+      setTxnsLoaded(true);
+    } catch (e) {
+      setNotice(e?.message || "Couldn't load transactions — please try again.");
+      setTxnModal(null);
+    } finally {
+      setTxnsLoading(false);
+    }
   }
 
   // Read linked transactions, build a proposal, and OPEN the review sheet (nothing is applied
@@ -693,6 +739,8 @@ export default function PlanPage({
                   <button className="icon-btn" style={{ width: 28, height: 28 }} onClick={() => shiftMonth(1)} title="Next month"><i className="ti ti-chevron-right"></i></button>
                 </div>
               )}
+              <button className="btn btn-secondary btn-sm" onClick={() => openTransactions("all")}
+                title="See every transaction behind your spending"><i className="ti ti-list-search"></i> View transactions</button>
               <button className="btn btn-secondary btn-sm" onClick={exportCsv}><i className="ti ti-download"></i> Export CSV</button>
               <button className="btn btn-primary btn-sm" onClick={saveBudget} disabled={saving || !dirty || isAggregate}>
                 <i className={`ti ${saving ? "ti-loader spin" : savedAt ? "ti-check" : "ti-device-floppy"}`}></i>
@@ -912,7 +960,15 @@ export default function PlanPage({
                                 style={{ border: "1px solid var(--tv-border)", borderRadius: "var(--radius-sm)", padding: "5px 8px", width: 90 }} />
                             )}
                           </td>
-                          <td className={isOver ? "amount-neg" : ""}>{currency(sp)}</td>
+                          <td className={isOver ? "amount-neg" : ""}>
+                            {sp > 0 ? (
+                              <button type="button" onClick={() => openTransactions(row.category)}
+                                title={`See the transactions behind ${currency(sp)} in ${row.category}`}
+                                style={{ background: "none", border: "none", padding: 0, cursor: "pointer", color: "inherit", font: "inherit", textDecoration: "underline", textUnderlineOffset: 2, textDecorationStyle: "dotted" }}>
+                                {currency(sp)}
+                              </button>
+                            ) : currency(sp)}
+                          </td>
                           <td style={{ color: isOver ? "var(--tv-negative)" : "var(--tv-positive)", fontWeight: 500 }}>{currency(remaining)}</td>
                           <td>
                             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -944,6 +1000,94 @@ export default function PlanPage({
               </div>
             )}
           </div>
+
+          {/* Transactions viewer — the receipts behind the numbers, all of them or one category. */}
+          {txnModal && (() => {
+            const cats = ["all", ...budgetLines.map((l) => l.category)];
+            let rows = periodTxns();
+            if (txnModal.category !== "all") {
+              rows = rows.filter((t) => txnCategory(t).toLowerCase() === txnModal.category.toLowerCase());
+            }
+            const q = txnSearch.trim().toLowerCase();
+            if (q) rows = rows.filter((t) => (t.name || "").toLowerCase().includes(q) || txnCategory(t).toLowerCase().includes(q));
+            rows = [...rows].sort((a, b) => txnSort === "amount"
+              ? Math.abs(Number(b.amount) || 0) - Math.abs(Number(a.amount) || 0)
+              : String(b.date || "").localeCompare(String(a.date || "")));
+            const spent = rows.reduce((s, t) => s + Math.max(0, Number(t.amount) || 0), 0);
+            const income = rows.reduce((s, t) => s + Math.max(0, -(Number(t.amount) || 0)), 0);
+            const close = () => setTxnModal(null);
+            return (
+              <div onClick={close}
+                style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
+                  alignItems: "center", justifyContent: "center", zIndex: 1100, padding: 16 }}>
+                <div onClick={(e) => e.stopPropagation()} className="card"
+                  style={{ width: "min(640px, 100%)", maxHeight: "88vh", display: "flex", flexDirection: "column", padding: 0 }}>
+                  <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--tv-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div className="section-title" style={{ marginBottom: 2 }}>
+                        <i className="ti ti-list-search" style={{ color: "var(--tv-forest)", marginRight: 6 }}></i>
+                        Transactions{txnModal.category !== "all" ? ` · ${txnModal.category}` : ""}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--tv-text-muted)" }}>{periodLabel}</div>
+                    </div>
+                    <button className="icon-btn" onClick={close} title="Close"><i className="ti ti-x"></i></button>
+                  </div>
+
+                  {/* Totals */}
+                  <div style={{ display: "flex", gap: 18, flexWrap: "wrap", padding: "12px 18px", borderBottom: "1px solid var(--tv-border)", background: "var(--tv-bg)" }}>
+                    <div><div style={{ fontSize: 11, color: "var(--tv-text-muted)" }}>Transactions</div><div style={{ fontWeight: 600 }}>{rows.length}</div></div>
+                    <div><div style={{ fontSize: 11, color: "var(--tv-text-muted)" }}>Spent</div><div style={{ fontWeight: 600, color: "var(--tv-negative)" }}>{currency(Math.round(spent))}</div></div>
+                    {income > 0 && <div><div style={{ fontSize: 11, color: "var(--tv-text-muted)" }}>Income</div><div style={{ fontWeight: 600, color: "var(--tv-positive)" }}>{currency(Math.round(income))}</div></div>}
+                  </div>
+
+                  {/* Controls */}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", padding: "12px 18px", borderBottom: "1px solid var(--tv-border)" }}>
+                    <input className="form-input" style={{ flex: 1, minWidth: 160, height: 34 }} placeholder="Search by name or category…"
+                      value={txnSearch} onChange={(e) => setTxnSearch(e.target.value)} />
+                    <select className="form-input" style={{ width: 150, height: 34 }}
+                      value={txnModal.category} onChange={(e) => setTxnModal({ category: e.target.value })}>
+                      {cats.map((c) => <option key={c} value={c}>{c === "all" ? "All categories" : c}</option>)}
+                    </select>
+                    <div className="seg-control">
+                      {[["recent", "Recent"], ["amount", "Amount"]].map(([val, lbl]) => (
+                        <button key={val} className={`seg-btn ${txnSort === val ? "active" : ""}`} onClick={() => setTxnSort(val)}>{lbl}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* List */}
+                  <div style={{ overflowY: "auto", padding: "6px 0" }}>
+                    {txnsLoading ? (
+                      <div style={{ padding: 28, textAlign: "center", color: "var(--tv-text-muted)" }}><i className="ti ti-loader spin"></i> Loading transactions…</div>
+                    ) : rows.length === 0 ? (
+                      <div className="empty-state" style={{ padding: 28 }}>
+                        <i className="ti ti-receipt-off"></i>
+                        <p>{txnsLoaded ? "No transactions match this view." : "No linked transactions yet — link a bank or card on the Accounts page."}</p>
+                      </div>
+                    ) : rows.map((t, i) => {
+                      const amt = Number(t.amount) || 0;
+                      const isIncome = amt < 0;
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", borderBottom: "1px solid var(--tv-border-light, var(--tv-border))" }}>
+                          <div className={`item-icon ${isIncome ? "icon-forest" : "icon-red"}`} style={{ width: 30, height: 30, fontSize: 14, flexShrink: 0 }}>
+                            <i className={isIncome ? "ti ti-arrow-down-left" : iconForCategory(txnCategory(t))}></i>
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{t.name || "—"}</div>
+                            <div style={{ fontSize: 12, color: "var(--tv-text-muted)" }}>{t.date || ""} · {txnCategory(t)}</div>
+                          </div>
+                          <div style={{ fontWeight: 600, whiteSpace: "nowrap", color: isIncome ? "var(--tv-positive)" : "var(--tv-text-primary)" }}>
+                            {isIncome ? "+" : "−"}{currency(Math.abs(Math.round(amt)))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {showAfSettings && (
             <div onClick={closeAfSettings}
               style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
