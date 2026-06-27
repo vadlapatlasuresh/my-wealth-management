@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { extractPdfText } from "../utils/pdfText";
+import { recognizeImage, isOcrableImage } from "../utils/ocr";
 
 const INSIGHT_STYLE = {
   TIP:         { icon: "ti ti-bulb", color: "var(--tv-forest)", bg: "var(--tv-sage-pale)" },
@@ -102,6 +103,7 @@ export default function TaxPage() {
   const [guideOpen, setGuideOpen] = useState(true);
   const [docBusy, setDocBusy] = useState(false);
   const [docErr, setDocErr] = useState("");
+  const [ocrStatus, setOcrStatus] = useState(null); // { name, pct } while OCR'ing a photo
   const [history, setHistory] = useState([]); // year-over-year estimate snapshots
   // Joint filing: one W-2 entry per form (per filer); uploaded docs tracked for delete.
   const [w2s, setW2s] = useState([{ id: uid(), filerId: "you", employer: "", wages: "", withholding: "" }]);
@@ -373,17 +375,23 @@ export default function TaxPage() {
     return { ok: true };
   };
 
-  // Best-effort text from a file (never throws). PDFs → pdf.js text; images → "" (Textract reads
-  // the bytes when enabled); text/CSV → raw. The raw bytes are always sent too, so the backend can
-  // OCR with Textract regardless.
+  // Best-effort text from a file (never throws). PDFs → pdf.js text; images → client-side OCR
+  // (tesseract.js) so a photo/scan of a W-2 extracts without any cloud OCR; text/CSV → raw. The
+  // raw bytes are always sent too, so the backend can still use Textract when configured.
   const safeText = async (file) => {
     const type = file.type || "";
     const name = (file.name || "").toLowerCase();
     try {
       if (type === "application/pdf" || name.endsWith(".pdf")) return await extractPdfText(file);
-      if (type.startsWith("image/")) return "";
+      if (isOcrableImage(file)) {
+        setOcrStatus({ name: file.name, pct: 0 });
+        const text = await recognizeImage(file, (p) =>
+          setOcrStatus({ name: file.name, pct: Math.round((p || 0) * 100) }));
+        setOcrStatus(null);
+        return text;
+      }
       return await file.text();
-    } catch { return ""; }
+    } catch { setOcrStatus(null); return ""; }
   };
 
   // Read a file as a base64 data URL (so the backend can hand the bytes to Textract). Skips very
@@ -559,7 +567,8 @@ export default function TaxPage() {
         </div>
         <div className="item-sub" style={{ fontSize: 12.5, marginBottom: 12 }}>
           Drop in one or more forms for everyone in your household — W-2, 1099-NEC/MISC/INT/DIV/R, 1098,
-          1098-E, 1098-T. Each W-2 becomes its own entry; tag every file to a filer and delete any to
+          1098-E, 1098-T. PDFs, <strong>photos and screenshots</strong> all work — images are read with
+          on-device OCR. Each W-2 becomes its own entry; tag every file to a filer and delete any to
           remove its figures. Parsed in your session and <strong>never stored</strong>.
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
@@ -573,7 +582,13 @@ export default function TaxPage() {
           style={{ marginTop: 8, width: "100%", resize: "vertical" }}
           onBlur={(e) => { if (e.target.value.trim()) { onPasteParse(e.target.value); e.target.value = ""; } }} />
 
-        {docBusy && <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document(s)…</p>}
+        {ocrStatus ? (
+          <p className="item-sub" style={{ fontSize: 12 }}>
+            <i className="ti ti-loader spin"></i> Reading photo <strong>{ocrStatus.name}</strong> with on-device OCR… {ocrStatus.pct}%
+          </p>
+        ) : docBusy ? (
+          <p className="item-sub" style={{ fontSize: 12 }}><i className="ti ti-loader spin"></i> Reading your document(s)…</p>
+        ) : null}
         {docErr && <p className="item-sub" style={{ color: "var(--tv-negative)", fontSize: 12.5 }}><i className="ti ti-alert-triangle"></i> {docErr}</p>}
 
         {docs.length > 0 && (
