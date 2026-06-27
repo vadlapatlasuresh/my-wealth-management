@@ -21,7 +21,11 @@ public record TaxRuleSet(
         Map<FilingStatus, List<Bracket>> brackets,
         Map<FilingStatus, BigDecimal> standardDeduction,
         BigDecimal childTaxCredit,
-        Map<FilingStatus, BigDecimal> ctcPhaseoutStart) {
+        Map<FilingStatus, BigDecimal> ctcPhaseoutStart,
+        // Long-term capital-gains breakpoints (a taxable-income level; gains stack on top of
+        // ordinary income): 0% up to ltcgZeroCeiling, 15% up to ltcgFifteenCeiling, 20% above.
+        Map<FilingStatus, BigDecimal> ltcgZeroCeiling,
+        Map<FilingStatus, BigDecimal> ltcgFifteenCeiling) {
 
     /** A marginal bracket: {@code rate} applies to income up to {@code upTo} (null = no cap). */
     public record Bracket(BigDecimal rate, BigDecimal upTo) {}

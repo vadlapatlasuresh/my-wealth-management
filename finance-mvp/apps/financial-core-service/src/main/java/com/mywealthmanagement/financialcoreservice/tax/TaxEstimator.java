@@ -55,9 +55,16 @@ public final class TaxEstimator {
                 .max(BigDecimal.ZERO);
         BigDecimal taxable = taxableBeforeQbi.subtract(qbiDeduction).max(BigDecimal.ZERO);
 
+        // Long-term capital gains are in taxable income but taxed at preferential rates: ordinary
+        // income fills the brackets, the gains stack on top and are taxed at 0/15/20%. Cap the
+        // preferential portion at taxable income (deductions may have absorbed some of the gains).
+        BigDecimal ltcg = nz(in.longTermCapitalGains()).max(BigDecimal.ZERO).min(taxable);
+        BigDecimal ordinaryTaxable = taxable.subtract(ltcg).max(BigDecimal.ZERO);
+
         List<TaxRuleSet.Bracket> brackets = rules.brackets().get(status);
-        BigDecimal taxBefore = applyBrackets(taxable, brackets);
-        BigDecimal marginal = marginalRate(taxable, brackets);
+        BigDecimal capitalGainsTax = capitalGainsTax(ordinaryTaxable, ltcg, status, rules);
+        BigDecimal taxBefore = applyBrackets(ordinaryTaxable, brackets).add(capitalGainsTax);
+        BigDecimal marginal = marginalRate(ordinaryTaxable, brackets);
 
         BigDecimal ctc = childTaxCredit(in.dependentsUnder17(), agi, status, rules);
         BigDecimal incomeTax = taxBefore.subtract(ctc).max(BigDecimal.ZERO);
@@ -76,6 +83,7 @@ public final class TaxEstimator {
         e.setDeductionType(itemize ? "ITEMIZED" : "STANDARD");
         e.setDeductionUsed(money(deduction));
         e.setQbiDeduction(money(qbiDeduction));
+        e.setCapitalGainsTax(money(capitalGainsTax));
         e.setTaxableIncome(money(taxable));
         e.setTaxBeforeCredits(money(taxBefore));
         e.setChildTaxCredit(money(ctc));
@@ -149,6 +157,31 @@ public final class TaxEstimator {
         BigDecimal steps = over.divide(BigDecimal.valueOf(1000), 0, RoundingMode.CEILING);
         BigDecimal reduction = steps.multiply(BigDecimal.valueOf(50));
         return base.subtract(reduction).max(BigDecimal.ZERO);
+    }
+
+    private static final BigDecimal LTCG_15 = new BigDecimal("0.15");
+    private static final BigDecimal LTCG_20 = new BigDecimal("0.20");
+
+    /**
+     * Preferential long-term capital-gains tax. The gains stack on top of ordinary taxable income:
+     * the part of the stack below the 0% ceiling is untaxed, the part up to the 15% ceiling is 15%,
+     * and the remainder is 20%.
+     */
+    private static BigDecimal capitalGainsTax(BigDecimal ordinaryTaxable, BigDecimal ltcg,
+                                              FilingStatus status, TaxRuleSet rules) {
+        if (ltcg.signum() <= 0) return BigDecimal.ZERO;
+        BigDecimal zeroCeil = rules.ltcgZeroCeiling().getOrDefault(status, BigDecimal.ZERO);
+        BigDecimal fifteenCeil = rules.ltcgFifteenCeiling().getOrDefault(status, BigDecimal.ZERO);
+        BigDecimal bottom = ordinaryTaxable;
+        BigDecimal top = ordinaryTaxable.add(ltcg);
+        BigDecimal in15 = clamp(fifteenCeil, bottom, top).subtract(clamp(zeroCeil, bottom, top)).max(BigDecimal.ZERO);
+        BigDecimal in20 = top.subtract(clamp(fifteenCeil, bottom, top)).max(BigDecimal.ZERO);
+        return in15.multiply(LTCG_15).add(in20.multiply(LTCG_20));
+    }
+
+    /** v constrained to [lo, hi]. */
+    private static BigDecimal clamp(BigDecimal v, BigDecimal lo, BigDecimal hi) {
+        return v.max(lo).min(hi);
     }
 
     private static BigDecimal nz(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }

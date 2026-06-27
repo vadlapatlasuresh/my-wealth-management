@@ -27,12 +27,14 @@ public record TaxEstimateInput(
         int dependentsUnder17,
         BigDecimal withholding,
         BigDecimal selfEmploymentIncome,
-        BigDecimal qualifiedBusinessIncome) {
+        BigDecimal qualifiedBusinessIncome,
+        // Long-term capital gains included in grossIncome but taxed at preferential rates.
+        BigDecimal longTermCapitalGains) {
 
     /** Back-compat constructor for callers without SE / QBI income (treated as zero). */
     public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding) {
-        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null, null);
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding, null, null, null);
     }
 
     /** Back-compat constructor without QBI income (treated as zero). */
@@ -40,6 +42,14 @@ public record TaxEstimateInput(
                             BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
                             BigDecimal selfEmploymentIncome) {
         this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
-                selfEmploymentIncome, null);
+                selfEmploymentIncome, null, null);
+    }
+
+    /** Back-compat constructor without long-term capital gains (treated as zero). */
+    public TaxEstimateInput(FilingStatus filingStatus, BigDecimal grossIncome, BigDecimal adjustments,
+                            BigDecimal itemizedDeductions, int dependentsUnder17, BigDecimal withholding,
+                            BigDecimal selfEmploymentIncome, BigDecimal qualifiedBusinessIncome) {
+        this(filingStatus, grossIncome, adjustments, itemizedDeductions, dependentsUnder17, withholding,
+                selfEmploymentIncome, qualifiedBusinessIncome, null);
     }
 }
