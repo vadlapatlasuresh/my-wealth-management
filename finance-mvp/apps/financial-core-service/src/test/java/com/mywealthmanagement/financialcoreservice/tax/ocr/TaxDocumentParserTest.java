@@ -39,6 +39,30 @@ class TaxDocumentParserTest {
     }
 
     @Test
+    void parsesW2WithRaggedWhitespaceAndWrappedCaption() {
+        // Real PDFs extract with uneven spacing and captions that wrap across lines; whitespace
+        // normalization lets the multi-word labels still match.
+        String w2 = "ACME PAYROLL\nForm W-2   Wage and Tax Statement    2025\n"
+                + "1    Wages,  tips,  other\ncompensation         2  Federal income tax withheld\n"
+                + "   84,200.00              9,310.00\n";
+        ParsedTaxDocument r = parser.parse(w2);
+        assertThat(r.documentType()).isEqualTo("W2");
+        assertThat(field(r, "wages")).isEqualByComparingTo("84200.00");
+        assertThat(field(r, "withholding")).isEqualByComparingTo("9310.00");
+    }
+
+    @Test
+    void parsesValueExtractedAboveItsLabel() {
+        // Some PDFs surface the box value before its caption — the before-the-label fallback
+        // catches it instead of leaving the field blank.
+        String doc = "Form 1098-E Student Loan Interest Statement 2025\n2,180.45\n"
+                + "1 Student loan interest received by lender";
+        ParsedTaxDocument r = parser.parse(doc);
+        assertThat(r.documentType()).isEqualTo("1098-E");
+        assertThat(field(r, "studentLoanInterest")).isEqualByComparingTo("2180.45");
+    }
+
+    @Test
     void parses1099NecAsSelfEmployment() {
         String f = """
                 Form 1099-NEC 2024

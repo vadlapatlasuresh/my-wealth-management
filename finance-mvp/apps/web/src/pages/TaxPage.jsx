@@ -185,6 +185,7 @@ export default function TaxPage() {
   const retagDoc = (id, filerId) => setDocs((ds) => ds.map((d) => (d.id === id ? { ...d, filerId } : d)));
   const docSummary = (d) => {
     if (d.status === "unreadable") return d.note || "Couldn't read — enter the figures manually.";
+    if (d.status === "needs_input") return d.note || "Recognized — type the figures in the row above.";
     if (d.w2Id) {
       const w = w2s.find((x) => x.id === d.w2Id);
       return w ? `Wages ${usd(numOf(w.wages))}${numOf(w.withholding) ? ` · Withheld ${usd(numOf(w.withholding))}` : ""} → applied` : "W-2 removed";
@@ -328,20 +329,30 @@ export default function TaxPage() {
     if (r?.taxYear === 2024 || r?.taxYear === 2025) setForm((f) => ({ ...f, year: r.taxYear }));
     const get = (k) => { const f = fields.find((x) => x.key === k); return f ? numOf(f.amount) : 0; };
 
-    // A W-2 becomes its own W-2 entry (tagged to the primary filer; the user can re-tag it).
+    // A recognized W-2 always becomes its own W-2 entry (tagged to the primary filer; the user
+    // can re-tag it). When we read the boxes we pre-fill them; when we couldn't (e.g. a photo/scan
+    // with OCR off) we still drop in a row linked to the file so the user just types the two numbers
+    // instead of hunting for where to enter them.
     if (docType === "W2") {
       const wages = get("wages"), wh = get("withholding");
-      if (wages > 0 || wh > 0) {
-        const w2Id = uid();
-        setW2s((xs) => {
-          const entry = { id: w2Id, filerId: "you", employer: "", wages: String(Math.round(wages)), withholding: String(Math.round(wh)) };
-          const blankIdx = xs.findIndex((w) => !numOf(w.wages) && !numOf(w.withholding) && !w.employer.trim());
-          if (blankIdx >= 0) { const copy = [...xs]; copy[blankIdx] = entry; return copy; }
-          return [...xs, entry];
-        });
-        setDocs((ds) => [{ id: uid(), fileName, docType, filerId: "you", w2Id, status: "ok" }, ...ds]);
-        return { ok: true };
-      }
+      const readOk = wages > 0 || wh > 0;
+      const w2Id = uid();
+      setW2s((xs) => {
+        const entry = {
+          id: w2Id, filerId: "you", employer: "",
+          wages: readOk && wages > 0 ? String(Math.round(wages)) : "",
+          withholding: readOk && wh > 0 ? String(Math.round(wh)) : "",
+        };
+        const blankIdx = xs.findIndex((w) => !numOf(w.wages) && !numOf(w.withholding) && !w.employer.trim());
+        if (blankIdx >= 0) { const copy = [...xs]; copy[blankIdx] = entry; return copy; }
+        return [...xs, entry];
+      });
+      setDocs((ds) => [{
+        id: uid(), fileName, docType, filerId: "you", w2Id,
+        status: readOk ? "ok" : "needs_input",
+        note: readOk ? null : "Recognized a W-2 but couldn't read the boxes — type Wages (Box 1) and Federal tax withheld (Box 2) in the W-2 row above.",
+      }, ...ds]);
+      return { ok: readOk };
     }
 
     // Any other form routes its figures into the matching category fields.
@@ -592,11 +603,11 @@ export default function TaxPage() {
                   </div>
                   <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                     {group.map((d) => (
-                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--tv-card)", border: `1px solid ${d.status === "unreadable" ? "var(--tv-negative)" : "var(--tv-border)"}`, borderRadius: "var(--radius-md)", padding: "8px 10px" }}>
-                        <i className={d.status === "unreadable" ? "ti ti-alert-triangle" : "ti ti-file-text"} style={{ color: d.status === "unreadable" ? "var(--tv-negative)" : "var(--tv-forest)" }}></i>
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, background: "var(--tv-card)", border: `1px solid ${d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "var(--tv-gold)" : "var(--tv-border)"}`, borderRadius: "var(--radius-md)", padding: "8px 10px" }}>
+                        <i className={d.status === "unreadable" ? "ti ti-alert-triangle" : d.status === "needs_input" ? "ti ti-pencil" : "ti ti-file-text"} style={{ color: d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "var(--tv-gold)" : "var(--tv-forest)" }}></i>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="item-name" style={{ fontSize: 12.5 }}>{d.fileName} <span className="badge badge-gray">{DOC_LABELS[d.docType] || d.docType}</span></div>
-                          <div className="item-sub" style={{ fontSize: 11.5, color: d.status === "unreadable" ? "var(--tv-negative)" : undefined }}>{docSummary(d)}</div>
+                          <div className="item-sub" style={{ fontSize: 11.5, color: d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "#B7791F" : undefined }}>{docSummary(d)}</div>
                         </div>
                         <select className="form-select" style={{ maxWidth: 104, fontSize: 12, padding: "4px 8px" }} value={d.filerId} onChange={(e) => retagDoc(d.id, e.target.value)}>
                           {filers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
