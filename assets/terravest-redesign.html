@@ -1351,6 +1351,14 @@ a { text-decoration: none; color: inherit; }
 
       <!-- =================== BUDGET =================== -->
       <div id="page-budget" class="page">
+        <!-- Keep-it-current drift nudge (shows when live spending no longer matches the saved budget) -->
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:var(--tv-sage-pale);border:1px solid var(--tv-forest);border-radius:var(--radius-md);">
+          <i class="ti ti-refresh" style="color:var(--tv-forest);"></i>
+          <span style="flex:1;min-width:200px;font-size:13px;">Your recent spending has shifted since you set this budget — 2 new categories, 3 changed. Keep it current?</span>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Refresh actuals</button>
+          <button class="btn btn-primary btn-sm"><i class="ti ti-building-bank"></i> Re-sync</button>
+          <button class="btn btn-secondary btn-sm" style="padding:4px 8px;"><i class="ti ti-x"></i></button>
+        </div>
         <div class="page-header">
           <div>
             <div class="page-title">Budget</div>

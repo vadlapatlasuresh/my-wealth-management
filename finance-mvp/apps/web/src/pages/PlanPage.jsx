@@ -259,6 +259,30 @@ export default function PlanPage({
     api.getDebts().then((res) => setDebts(res || [])).catch(() => {});
   }, []);
 
+  // Phase 5 — detect when live spending has drifted from the saved budget and nudge to re-sync.
+  // Runs when a budget is loaded for a real month; quiet unless the drift is meaningful.
+  useEffect(() => {
+    if (isAggregate || dirty || driftDismissed || budgetLines.length === 0) { setDrift(null); return; }
+    let cancelled = false;
+    api.getTransactions().then((txns) => {
+      if (cancelled) return;
+      const { byCat } = liveSpend(Array.isArray(txns) ? txns : []);
+      if (Object.keys(byCat).length === 0) return;
+      const budgetKeys = new Set(budgetLines.map((l) => l.category.toLowerCase()));
+      const newCats = Object.values(byCat).filter((v) => v.spent >= 50 && !budgetKeys.has(v.label.toLowerCase())).map((v) => v.label);
+      const changed = budgetLines.filter((l) => {
+        const live = byCat[l.category.toLowerCase()]?.spent || 0;
+        const budgeted = Number(l.amount) || 0;
+        return budgeted > 0 && Math.abs(live - budgeted) >= 50 && Math.abs(live - budgeted) / budgeted >= 0.25;
+      });
+      // Only nudge for meaningful drift (a new category, or several changed) to avoid noise.
+      if (newCats.length >= 1 || changed.length >= 2) setDrift({ newCats, changed });
+      else setDrift(null);
+    }).catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budgetLines, currentMonth, isAggregate, dirty, driftDismissed, afSettings]);
+
   const totalBudget = useMemo(() => budgetLines.reduce((s, r) => s + (Number(r.amount) || 0), 0), [budgetLines]);
   const totalSpent = useMemo(() => budgetLines.reduce((s, r) => s + (Number(r.spent) || 0), 0), [budgetLines]);
   const pctUsed = totalBudget > 0 ? Math.round((totalSpent / totalBudget) * 100) : 0;
@@ -304,6 +328,46 @@ export default function PlanPage({
   const [review, setReview] = useState(null);
   const [reviewMode, setReviewMode] = useState("merge"); // "replace" | "merge"
   const [expandedLine, setExpandedLine] = useState(null); // review line id whose transactions are shown
+  // Phase 5 — keep-it-current: when live spending drifts from the saved budget, nudge to re-sync.
+  const [drift, setDrift] = useState(null);             // { newCats:[], changed:[] } or null
+  const [driftDismissed, setDriftDismissed] = useState(false);
+
+  // Lightweight categorized spend for the current period, honoring the auto-fill filters
+  // (account scope, excludes, renames). Used by the drift check + "Refresh actuals". Keep the
+  // filtering in sync with autoFillFromAccounts.
+  function liveSpend(all) {
+    const inMonth = all.filter((t) => String(t.date || "").startsWith(currentMonth));
+    let use = inMonth.length ? inMonth : all;
+    if (Array.isArray(afSettings.accounts) && afSettings.accounts.length) {
+      use = use.filter((t) => afSettings.accounts.includes(t.accountId));
+    }
+    const excluded = new Set((afSettings.excluded || []).map((c) => c.toLowerCase()));
+    let income = 0;
+    const byCat = {}; // lowercase category -> { label, spent }
+    for (const t of use) {
+      const amt = Number(t.amount) || 0;
+      const raw = (t.category || "Uncategorized").trim() || "Uncategorized";
+      const cat = afSettings.map[raw.toLowerCase()] || raw;
+      if (/transfer|payment|credit card|loan/i.test(raw) || excluded.has(cat.toLowerCase()) || excluded.has(raw.toLowerCase())) continue;
+      if (amt < 0) income += -amt;
+      else { (byCat[cat.toLowerCase()] = byCat[cat.toLowerCase()] || { label: cat, spent: 0 }).spent += amt; }
+    }
+    return { income, byCat };
+  }
+
+  // Refresh just the actuals (the "spent" on each line) from the latest transactions — the light
+  // alternative to a full re-sync. Doesn't change budget targets, so it never marks the budget dirty.
+  async function refreshActuals() {
+    try {
+      const txns = await api.getTransactions();
+      const { byCat } = liveSpend(Array.isArray(txns) ? txns : []);
+      setBudgetLines((prev) => prev.map((l) => ({ ...l, spent: Math.round(byCat[l.category.toLowerCase()]?.spent || 0) })));
+      setDrift(null);
+      setNotice("Actuals refreshed from your latest transactions.");
+    } catch (e) {
+      setNotice(e?.message || "Couldn't refresh — please try again.");
+    }
+  }
 
   // Read linked transactions, build a proposal, and OPEN the review sheet (nothing is applied
   // to the budget yet — the user adjusts and confirms first).
@@ -579,6 +643,19 @@ export default function PlanPage({
       )}
       {planTab === "budget" && (
         <div id="page-budget" className="page active">
+          {drift && !isAggregate && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", padding: "10px 14px", marginBottom: 14, background: "var(--tv-sage-pale)", border: "1px solid var(--tv-forest)", borderRadius: "var(--radius-md)" }}>
+              <i className="ti ti-refresh" style={{ color: "var(--tv-forest)" }}></i>
+              <span style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
+                Your recent spending has shifted since you set this budget
+                {drift.newCats.length > 0 && ` — ${drift.newCats.length} new categor${drift.newCats.length === 1 ? "y" : "ies"}`}
+                {drift.changed.length > 0 && `${drift.newCats.length ? "," : " —"} ${drift.changed.length} changed`}. Keep it current?
+              </span>
+              <button className="btn btn-secondary btn-sm" onClick={refreshActuals}><i className="ti ti-refresh"></i> Refresh actuals</button>
+              <button className="btn btn-primary btn-sm" onClick={autoFillFromAccounts}><i className="ti ti-building-bank"></i> Re-sync</button>
+              <button className="icon-btn" title="Dismiss" onClick={() => { setDrift(null); setDriftDismissed(true); }}><i className="ti ti-x"></i></button>
+            </div>
+          )}
           <div className="page-header">
             <div>
               <div className="page-title">Budget</div>
