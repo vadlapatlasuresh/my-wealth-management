@@ -25,7 +25,14 @@ public record TaxRuleSet(
         // Long-term capital-gains breakpoints (a taxable-income level; gains stack on top of
         // ordinary income): 0% up to ltcgZeroCeiling, 15% up to ltcgFifteenCeiling, 20% above.
         Map<FilingStatus, BigDecimal> ltcgZeroCeiling,
-        Map<FilingStatus, BigDecimal> ltcgFifteenCeiling) {
+        Map<FilingStatus, BigDecimal> ltcgFifteenCeiling,
+        // Net Investment Income Tax (3.8%) MAGI threshold per filing status (statutory, not
+        // inflation-adjusted). NIIT applies to the lesser of net investment income or MAGI over this.
+        Map<FilingStatus, BigDecimal> niitThreshold,
+        // American Opportunity education credit MAGI phase-out range (full credit up to start,
+        // zero at end). MFS can't claim it, so its range is 0..0.
+        Map<FilingStatus, BigDecimal> educationPhaseoutStart,
+        Map<FilingStatus, BigDecimal> educationPhaseoutEnd) {
 
     /** A marginal bracket: {@code rate} applies to income up to {@code upTo} (null = no cap). */
     public record Bracket(BigDecimal rate, BigDecimal upTo) {}

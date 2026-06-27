@@ -45,6 +45,39 @@ class TaxEstimatorTest {
     }
 
     @Test
+    void niit_appliesToInvestmentIncomeOverThreshold() {
+        // Single, AGI 250k, $60k net investment income. Threshold 200k -> MAGI over = 50k.
+        // NIIT = 3.8% * min(60,000, 50,000) = 1,900.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("250000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, new BigDecimal("60000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getNetInvestmentIncomeTax()).isEqualByComparingTo("1900.00");
+
+        // Below the threshold there is no NIIT.
+        var below = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("150000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, new BigDecimal("60000"));
+        assertThat(TaxEstimator.estimate(below, rules.forYear(2025)).getNetInvestmentIncomeTax())
+                .isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void educationCredit_aotc_andPhaseOut() {
+        // Single, gross 60k, $4,000 qualified tuition. AOTC = 100%*2000 + 25%*2000 = 2,500; MAGI
+        // 60k below the 80k phase-out start so full credit. Reduces tax 5,161.50 -> 2,661.50.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("60000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, null, new BigDecimal("4000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getEducationCredit()).isEqualByComparingTo("2500.00");
+        assertThat(e.getTaxAfterCredits()).isEqualByComparingTo("2661.50");
+
+        // MAGI 85k is halfway through the 80k–90k phase-out -> 50% of the credit = 1,250.
+        var phased = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("85000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, null, new BigDecimal("4000"));
+        assertThat(TaxEstimator.estimate(phased, rules.forYear(2025)).getEducationCredit())
+                .isEqualByComparingTo("1250.00");
+    }
+
+    @Test
     void marriedJoint2025_itemized_withChildren() {
         // AGI 140k (150k - 10k adj), itemized 35k > std 30k. taxable 105k. 2 kids, no phase-out.
         var e = TaxEstimator.estimate(in(FilingStatus.MARRIED_JOINT, "150000", "10000", "35000", 2, "15000"), rules.forYear(2025));

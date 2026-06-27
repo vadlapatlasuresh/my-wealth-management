@@ -198,6 +198,12 @@ public class TaxController {
                 num(body.get("retirementIncome")), num(body.get("otherIncome")),
                 num(body.get("grossIncome"))); // legacy single field
 
+        // Net investment income for NIIT: interest + dividends + capital gains + positive (passive)
+        // rental. Excludes wages, self-employment and retirement distributions.
+        BigDecimal netInvestmentIncome = sum(
+                num(body.get("interestIncome")), num(body.get("dividendIncome")),
+                capitalGains, rental.max(BigDecimal.ZERO));
+
         // QBI-eligible income: self-employment + positive rental (a rental trade/business).
         BigDecimal qbiIncome = selfEmployment.add(rental.max(BigDecimal.ZERO));
 
@@ -221,7 +227,9 @@ public class TaxController {
                 num(body.get("withholding")),
                 selfEmployment,
                 qbiIncome,
-                capitalGains);
+                capitalGains,
+                netInvestmentIncome,
+                num(body.get("educationExpenses")).max(BigDecimal.ZERO));
     }
 
     private static BigDecimal sum(BigDecimal... values) {
