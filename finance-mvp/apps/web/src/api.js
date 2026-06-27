@@ -192,6 +192,8 @@ export const api = {
     request(`/api/v1/aggregation/items/${encodeURIComponent(plaidItemId)}`, { method: "DELETE" }),
   // Brokerage positions + trade activity synced from Plaid Investments (Investments tab).
   getHoldings: () => request("/api/v1/aggregation/holdings"),
+  // Re-pull holdings + investment activity from the brokers; returns refreshed holdings.
+  refreshHoldings: () => request("/api/v1/aggregation/holdings/refresh", { method: "POST" }),
   getInvestmentTransactions: () => request("/api/v1/aggregation/investment-transactions"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Recurring bills/subscriptions detected from transaction history (upcoming first).

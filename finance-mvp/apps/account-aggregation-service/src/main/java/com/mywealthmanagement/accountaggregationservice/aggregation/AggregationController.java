@@ -100,6 +100,15 @@ public class AggregationController {
         return ResponseEntity.ok(holdingService.getHoldingsByUserId(getUserId()));
     }
 
+    /** Re-pull holdings + investment activity from Plaid for all linked items, then return
+     *  the refreshed holdings. Powers the Investments "Refresh" action. */
+    @PostMapping("/holdings/refresh")
+    public ResponseEntity<List<HoldingDto>> refreshHoldings() {
+        Long userId = getUserId();
+        plaidService.refreshInvestments(userId);
+        return ResponseEntity.ok(holdingService.getHoldingsByUserId(userId));
+    }
+
     /** Brokerage trade/activity history synced from Plaid Investments (newest first). */
     @GetMapping("/investment-transactions")
     public ResponseEntity<List<InvestmentTransactionDto>> getInvestmentTransactions() {

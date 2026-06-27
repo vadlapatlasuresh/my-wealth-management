@@ -2584,6 +2584,7 @@ a { text-decoration: none; color: inherit; }
           <div><div class="page-title">Invest</div><div class="page-subtitle">Holdings, linked brokers, alternatives, and the TerraVest marketplace</div></div>
           <div class="page-actions" style="align-items:center;">
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
+            <button class="btn btn-secondary btn-sm" title="Re-pull holdings &amp; activity from your brokers"><i class="ti ti-refresh"></i> Refresh</button>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export CSV</button>
           </div>
         </div>
@@ -2599,7 +2600,7 @@ a { text-decoration: none; color: inherit; }
         <!-- ===== Tab 1: Stocks & ETFs ===== -->
         <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-coins" style="color:var(--tv-forest-light)"></i> Total Invested</div><div class="kpi-value">$161,260</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Day Change</div><div class="kpi-value" style="color:var(--tv-positive);">+$1,284</div><div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +0.80% today</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Total Gain / Loss</div><div class="kpi-value" style="color:var(--tv-positive);">+$28,680</div><div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +21.6% all-time</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-list" style="color:#6B46C1"></i> Holdings</div><div class="kpi-value">7</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-donut" style="color:var(--tv-gold)"></i> Allocations</div><div class="kpi-value" style="font-size:18px;">Diversified</div></div>
         </div>
@@ -2618,7 +2619,7 @@ a { text-decoration: none; color: inherit; }
             <div class="section-title">Portfolio snapshot</div>
             <div class="grid-2" style="gap:12px;">
               <div class="kpi-card" style="margin:0;"><div class="kpi-label">Total Invested</div><div class="kpi-value" style="font-size:18px;">$161,260</div></div>
-              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Day Change</div><div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">+$1,284</div></div>
+              <div class="kpi-card" style="margin:0;"><div class="kpi-label">Gain / Loss</div><div class="kpi-value" style="font-size:18px;color:var(--tv-positive);">+$28,680</div></div>
               <div class="kpi-card" style="margin:0;"><div class="kpi-label">Positions</div><div class="kpi-value" style="font-size:18px;">7</div></div>
               <div class="kpi-card" style="margin:0;"><div class="kpi-label">Cash</div><div class="kpi-value" style="font-size:18px;">$12,900</div></div>
             </div>
@@ -2635,14 +2636,14 @@ a { text-decoration: none; color: inherit; }
           </div>
           <div class="table-scroll">
             <table class="tv-table">
-              <thead><tr><th>Symbol</th><th>Name</th><th>Broker</th><th>Qty</th><th>Price</th><th>Mkt Value</th><th>Day Chg</th></tr></thead>
+              <thead><tr><th>Symbol</th><th>Name</th><th>Broker</th><th>Qty</th><th>Price</th><th>Mkt Value</th><th>Gain / Loss</th></tr></thead>
               <tbody>
-                <tr><td style="font-weight:600;">VTI</td><td>Vanguard Total Stock Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>180</td><td>$268.40</td><td>$48,312</td><td><span style="color:var(--tv-positive);">+0.9%</span></td></tr>
-                <tr><td style="font-weight:600;">VXUS</td><td>Vanguard Total Int'l Stock</td><td><span class="badge badge-gray">Vanguard</span></td><td>410</td><td>$64.10</td><td>$26,281</td><td><span style="color:var(--tv-positive);">+0.4%</span></td></tr>
-                <tr><td style="font-weight:600;">AAPL</td><td>Apple Inc.</td><td><span class="badge badge-gray">Fidelity</span></td><td>120</td><td>$214.80</td><td>$25,776</td><td><span style="color:var(--tv-positive);">+1.2%</span></td></tr>
-                <tr><td style="font-weight:600;">MSFT</td><td>Microsoft Corp.</td><td><span class="badge badge-gray">Fidelity</span></td><td>60</td><td>$432.10</td><td>$25,926</td><td><span style="color:var(--tv-negative);">-0.3%</span></td></tr>
-                <tr><td style="font-weight:600;">BND</td><td>Vanguard Total Bond Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>240</td><td>$72.65</td><td>$17,436</td><td><span style="color:var(--tv-positive);">+0.1%</span></td></tr>
-                <tr><td style="font-weight:600;">SCHD</td><td>Schwab US Dividend Equity</td><td><span class="badge badge-gray">Fidelity</span></td><td>110</td><td>$82.30</td><td>$9,053</td><td><span style="color:var(--tv-positive);">+0.6%</span></td></tr>
+                <tr><td style="font-weight:600;">VTI</td><td>Vanguard Total Stock Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>180</td><td>$268.40</td><td>$48,312</td><td><span style="color:var(--tv-positive);">+$8,420 (+21.1%)</span></td></tr>
+                <tr><td style="font-weight:600;">VXUS</td><td>Vanguard Total Int'l Stock</td><td><span class="badge badge-gray">Vanguard</span></td><td>410</td><td>$64.10</td><td>$26,281</td><td><span style="color:var(--tv-positive);">+$2,140 (+8.9%)</span></td></tr>
+                <tr><td style="font-weight:600;">AAPL</td><td>Apple Inc.</td><td><span class="badge badge-gray">Fidelity</span></td><td>120</td><td>$214.80</td><td>$25,776</td><td><span style="color:var(--tv-positive);">+$9,310 (+56.5%)</span></td></tr>
+                <tr><td style="font-weight:600;">MSFT</td><td>Microsoft Corp.</td><td><span class="badge badge-gray">Fidelity</span></td><td>60</td><td>$432.10</td><td>$25,926</td><td><span style="color:var(--tv-positive);">+$7,890 (+43.7%)</span></td></tr>
+                <tr><td style="font-weight:600;">BND</td><td>Vanguard Total Bond Mkt</td><td><span class="badge badge-gray">Vanguard</span></td><td>240</td><td>$72.65</td><td>$17,436</td><td><span style="color:var(--tv-negative);">-$640 (-3.5%)</span></td></tr>
+                <tr><td style="font-weight:600;">SCHD</td><td>Schwab US Dividend Equity</td><td><span class="badge badge-gray">Fidelity</span></td><td>110</td><td>$82.30</td><td>$9,053</td><td><span style="color:var(--tv-positive);">+$1,560 (+20.8%)</span></td></tr>
               </tbody>
             </table>
           </div>
