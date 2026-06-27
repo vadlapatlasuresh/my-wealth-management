@@ -240,6 +240,52 @@ export default function PlanPage({
     setDirty(true);
   }
 
+  // Build income + spending categories automatically from the user's linked bank/card
+  // transactions, so they don't have to enter everything by hand. Only changes local state
+  // (nothing is saved until they click Save), so it's safe to re-run / undo by reloading.
+  const [autoFilling, setAutoFilling] = useState(false);
+  async function autoFillFromAccounts() {
+    setAutoFilling(true);
+    setNotice("");
+    try {
+      const txns = await api.getTransactions();
+      const all = Array.isArray(txns) ? txns : [];
+      if (all.length === 0) {
+        setNotice("No linked transactions yet — link a bank or card on the Accounts page first.");
+        return;
+      }
+      // Prefer transactions in the selected month; fall back to all recent ones.
+      const inMonth = all.filter((t) => String(t.date || "").startsWith(currentMonth));
+      const use = inMonth.length ? inMonth : all;
+      // Skip transfers / credit-card payments — they're money moving, not income or spending.
+      const isTransfer = (c) => /transfer|payment|credit card|loan/i.test(c || "");
+      let inflow = 0;
+      const byCat = {};
+      for (const t of use) {
+        const amt = Number(t.amount) || 0;
+        const cat = (t.category || "Uncategorized").trim() || "Uncategorized";
+        if (isTransfer(cat)) continue;
+        if (amt < 0) inflow += -amt;              // Plaid: negative = money in (income/deposit)
+        else byCat[cat] = (byCat[cat] || 0) + amt; // positive = money out (spending)
+      }
+      const lines = Object.entries(byCat)
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+        .map(([category, spent]) => ({ category, amount: Math.round(spent), spent: Math.round(spent) }));
+      if (inflow > 0) saveIncome(Math.round(inflow));
+      if (lines.length) { setBudgetLines(lines); setDirty(true); }
+      setNotice(
+        lines.length
+          ? `Auto-filled ${currency(Math.round(inflow))} income and ${lines.length} spending categor${lines.length === 1 ? "y" : "ies"} from your accounts — review the amounts, then Save.`
+          : "Found transactions but nothing to categorize as spending yet."
+      );
+    } catch (e) {
+      setNotice(e?.message || "Couldn't read your transactions — please try again.");
+    } finally {
+      setAutoFilling(false);
+    }
+  }
+
   function applyTemplate() {
     if (!income || income <= 0) {
       setNotice(`Enter your monthly take-home income first to build a ${ruleLabel} budget.`);
@@ -445,6 +491,13 @@ export default function PlanPage({
                 <input type="number" className="form-input" style={{ width: 140, height: 34 }} placeholder="e.g. 6000"
                   value={income || ""} onChange={(e) => saveIncome(Number(e.target.value))} />
                 <button className="btn btn-secondary btn-sm" onClick={applyTemplate}><i className="ti ti-wand"></i> Apply template</button>
+                {!isAggregate && (
+                  <button className="btn btn-primary btn-sm" onClick={autoFillFromAccounts} disabled={autoFilling}
+                    title="Pull income & spending from your linked bank and card transactions">
+                    <i className={`ti ${autoFilling ? "ti-loader spin" : "ti-building-bank"}`}></i>
+                    {autoFilling ? "Reading accounts…" : "Auto-fill from accounts"}
+                  </button>
+                )}
               </div>
             </div>
 

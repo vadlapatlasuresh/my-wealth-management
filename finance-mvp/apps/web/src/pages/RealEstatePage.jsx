@@ -37,6 +37,7 @@ export default function RealEstatePage({ properties = [] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null); // non-null = editing that property
   const [revaluingId, setRevaluingId] = useState(null);
   const [lookingUp, setLookingUp] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -115,10 +116,41 @@ export default function RealEstatePage({ properties = [] }) {
   const onFormChange = (field) => (e) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
+  // Load a property into the form for editing (the address field is the dup key, so it
+  // stays editable but the dup-check skips the property being edited).
+  const startEdit = (prop) => {
+    setEditingId(prop.id);
+    setForm({
+      address: prop.address || "",
+      propertyType: prop.propertyType || prop.type || "PRIMARY_RESIDENCE",
+      purchasePrice: prop.purchasePrice != null ? String(prop.purchasePrice) : "",
+      currentValue: prop.currentValue != null ? String(prop.currentValue) : "",
+      mortgageBalance: prop.loanBalance != null ? String(prop.loanBalance) : "",
+      beds: prop.beds != null ? String(prop.beds) : "",
+      baths: prop.baths != null ? String(prop.baths) : "",
+      sqft: prop.sqft != null ? String(prop.sqft) : "",
+      yearBuilt: prop.yearBuilt != null ? String(prop.yearBuilt) : "",
+      rentEstimate: prop.rentEstimate != null ? String(prop.rentEstimate) : "",
+    });
+    setError("");
+    setNotice("");
+    setShowForm(true);
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!form.address.trim()) {
       setError("Enter an address to add this property.");
+      return;
+    }
+    // Block adding a property whose address is already in the list (ignore the one being
+    // edited). Normalize whitespace/case so "123 Main St" == "123 main st  ".
+    const normAddr = form.address.trim().toLowerCase().replace(/\s+/g, " ");
+    const dup = props.find(
+      (p) => (p.address || "").trim().toLowerCase().replace(/\s+/g, " ") === normAddr && p.id !== editingId
+    );
+    if (dup) {
+      setError("That property is already in your list — edit the existing one instead.");
       return;
     }
     try {
@@ -167,7 +199,7 @@ export default function RealEstatePage({ properties = [] }) {
         }
       }
 
-      await api.addProperty({
+      const payload = {
         address: form.address.trim(),
         propertyType: form.propertyType,
         purchasePrice: filled.purchasePrice ?? 0,
@@ -178,11 +210,19 @@ export default function RealEstatePage({ properties = [] }) {
         sqft: filled.sqft,
         yearBuilt: filled.yearBuilt,
         rentEstimate: filled.rentEstimate,
-      });
+      };
+      if (editingId) {
+        await api.updateProperty(editingId, payload);
+      } else {
+        await api.addProperty(payload);
+      }
       setForm(emptyForm);
       setShowForm(false);
+      setEditingId(null);
       await fetchProperties();
-      if (estimatedValue != null) {
+      if (editingId) {
+        setNotice("Property updated.");
+      } else if (estimatedValue != null) {
         setNotice(
           `Saved. We estimated this property at ${currency(estimatedValue)} from the address — you can refine it anytime with Revalue or by editing.`
         );
@@ -245,7 +285,10 @@ export default function RealEstatePage({ properties = [] }) {
           <LastRefreshed onRefresh={fetchProperties} />
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => setShowForm((s) => !s)}
+            onClick={() => {
+              if (showForm) { setShowForm(false); setEditingId(null); setForm(emptyForm); }
+              else { setEditingId(null); setForm(emptyForm); setError(""); setNotice(""); setShowForm(true); }
+            }}
           >
             <i className={showForm ? "ti ti-x" : "ti ti-plus"}></i>{" "}
             {showForm ? "Cancel" : "Add property"}
@@ -293,10 +336,11 @@ export default function RealEstatePage({ properties = [] }) {
 
       {showForm && (
         <div className="card" style={{ marginBottom: "16px" }}>
-          <div className="section-title">Add a property</div>
+          <div className="section-title">{editingId ? "Edit property" : "Add a property"}</div>
           <div style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: -4, marginBottom: 14 }}>
-            Only the address is required. Leave the value or any detail blank and we'll
-            estimate it from the address when you save.
+            {editingId
+              ? "Update any detail and save your changes."
+              : "Only the address is required. Leave the value or any detail blank and we'll estimate it from the address when you save."}
           </div>
           <form onSubmit={onSubmit}>
             <div className="form-group">
@@ -375,7 +419,7 @@ export default function RealEstatePage({ properties = [] }) {
             </div>
             <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
               <i className={`ti ${saving ? "ti-loader spin" : "ti-check"}`}></i>
-              {saving ? "Saving & estimating…" : "Save property"}
+              {saving ? (editingId ? "Updating…" : "Saving & estimating…") : (editingId ? "Update property" : "Save property")}
             </button>
           </form>
         </div>
@@ -427,7 +471,7 @@ export default function RealEstatePage({ properties = [] }) {
               <button
                 className="btn btn-primary btn-sm"
                 style={{ marginTop: "12px" }}
-                onClick={() => setShowForm(true)}
+                onClick={() => { setEditingId(null); setForm(emptyForm); setShowForm(true); }}
               >
                 <i className="ti ti-plus"></i> Add your first property
               </button>
@@ -470,6 +514,13 @@ export default function RealEstatePage({ properties = [] }) {
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => startEdit(prop)}
+                      title="Edit this property's details"
+                    >
+                      <i className="ti ti-pencil"></i> Edit
+                    </button>
                     <button
                       className="btn btn-secondary btn-sm"
                       onClick={() => onRevalue(prop.id)}
