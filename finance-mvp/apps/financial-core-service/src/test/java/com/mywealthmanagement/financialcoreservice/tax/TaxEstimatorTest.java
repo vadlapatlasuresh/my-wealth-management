@@ -45,6 +45,22 @@ class TaxEstimatorTest {
     }
 
     @Test
+    void niit_appliesToInvestmentIncomeOverThreshold() {
+        // Single, AGI 250k, $60k net investment income. Threshold 200k -> MAGI over = 50k.
+        // NIIT = 3.8% * min(60,000, 50,000) = 1,900.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("250000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, new BigDecimal("60000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getNetInvestmentIncomeTax()).isEqualByComparingTo("1900.00");
+
+        // Below the threshold there is no NIIT.
+        var below = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("150000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, null, new BigDecimal("60000"));
+        assertThat(TaxEstimator.estimate(below, rules.forYear(2025)).getNetInvestmentIncomeTax())
+                .isEqualByComparingTo("0.00");
+    }
+
+    @Test
     void marriedJoint2025_itemized_withChildren() {
         // AGI 140k (150k - 10k adj), itemized 35k > std 30k. taxable 105k. 2 kids, no phase-out.
         var e = TaxEstimator.estimate(in(FilingStatus.MARRIED_JOINT, "150000", "10000", "35000", 2, "15000"), rules.forYear(2025));

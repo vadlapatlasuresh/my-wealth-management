@@ -23,6 +23,7 @@ public class TaxEstimate {
     private BigDecimal deductionUsed;
     private BigDecimal qbiDeduction;        // Section 199A 20% QBI deduction (rental/business)
     private BigDecimal capitalGainsTax;     // preferential 0/15/20% tax on long-term capital gains
+    private BigDecimal netInvestmentIncomeTax; // 3.8% NIIT on investment income over the MAGI threshold
     private BigDecimal taxableIncome;
     private BigDecimal taxBeforeCredits;
     private BigDecimal childTaxCredit;

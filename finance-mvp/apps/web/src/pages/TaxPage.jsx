@@ -888,10 +888,11 @@ export default function TaxPage() {
                 <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
                 {Number(result.capitalGainsTax) > 0 && <Row k="↳ incl. long-term capital gains (0/15/20%)" v={usd(result.capitalGainsTax)} />}
                 {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
-                {seTax > 0 ? (
+                {(seTax > 0 || Number(result.netInvestmentIncomeTax) > 0) ? (
                   <>
                     <Row k="Income tax" v={usd(result.taxAfterCredits)} />
-                    <Row k="Self-employment tax" v={usd(result.selfEmploymentTax)} />
+                    {seTax > 0 && <Row k="Self-employment tax" v={usd(result.selfEmploymentTax)} />}
+                    {Number(result.netInvestmentIncomeTax) > 0 && <Row k="Net investment income tax (3.8%)" v={usd(result.netInvestmentIncomeTax)} />}
                     <Row k="Total federal tax" v={usd(result.totalTax)} bold />
                   </>
                 ) : (

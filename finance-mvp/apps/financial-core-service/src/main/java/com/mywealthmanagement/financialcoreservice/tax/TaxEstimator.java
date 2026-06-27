@@ -69,7 +69,11 @@ public final class TaxEstimator {
         BigDecimal ctc = childTaxCredit(in.dependentsUnder17(), agi, status, rules);
         BigDecimal incomeTax = taxBefore.subtract(ctc).max(BigDecimal.ZERO);
 
-        BigDecimal totalTax = incomeTax.add(seTax);
+        // Net Investment Income Tax: 3.8% on the lesser of net investment income or MAGI (≈ AGI
+        // here) over the statutory threshold.
+        BigDecimal niit = niit(agi, nz(in.netInvestmentIncome()), status, rules);
+
+        BigDecimal totalTax = incomeTax.add(seTax).add(niit);
         BigDecimal effective = gross.signum() > 0
                 ? totalTax.divide(gross, 4, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
@@ -84,6 +88,7 @@ public final class TaxEstimator {
         e.setDeductionUsed(money(deduction));
         e.setQbiDeduction(money(qbiDeduction));
         e.setCapitalGainsTax(money(capitalGainsTax));
+        e.setNetInvestmentIncomeTax(money(niit));
         e.setTaxableIncome(money(taxable));
         e.setTaxBeforeCredits(money(taxBefore));
         e.setChildTaxCredit(money(ctc));
@@ -182,6 +187,16 @@ public final class TaxEstimator {
     /** v constrained to [lo, hi]. */
     private static BigDecimal clamp(BigDecimal v, BigDecimal lo, BigDecimal hi) {
         return v.max(lo).min(hi);
+    }
+
+    private static final BigDecimal NIIT_RATE = new BigDecimal("0.038");
+
+    /** Net Investment Income Tax: 3.8% × min(net investment income, MAGI over the threshold). */
+    private static BigDecimal niit(BigDecimal magi, BigDecimal nii, FilingStatus status, TaxRuleSet rules) {
+        if (nii.signum() <= 0) return BigDecimal.ZERO;
+        BigDecimal threshold = rules.niitThreshold().getOrDefault(status, BigDecimal.ZERO);
+        BigDecimal over = magi.subtract(threshold).max(BigDecimal.ZERO);
+        return nii.min(over).multiply(NIIT_RATE);
     }
 
     private static BigDecimal nz(BigDecimal v) { return v == null ? BigDecimal.ZERO : v; }
