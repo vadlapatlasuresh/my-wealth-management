@@ -303,6 +303,7 @@ export default function PlanPage({
   // null = closed. { income, periodLabel, accounts, lines:[{id,category,amount,spent,count,include}] }
   const [review, setReview] = useState(null);
   const [reviewMode, setReviewMode] = useState("merge"); // "replace" | "merge"
+  const [expandedLine, setExpandedLine] = useState(null); // review line id whose transactions are shown
 
   // Read linked transactions, build a proposal, and OPEN the review sheet (nothing is applied
   // to the budget yet — the user adjusts and confirms first).
@@ -310,12 +311,19 @@ export default function PlanPage({
     setAutoFilling(true);
     setNotice("");
     try {
-      const txns = await api.getTransactions();
-      const all = Array.isArray(txns) ? txns : [];
+      // Fetch transactions + the user's detected recurring bills (to tag recurring spend).
+      const [txnsRes, recurringRes] = await Promise.allSettled([api.getTransactions(), api.getRecurringBills()]);
+      const all = txnsRes.status === "fulfilled" && Array.isArray(txnsRes.value) ? txnsRes.value : [];
       if (all.length === 0) {
         setNotice("No linked transactions yet — link a bank or card on the Accounts page first.");
         return;
       }
+      const recurringNames = (recurringRes.status === "fulfilled" && Array.isArray(recurringRes.value) ? recurringRes.value : [])
+        .map((b) => (b.name || "").trim().toLowerCase()).filter((n) => n.length > 2);
+      const isRecurring = (name) => {
+        const n = (name || "").toLowerCase();
+        return recurringNames.some((r) => n.includes(r) || r.includes(n));
+      };
       // Prefer transactions in the selected month; fall back to all recent ones.
       const inMonth = all.filter((t) => String(t.date || "").startsWith(currentMonth));
       let use = inMonth.length ? inMonth : all;
@@ -335,15 +343,28 @@ export default function PlanPage({
         const cat = afSettings.map[raw.toLowerCase()] || raw;
         if (isTransfer(raw) || excluded.has(cat.toLowerCase()) || excluded.has(raw.toLowerCase())) continue;
         if (amt < 0) inflow += -amt;                       // Plaid: negative = money in (income)
-        else { (byCat[cat] = byCat[cat] || { spent: 0, count: 0 }).spent += amt; byCat[cat].count += 1; }
+        else {
+          const e = (byCat[cat] = byCat[cat] || { spent: 0, count: 0, txns: [] });
+          e.spent += amt; e.count += 1;
+          e.txns.push({ name: t.name || "—", date: t.date || "", amount: amt, recurring: isRecurring(t.name) });
+        }
       }
       const lines = Object.entries(byCat)
         .filter(([, v]) => v.spent > 0)
         .sort((a, b) => b[1].spent - a[1].spent)
-        .map(([category, v], i) => ({
-          id: `af-${i}`, category, amount: Math.round(v.spent), spent: Math.round(v.spent),
-          count: v.count, include: true,
-        }));
+        .map(([category, v], i) => {
+          // Flag a dominant one-off (≥50% of the category and ≥$200) so it doesn't distort the
+          // monthly target; "typical" is the spend without it. Count recurring (subscription) txns.
+          const sorted = [...v.txns].sort((a, b) => b.amount - a.amount);
+          const top = sorted[0];
+          const outlier = (v.txns.length >= 2 && top && top.amount >= 0.5 * v.spent && top.amount >= 200) ? top : null;
+          const typical = outlier ? Math.max(0, Math.round(v.spent - top.amount)) : null;
+          const recurringCount = v.txns.filter((t) => t.recurring).length;
+          return {
+            id: `af-${i}`, category, amount: Math.round(v.spent), spent: Math.round(v.spent),
+            count: v.count, include: true, txns: sorted, outlier, typical, recurringCount,
+          };
+        });
       if (!lines.length && inflow <= 0) {
         setNotice("Found transactions but nothing to categorize as income or spending yet.");
         return;
@@ -961,19 +982,59 @@ export default function PlanPage({
                   {review.lines.length === 0 ? (
                     <div className="item-sub" style={{ fontSize: 12.5 }}>No spending detected — set income above, or add categories after applying.</div>
                   ) : review.lines.map((l) => (
-                    <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
-                      <input type="checkbox" checked={l.include} title="Include this category"
-                        onChange={(e) => updateReviewLine(l.id, { include: e.target.checked })} />
-                      <input className="form-input" style={{ flex: 1, padding: "5px 8px", opacity: l.include ? 1 : 0.5 }}
-                        value={l.category} onChange={(e) => updateReviewLine(l.id, { category: e.target.value })} />
-                      <span className="item-sub" style={{ fontSize: 10.5, whiteSpace: "nowrap" }} title={`${l.count} transactions`}>{l.count} txn</span>
-                      <div style={{ position: "relative", width: 108 }}>
-                        <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--tv-text-muted)", fontSize: 13 }}>$</span>
-                        <input type="number" className="form-input" style={{ padding: "5px 8px 5px 18px", opacity: l.include ? 1 : 0.5 }}
-                          value={l.amount} onChange={(e) => updateReviewLine(l.id, { amount: Number(e.target.value) || 0 })} />
+                    <div key={l.id} style={{ borderBottom: "1px solid var(--tv-border-light)", padding: "6px 0" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input type="checkbox" checked={l.include} title="Include this category"
+                          onChange={(e) => updateReviewLine(l.id, { include: e.target.checked })} />
+                        <input className="form-input" style={{ flex: 1, padding: "5px 8px", opacity: l.include ? 1 : 0.5 }}
+                          value={l.category} onChange={(e) => updateReviewLine(l.id, { category: e.target.value })} />
+                        <button className="icon-btn" title={`${l.count} transactions — show them`} style={{ whiteSpace: "nowrap", fontSize: 11 }}
+                          onClick={() => setExpandedLine((id) => (id === l.id ? null : l.id))}>
+                          {l.count} <i className={`ti ti-chevron-${expandedLine === l.id ? "up" : "down"}`} style={{ fontSize: 12 }}></i>
+                        </button>
+                        <div style={{ position: "relative", width: 108 }}>
+                          <span style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)", color: "var(--tv-text-muted)", fontSize: 13 }}>$</span>
+                          <input type="number" className="form-input" style={{ padding: "5px 8px 5px 18px", opacity: l.include ? 1 : 0.5 }}
+                            value={l.amount} onChange={(e) => updateReviewLine(l.id, { amount: Number(e.target.value) || 0 })} />
+                        </div>
+                        <button className="icon-btn" title="Remove this category" style={{ color: "var(--tv-negative)" }}
+                          onClick={() => removeReviewLine(l.id)}><i className="ti ti-trash"></i></button>
                       </div>
-                      <button className="icon-btn" title="Remove this category" style={{ color: "var(--tv-negative)" }}
-                        onClick={() => removeReviewLine(l.id)}><i className="ti ti-trash"></i></button>
+                      {/* Smart-detection chips */}
+                      {(l.outlier || l.recurringCount > 0) && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, margin: "4px 0 2px 26px", alignItems: "center" }}>
+                          {l.outlier && (
+                            <>
+                              <span className="badge badge-amber" title={`${l.outlier.name} on ${l.outlier.date}`}>
+                                <i className="ti ti-alert-triangle" style={{ fontSize: 10 }}></i> 1 large one-off · {currency(Math.round(l.outlier.amount))}
+                              </span>
+                              <button onClick={() => updateReviewLine(l.id, { amount: l.typical })}
+                                style={{ background: "none", border: "none", padding: 0, color: "var(--tv-forest-light)", fontWeight: 600, fontSize: 11.5, cursor: "pointer" }}>
+                                use typical {currency(l.typical)} ▸
+                              </button>
+                            </>
+                          )}
+                          {l.recurringCount > 0 && (
+                            <span className="badge badge-forest" title="Recurring bills / subscriptions detected">
+                              <i className="ti ti-repeat" style={{ fontSize: 10 }}></i> {l.recurringCount} recurring
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {/* Drill-down: the transactions behind this category */}
+                      {expandedLine === l.id && (
+                        <div style={{ margin: "4px 0 4px 26px", padding: "6px 10px", background: "var(--tv-bg)", borderRadius: "var(--radius-md)" }}>
+                          {l.txns.map((t, ti) => (
+                            <div key={ti} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 11.5, padding: "2px 0", color: "var(--tv-text-muted)" }}>
+                              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                {t.recurring && <i className="ti ti-repeat" style={{ fontSize: 10, color: "var(--tv-forest-light)", marginRight: 4 }}></i>}
+                                {t.name}<span style={{ marginLeft: 6 }}>{t.date}</span>
+                              </span>
+                              <span style={{ fontWeight: 600, whiteSpace: "nowrap" }}>{currency(Math.round(t.amount))}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

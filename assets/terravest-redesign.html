@@ -1480,9 +1480,25 @@ a { text-decoration: none; color: inherit; }
           <div style="margin-bottom:12px;"><div class="seg-control" style="max-width:340px;"><button class="seg-btn">Replace my budget</button><button class="seg-btn active">Merge into it</button></div></div>
           <div class="form-group" style="max-width:220px;"><label class="form-label">Detected income (monthly)</label><input class="form-input" value="$5,420"></div>
           <div style="font-size:12.5px;font-weight:600;margin:8px 0 4px;">Spending categories (12)</div>
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--tv-border-light);"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Rent &amp; Utilities"><span style="font-size:10.5px;color:var(--tv-text-muted);">4 txn</span><input class="form-input" style="width:100px;padding:5px 8px;" value="$1,850"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--tv-border-light);"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Food &amp; Drink"><span style="font-size:10.5px;color:var(--tv-text-muted);">14 txn</span><input class="form-input" style="width:100px;padding:5px 8px;" value="$612"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
-          <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--tv-border-light);opacity:.5;"><input type="checkbox"><input class="form-input" style="flex:1;padding:5px 8px;" value="Shopping (review — looks off)"><span style="font-size:10.5px;color:var(--tv-text-muted);">7 txn</span><input class="form-input" style="width:100px;padding:5px 8px;" value="$330"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
+          <!-- recurring chip -->
+          <div style="border-bottom:1px solid var(--tv-border-light);padding:6px 0;">
+            <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Rent &amp; Utilities"><button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;">4 <i class="ti ti-chevron-down" style="font-size:12px;"></i></button><input class="form-input" style="width:100px;padding:5px 8px;" value="$1,850"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
+            <div style="margin:4px 0 2px 26px;"><span class="badge badge-forest"><i class="ti ti-repeat" style="font-size:10px;"></i> 3 recurring</span></div>
+          </div>
+          <!-- drill-down expanded (see the transactions behind a category) -->
+          <div style="border-bottom:1px solid var(--tv-border-light);padding:6px 0;">
+            <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Food &amp; Drink"><button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;">14 <i class="ti ti-chevron-up" style="font-size:12px;"></i></button><input class="form-input" style="width:100px;padding:5px 8px;" value="$612"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
+            <div style="margin:4px 0 4px 26px;padding:6px 10px;background:var(--tv-bg);border-radius:var(--radius-md);font-size:11.5px;color:var(--tv-text-muted);">
+              <div style="display:flex;justify-content:space-between;"><span>Whole Foods · Jun 3</span><span style="font-weight:600;">$142</span></div>
+              <div style="display:flex;justify-content:space-between;"><span><i class="ti ti-repeat" style="font-size:10px;color:var(--tv-forest-light);"></i> Blue Bottle Coffee · Jun 5</span><span style="font-weight:600;">$18</span></div>
+              <div style="display:flex;justify-content:space-between;"><span>Chipotle · Jun 7</span><span style="font-weight:600;">$24</span></div>
+            </div>
+          </div>
+          <!-- outlier (large one-off) flag + "use typical" -->
+          <div style="border-bottom:1px solid var(--tv-border-light);padding:6px 0;">
+            <div style="display:flex;align-items:center;gap:8px;"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Shopping"><button class="btn btn-secondary btn-sm" style="padding:2px 8px;font-size:11px;">7 <i class="ti ti-chevron-down" style="font-size:12px;"></i></button><input class="form-input" style="width:100px;padding:5px 8px;" value="$330"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
+            <div style="margin:4px 0 2px 26px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span class="badge badge-amber"><i class="ti ti-alert-triangle" style="font-size:10px;"></i> 1 large one-off · $210</span><span style="color:var(--tv-forest-light);font-weight:600;font-size:11.5px;">use typical $120 ▸</span></div>
+          </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span style="font-size:11.5px;color:var(--tv-text-muted);">11 of 12 included</span><div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">Cancel</button><button class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Apply to budget</button></div></div>
         </div>
 
