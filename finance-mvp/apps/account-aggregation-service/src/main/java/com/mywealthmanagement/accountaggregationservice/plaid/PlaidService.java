@@ -390,6 +390,32 @@ public class PlaidService {
     }
 
     /**
+     * Re-pull brokerage holdings + investment transactions for all of the user's linked
+     * items. Best-effort per item — used by the Investments "Refresh" action and to
+     * back-fill holdings when the Investments product wasn't ready at link time. Returns
+     * the number of items processed.
+     */
+    public int refreshInvestments(Long userId) {
+        int items = 0;
+        for (PlaidItem item : plaidItemRepository.findByUserId(userId)) {
+            try {
+                fetchHoldings(userId, item);
+            } catch (Exception e) {
+                log.warn("Holdings refresh failed for item {}: {}",
+                        item.getPlaidItemId(), e.getMessage());
+            }
+            try {
+                fetchInvestmentTransactions(userId, item);
+            } catch (Exception e) {
+                log.warn("Investment-txns refresh failed for item {}: {}",
+                        item.getPlaidItemId(), e.getMessage());
+            }
+            items++;
+        }
+        return items;
+    }
+
+    /**
      * Pull-based transaction sync via Plaid /transactions/sync (no webhook needed).
      * Walks every linked item from its stored cursor, upserts added/modified, removes
      * deleted, and persists the new cursor so subsequent syncs are incremental.

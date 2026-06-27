@@ -115,6 +115,26 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
     } catch { /* keep what we have */ }
   };
 
+  /* Re-pull positions + activity + balances from the brokers (Plaid). Use this when
+     holdings look stale or didn't sync at link time. */
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshInvestments = async () => {
+    setRefreshing(true);
+    try {
+      const h = await api.refreshHoldings();
+      setSyncedHoldings(Array.isArray(h) ? h : []);
+      try {
+        const act = await api.getInvestmentTransactions();
+        setActivity(Array.isArray(act) ? act : []);
+      } catch { /* non-fatal */ }
+      if (loadAll) await loadAll();
+    } catch (e) {
+      window.alert(`Couldn't refresh investments: ${e?.message || 'please try again.'}`);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   /* Load the user's alternatives + synced holdings + brokerage activity on mount. */
   useEffect(() => {
     let cancelled = false;
@@ -226,17 +246,26 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
   const brokersTotal = brokerAccounts.reduce((sum, b) => sum + (Number(b.value) || 0), 0);
   const altsTotal = alts.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
 
-  /* Day change derived from real holdings (no fabricated number). */
-  const dayChangeValue = useMemo(
-    () =>
-      holdings.reduce((sum, h) => {
-        const mv = (Number(h.qty) || 0) * (Number(h.price) || 0);
-        const pct = Number(h.dayChg) || 0;
-        return sum + mv * (pct / 100);
-      }, 0),
-    [holdings]
-  );
-  const dayChangePct = totalInvested > 0 ? (dayChangeValue / totalInvested) * 100 : 0;
+  // Market value of a holding: Plaid's institution value when present, else qty × price.
+  const marketValueOf = (h) =>
+    h.value != null ? Number(h.value) : (Number(h.qty) || 0) * (Number(h.price) || 0);
+
+  /* Unrealized gain/loss from real cost basis (Plaid). Only holdings that report a cost
+     basis contribute, so the % is honest; hasCost is false when none do (then we show "—"
+     rather than a fabricated zero). */
+  const gainLoss = useMemo(() => {
+    let value = 0;
+    let cost = 0;
+    let n = 0;
+    for (const h of holdings) {
+      if (h.costBasis == null) continue;
+      value += marketValueOf(h);
+      cost += Number(h.costBasis) || 0;
+      n += 1;
+    }
+    const gl = value - cost;
+    return { gl, pct: cost > 0 ? (gl / cost) * 100 : 0, hasCost: n > 0 };
+  }, [holdings]);
 
   /* Alternatives breakdown by type (only types with at least one entry). */
   const altBreakdown = useMemo(() => {
@@ -275,11 +304,14 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
 
   /* Build a CSV from the (filtered) holdings table and trigger a download via Blob. */
   function exportHoldingsCsv() {
-    const header = ['Symbol', 'Name', 'Broker', 'Qty', 'Price', 'Market Value', 'Day Change %'];
+    const header = ['Symbol', 'Name', 'Broker', 'Qty', 'Price', 'Market Value', 'Cost Basis', 'Gain/Loss'];
     const esc = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const rows = filteredHoldings.map((h) =>
-      [h.symbol, h.name, h.broker || '', h.qty, h.price, h.qty * h.price, h.dayChg].map(esc).join(',')
-    );
+    const rows = filteredHoldings.map((h) => {
+      const mv = marketValueOf(h);
+      const cb = h.costBasis != null ? Number(h.costBasis) : '';
+      const gl = cb !== '' ? mv - cb : '';
+      return [h.symbol, h.name, h.broker || '', h.qty, h.price, mv, cb, gl].map(esc).join(',');
+    });
     const csv = [header.map(esc).join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -301,6 +333,14 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
         </div>
         <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <LastRefreshed />
+          <button
+            className="btn btn-secondary btn-sm"
+            title="Re-pull holdings & activity from your brokers"
+            onClick={refreshInvestments}
+            disabled={refreshing}
+          >
+            <i className={`ti ti-refresh ${refreshing ? 'spin' : ''}`}></i> {refreshing ? 'Refreshing…' : 'Refresh'}
+          </button>
           <button className="btn btn-secondary btn-sm" title="Export holdings to CSV" onClick={exportHoldingsCsv}>
             <i className="ti ti-download"></i> Export CSV
           </button>
@@ -332,12 +372,20 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
               <div className="kpi-value">{currency(totalInvested)}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-trending-up" style={{ color: 'var(--tv-positive)' }}></i> Day Change</div>
-              <div className="kpi-value">{currency(dayChangeValue)}</div>
-              <div className={`kpi-delta ${dayChangeValue >= 0 ? 'pos' : 'neg'}`}>
-                <i className={dayChangeValue >= 0 ? 'ti ti-arrow-up-right' : 'ti ti-arrow-down-right'}></i>
-                {dayChangeValue >= 0 ? '+' : ''}{dayChangePct.toFixed(2)}% today
-              </div>
+              <div className="kpi-label"><i className="ti ti-trending-up" style={{ color: 'var(--tv-positive)' }}></i> Total Gain / Loss</div>
+              {gainLoss.hasCost ? (
+                <>
+                  <div className="kpi-value" style={{ color: gainLoss.gl >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)' }}>
+                    {gainLoss.gl >= 0 ? '+' : ''}{currency(gainLoss.gl)}
+                  </div>
+                  <div className={`kpi-delta ${gainLoss.gl >= 0 ? 'pos' : 'neg'}`}>
+                    <i className={gainLoss.gl >= 0 ? 'ti ti-arrow-up-right' : 'ti ti-arrow-down-right'}></i>
+                    {gainLoss.gl >= 0 ? '+' : ''}{gainLoss.pct.toFixed(2)}% all-time
+                  </div>
+                </>
+              ) : (
+                <div className="kpi-value" style={{ fontSize: 16, color: 'var(--tv-text-muted)' }}>—</div>
+              )}
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-list-details" style={{ color: 'var(--tv-gold)' }}></i> Holdings</div>
@@ -387,9 +435,9 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
                   <div className="stat-tile-value">{currency(totalInvested)}</div>
                 </div>
                 <div className="stat-tile">
-                  <div className="stat-tile-label">Day Change</div>
-                  <div className="stat-tile-value" style={{ color: dayChangeValue >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)' }}>
-                    {dayChangeValue >= 0 ? '+' : ''}{currency(dayChangeValue)}
+                  <div className="stat-tile-label">Gain / Loss</div>
+                  <div className="stat-tile-value" style={{ color: !gainLoss.hasCost ? 'var(--tv-text-muted)' : gainLoss.gl >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)' }}>
+                    {gainLoss.hasCost ? `${gainLoss.gl >= 0 ? '+' : ''}${currency(gainLoss.gl)}` : '—'}
                   </div>
                 </div>
                 <div className="stat-tile">
@@ -443,7 +491,7 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
                     <th className="num">Qty</th>
                     <th className="num">Price</th>
                     <th className="num">Mkt Value</th>
-                    <th className="num">Day Chg</th>
+                    <th className="num">Gain / Loss</th>
                     <th style={{ textAlign: 'right' }}>Trend</th>
                   </tr>
                 </thead>
@@ -463,10 +511,13 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
                     </tr>
                   ) : (
                     filteredHoldings.map((h) => {
-                      const mv = h.qty * h.price;
-                      const up = h.dayChg >= 0;
+                      const mv = marketValueOf(h);
+                      const cb = h.costBasis != null ? Number(h.costBasis) : null;
+                      const gl = cb != null ? mv - cb : null;
+                      const glPct = cb && cb > 0 ? (gl / cb) * 100 : null;
+                      const up = (gl ?? 0) >= 0;
                       return (
-                        <tr key={h.symbol}>
+                        <tr key={`${h.broker || ''}-${h.symbol}`}>
                           <td><strong>{h.symbol}</strong></td>
                           <td style={{ color: 'var(--tv-text-secondary)' }}>{h.name}</td>
                           <td style={{ color: 'var(--tv-text-muted)' }}>{h.broker || '—'}</td>
@@ -474,9 +525,13 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
                           <td className="num">{currency(h.price)}</td>
                           <td className="num">{currency(mv)}</td>
                           <td className="num">
-                            <span className={up ? 'amount-pos' : 'amount-neg'} style={{ fontWeight: 600 }}>
-                              {up ? '+' : ''}{h.dayChg}%
-                            </span>
+                            {gl != null ? (
+                              <span className={up ? 'amount-pos' : 'amount-neg'} style={{ fontWeight: 600 }}>
+                                {up ? '+' : ''}{currency(gl)}{glPct != null ? ` (${up ? '+' : ''}${glPct.toFixed(1)}%)` : ''}
+                              </span>
+                            ) : (
+                              <span style={{ color: 'var(--tv-text-muted)' }}>—</span>
+                            )}
                           </td>
                           <td style={{ textAlign: 'right' }}>
                             <Sparkline series={series} stroke={up ? 'var(--tv-positive)' : 'var(--tv-negative)'} />
