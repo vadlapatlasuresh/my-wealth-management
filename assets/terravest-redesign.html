@@ -1406,6 +1406,7 @@ a { text-decoration: none; color: inherit; }
               <div class="form-group" style="margin-bottom:0;max-width:200px;"><label class="form-label">Monthly take-home</label><input class="form-input" value="$5,000"></div>
               <button class="btn btn-secondary btn-sm"><i class="ti ti-template"></i> Apply template</button>
               <button class="btn btn-primary btn-sm" title="Pull income &amp; spending from your linked bank and card transactions"><i class="ti ti-building-bank"></i> Auto-fill from accounts</button>
+              <button class="btn btn-secondary btn-sm" title="Auto-fill settings — accounts, excluded categories, renames, default mode"><i class="ti ti-adjustments-horizontal"></i></button>
               <button class="btn btn-primary btn-sm"><i class="ti ti-device-floppy"></i> Save rule</button>
             </div>
             <span class="badge badge-green"><i class="ti ti-check"></i> Total = 100%</span>
@@ -1483,6 +1484,19 @@ a { text-decoration: none; color: inherit; }
           <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--tv-border-light);"><input type="checkbox" checked><input class="form-input" style="flex:1;padding:5px 8px;" value="Food &amp; Drink"><span style="font-size:10.5px;color:var(--tv-text-muted);">14 txn</span><input class="form-input" style="width:100px;padding:5px 8px;" value="$612"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
           <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--tv-border-light);opacity:.5;"><input type="checkbox"><input class="form-input" style="flex:1;padding:5px 8px;" value="Shopping (review — looks off)"><span style="font-size:10.5px;color:var(--tv-text-muted);">7 txn</span><input class="form-input" style="width:100px;padding:5px 8px;" value="$330"><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span style="font-size:11.5px;color:var(--tv-text-muted);">11 of 12 included</span><div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">Cancel</button><button class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Apply to budget</button></div></div>
+        </div>
+
+        <!-- Auto-fill settings (the gear next to "Auto-fill from accounts" — persisted preferences) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title" style="margin-bottom:8px;"><i class="ti ti-adjustments-horizontal" style="color:var(--tv-forest);margin-right:6px;"></i> Auto-fill settings</div>
+          <label class="form-label">Default apply mode</label>
+          <div class="seg-control" style="max-width:380px;margin-bottom:14px;"><button class="seg-btn">Replace</button><button class="seg-btn active">Merge</button><button class="seg-btn">Ask each time</button></div>
+          <label class="form-label">Accounts to include</label>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;margin-bottom:14px;"><label><input type="checkbox" checked> Chase Checking ····4821</label><label><input type="checkbox" checked> Amex Gold ····1009</label><label><input type="checkbox"> Business Card ····7732</label></div>
+          <label class="form-label">Always exclude these categories</label>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;"><span class="badge badge-gray">Transfers &amp; payments</span><span class="badge badge-amber">Loan Pmt ✕</span></div>
+          <label class="form-label">Rename / combine categories</label>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;"><span style="flex:1;color:var(--tv-text-muted);">Food &amp; Drink</span><i class="ti ti-arrow-right" style="color:var(--tv-text-muted);"></i><span style="flex:1;font-weight:600;">Groceries</span><i class="ti ti-trash" style="color:var(--tv-negative);"></i></div>
         </div>
 
         <!-- Budget table -->

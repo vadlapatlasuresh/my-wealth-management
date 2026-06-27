@@ -104,6 +104,56 @@ export default function PlanPage({
   const [rule, setRule] = useState(loadRule);
   const [editingRule, setEditingRule] = useState(false);
   const [period, setPeriod] = useState("month"); // month | ytd | year
+
+  // Persisted auto-fill preferences (Phase 3): default apply mode, account scope, always-excluded
+  // categories, and category renames/combines. Stored locally so the user sets them once.
+  const [afSettings, setAfSettings] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem("tv_budget_autofill") || "{}");
+      return {
+        mode: ["replace", "merge", "ask"].includes(s.mode) ? s.mode : "merge",
+        excluded: Array.isArray(s.excluded) ? s.excluded : [],
+        accounts: Array.isArray(s.accounts) ? s.accounts : null, // null = all accounts
+        map: s.map && typeof s.map === "object" ? s.map : {},     // { "<lowercase raw cat>": "Label" }
+      };
+    } catch {
+      return { mode: "merge", excluded: [], accounts: null, map: {} };
+    }
+  });
+  const [accountsList, setAccountsList] = useState([]);   // linked accounts, for scope checkboxes
+  const [showAfSettings, setShowAfSettings] = useState(false);
+  const [newExcluded, setNewExcluded] = useState("");
+  const [newMap, setNewMap] = useState({ from: "", to: "" });
+  const saveAfSettings = (next) => {
+    setAfSettings(next);
+    try { localStorage.setItem("tv_budget_autofill", JSON.stringify(next)); } catch { /* non-fatal */ }
+  };
+  // Account scope helpers (settings.accounts: null = all; otherwise the included ids).
+  const allAcctIds = accountsList.map((a) => a.id);
+  const includedAccts = afSettings.accounts == null ? allAcctIds : afSettings.accounts;
+  const toggleAccount = (id) => {
+    const next = includedAccts.includes(id) ? includedAccts.filter((x) => x !== id) : [...includedAccts, id];
+    saveAfSettings({ ...afSettings, accounts: next.length === allAcctIds.length ? null : next });
+  };
+  const addExcluded = (c) => {
+    const v = (c || "").trim();
+    if (!v || afSettings.excluded.some((x) => x.toLowerCase() === v.toLowerCase())) return;
+    saveAfSettings({ ...afSettings, excluded: [...afSettings.excluded, v] });
+  };
+  const removeExcluded = (c) => saveAfSettings({ ...afSettings, excluded: afSettings.excluded.filter((x) => x !== c) });
+  const addMapping = (from, to) => {
+    const f = (from || "").trim().toLowerCase();
+    const t = (to || "").trim();
+    if (!f || !t) return;
+    saveAfSettings({ ...afSettings, map: { ...afSettings.map, [f]: t } });
+  };
+  const removeMapping = (from) => {
+    const m = { ...afSettings.map };
+    delete m[from];
+    saveAfSettings({ ...afSettings, map: m });
+  };
+  // Closing settings re-scans an open review so the new filters apply to the preview.
+  const closeAfSettings = () => { setShowAfSettings(false); if (review) autoFillFromAccounts(); };
   const [aggLoading, setAggLoading] = useState(false);
   const isAggregate = period !== "month";
 
@@ -201,6 +251,11 @@ export default function PlanPage({
   }, [currentMonth, period]);
 
   useEffect(() => {
+    // Linked accounts power the auto-fill "account scope" setting.
+    api.getAccounts().then((r) => setAccountsList(Array.isArray(r) ? r : [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
     api.getDebts().then((res) => setDebts(res || [])).catch(() => {});
   }, []);
 
@@ -263,15 +318,22 @@ export default function PlanPage({
       }
       // Prefer transactions in the selected month; fall back to all recent ones.
       const inMonth = all.filter((t) => String(t.date || "").startsWith(currentMonth));
-      const use = inMonth.length ? inMonth : all;
-      // Skip transfers / credit-card payments — they're money moving, not income or spending.
+      let use = inMonth.length ? inMonth : all;
+      // Account scope: restrict to the user's chosen accounts when set.
+      if (Array.isArray(afSettings.accounts) && afSettings.accounts.length) {
+        use = use.filter((t) => afSettings.accounts.includes(t.accountId));
+      }
+      // Skip transfers / credit-card payments (money movement) and any user-excluded category.
       const isTransfer = (c) => /transfer|payment|credit card|loan/i.test(c || "");
+      const excluded = new Set((afSettings.excluded || []).map((c) => c.toLowerCase()));
       let inflow = 0;
       const byCat = {};
       for (const t of use) {
         const amt = Number(t.amount) || 0;
-        const cat = (t.category || "Uncategorized").trim() || "Uncategorized";
-        if (isTransfer(cat)) continue;
+        const raw = (t.category || "Uncategorized").trim() || "Uncategorized";
+        // Apply the user's rename/combine map (raw category -> custom label).
+        const cat = afSettings.map[raw.toLowerCase()] || raw;
+        if (isTransfer(raw) || excluded.has(cat.toLowerCase()) || excluded.has(raw.toLowerCase())) continue;
         if (amt < 0) inflow += -amt;                       // Plaid: negative = money in (income)
         else { (byCat[cat] = byCat[cat] || { spent: 0, count: 0 }).spent += amt; byCat[cat].count += 1; }
       }
@@ -286,7 +348,7 @@ export default function PlanPage({
         setNotice("Found transactions but nothing to categorize as income or spending yet.");
         return;
       }
-      setReviewMode(budgetLines.length ? "merge" : "replace");
+      setReviewMode(afSettings.mode === "ask" ? (budgetLines.length ? "merge" : "replace") : afSettings.mode);
       setReview({
         income: Math.round(inflow),
         periodLabel: inMonth.length ? monthLabel : "the last 30 days",
@@ -555,11 +617,16 @@ export default function PlanPage({
                   value={income || ""} onChange={(e) => saveIncome(Number(e.target.value))} />
                 <button className="btn btn-secondary btn-sm" onClick={applyTemplate}><i className="ti ti-wand"></i> Apply template</button>
                 {!isAggregate && (
-                  <button className="btn btn-primary btn-sm" onClick={autoFillFromAccounts} disabled={autoFilling}
-                    title="Pull income & spending from your linked bank and card transactions">
-                    <i className={`ti ${autoFilling ? "ti-loader spin" : "ti-building-bank"}`}></i>
-                    {autoFilling ? "Reading accounts…" : "Auto-fill from accounts"}
-                  </button>
+                  <>
+                    <button className="btn btn-primary btn-sm" onClick={autoFillFromAccounts} disabled={autoFilling}
+                      title="Pull income & spending from your linked bank and card transactions">
+                      <i className={`ti ${autoFilling ? "ti-loader spin" : "ti-building-bank"}`}></i>
+                      {autoFilling ? "Reading accounts…" : "Auto-fill from accounts"}
+                    </button>
+                    <button className="icon-btn" onClick={() => setShowAfSettings(true)} title="Auto-fill settings — accounts, excluded categories, renames, default mode">
+                      <i className="ti ti-adjustments-horizontal"></i>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -767,6 +834,87 @@ export default function PlanPage({
               </div>
             )}
           </div>
+          {showAfSettings && (
+            <div onClick={closeAfSettings}
+              style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
+                alignItems: "center", justifyContent: "center", zIndex: 1100, padding: 16 }}>
+              <div onClick={(e) => e.stopPropagation()} className="card"
+                style={{ width: "min(560px, 100%)", maxHeight: "88vh", display: "flex", flexDirection: "column", padding: 0 }}>
+                <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--tv-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="section-title" style={{ marginBottom: 0 }}>
+                    <i className="ti ti-adjustments-horizontal" style={{ color: "var(--tv-forest)", marginRight: 6 }}></i> Auto-fill settings
+                  </div>
+                  <button className="icon-btn" onClick={closeAfSettings} title="Done"><i className="ti ti-x"></i></button>
+                </div>
+                <div style={{ padding: "14px 18px", overflowY: "auto", display: "flex", flexDirection: "column", gap: 18 }}>
+                  <div>
+                    <label className="form-label">Default apply mode</label>
+                    <div className="seg-control">
+                      {["replace", "merge", "ask"].map((m) => (
+                        <button key={m} className={`seg-btn ${afSettings.mode === m ? "active" : ""}`}
+                          onClick={() => saveAfSettings({ ...afSettings, mode: m })}>
+                          {m === "replace" ? "Replace" : m === "merge" ? "Merge" : "Ask each time"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">Accounts to include</label>
+                    {accountsList.length === 0 ? (
+                      <div className="item-sub" style={{ fontSize: 12 }}>No linked accounts found — link one on the Accounts page.</div>
+                    ) : (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {accountsList.map((a) => (
+                          <label key={a.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+                            <input type="checkbox" checked={includedAccts.includes(a.id)} onChange={() => toggleAccount(a.id)} />
+                            {a.officialName || a.name}{a.mask ? <span style={{ color: "var(--tv-text-muted)" }}> ····{a.mask}</span> : null}
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="form-label">Always exclude these categories</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                      <span className="badge badge-gray" title="Always excluded by default">Transfers &amp; payments</span>
+                      {afSettings.excluded.map((c) => (
+                        <span key={c} className="badge badge-amber" style={{ cursor: "pointer" }} onClick={() => removeExcluded(c)} title="Remove">{c} ✕</span>
+                      ))}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input className="form-input" style={{ flex: 1, padding: "5px 8px" }} placeholder="e.g. Shopping"
+                        value={newExcluded} onChange={(e) => setNewExcluded(e.target.value)} />
+                      <button className="btn btn-secondary btn-sm" onClick={() => { addExcluded(newExcluded); setNewExcluded(""); }}>Add</button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">Rename / combine categories</label>
+                    <div className="item-sub" style={{ fontSize: 11.5, marginBottom: 8 }}>
+                      Map a transaction category to your own label (e.g. “Food &amp; Drink” → “Groceries”). Two mapped to the same label combine.
+                    </div>
+                    {Object.entries(afSettings.map).map(([from, to]) => (
+                      <div key={from} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, fontSize: 12.5 }}>
+                        <span style={{ flex: 1, color: "var(--tv-text-muted)" }}>{from}</span>
+                        <i className="ti ti-arrow-right" style={{ color: "var(--tv-text-muted)" }}></i>
+                        <span style={{ flex: 1, fontWeight: 600 }}>{to}</span>
+                        <button className="icon-btn" style={{ color: "var(--tv-negative)" }} onClick={() => removeMapping(from)} title="Remove"><i className="ti ti-trash"></i></button>
+                      </div>
+                    ))}
+                    <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                      <input className="form-input" style={{ flex: 1, padding: "5px 8px" }} placeholder="From (e.g. Food & Drink)"
+                        value={newMap.from} onChange={(e) => setNewMap((p) => ({ ...p, from: e.target.value }))} />
+                      <input className="form-input" style={{ flex: 1, padding: "5px 8px" }} placeholder="To (e.g. Groceries)"
+                        value={newMap.to} onChange={(e) => setNewMap((p) => ({ ...p, to: e.target.value }))} />
+                      <button className="btn btn-secondary btn-sm" onClick={() => { addMapping(newMap.from, newMap.to); setNewMap({ from: "", to: "" }); }}>Add</button>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ padding: "14px 18px", borderTop: "1px solid var(--tv-border)", display: "flex", justifyContent: "flex-end" }}>
+                  <button className="btn btn-primary btn-sm" onClick={closeAfSettings}><i className="ti ti-check"></i> Done</button>
+                </div>
+              </div>
+            </div>
+          )}
           {review && (
             <div onClick={() => setReview(null)}
               style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
@@ -783,7 +931,11 @@ export default function PlanPage({
                   </div>
                   <div className="item-sub" style={{ fontSize: 12.5 }}>
                     From {review.periodLabel} · {review.accounts} linked account{review.accounts === 1 ? "" : "s"}. Fix anything
-                    that's miscategorized below — nothing is saved until you Apply, then Save.
+                    that's miscategorized below — nothing is saved until you Apply, then Save.{" "}
+                    <button onClick={() => setShowAfSettings(true)}
+                      style={{ background: "none", border: "none", padding: 0, color: "var(--tv-forest-light)", fontWeight: 600, cursor: "pointer" }}>
+                      Customize filters ▸
+                    </button>
                   </div>
                 </div>
                 {/* Body */}
