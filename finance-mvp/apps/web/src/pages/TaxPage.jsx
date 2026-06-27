@@ -20,7 +20,7 @@ const FILING = [
 
 // The categorized money fields the estimator accepts (default "" in the form).
 const INCOME_FIELDS = [
-  "wages", "selfEmploymentIncome", "rentalIncome", "interestIncome",
+  "wages", "selfEmploymentIncome", "rentalIncome", "capitalGains", "interestIncome",
   "dividendIncome", "retirementIncome", "otherIncome",
 ];
 const ADJUSTMENT_FIELDS = [
@@ -37,6 +37,7 @@ const FIELD_LABELS = {
   withholding: "Withholding",
   selfEmploymentIncome: "Self-employment income",
   rentalIncome: "Rental income",
+  capitalGains: "Long-term capital gains",
   interestIncome: "Interest income",
   dividendIncome: "Dividend income",
   retirementIncome: "Retirement income",
@@ -89,7 +90,7 @@ export default function TaxPage() {
     dependentsUnder17: 0,
     withholding: "",
     // categorized income / adjustments / itemized — all default ""
-    wages: "", selfEmploymentIncome: "", rentalIncome: "", interestIncome: "",
+    wages: "", selfEmploymentIncome: "", rentalIncome: "", capitalGains: "", interestIncome: "",
     dividendIncome: "", retirementIncome: "", otherIncome: "",
     studentLoanInterest: "", hsaContribution: "", iraContribution: "", otherAdjustments: "",
     mortgageInterest: "", propertyTaxes: "", stateLocalTaxes: "", charitable: "", medicalExpenses: "",
@@ -775,6 +776,7 @@ export default function TaxPage() {
               </div>
               <Field label="Interest income" value={form.interestIncome} onChange={set("interestIncome")} placeholder="from your 1099-INT" />
               <Field label="Dividend income" value={form.dividendIncome} onChange={set("dividendIncome")} placeholder="from your 1099-DIV" />
+              <Field label="Long-term capital gains" value={form.capitalGains} onChange={set("capitalGains")} placeholder="held > 1 yr — taxed at 0/15/20% (1099-B / Sch. D)" />
               <Field label="Retirement income" value={form.retirementIncome} onChange={set("retirementIncome")} placeholder="from your 1099-R" />
               <Field label="Other income" value={form.otherIncome} onChange={set("otherIncome")} placeholder="anything else (optional)" />
             </Section>
@@ -884,6 +886,7 @@ export default function TaxPage() {
                 {Number(result.qbiDeduction) > 0 && <Row k="QBI deduction (20% · §199A)" v={`− ${usd(result.qbiDeduction)}`} />}
                 <Row k="Taxable income" v={usd(result.taxableIncome)} bold />
                 <Row k="Tax before credits" v={usd(result.taxBeforeCredits)} />
+                {Number(result.capitalGainsTax) > 0 && <Row k="↳ incl. long-term capital gains (0/15/20%)" v={usd(result.capitalGainsTax)} />}
                 {Number(result.childTaxCredit) > 0 && <Row k="Child tax credit" v={`− ${usd(result.childTaxCredit)}`} />}
                 {seTax > 0 ? (
                   <>

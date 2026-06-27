@@ -191,8 +191,9 @@ public class TaxController {
     private TaxEstimateInput inputFrom(Map<String, Object> body) {
         BigDecimal selfEmployment = num(body.get("selfEmploymentIncome"));
         BigDecimal rental = num(body.get("rentalIncome"));
+        BigDecimal capitalGains = num(body.get("capitalGains")).max(BigDecimal.ZERO);
         BigDecimal grossIncome = sum(
-                num(body.get("wages")), selfEmployment, rental,
+                num(body.get("wages")), selfEmployment, rental, capitalGains,
                 num(body.get("interestIncome")), num(body.get("dividendIncome")),
                 num(body.get("retirementIncome")), num(body.get("otherIncome")),
                 num(body.get("grossIncome"))); // legacy single field
@@ -219,7 +220,8 @@ public class TaxController {
                 intVal(body.get("dependentsUnder17"), 0),
                 num(body.get("withholding")),
                 selfEmployment,
-                qbiIncome);
+                qbiIncome,
+                capitalGains);
     }
 
     private static BigDecimal sum(BigDecimal... values) {

@@ -29,6 +29,22 @@ class TaxEstimatorTest {
     }
 
     @Test
+    void single2025_longTermCapitalGains_taxedAtPreferentialRates() {
+        // Wages 50k + LTCG 20k = gross 70k. std 15k -> taxable 55k; gains stack on ordinary 35k.
+        // Ordinary tax on 35k = 1,192.50 + 12%*(35,000-11,925) = 3,961.50.
+        // 0% LTCG ceiling (single 2025) = 48,350: 35,000..48,350 (=13,350) at 0%,
+        // 48,350..55,000 (=6,650) at 15% = 997.50; nothing at 20%.
+        var in = new TaxEstimateInput(FilingStatus.SINGLE, new BigDecimal("70000"), BigDecimal.ZERO,
+                BigDecimal.ZERO, 0, BigDecimal.ZERO, null, null, new BigDecimal("20000"));
+        var e = TaxEstimator.estimate(in, rules.forYear(2025));
+        assertThat(e.getTaxableIncome()).isEqualByComparingTo("55000.00");
+        assertThat(e.getCapitalGainsTax()).isEqualByComparingTo("997.50");
+        assertThat(e.getTaxBeforeCredits()).isEqualByComparingTo("4959.00"); // 3,961.50 + 997.50
+        assertThat(e.getTotalTax()).isEqualByComparingTo("4959.00");
+        assertThat(e.getMarginalRate()).isEqualByComparingTo("0.12"); // ordinary income's bracket
+    }
+
+    @Test
     void marriedJoint2025_itemized_withChildren() {
         // AGI 140k (150k - 10k adj), itemized 35k > std 30k. taxable 105k. 2 kids, no phase-out.
         var e = TaxEstimator.estimate(in(FilingStatus.MARRIED_JOINT, "150000", "10000", "35000", 2, "15000"), rules.forYear(2025));

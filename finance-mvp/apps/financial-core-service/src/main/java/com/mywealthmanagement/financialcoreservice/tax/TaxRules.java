@@ -50,7 +50,13 @@ public class TaxRules {
             bd("2000"),
             Map.of(
                 FilingStatus.SINGLE, bd("200000"), FilingStatus.MARRIED_JOINT, bd("400000"),
-                FilingStatus.MARRIED_SEPARATE, bd("200000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")));
+                FilingStatus.MARRIED_SEPARATE, bd("200000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")),
+            Map.of( // 2024 LTCG 0% ceiling
+                FilingStatus.SINGLE, bd("47025"), FilingStatus.MARRIED_JOINT, bd("94050"),
+                FilingStatus.MARRIED_SEPARATE, bd("47025"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("63000")),
+            Map.of( // 2024 LTCG 15% ceiling (above = 20%)
+                FilingStatus.SINGLE, bd("518900"), FilingStatus.MARRIED_JOINT, bd("583750"),
+                FilingStatus.MARRIED_SEPARATE, bd("291850"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("551350")));
 
     // ---- 2025 (Rev. Proc. 2024-40) ----
     private static final TaxRuleSet Y2025 = new TaxRuleSet(
@@ -74,7 +80,13 @@ public class TaxRules {
             bd("2000"),
             Map.of(
                 FilingStatus.SINGLE, bd("200000"), FilingStatus.MARRIED_JOINT, bd("400000"),
-                FilingStatus.MARRIED_SEPARATE, bd("200000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")));
+                FilingStatus.MARRIED_SEPARATE, bd("200000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("200000")),
+            Map.of( // 2025 LTCG 0% ceiling
+                FilingStatus.SINGLE, bd("48350"), FilingStatus.MARRIED_JOINT, bd("96700"),
+                FilingStatus.MARRIED_SEPARATE, bd("48350"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("64750")),
+            Map.of( // 2025 LTCG 15% ceiling (above = 20%)
+                FilingStatus.SINGLE, bd("533400"), FilingStatus.MARRIED_JOINT, bd("600050"),
+                FilingStatus.MARRIED_SEPARATE, bd("300000"), FilingStatus.HEAD_OF_HOUSEHOLD, bd("566700")));
 
     private static final Map<Integer, TaxRuleSet> BY_YEAR = Map.of(2024, Y2024, 2025, Y2025);
     private static final int LATEST = 2025;

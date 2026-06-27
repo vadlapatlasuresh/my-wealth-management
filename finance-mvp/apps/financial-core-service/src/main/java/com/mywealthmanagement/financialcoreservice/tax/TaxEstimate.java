@@ -22,6 +22,7 @@ public class TaxEstimate {
     private String deductionType;           // STANDARD | ITEMIZED
     private BigDecimal deductionUsed;
     private BigDecimal qbiDeduction;        // Section 199A 20% QBI deduction (rental/business)
+    private BigDecimal capitalGainsTax;     // preferential 0/15/20% tax on long-term capital gains
     private BigDecimal taxableIncome;
     private BigDecimal taxBeforeCredits;
     private BigDecimal childTaxCredit;
