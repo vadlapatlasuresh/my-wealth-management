@@ -149,7 +149,9 @@ export default function TaxPage() {
   const [mfsBusy, setMfsBusy] = useState(false);
 
   // Collapsible input sections (Basics always visible; the rest start open).
-  const [openSection, setOpenSection] = useState({ income: true, adjustments: true, itemized: true });
+  // All input sections start collapsed — the user expands a feature only when they want to
+  // add/update it, so the page stays compact.
+  const [openSection, setOpenSection] = useState({});
   const toggleSection = (k) => setOpenSection((s) => ({ ...s, [k]: !s[k] }));
 
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
