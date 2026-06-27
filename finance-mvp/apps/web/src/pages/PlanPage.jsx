@@ -224,7 +224,10 @@ export default function PlanPage({
     let cancelled = false;
     if (!isAggregate) {
       api.getBudget(currentMonth)
-        .then((res) => { if (!cancelled) { setBudgetLines(res?.lines || []); setDirty(false); } })
+        .then(async (res) => {
+          const withActuals = await applyLiveActuals(res?.lines || []);
+          if (!cancelled) { setBudgetLines(withActuals); setDirty(false); }
+        })
         .catch((e) => console.error("budget load failed", e));
       return () => { cancelled = true; };
     }
@@ -355,18 +358,25 @@ export default function PlanPage({
     return { income, byCat };
   }
 
-  // Refresh just the actuals (the "spent" on each line) from the latest transactions — the light
-  // alternative to a full re-sync. Doesn't change budget targets, so it never marks the budget dirty.
-  async function refreshActuals() {
+  // Overlay live "spent" (from the latest transactions, same categorization as auto-fill) onto a
+  // set of budget lines. The backend only persists category + target amount, so without this the
+  // spent shown after a save/reload would come from a different source and look like it "reset".
+  async function applyLiveActuals(lines) {
     try {
       const txns = await api.getTransactions();
       const { byCat } = liveSpend(Array.isArray(txns) ? txns : []);
-      setBudgetLines((prev) => prev.map((l) => ({ ...l, spent: Math.round(byCat[l.category.toLowerCase()]?.spent || 0) })));
-      setDrift(null);
-      setNotice("Actuals refreshed from your latest transactions.");
-    } catch (e) {
-      setNotice(e?.message || "Couldn't refresh — please try again.");
+      return lines.map((l) => ({ ...l, spent: Math.round(byCat[l.category.toLowerCase()]?.spent || 0) }));
+    } catch {
+      return lines;
     }
+  }
+
+  // Refresh just the actuals (the "spent" on each line) from the latest transactions — the light
+  // alternative to a full re-sync. Doesn't change budget targets, so it never marks the budget dirty.
+  async function refreshActuals() {
+    setBudgetLines(await applyLiveActuals(budgetLines));
+    setDrift(null);
+    setNotice("Actuals refreshed from your latest transactions.");
   }
 
   // Read linked transactions, build a proposal, and OPEN the review sheet (nothing is applied
@@ -525,7 +535,9 @@ export default function PlanPage({
     try {
       const lines = budgetLines.map((l) => ({ category: l.category, amount: Number(l.amount) || 0 }));
       const updated = await api.putBudget(currentMonth, lines);
-      setBudgetLines(updated?.lines || lines);
+      // The backend stores only category + amount; re-overlay live actuals so "spent" sticks
+      // (consistent with what auto-fill showed) instead of appearing to reset after Save.
+      setBudgetLines(await applyLiveActuals(updated?.lines || lines));
       setDirty(false);
       setSavedAt(true);
       setTimeout(() => setSavedAt(false), 2500);
