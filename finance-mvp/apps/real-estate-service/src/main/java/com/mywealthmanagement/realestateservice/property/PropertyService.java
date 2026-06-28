@@ -102,6 +102,26 @@ public class PropertyService {
         if (dto.getRentEstimate() != null) {
             property.setRentEstimate(dto.getRentEstimate());
         }
+        // Financing & carrying costs — only overwrite when supplied, so a partial
+        // update never wipes existing values.
+        if (dto.getApr() != null) {
+            property.setApr(dto.getApr());
+        }
+        if (dto.getMonthlyPayment() != null) {
+            property.setMonthlyPayment(dto.getMonthlyPayment());
+        }
+        if (dto.getMonthlyTax() != null) {
+            property.setMonthlyTax(dto.getMonthlyTax());
+        }
+        if (dto.getMonthlyInsurance() != null) {
+            property.setMonthlyInsurance(dto.getMonthlyInsurance());
+        }
+        if (dto.getMonthlyHoa() != null) {
+            property.setMonthlyHoa(dto.getMonthlyHoa());
+        }
+        if (dto.getMonthlyPmi() != null) {
+            property.setMonthlyPmi(dto.getMonthlyPmi());
+        }
     }
 
     private static String firstNonBlank(String... values) {
@@ -136,7 +156,13 @@ public class PropertyService {
                 property.getBaths(),
                 property.getSqft(),
                 property.getYearBuilt(),
-                property.getRentEstimate()
+                property.getRentEstimate(),
+                property.getApr(),
+                property.getMonthlyPayment(),
+                property.getMonthlyTax(),
+                property.getMonthlyInsurance(),
+                property.getMonthlyHoa(),
+                property.getMonthlyPmi()
         );
     }
 
