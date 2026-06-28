@@ -16,8 +16,7 @@ const EMPTY_HOLDINGS = [];
 const TABS = [
   { id: 'stocks', label: 'Stocks & ETFs', icon: 'ti-chart-line' },
   { id: 'brokers', label: 'Brokers', icon: 'ti-building-bank' },
-  { id: 'alts', label: 'Alternatives', icon: 'ti-diamond' },
-  { id: 'market', label: 'Marketplace', icon: 'ti-map-2' }
+  { id: 'alts', label: 'Alternatives', icon: 'ti-diamond' }
 ];
 
 /* Alternative-investment categories, each with an icon + accent for the cards. */
@@ -329,7 +328,7 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
       <div className="page-header">
         <div>
           <div className="page-title">Invest</div>
-          <div className="page-subtitle">Holdings, linked brokers, alternatives, and the TerraVest marketplace</div>
+          <div className="page-subtitle">Holdings, linked brokers, and alternatives</div>
         </div>
         <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <LastRefreshed />
@@ -882,32 +881,6 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
               </div>
             </div>
           )}
-        </>
-      )}
-
-      {/* ============================================================ *
-       * TAB 4 — Marketplace
-       * ============================================================ */}
-      {tab === 'market' && (
-        <>
-          <div className="section-header">
-            <div className="section-title" style={{ marginBottom: 0 }}>Marketplace</div>
-          </div>
-          {/* No fabricated offerings. Real curated deals will populate here when a
-              marketplace provider is connected; until then, an honest empty state. */}
-          <div className="card">
-            <div className="empty-state" style={{ padding: '40px 16px', textAlign: 'center' }}>
-              <i className="ti ti-building-store" style={{ fontSize: 30, opacity: 0.5 }}></i>
-              <p style={{ marginTop: 10, fontWeight: 600, color: 'var(--tv-text-primary)' }}>
-                No live offerings yet
-              </p>
-              <p style={{ fontSize: 13, color: 'var(--tv-text-muted)', maxWidth: 420, margin: '4px auto 0' }}>
-                Curated alternative-investment deals will appear here once a marketplace
-                provider is connected. You can still track your own alternatives in the
-                Alternatives tab.
-              </p>
-            </div>
-          </div>
         </>
       )}
     </div>
