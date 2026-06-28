@@ -262,6 +262,13 @@ export default function PlanPage({
     api.getDebts().then((res) => setDebts(res || [])).catch(() => {});
   }, []);
 
+  // Phase 5 — keep-it-current: when live spending drifts from the saved budget, nudge to re-sync.
+  // NOTE: declared *before* the drift effect below — the effect's deps array reads `driftDismissed`
+  // during render, so these consts must already be initialized (else a TDZ ReferenceError crashes
+  // the whole Budget tab render).
+  const [drift, setDrift] = useState(null);             // { newCats:[], changed:[] } or null
+  const [driftDismissed, setDriftDismissed] = useState(false);
+
   // Phase 5 — detect when live spending has drifted from the saved budget and nudge to re-sync.
   // Runs when a budget is loaded for a real month; quiet unless the drift is meaningful.
   useEffect(() => {
@@ -331,11 +338,9 @@ export default function PlanPage({
   const [review, setReview] = useState(null);
   const [reviewMode, setReviewMode] = useState("merge"); // "replace" | "merge"
   const [expandedLine, setExpandedLine] = useState(null); // review line id whose transactions are shown
-<<<<<<< Updated upstream
   // Phase 5 — keep-it-current: when live spending drifts from the saved budget, nudge to re-sync.
   const [drift, setDrift] = useState(null);             // { newCats:[], changed:[] } or null
   const [driftDismissed, setDriftDismissed] = useState(false);
-=======
   // Transactions viewer — let the user see exactly what was spent (all of it, or one category).
   const [txnModal, setTxnModal] = useState(null);   // null = closed | { category: "all" | <name> }
   const [allTxns, setAllTxns] = useState([]);        // raw transactions, fetched lazily on first open
@@ -343,7 +348,6 @@ export default function PlanPage({
   const [txnsLoading, setTxnsLoading] = useState(false);
   const [txnSearch, setTxnSearch] = useState("");
   const [txnSort, setTxnSort] = useState("recent"); // "recent" | "amount"
->>>>>>> Stashed changes
 
   // Lightweight categorized spend for the current period, honoring the auto-fill filters
   // (account scope, excludes, renames). Used by the drift check + "Refresh actuals". Keep the
