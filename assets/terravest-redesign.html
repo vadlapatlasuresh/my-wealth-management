@@ -1025,7 +1025,7 @@ a { text-decoration: none; color: inherit; }
     • Budget: customizable rule (50/30/20 default + presets + custom split) and period selector
       (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
     • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
-    • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto), Marketplace.
+    • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto).
     • My Business: multi-business switcher, manual + QuickBooks linking, accounts, revenue trend, activity timeline.
     • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
 
@@ -2657,7 +2657,7 @@ a { text-decoration: none; color: inherit; }
       </div>
       <div id="page-invest" class="page">
         <div class="page-header">
-          <div><div class="page-title">Invest</div><div class="page-subtitle">Holdings, linked brokers, alternatives, and the TerraVest marketplace</div></div>
+          <div><div class="page-title">Invest</div><div class="page-subtitle">Holdings, linked brokers, and alternatives</div></div>
           <div class="page-actions" style="align-items:center;">
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
             <button class="btn btn-secondary btn-sm" title="Re-pull holdings &amp; activity from your brokers"><i class="ti ti-refresh"></i> Refresh</button>
@@ -2670,7 +2670,6 @@ a { text-decoration: none; color: inherit; }
           <button class="seg-btn active">Stocks &amp; ETFs</button>
           <button class="seg-btn">Brokers</button>
           <button class="seg-btn">Alternatives</button>
-          <button class="seg-btn">Marketplace</button>
         </div>
 
         <!-- ===== Tab 1: Stocks & ETFs ===== -->
@@ -2832,17 +2831,6 @@ a { text-decoration: none; color: inherit; }
                 <tr><td><span class="badge badge-amber">Crypto</span></td><td>BTC / ETH</td><td>$14,500</td><td>100%</td><td>Cold storage</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-pencil"></i></button> <button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
               </tbody>
             </table>
-          </div>
-        </div>
-
-        <!-- ===== Tab 4: Marketplace ===== -->
-        <div class="section-title">Marketplace</div>
-        <div class="card">
-          <div class="empty-state">
-            <i class="ti ti-building-store"></i>
-            <p style="font-weight:600;color:var(--tv-text-secondary);">No live offerings yet</p>
-            <p>Curated alternative-investment deals will appear here once a marketplace provider is connected.</p>
-            <p style="margin-top:8px;font-size:12px;"><span class="badge badge-gray">Example offerings — not live</span></p>
           </div>
         </div>
       </div>
@@ -3602,6 +3590,11 @@ a { text-decoration: none; color: inherit; }
           <div class="card">
             <div class="section-title">Mortgage details</div>
             <div class="form-group">
+              <label class="form-label">Use a linked property</label>
+              <select class="form-select"><option>123 Oak St — $360,000 owed</option><option>Enter manually…</option></select>
+              <div style="margin-top:8px;font-size:12px;color:var(--tv-text-secondary);"><i class="ti ti-link" style="color:var(--tv-forest);"></i> Linked to <strong>123 Oak St</strong> · valued $540,000. Balance pulled in — add your rate &amp; payment to model it.</div>
+            </div>
+            <div class="form-group">
               <label class="form-label">Balance owed</label>
               <input class="form-input" value="$360,000">
             </div>
@@ -3644,7 +3637,7 @@ a { text-decoration: none; color: inherit; }
               Paying <strong>$300 extra</strong> each month pays your loan off <strong>6y 4m sooner</strong> and saves <strong>$84,210</strong> in interest.
             </div>
             <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:14px;">
-              Other tabs: <span style="opacity:.6;">Compound interest</span> · <span style="opacity:.6;">Simple interest</span> — switch above to model savings growth.
+              Other tabs: <span style="opacity:.6;">Compound interest</span> · <span style="opacity:.6;">Simple interest</span> — Simple now has a <strong>loan payoff</strong> option (shows the monthly payment) and a <strong>Yearly / Monthly</strong> return toggle.
             </div>
           </div>
         </div>
@@ -3662,9 +3655,10 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
-        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-target" style="font-size:13px;color:var(--tv-forest-light)"></i> Goals</div><div class="kpi-value">3</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-pig-money" style="font-size:13px;color:var(--tv-forest-light)"></i> Saved so far</div><div class="kpi-value">$46,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag-2" style="font-size:13px;color:var(--tv-forest)"></i> Still needed</div><div class="kpi-value">$74,000</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag" style="font-size:13px;color:var(--tv-gold)"></i> Total target</div><div class="kpi-value">$120,000</div></div>
         </div>
 
@@ -3677,6 +3671,7 @@ a { text-decoration: none; color: inherit; }
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target amount</label><input class="form-input" placeholder="$10,000"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Already saved</label><input class="form-input" placeholder="$0"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target date</label><input class="form-input" type="date"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Fund from account <span style="color:var(--tv-text-muted);font-weight:400;">(optional)</span></label><select class="form-select"><option>Not linked</option><option>Ally Savings · savings — $9,000</option><option>Chase Checking · checking — $4,200</option></select></div>
             <div style="display:flex;align-items:end;"><button class="btn btn-primary" style="width:100%;justify-content:center;"><i class="ti ti-plus"></i> Create goal</button></div>
           </div>
         </div>
@@ -3689,11 +3684,23 @@ a { text-decoration: none; color: inherit; }
                 <div class="item-name">Emergency fund</div>
                 <div class="item-sub">Safety net · Target Dec 2026</div>
               </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:var(--tv-text-muted);text-transform:uppercase;letter-spacing:.4px;">Still needed</div>
+                <div style="font-family:var(--font-display);font-size:19px;color:var(--tv-forest);">$11,000</div>
+              </div>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:45%;background:var(--tv-forest);"></div></div>
             <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$9,000 of $20,000</span><span style="color:var(--tv-text-muted);">45%</span></div>
             <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $650/mo for 2y 3m</div>
             <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn btn-secondary btn-sm">+$100</button><button class="btn btn-secondary btn-sm">+$500</button></div>
+            <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--tv-border-light);">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="ti ti-building-bank" style="color:var(--tv-text-muted);"></i>
+                <select class="form-select" style="flex:1;height:34px;font-size:12.5px;"><option>Ally Savings · savings — $9,000</option><option>Link a savings account…</option></select>
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Sync</button>
+              </div>
+              <div style="font-size:12px;color:var(--tv-text-muted);margin-top:6px;">Tracking <strong>Ally Savings</strong> · balance $9,000</div>
+            </div>
           </div>
 
           <div class="card">
@@ -3702,6 +3709,10 @@ a { text-decoration: none; color: inherit; }
               <div class="item-main">
                 <div class="item-name">House down payment</div>
                 <div class="item-sub">Real estate · Target Aug 2028</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:11px;color:var(--tv-text-muted);text-transform:uppercase;letter-spacing:.4px;">Still needed</div>
+                <div style="font-family:var(--font-display);font-size:19px;color:var(--tv-forest);">$63,000</div>
               </div>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:22%;background:var(--tv-forest);"></div></div>

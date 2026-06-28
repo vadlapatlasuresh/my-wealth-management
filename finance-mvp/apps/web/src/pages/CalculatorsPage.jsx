@@ -46,23 +46,47 @@ function SimpleCalc() {
   const [p, setP] = useState(10000);
   const [r, setR] = useState(5);
   const [t, setT] = useState(3);
+  const [asLoan, setAsLoan] = useState(false); // treat the principal as a loan to pay off
+  const [view, setView] = useState("year");    // show the interest per "year" | "month"
+
   const res = useMemo(() => simpleInterest(p, r, t), [p, r, t]);
+  const months = Math.max(1, Math.round(Number(t) * 12));
+  const perYear = useMemo(() => simpleInterest(p, r, 1).interest, [p, r]); // interest for one year (P·r)
+  const perValue = view === "year" ? perYear : perYear / 12;
+  const perLabel = view === "year" ? "year" : "month";
+  const monthlyPayment = res.total / months; // simple-interest loan: total owed spread evenly over the term
+
   return (
     <div className="grid-2">
       <div className="card">
         <div className="section-title">Inputs</div>
         <Field label="Principal" prefix="$" value={p} onChange={setP} />
         <Field label="Annual rate" suffix="%" value={r} onChange={setR} step="0.1" />
-        <Field label="Years" value={t} onChange={setT} step="0.5" />
+        <Field label={asLoan ? "Loan term (years)" : "Years"} value={t} onChange={setT} step="0.5" />
+        <label className="form-label" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", marginTop: 4 }}>
+          <input type="checkbox" checked={asLoan} onChange={(e) => setAsLoan(e.target.checked)} />
+          This is a loan I want to pay off
+        </label>
       </div>
       <div className="card">
-        <div className="section-title">Result</div>
+        <div className="section-header" style={{ marginBottom: 10 }}>
+          <div className="section-title" style={{ marginBottom: 0 }}>{asLoan ? "Payoff" : "Result"}</div>
+          <div className="seg-control">
+            {[["year", "Yearly"], ["month", "Monthly"]].map(([v, l]) => (
+              <button key={v} className={`seg-btn ${view === v ? "active" : ""}`} onClick={() => setView(v)}>{l}</button>
+            ))}
+          </div>
+        </div>
         <div className="stat-grid">
-          <Stat label="Interest earned" value={currency(res.interest)} tone="good" />
-          <Stat label="Total value" value={currency(res.total)} />
+          <Stat label={asLoan ? "Interest cost" : "Interest earned"} value={currency(res.interest)} tone={asLoan ? "bad" : "good"} />
+          <Stat label={asLoan ? "Total to repay" : "Total value"} value={currency(res.total)} />
+          <Stat label={`Interest / ${perLabel}`} value={currency(perValue)} tone={asLoan ? "bad" : "good"} />
+          {asLoan && <Stat label="Monthly payment" value={currency(monthlyPayment)} />}
         </div>
         <p style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: 12 }}>
-          Simple interest = Principal × Rate × Years. Interest is not reinvested.
+          {asLoan
+            ? `Paying off this ${currency(p)} loan over ${t} year${Number(t) === 1 ? "" : "s"} costs ${currency(res.interest)} in simple interest — about ${currency(monthlyPayment)}/mo (${currency(res.total)} total).`
+            : `Simple interest = Principal × Rate × Years. Interest is not reinvested — that's about ${currency(perValue)} per ${perLabel}.`}
         </p>
       </div>
     </div>
@@ -125,20 +149,30 @@ function MortgageCalc() {
   const [payment, setPayment] = useState(2400);
   const [extra, setExtra] = useState(300);
   const [properties, setProperties] = useState([]);
+  const [linkedIdx, setLinkedIdx] = useState(""); // index of the linked property, "" = none
 
-  // Offer to prefill the balance from the user's REAL mortgaged properties.
+  // Offer to prefill the balance from the user's REAL mortgaged properties. Properties only store a
+  // balance (not a rate or payment), so we fill what exists and leave the rest for the user.
   useEffect(() => {
     let active = true;
     api.getRealEstate()
       .then((res) => {
         if (!active) return;
         const items = (Array.isArray(res) ? res : res?.items || [])
+          .map((p) => ({ ...p, mortgageBalance: p.mortgageBalance ?? p.loanBalance ?? p.mortgage ?? 0 }))
           .filter((p) => Number(p.mortgageBalance) > 0);
         setProperties(items);
       })
       .catch(() => {});
     return () => { active = false; };
   }, []);
+
+  const linkProperty = (idx) => {
+    setLinkedIdx(idx);
+    const p = properties[Number(idx)];
+    if (p) setBalance(Number(p.mortgageBalance) || 0);
+  };
+  const linked = linkedIdx !== "" ? properties[Number(linkedIdx)] : null;
 
   const r = useMemo(() => extraPaymentImpact(balance, rate, payment, extra), [balance, rate, payment, extra]);
   const basePayoff = payoffDateLabel(r.base.months);
@@ -152,16 +186,20 @@ function MortgageCalc() {
         {properties.length > 0 && (
           <div className="form-group" style={{ marginBottom: 12 }}>
             <label className="form-label">Use a linked property</label>
-            <select
-              className="form-select"
-              onChange={(e) => { const p = properties[Number(e.target.value)]; if (p) setBalance(Number(p.mortgageBalance)); }}
-              defaultValue=""
-            >
-              <option value="" disabled>Select a property…</option>
+            <select className="form-select" value={linkedIdx} onChange={(e) => linkProperty(e.target.value)}>
+              <option value="">Enter manually…</option>
               {properties.map((p, i) => (
                 <option key={p.id ?? i} value={i}>{p.address} — {currency(p.mortgageBalance)} owed</option>
               ))}
             </select>
+            {linked && (
+              <div style={{ marginTop: 8, fontSize: 12, color: "var(--tv-text-secondary)", display: "flex", alignItems: "center", gap: 6 }}>
+                <i className="ti ti-link" style={{ color: "var(--tv-forest)" }}></i>
+                Linked to <strong>{linked.address}</strong>
+                {Number(linked.currentValue) > 0 && <> · valued {currency(linked.currentValue)}</>}
+                . Balance pulled in — add your rate &amp; payment to model it.
+              </div>
+            )}
           </div>
         )}
         <Field label="Balance owed" prefix="$" value={balance} onChange={setBalance} />
