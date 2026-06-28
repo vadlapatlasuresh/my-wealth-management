@@ -338,9 +338,6 @@ export default function PlanPage({
   const [review, setReview] = useState(null);
   const [reviewMode, setReviewMode] = useState("merge"); // "replace" | "merge"
   const [expandedLine, setExpandedLine] = useState(null); // review line id whose transactions are shown
-  // Phase 5 — keep-it-current: when live spending drifts from the saved budget, nudge to re-sync.
-  const [drift, setDrift] = useState(null);             // { newCats:[], changed:[] } or null
-  const [driftDismissed, setDriftDismissed] = useState(false);
   // Transactions viewer — let the user see exactly what was spent (all of it, or one category).
   const [txnModal, setTxnModal] = useState(null);   // null = closed | { category: "all" | <name> }
   const [allTxns, setAllTxns] = useState([]);        // raw transactions, fetched lazily on first open
