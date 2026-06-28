@@ -1377,6 +1377,7 @@ a { text-decoration: none; color: inherit; }
               <span style="font-family:var(--font-display);font-size:16px;color:var(--tv-forest);min-width:90px;text-align:center;">June 2026</span>
               <button class="btn-secondary" style="background:none;border:none;font-size:18px;color:var(--tv-text-muted);cursor:pointer;padding:0;">&rsaquo;</button>
             </div>
+            <button class="btn btn-secondary btn-sm" title="See every transaction behind your spending"><i class="ti ti-list-search"></i> View transactions</button>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export CSV</button>
             <button class="btn btn-primary btn-sm"><i class="ti ti-device-floppy"></i> Save budget</button>
           </div>
@@ -1508,6 +1509,26 @@ a { text-decoration: none; color: inherit; }
             <div style="margin:4px 0 2px 26px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><span class="badge badge-amber"><i class="ti ti-alert-triangle" style="font-size:10px;"></i> 1 large one-off · $210</span><span style="color:var(--tv-forest-light);font-weight:600;font-size:11.5px;">use typical $120 ▸</span></div>
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;"><span style="font-size:11.5px;color:var(--tv-text-muted);">11 of 12 included</span><div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">Cancel</button><button class="btn btn-primary btn-sm"><i class="ti ti-check"></i> Apply to budget</button></div></div>
+        </div>
+
+        <!-- Transactions viewer (opens from "View transactions" or by clicking a category's Spent — the receipts behind the numbers) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header" style="margin-bottom:6px;">
+            <div class="section-title" style="margin-bottom:0;"><i class="ti ti-list-search" style="color:var(--tv-forest);margin-right:6px;"></i> Transactions · Food &amp; Drink</div>
+            <span class="badge badge-gray">June 2025</span>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap;padding:10px 0;border-bottom:1px solid var(--tv-border);margin-bottom:10px;">
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Transactions</div><div style="font-weight:600;">14</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Spent</div><div style="font-weight:600;color:var(--tv-negative);">$612</div></div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+            <input class="form-input" style="flex:1;min-width:160px;" placeholder="Search by name or category…">
+            <select class="form-input" style="width:150px;"><option>All categories</option><option selected>Food &amp; Drink</option><option>Shopping</option></select>
+            <div class="seg-control"><button class="seg-btn active">Recent</button><button class="seg-btn">Amount</button></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--tv-border-light);"><div class="item-icon icon-red" style="width:30px;height:30px;font-size:14px;"><i class="ti ti-shopping-cart"></i></div><div style="flex:1;"><div style="font-weight:500;">Whole Foods</div><div style="font-size:12px;color:var(--tv-text-muted);">2025-06-03 · Food &amp; Drink</div></div><div style="font-weight:600;">−$142</div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--tv-border-light);"><div class="item-icon icon-red" style="width:30px;height:30px;font-size:14px;"><i class="ti ti-coffee"></i></div><div style="flex:1;"><div style="font-weight:500;">Blue Bottle Coffee</div><div style="font-size:12px;color:var(--tv-text-muted);">2025-06-05 · Food &amp; Drink</div></div><div style="font-weight:600;">−$18</div></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:8px 0;"><div class="item-icon icon-forest" style="width:30px;height:30px;font-size:14px;"><i class="ti ti-arrow-down-left"></i></div><div style="flex:1;"><div style="font-weight:500;">Payroll · Acme Inc</div><div style="font-size:12px;color:var(--tv-text-muted);">2025-06-01 · Income</div></div><div style="font-weight:600;color:var(--tv-positive);">+$5,420</div></div>
         </div>
 
         <!-- Auto-fill settings (the gear next to "Auto-fill from accounts" — persisted preferences) -->
