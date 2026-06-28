@@ -48,4 +48,23 @@ public class PropertyDto {
 
     @PositiveOrZero(message = "rentEstimate must be zero or positive")
     private BigDecimal rentEstimate;
+
+    // Financing & monthly carrying costs (all optional).
+    @PositiveOrZero(message = "apr must be zero or positive")
+    private BigDecimal apr;
+
+    @PositiveOrZero(message = "monthlyPayment must be zero or positive")
+    private BigDecimal monthlyPayment;
+
+    @PositiveOrZero(message = "monthlyTax must be zero or positive")
+    private BigDecimal monthlyTax;
+
+    @PositiveOrZero(message = "monthlyInsurance must be zero or positive")
+    private BigDecimal monthlyInsurance;
+
+    @PositiveOrZero(message = "monthlyHoa must be zero or positive")
+    private BigDecimal monthlyHoa;
+
+    @PositiveOrZero(message = "monthlyPmi must be zero or positive")
+    private BigDecimal monthlyPmi;
 }

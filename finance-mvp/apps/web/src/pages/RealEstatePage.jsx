@@ -53,6 +53,13 @@ export default function RealEstatePage({ properties = [] }) {
     sqft: "",
     yearBuilt: "",
     rentEstimate: "",
+    // Financing & monthly carrying costs
+    apr: "",
+    monthlyPayment: "",
+    monthlyTax: "",
+    monthlyInsurance: "",
+    monthlyHoa: "",
+    monthlyPmi: "",
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -131,6 +138,12 @@ export default function RealEstatePage({ properties = [] }) {
       sqft: prop.sqft != null ? String(prop.sqft) : "",
       yearBuilt: prop.yearBuilt != null ? String(prop.yearBuilt) : "",
       rentEstimate: prop.rentEstimate != null ? String(prop.rentEstimate) : "",
+      apr: prop.apr != null ? String(prop.apr) : "",
+      monthlyPayment: prop.monthlyPayment != null ? String(prop.monthlyPayment) : "",
+      monthlyTax: prop.monthlyTax != null ? String(prop.monthlyTax) : "",
+      monthlyInsurance: prop.monthlyInsurance != null ? String(prop.monthlyInsurance) : "",
+      monthlyHoa: prop.monthlyHoa != null ? String(prop.monthlyHoa) : "",
+      monthlyPmi: prop.monthlyPmi != null ? String(prop.monthlyPmi) : "",
     });
     setError("");
     setNotice("");
@@ -199,6 +212,9 @@ export default function RealEstatePage({ properties = [] }) {
         }
       }
 
+      // Rent income & PMI only apply to rentals — don't send them for other types.
+      const isRental = form.propertyType === "RENTAL_PROPERTY";
+      const num = (v) => (v === "" || v == null ? null : Number(v));
       const payload = {
         address: form.address.trim(),
         propertyType: form.propertyType,
@@ -209,7 +225,14 @@ export default function RealEstatePage({ properties = [] }) {
         baths: filled.baths,
         sqft: filled.sqft,
         yearBuilt: filled.yearBuilt,
-        rentEstimate: filled.rentEstimate,
+        rentEstimate: isRental ? filled.rentEstimate : null,
+        // Financing & monthly carrying costs
+        apr: num(form.apr),
+        monthlyPayment: num(form.monthlyPayment),
+        monthlyTax: num(form.monthlyTax),
+        monthlyInsurance: num(form.monthlyInsurance),
+        monthlyHoa: num(form.monthlyHoa),
+        monthlyPmi: isRental ? num(form.monthlyPmi) : null,
       };
       if (editingId) {
         await api.updateProperty(editingId, payload);
@@ -412,11 +435,49 @@ export default function RealEstatePage({ properties = [] }) {
                 <label className="form-label">Year built</label>
                 <input className="form-input" type="number" value={form.yearBuilt} onChange={onFormChange("yearBuilt")} placeholder="—" />
               </div>
+            </div>
+
+            {/* Financing & monthly carrying costs — apply to any property type. */}
+            <div className="section-title" style={{ fontSize: 13, marginTop: 6, marginBottom: 10 }}>Financing &amp; carrying costs</div>
+            <div className="grid-3">
               <div className="form-group">
-                <label className="form-label">Est. monthly rent</label>
-                <input className="form-input" type="number" value={form.rentEstimate} onChange={onFormChange("rentEstimate")} placeholder="—" />
+                <label className="form-label">APR <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(%)</span></label>
+                <input className="form-input" type="number" step="0.01" min="0" value={form.apr} onChange={onFormChange("apr")} placeholder="—" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Monthly payment</label>
+                <input className="form-input" type="number" min="0" value={form.monthlyPayment} onChange={onFormChange("monthlyPayment")} placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Taxes <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(monthly)</span></label>
+                <input className="form-input" type="number" min="0" value={form.monthlyTax} onChange={onFormChange("monthlyTax")} placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Insurance <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(monthly)</span></label>
+                <input className="form-input" type="number" min="0" value={form.monthlyInsurance} onChange={onFormChange("monthlyInsurance")} placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">HOA <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(monthly)</span></label>
+                <input className="form-input" type="number" min="0" value={form.monthlyHoa} onChange={onFormChange("monthlyHoa")} placeholder="0" />
               </div>
             </div>
+
+            {/* Rental-only: rent income + optional PMI. Hidden for personal residences / land. */}
+            {form.propertyType === "RENTAL_PROPERTY" && (
+              <>
+                <div className="section-title" style={{ fontSize: 13, marginTop: 6, marginBottom: 10 }}>Rental income</div>
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Monthly rent income</label>
+                    <input className="form-input" type="number" min="0" value={form.rentEstimate} onChange={onFormChange("rentEstimate")} placeholder="0" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">PMI <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(monthly, optional)</span></label>
+                    <input className="form-input" type="number" min="0" value={form.monthlyPmi} onChange={onFormChange("monthlyPmi")} placeholder="0" />
+                  </div>
+                </div>
+              </>
+            )}
             <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>
               <i className={`ti ${saving ? "ti-loader spin" : "ti-check"}`}></i>
               {saving ? (editingId ? "Updating…" : "Saving & estimating…") : (editingId ? "Update property" : "Save property")}
@@ -579,17 +640,38 @@ export default function RealEstatePage({ properties = [] }) {
                   </div>
                 )}
 
-                {/* Rental analysis for rental properties with a rent estimate */}
-                {prop.rentEstimate && (prop.type === "RENTAL_PROPERTY" || prop.type === "Rental") ? (
-                  <div style={{ margin: "0 18px 16px", padding: "10px 12px", background: "var(--tv-sage-pale)", borderRadius: "var(--radius-md)", display: "flex", justifyContent: "space-between", fontSize: 12.5 }}>
-                    <span><i className="ti ti-cash" style={{ color: "var(--tv-forest)", marginRight: 4 }}></i>Est. rent <strong>{currency(prop.rentEstimate)}/mo</strong></span>
-                    {prop.currentValue ? (
-                      <span title="Annual rent ÷ current value">
-                        Cap rate <strong>{(((prop.rentEstimate * 12) / prop.currentValue) * 100).toFixed(1)}%</strong>
-                      </span>
-                    ) : null}
-                  </div>
-                ) : null}
+                {/* Rental analysis — net cap rate accounts for all monthly carrying costs */}
+                {prop.rentEstimate && (prop.type === "RENTAL_PROPERTY" || prop.type === "Rental") ? (() => {
+                  const rent = Number(prop.rentEstimate) || 0;
+                  // Operating expenses for the cap rate: taxes + insurance + HOA + PMI (monthly).
+                  const monthlyOpEx =
+                    (Number(prop.monthlyTax) || 0) +
+                    (Number(prop.monthlyInsurance) || 0) +
+                    (Number(prop.monthlyHoa) || 0) +
+                    (Number(prop.monthlyPmi) || 0);
+                  const noiAnnual = (rent - monthlyOpEx) * 12; // net operating income (excludes debt service)
+                  const capRate = prop.currentValue ? (noiAnnual / prop.currentValue) * 100 : null;
+                  // Monthly cash flow also nets out the mortgage payment (debt service).
+                  const cashFlow = rent - (Number(prop.monthlyPayment) || 0) - monthlyOpEx;
+                  return (
+                    <div style={{ margin: "0 18px 16px", padding: "10px 12px", background: "var(--tv-sage-pale)", borderRadius: "var(--radius-md)", fontSize: 12.5 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span><i className="ti ti-cash" style={{ color: "var(--tv-forest)", marginRight: 4 }}></i>Rent <strong>{currency(rent)}/mo</strong></span>
+                        {capRate != null ? (
+                          <span title="(annual rent − annual taxes, insurance, HOA & PMI) ÷ current value">
+                            Cap rate <strong style={{ color: capRate >= 0 ? "var(--tv-positive)" : "var(--tv-negative)" }}>{capRate.toFixed(1)}%</strong>
+                          </span>
+                        ) : null}
+                      </div>
+                      {(monthlyOpEx > 0 || Number(prop.monthlyPayment) > 0) && (
+                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "var(--tv-text-muted)", fontSize: 11.5 }}>
+                          <span>Expenses {currency(monthlyOpEx)}/mo{Number(prop.monthlyPayment) > 0 ? ` · payment ${currency(Number(prop.monthlyPayment))}/mo` : ""}</span>
+                          <span>Cash flow <strong style={{ color: cashFlow >= 0 ? "var(--tv-positive)" : "var(--tv-negative)" }}>{cashFlow >= 0 ? "+" : ""}{currency(cashFlow)}/mo</strong></span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })() : null}
               </div>
             );
           })

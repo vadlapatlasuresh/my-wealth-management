@@ -2846,9 +2846,22 @@ a { text-decoration: none; color: inherit; }
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Purchase price</label><input class="form-input" placeholder="$0"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Current value (auto if blank)</label><input class="form-input" placeholder="$0"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Mortgage balance</label><input class="form-input" placeholder="$0"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Est. monthly rent</label><input class="form-input" placeholder="$0"></div>
-            <div style="display:flex;align-items:end;"><button class="btn btn-primary" style="width:100%;justify-content:center;"><i class="ti ti-device-floppy"></i> Save property</button></div>
           </div>
+          <div class="section-title" style="font-size:13px;margin:14px 0 10px;">Financing &amp; carrying costs</div>
+          <div class="grid-3" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">APR (%)</label><input class="form-input" placeholder="—"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Monthly payment</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Taxes (monthly)</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Insurance (monthly)</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">HOA (monthly)</label><input class="form-input" placeholder="$0"></div>
+          </div>
+          <!-- Rental income — shown only when Type = Rental property (rent + optional PMI) -->
+          <div class="section-title" style="font-size:13px;margin:14px 0 10px;">Rental income <span style="font-weight:400;color:var(--tv-text-muted);">· rentals only</span></div>
+          <div class="grid-2" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Monthly rent income</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">PMI (monthly, optional)</label><input class="form-input" placeholder="$0"></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:14px;"><button class="btn btn-primary"><i class="ti ti-device-floppy"></i> Save property</button></div>
           <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:10px;"><i class="ti ti-info-circle"></i> Estimated values are for informational purposes and may not reflect market price.</div>
         </div>
 
@@ -2886,9 +2899,15 @@ a { text-decoration: none; color: inherit; }
               <div class="property-stat"><div class="property-stat-label">Equity</div><div class="property-stat-value" style="color:var(--tv-positive);">$45,000</div></div>
               <div class="property-stat"><div class="property-stat-label">Mortgage</div><div class="property-stat-value">$80,000</div></div>
             </div>
-            <div style="margin:0 18px 16px;padding:12px;background:var(--tv-sage-pale);border-radius:var(--radius-md);display:flex;justify-content:space-between;font-size:13px;">
-              <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:600;">Est. rent / mo</div><div style="font-weight:600;">$1,650</div></div>
-              <div style="text-align:right;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:600;">Cap rate</div><div style="font-weight:600;color:var(--tv-positive);">6.8%</div></div>
+            <div style="margin:0 18px 16px;padding:12px;background:var(--tv-sage-pale);border-radius:var(--radius-md);font-size:13px;">
+              <div style="display:flex;justify-content:space-between;">
+                <span><i class="ti ti-cash" style="color:var(--tv-forest);margin-right:4px;"></i>Rent <strong>$1,650/mo</strong></span>
+                <span title="(annual rent − annual taxes, insurance, HOA & PMI) ÷ current value">Cap rate <strong style="color:var(--tv-positive);">10.8%</strong></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;color:var(--tv-text-muted);font-size:11.5px;">
+                <span>Expenses $520/mo · payment $760/mo</span>
+                <span>Cash flow <strong style="color:var(--tv-positive);">+$370/mo</strong></span>
+              </div>
             </div>
           </div>
         </div>

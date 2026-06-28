@@ -57,4 +57,23 @@ public class Property {
 
     @Column(name = "rent_estimate")
     private BigDecimal rentEstimate;
+
+    // Financing & monthly carrying costs (all nullable — backwards compatible).
+    @Column(name = "apr")
+    private BigDecimal apr; // mortgage APR, percent
+
+    @Column(name = "monthly_payment")
+    private BigDecimal monthlyPayment; // mortgage payment (P&I)
+
+    @Column(name = "monthly_tax")
+    private BigDecimal monthlyTax;
+
+    @Column(name = "monthly_insurance")
+    private BigDecimal monthlyInsurance;
+
+    @Column(name = "monthly_hoa")
+    private BigDecimal monthlyHoa;
+
+    @Column(name = "monthly_pmi")
+    private BigDecimal monthlyPmi; // rentals, optional
 }
