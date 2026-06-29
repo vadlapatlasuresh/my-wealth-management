@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { currency, formatDate } from "../utils/format";
 import { api } from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
@@ -62,6 +62,20 @@ export default function RealEstatePage({ properties = [] }) {
     monthlyPmi: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const formRef = useRef(null);
+  const [formFlash, setFormFlash] = useState(false); // brief highlight when the form opens
+
+  // The add/edit form renders at the top of the page; when opened (esp. via a card's Edit
+  // button lower down) scroll it into view and flash it, so it's obvious the form opened
+  // rather than looking like the Edit button did nothing.
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      setFormFlash(true);
+      const t = setTimeout(() => setFormFlash(false), 1300);
+      return () => clearTimeout(t);
+    }
+  }, [showForm, editingId]);
 
   // Estimate value + details from the address via the real-estate service.
   const lookupFromAddress = async () => {
@@ -358,8 +372,24 @@ export default function RealEstatePage({ properties = [] }) {
       )}
 
       {showForm && (
-        <div className="card" style={{ marginBottom: "16px" }}>
-          <div className="section-title">{editingId ? "Edit property" : "Add a property"}</div>
+        <div
+          ref={formRef}
+          className="card"
+          style={{
+            marginBottom: "16px",
+            scrollMarginTop: "16px",
+            transition: "box-shadow .5s ease, border-color .3s ease",
+            borderLeft: editingId ? "4px solid var(--tv-forest)" : undefined,
+            boxShadow: formFlash ? "0 0 0 3px var(--tv-forest)" : undefined,
+          }}
+        >
+          <div className="section-title" style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <i className={editingId ? "ti ti-pencil" : "ti ti-plus"} style={{ color: "var(--tv-forest)" }}></i>
+            {editingId ? "Edit property" : "Add a property"}
+            {editingId && form.address ? (
+              <span className="badge badge-green" style={{ fontSize: 11, fontWeight: 500 }}>{form.address}</span>
+            ) : null}
+          </div>
           <div style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: -4, marginBottom: 14 }}>
             {editingId
               ? "Update any detail and save your changes."
