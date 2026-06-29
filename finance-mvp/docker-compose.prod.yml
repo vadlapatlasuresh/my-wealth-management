@@ -5,9 +5,10 @@
 #  service talks to its neighbours over the internal `wealth` network
 #  using compose DNS (e.g. http://auth-service:8081).
 #
-#  Postgres is EXTERNAL (Neon) by default — set DATABASE_URL per service in .env.prod.
-#  To run Postgres locally instead, uncomment the `postgres` service at the bottom
-#  and point DATABASE_URL at jdbc:postgresql://postgres:5432/wealth.
+#  Postgres is SELF-HOSTED in this stack (the `postgres` service below) — one instance
+#  with a database per service (created by deploy/init-databases.sql on first boot).
+#  Only POSTGRES_PASSWORD (+ optional POSTGRES_USER/DB) is needed in .env.prod; the old
+#  per-service Neon *_DATABASE_URL/USER/PASSWORD vars are no longer used.
 #
 #  Usage:
 #    cp .env.prod.example .env.prod   # fill in secrets
@@ -78,6 +79,8 @@ x-java-defaults: &java-defaults
 # secrets-client fetch races the store, fails, and they fall back to (blank) env — silently
 # disabling Plaid/SendGrid/Gemini/etc. until the next restart.
 x-needs-secrets: &needs-secrets
+  postgres:
+    condition: service_healthy
   secrets-service:
     condition: service_healthy
 
@@ -138,12 +141,15 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-auth-service:${TAG:-latest}
     container_name: wealth-auth-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,encryption,audit
-      DATABASE_URL: ${AUTH_DATABASE_URL:?}
-      DATABASE_USER: ${AUTH_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${AUTH_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/authdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       # Where auth-service POSTs OTP codes for delivery (NotificationClient ->
       # notification-service /internal/comms/otp). Without this it defaults to
       # localhost:8088 and silently calls itself, so real email/SMS never sends.
@@ -171,9 +177,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,encryption,plaid
-      DATABASE_URL: ${AGG_DATABASE_URL:?}
-      DATABASE_USER: ${AGG_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${AGG_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/aggdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # AES key to encrypt Plaid access tokens at rest (required by EncryptionKeyHolder)
       APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env.prod}
@@ -185,12 +191,15 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-financial-core-service:${TAG:-latest}
     container_name: wealth-financial-core-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,notifications-internal
-      DATABASE_URL: ${CORE_DATABASE_URL:?}
-      DATABASE_USER: ${CORE_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${CORE_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/coredb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Weekly net-worth digest -> notification-service (best-effort, shared key)
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
@@ -205,9 +214,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,realestate,notifications-internal
-      DATABASE_URL: ${RE_DATABASE_URL:?}
-      DATABASE_USER: ${RE_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${RE_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/redb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Valuation provider: mock (default) | rentcast. Set both flag + key to go live.
       REALESTATE_PROVIDER: ${REALESTATE_PROVIDER:-mock}
@@ -226,9 +235,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,qbo
-      DATABASE_URL: ${BIZ_DATABASE_URL:?}
-      DATABASE_USER: ${BIZ_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${BIZ_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/bizdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Business data provider: mock (default) | quickbooks. Set flag + QBO app creds to go live.
       BUSINESS_PROVIDER: ${BUSINESS_PROVIDER:-mock}
@@ -248,9 +257,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,gemini,anthropic,openai
-      DATABASE_URL: ${AI_DATABASE_URL:?}
-      DATABASE_USER: ${AI_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${AI_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/aidb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # AI provider: mock (default) | anthropic | gemini
       AI_PROVIDER: ${AI_PROVIDER:-mock}
@@ -270,9 +279,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,stripe,notifications-internal
-      DATABASE_URL: ${PAY_DATABASE_URL:?}
-      DATABASE_USER: ${PAY_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${PAY_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/paydb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Provider toggle: mock (default) | stripe. Set PAYMENT_PROVIDER=stripe + keys to go live.
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-mock}
@@ -293,9 +302,9 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,sendgrid,twilio,fcm,notifications-internal
-      DATABASE_URL: ${NOTIF_DATABASE_URL:?}
-      DATABASE_USER: ${NOTIF_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${NOTIF_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/notifdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Resolve a user's email (for alert emails) from auth-service. Uses the shared
       # AUDIT_INGEST_KEY as X-Internal-Key (already in the env anchor).
@@ -318,12 +327,15 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-platform-config-service:${TAG:-latest}
     container_name: wealth-platform-config-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt
-      DATABASE_URL: ${CONFIG_DATABASE_URL:?}
-      DATABASE_USER: ${CONFIG_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${CONFIG_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/configdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Skip strict Hibernate validate: the disclaimer.body_markdown entity is @Lob
       # (expects CLOB/oid) but the Flyway migration uses text. Flyway owns the schema;
@@ -334,12 +346,15 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-audit-service:${TAG:-latest}
     container_name: wealth-audit-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,audit,notifications-internal
-      DATABASE_URL: ${AUDIT_DATABASE_URL:?}
-      DATABASE_USER: ${AUDIT_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${AUDIT_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/auditdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Health monitor: polls every service + emails an admin on UP/DOWN transitions.
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
@@ -351,11 +366,14 @@ services:
     <<: *java-defaults
     image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-secrets-service:${TAG:-latest}
     container_name: wealth-secrets-service
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
       <<: *java-env
-      DATABASE_URL: ${SECRETS_DATABASE_URL:?}
-      DATABASE_USER: ${SECRETS_DATABASE_USER:?}
-      DATABASE_PASSWORD: ${SECRETS_DATABASE_PASSWORD:?}
+      DATABASE_URL: jdbc:postgresql://postgres:5432/secretsdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
       # KEK provider: local | kms.
       #   kms (recommended in prod): KEK lives in Cloud KMS, NO secret here. Set
       #     SECRETS_PROVIDER=kms + SECRETS_KMS_KEY_NAME (terraform output secrets_kms_key_name);
@@ -365,25 +383,27 @@ services:
       SECRETS_KMS_KEY_NAME: ${SECRETS_KMS_KEY_NAME:-}
       SECRETS_MASTER_KEY: ${SECRETS_MASTER_KEY:-} # required only when SECRETS_PROVIDER=local
 
-  # ---------------- OPTIONAL local Postgres (instead of Neon) ----------------
-  # Uncomment to self-host Postgres in the stack. Then set every *_DATABASE_URL to
-  # jdbc:postgresql://postgres:5432/wealth (one DB, schema-per-service) in .env.prod.
-  # postgres:
-  #   image: postgres:16-alpine
-  #   container_name: wealth-postgres
-  #   restart: unless-stopped
-  #   networks: [wealth]
-  #   environment:
-  #     POSTGRES_DB: ${POSTGRES_DB:-wealth}
-  #     POSTGRES_USER: ${POSTGRES_USER:-wealth}
-  #     POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-  #   volumes:
-  #     - pgdata:/var/lib/postgresql/data
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wealth}"]
-  #     interval: 5s
-  #     timeout: 3s
-  #     retries: 10
+  # ---------------- Self-hosted Postgres (replaces Neon) ----------------
+  # One Postgres instance with a database per service (created by deploy/init-databases.sql
+  # on first boot). Every service's DATABASE_URL points here. No external compute limits.
+  postgres:
+    image: postgres:16-alpine
+    container_name: wealth-postgres
+    restart: unless-stopped
+    networks: [wealth]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-wealth}
+      POSTGRES_USER: ${POSTGRES_USER:-wealth}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Creates the per-service databases on first init only (when pgdata is empty).
+      - ./deploy/init-databases.sql:/docker-entrypoint-initdb.d/10-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wealth}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
 networks:
   wealth:
@@ -392,4 +412,4 @@ networks:
 volumes:
   caddy_data:
   caddy_config:
-  # pgdata:
+  pgdata:
