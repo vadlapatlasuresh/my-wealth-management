@@ -651,22 +651,37 @@ export default function RealEstatePage({ properties = [] }) {
                     (Number(prop.monthlyPmi) || 0);
                   const noiAnnual = (rent - monthlyOpEx) * 12; // net operating income (excludes debt service)
                   const capRate = prop.currentValue ? (noiAnnual / prop.currentValue) * 100 : null;
+                  const payment = Number(prop.monthlyPayment) || 0;
                   // Monthly cash flow also nets out the mortgage payment (debt service).
-                  const cashFlow = rent - (Number(prop.monthlyPayment) || 0) - monthlyOpEx;
+                  const cashFlow = rent - payment - monthlyOpEx;
+                  // Cap rate is an UNLEVERED yield (before the mortgage), so it can be positive while
+                  // cash flow (after the mortgage) is negative. Don't paint a positive cap rate green —
+                  // that falsely reads as "good" when the property is cash-flow negative. Neutral by
+                  // default; red only when the cap rate itself is negative (operating at a loss).
+                  const capColor = capRate != null && capRate < 0 ? "var(--tv-negative)" : "var(--tv-text-primary)";
+                  // Flag the counter-intuitive case so a positive cap rate + negative cash flow
+                  // doesn't look like a bug.
+                  const leverageNote = capRate != null && capRate >= 0 && cashFlow < 0;
                   return (
                     <div style={{ margin: "0 18px 16px", padding: "10px 12px", background: "var(--tv-sage-pale)", borderRadius: "var(--radius-md)", fontSize: 12.5 }}>
                       <div style={{ display: "flex", justifyContent: "space-between" }}>
                         <span><i className="ti ti-cash" style={{ color: "var(--tv-forest)", marginRight: 4 }}></i>Rent <strong>{currency(rent)}/mo</strong></span>
                         {capRate != null ? (
-                          <span title="(annual rent − annual taxes, insurance, HOA & PMI) ÷ current value">
-                            Cap rate <strong style={{ color: capRate >= 0 ? "var(--tv-positive)" : "var(--tv-negative)" }}>{capRate.toFixed(1)}%</strong>
+                          <span title="Unlevered yield — (annual rent − taxes, insurance, HOA & PMI) ÷ current value. Before the mortgage payment.">
+                            Cap rate <strong style={{ color: capColor }}>{capRate.toFixed(1)}%</strong>
                           </span>
                         ) : null}
                       </div>
-                      {(monthlyOpEx > 0 || Number(prop.monthlyPayment) > 0) && (
+                      {(monthlyOpEx > 0 || payment > 0) && (
                         <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, color: "var(--tv-text-muted)", fontSize: 11.5 }}>
-                          <span>Expenses {currency(monthlyOpEx)}/mo{Number(prop.monthlyPayment) > 0 ? ` · payment ${currency(Number(prop.monthlyPayment))}/mo` : ""}</span>
-                          <span>Cash flow <strong style={{ color: cashFlow >= 0 ? "var(--tv-positive)" : "var(--tv-negative)" }}>{cashFlow >= 0 ? "+" : ""}{currency(cashFlow)}/mo</strong></span>
+                          <span>Expenses {currency(monthlyOpEx)}/mo{payment > 0 ? ` · payment ${currency(payment)}/mo` : ""}</span>
+                          <span title="After the mortgage payment — rent − payment − taxes, insurance, HOA & PMI.">Cash flow <strong style={{ color: cashFlow >= 0 ? "var(--tv-positive)" : "var(--tv-negative)" }}>{cashFlow >= 0 ? "+" : ""}{currency(cashFlow)}/mo</strong></span>
+                        </div>
+                      )}
+                      {leverageNote && (
+                        <div style={{ marginTop: 6, fontSize: 11, color: "var(--tv-text-muted)", display: "flex", alignItems: "flex-start", gap: 4 }}>
+                          <i className="ti ti-info-circle" style={{ marginTop: 1 }}></i>
+                          <span>Cap rate is the yield <em>before</em> financing; the mortgage payment makes monthly cash flow negative.</span>
                         </div>
                       )}
                     </div>
