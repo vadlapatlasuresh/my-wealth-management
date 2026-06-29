@@ -35,8 +35,12 @@ fi
 echo "==> Validating compose config"
 $COMPOSE config >/dev/null
 
-echo "==> Pulling images"
-$COMPOSE pull
+echo "==> Pulling images (tolerating locally-built ones)"
+# Images are built ON the VM by build-all.sh and NOT pushed to a registry, so a plain
+# `pull` aborts with "not found" on those tags. --ignore-pull-failures pulls the public
+# images (Caddy, etc.) and SKIPS the local-only GHCR ones; the `up -d` below then uses the
+# local images. A genuinely-missing image still surfaces at `up -d`, so nothing is masked.
+$COMPOSE pull --ignore-pull-failures
 
 # Build the web SPA into ./web-dist (Caddy serves it at /). Runs in a Node container
 # so the VM needs no Node install. WEB_API_BASE (in .env.prod) is the public origin the
