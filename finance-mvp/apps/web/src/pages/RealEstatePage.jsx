@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { currency, formatDate } from "../utils/format";
 import { api } from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
@@ -62,6 +62,15 @@ export default function RealEstatePage({ properties = [] }) {
     monthlyPmi: "",
   };
   const [form, setForm] = useState(emptyForm);
+  const formRef = useRef(null);
+
+  // The add/edit form renders at the top of the page; when opened (esp. via a card's Edit
+  // button lower down) scroll it into view so it doesn't look like nothing happened.
+  useEffect(() => {
+    if (showForm && formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showForm, editingId]);
 
   // Estimate value + details from the address via the real-estate service.
   const lookupFromAddress = async () => {
@@ -358,7 +367,7 @@ export default function RealEstatePage({ properties = [] }) {
       )}
 
       {showForm && (
-        <div className="card" style={{ marginBottom: "16px" }}>
+        <div ref={formRef} className="card" style={{ marginBottom: "16px", scrollMarginTop: "16px" }}>
           <div className="section-title">{editingId ? "Edit property" : "Add a property"}</div>
           <div style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: -4, marginBottom: 14 }}>
             {editingId
