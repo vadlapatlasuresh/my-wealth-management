@@ -11,9 +11,9 @@
 #    bash deploy/build-all.sh                 # tag = git short SHA (recommended)
 #    TAG=mytag bash deploy/build-all.sh       # explicit tag
 #
-#  Then point the stack at the new tag and redeploy:
-#    sed -i "s/^TAG=.*/TAG=<the-tag-printed-below>/" .env.prod
-#    docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#  This script SETS TAG=<this build> in .env.prod for you, so just redeploy:
+#    bash deploy/deploy.sh
+#  (or, backend-only: docker compose -f docker-compose.prod.yml --env-file .env.prod up -d)
 # ============================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."   # -> finance-mvp/
@@ -68,9 +68,20 @@ elif [ -z "$existing" ]; then
   docker build -f Dockerfile.java-service --build-arg SERVICE=secrets-service -t "$SECRETS_IMG:$TAG" .
 fi
 
+# Point .env.prod at the tag we just built, so nobody has to hand-copy the SHA into a
+# `sed` (the literal "TAG=<sha>" placeholder mistake breaks `up -d` with "invalid reference
+# format"). Set TAG=<this build> in place, or append it if the key is absent.
+if grep -q '^TAG=' "$ENV_FILE"; then
+  sed -i "s/^TAG=.*/TAG=$TAG/" "$ENV_FILE"
+else
+  echo "TAG=$TAG" >> "$ENV_FILE"
+fi
+echo "==> Set TAG=$TAG in $ENV_FILE"
+
 echo
 echo "==> Done. Built ${#SERVICES[@]} images (+ secrets-service tagged) at tag: $TAG"
-echo "    Next:"
-echo "      sed -i \"s/^TAG=.*/TAG=$TAG/\" $ENV_FILE   # or add TAG=$TAG if absent"
+echo "    Next (TAG is already set in $ENV_FILE):"
+echo "      bash deploy/deploy.sh        # pull (tolerant) -> web build -> up -d -> recreate Caddy"
+echo "    or just restart the backend:"
 echo "      docker compose -f docker-compose.prod.yml --env-file $ENV_FILE up -d"
 docker image prune -f >/dev/null 2>&1 || true
