@@ -410,6 +410,37 @@ export const api = {
   deleteBusinessAccount: (id) =>
     request(`/api/v1/business/manual/accounts/${id}`, { method: "DELETE" }),
 
+  // Per-account business transactions (persisted server-side).
+  // Pass accountId to filter to a single account; omit for the unified list.
+  getBusinessTransactions: (businessId, accountId) =>
+    request(
+      `/api/v1/business/manual/businesses/${businessId}/transactions` +
+        (accountId ? `?accountId=${encodeURIComponent(accountId)}` : "")
+    ),
+  createBusinessTransaction: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/transactions`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessTransaction: (id) =>
+    request(`/api/v1/business/manual/transactions/${id}`, { method: "DELETE" }),
+
+  // Trackable business invoices (create / send / track + pending payments).
+  getManualInvoices: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/invoices`),
+  createManualInvoice: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/invoices`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateManualInvoice: (id, payload) =>
+    request(`/api/v1/business/manual/invoices/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteManualInvoice: (id) =>
+    request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
+
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
