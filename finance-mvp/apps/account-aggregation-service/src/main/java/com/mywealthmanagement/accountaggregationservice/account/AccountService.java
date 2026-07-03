@@ -36,7 +36,8 @@ public class AccountService {
                 account.getMinimumPayment(),
                 account.getNextPaymentDueDate(),
                 account.getAprPercentage(),
-                account.getPlaidItem() != null ? account.getPlaidItem().getPlaidItemId() : null
+                account.getPlaidItem() != null ? account.getPlaidItem().getPlaidItemId() : null,
+                account.getHolderCategory()
         );
     }
 }
