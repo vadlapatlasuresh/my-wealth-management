@@ -391,6 +391,11 @@ services:
     container_name: wealth-postgres
     restart: unless-stopped
     networks: [wealth]
+    # Bound to the VM's loopback only — reachable from the host (and via an SSH
+    # tunnel for pgAdmin), never from the public internet. Do NOT change to
+    # "5432:5432" (that would publish the DB to the world).
+    ports:
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-wealth}
       POSTGRES_USER: ${POSTGRES_USER:-wealth}
