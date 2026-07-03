@@ -20,4 +20,7 @@ public class TransactionDto {
     private String isoCurrencyCode;
     private LocalDate date;
     private String category;
+    private String merchantName;
+    /** true = pending, false = cleared. Null legacy rows are treated as cleared. */
+    private Boolean pending;
 }

@@ -61,7 +61,9 @@ public class TransactionService {
                 transaction.getAmount(),
                 transaction.getIsoCurrencyCode(),
                 transaction.getDate(),
-                transaction.getCategory()
+                transaction.getCategory(),
+                transaction.getMerchantName(),
+                transaction.getPending()
         );
     }
 }

@@ -26,6 +26,8 @@ public class ManualBusinessController {
     private final BusinessAccountRepository accountRepo;
     private final BusinessTransactionRepository transactionRepo;
     private final BusinessInvoiceRepository invoiceRepo;
+    private final ReconciledTransactionRepository reconciledRepo;
+    private final TransactionOverrideRepository overrideRepo;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -229,6 +231,112 @@ public class ManualBusinessController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         invoiceRepo.delete(inv);
         return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Reconciliation ---------------- */
+
+    /** External ids of the caller's reconciled transactions (linked or manual). */
+    @GetMapping("/reconciliations")
+    public List<String> listReconciliations() {
+        return reconciledRepo.findByUserId(userId()).stream()
+                .map(ReconciledTransaction::getExternalId)
+                .toList();
+    }
+
+    /** Mark a transaction reconciled. Idempotent — re-marking is a no-op. */
+    @PostMapping("/reconciliations")
+    @Transactional
+    public ResponseEntity<Void> addReconciliation(@RequestBody Map<String, Object> body) {
+        String externalId = str(body.get("externalId"));
+        if (externalId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "externalId is required");
+        }
+        if (!reconciledRepo.existsByUserIdAndExternalId(userId(), externalId)) {
+            ReconciledTransaction r = new ReconciledTransaction();
+            r.setUserId(userId());
+            r.setExternalId(externalId);
+            reconciledRepo.save(r);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Clear a transaction's reconciled flag. Idempotent. */
+    @DeleteMapping("/reconciliations/{externalId}")
+    @Transactional
+    public ResponseEntity<Void> removeReconciliation(@PathVariable String externalId) {
+        reconciledRepo.deleteByUserIdAndExternalId(userId(), externalId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Transaction type/tag overrides ---------------- */
+
+    /** The caller's transaction overrides, as {externalId, type, tags[]}. */
+    @GetMapping("/tx-overrides")
+    public List<Map<String, Object>> listTxOverrides() {
+        return overrideRepo.findByUserId(userId()).stream()
+                .map(this::overrideToMap)
+                .toList();
+    }
+
+    /** Upsert the type/tags override for a transaction. Sending an empty type
+     *  and no tags clears the override entirely. */
+    @PutMapping("/tx-overrides/{externalId}")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> upsertTxOverride(
+            @PathVariable String externalId, @RequestBody Map<String, Object> body) {
+        String type = str(body.get("type"));
+        String tags = normalizeTags(body.get("tags"));
+
+        // No meaningful override left → remove any existing row.
+        if (type == null && tags == null) {
+            overrideRepo.deleteByUserIdAndExternalId(userId(), externalId);
+            return ResponseEntity.noContent().build();
+        }
+
+        TransactionOverride o = overrideRepo.findByUserIdAndExternalId(userId(), externalId)
+                .orElseGet(() -> {
+                    TransactionOverride n = new TransactionOverride();
+                    n.setUserId(userId());
+                    n.setExternalId(externalId);
+                    return n;
+                });
+        o.setOverrideType(type);
+        o.setTags(tags);
+        return ResponseEntity.ok(overrideToMap(overrideRepo.save(o)));
+    }
+
+    /** Remove a transaction's override (revert to derived type, no tags). */
+    @DeleteMapping("/tx-overrides/{externalId}")
+    @Transactional
+    public ResponseEntity<Void> deleteTxOverride(@PathVariable String externalId) {
+        overrideRepo.deleteByUserIdAndExternalId(userId(), externalId);
+        return ResponseEntity.noContent().build();
+    }
+
+    private Map<String, Object> overrideToMap(TransactionOverride o) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("externalId", o.getExternalId());
+        m.put("type", o.getOverrideType());
+        m.put("tags", o.getTags() == null ? List.of()
+                : java.util.Arrays.stream(o.getTags().split(","))
+                        .map(String::trim).filter(s -> !s.isEmpty()).toList());
+        return m;
+    }
+
+    /** Accepts a comma-separated string or a list; returns a cleaned
+     *  comma-separated string (deduped, trimmed) or null if empty. */
+    private String normalizeTags(Object raw) {
+        if (raw == null) return null;
+        java.util.stream.Stream<String> parts;
+        if (raw instanceof List<?> list) {
+            parts = list.stream().map(o -> o == null ? "" : o.toString());
+        } else {
+            parts = java.util.Arrays.stream(raw.toString().split(","));
+        }
+        java.util.LinkedHashSet<String> cleaned = parts
+                .map(String::trim).filter(s -> !s.isEmpty())
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
+        return cleaned.isEmpty() ? null : String.join(",", cleaned);
     }
 
     /* ---------------- helpers ---------------- */

@@ -47,6 +47,18 @@ public class Transaction {
     @Column
     private String category;
 
+    /** Cleaned merchant name from Plaid (e.g. "Amazon"), when available. */
+    @Column(name = "merchant_name")
+    private String merchantName;
+
+    /**
+     * Whether the transaction is still pending (not yet cleared) at the institution.
+     * Drives status tracking (pending vs cleared). Null for legacy rows synced before
+     * this column existed; treated as cleared by consumers.
+     */
+    @Column(name = "pending")
+    private Boolean pending;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
