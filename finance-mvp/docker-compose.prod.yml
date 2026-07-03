@@ -147,6 +147,13 @@ services:
     environment:
       <<: *java-env
       SECRETS_SCOPES: jwt,encryption,audit
+      # Bootstrap key (like JWT_SECRET) — sourced straight from .env.prod, NOT the
+      # secrets store. auth-service uses it to encrypt SSN/EIN PII at rest and reads
+      # it at construction time (EncryptionKeyHolder), independent of the secrets-client
+      # fetch. Without this the service crash-loops with "FATAL: APP_ENCRYPTION_KEY is
+      # not set" whenever the store is empty or not yet ready (e.g. a fresh-DB deploy).
+      # Mirrors account-aggregation-service.
+      APP_ENCRYPTION_KEY: ${APP_ENCRYPTION_KEY:?set APP_ENCRYPTION_KEY in .env.prod}
       DATABASE_URL: jdbc:postgresql://postgres:5432/authdb
       DATABASE_USER: ${POSTGRES_USER:-wealth}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
