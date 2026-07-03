@@ -233,9 +233,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [bizTransactions, setBizTransactions] = useState([]); // manual transactions
   const [manualInvoices, setManualInvoices] = useState([]);
   const [reconciledSet, setReconciledSet] = useState(() => new Set());
+  /* Aggregation account ids assigned to the selected business (Set of strings). */
+  const [assignedLinkedIds, setAssignedLinkedIds] = useState(() => new Set());
 
   /* ---- UI state ---- */
   const [activeTab, setActiveTab] = useState('tx');
+  const [showAssign, setShowAssign] = useState(false);
+  const [assignDraft, setAssignDraft] = useState(() => new Set());
+  const [savingAssign, setSavingAssign] = useState(false);
 
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [bizForm, setBizForm] = useState({ name: '', industry: '', entityType: 'LLC', ein: '' });
@@ -337,15 +342,22 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }, [selectedId, businesses]);
 
   const loadBusinessDetail = useCallback(async (businessId) => {
-    if (!businessId) { setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); return; }
-    const [acc, tx, inv] = await Promise.allSettled([
+    if (!businessId) {
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setAssignedLinkedIds(new Set());
+      return;
+    }
+    const [acc, tx, inv, linked] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
+      api.getBusinessLinkedAccounts(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
+    setAssignedLinkedIds(new Set(
+      linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : []
+    ));
   }, []);
 
   useEffect(() => {
@@ -368,11 +380,16 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* ------------------------------------------------------------------ */
   /* Normalized accounts (linked + manual)                              */
   /* ------------------------------------------------------------------ */
+  /* Only linked accounts the user has assigned to this business are shown —
+     the business page reflects the business, not the whole aggregation. Manual
+     accounts are business by definition. */
   const allAccounts = useMemo(() => {
-    const linked = (accounts || []).map(normLinkedAccount);
+    const linked = (accounts || [])
+      .filter((a) => assignedLinkedIds.has(String(a.id)))
+      .map(normLinkedAccount);
     const manual = (bizAccounts || []).map(normManualAccount);
     return [...linked, ...manual];
-  }, [accounts, bizAccounts]);
+  }, [accounts, bizAccounts, assignedLinkedIds]);
 
   const linkedById = useMemo(() => {
     const m = new Map();
@@ -405,7 +422,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* Unified transactions (auto-synced linked + manual)                 */
   /* ------------------------------------------------------------------ */
   const unifiedTx = useMemo(() => {
-    const linked = (transactions || []).map((t) => ({ ...t, source: 'Linked' }));
+    // Only transactions from linked accounts assigned to this business.
+    const linked = (transactions || [])
+      .filter((t) => assignedLinkedIds.has(String(t.accountId)))
+      .map((t) => ({ ...t, source: 'Linked' }));
     const manual = (bizTransactions || []).map((t) => ({
       source: 'Manual', id: t.id,
       name: t.description, merchantName: t.merchant,
@@ -438,7 +458,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         canDelete: t.source === 'Manual',
       };
     });
-  }, [transactions, bizTransactions, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
+  }, [transactions, bizTransactions, assignedLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
 
   /* Dropdown option sets, derived from the data. */
   const categoryOptions = useMemo(() => {
@@ -658,6 +678,34 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch (err) { setError(err?.message || 'Could not delete account.'); }
   }
 
+  /* ---- Linked-account assignment ---- */
+  function openAssign() {
+    setAssignDraft(new Set(assignedLinkedIds));
+    setShowAssign(true);
+  }
+  function toggleAssignDraft(id) {
+    setAssignDraft((prev) => {
+      const next = new Set(prev);
+      const k = String(id);
+      if (next.has(k)) next.delete(k); else next.add(k);
+      return next;
+    });
+  }
+  async function saveAssign() {
+    if (!selectedBusiness) return;
+    setSavingAssign(true);
+    const ids = Array.from(assignDraft);
+    try {
+      await api.setBusinessLinkedAccounts(selectedBusiness.id, ids);
+      setAssignedLinkedIds(new Set(ids));
+      setShowAssign(false);
+    } catch (err) {
+      setError(err?.message || 'Could not save account assignment.');
+    } finally {
+      setSavingAssign(false);
+    }
+  }
+
   /* ---- Manual transaction CRUD ---- */
   function openAddTx(accountKey) {
     setActiveTab('tx');
@@ -746,8 +794,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const connected = connection?.connected ?? dashboard?.connected ?? false;
   const companyName = connection?.companyName || dashboard?.companyName || 'Your Business';
   const changePct = Number(dashboard?.revenueChangePct ?? 0);
-  const hasLinked = (accounts || []).length > 0;
-  const hasContext = connected || !!selectedBusiness || hasLinked;
+  const hasAnyLinked = (accounts || []).length > 0;        // any linked accounts exist to assign
+  const hasLinked = allAccounts.some((a) => a.source === 'Linked'); // any assigned to this business
+  const hasContext = connected || !!selectedBusiness || hasAnyLinked;
+  /* All linked accounts, normalized — the pool shown in the assignment picker. */
+  const availableLinked = useMemo(() => (accounts || []).map(normLinkedAccount), [accounts]);
 
   const bankAccounts = useMemo(() => allAccounts.filter((a) => isBankType(a.type)), [allAccounts]);
   const creditCards = useMemo(() => allAccounts.filter((a) => isCardType(a.type)), [allAccounts]);
@@ -1010,16 +1061,69 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   {currency(cashTotal)} cash{creditCards.length > 0 ? ` · ${currency(creditOwed)} owed` : ''}
                 </span>
               </div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAccount((v) => !v)}>
-                <i className={`ti ${showAddAccount ? 'ti-x' : 'ti-plus'}`}></i>
-                {showAddAccount ? ' Cancel' : ' Add manual account'}
-              </button>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {hasAnyLinked && (
+                  <button className="btn btn-secondary btn-sm" onClick={() => (showAssign ? setShowAssign(false) : openAssign())}
+                    disabled={!selectedBusiness} title={!selectedBusiness ? 'Add a business first' : 'Choose which linked accounts are business'}>
+                    <i className={`ti ${showAssign ? 'ti-x' : 'ti-link'}`}></i>
+                    {showAssign ? ' Cancel' : ' Assign accounts'}
+                  </button>
+                )}
+                <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAccount((v) => !v)}>
+                  <i className={`ti ${showAddAccount ? 'ti-x' : 'ti-plus'}`}></i>
+                  {showAddAccount ? ' Cancel' : ' Add manual account'}
+                </button>
+              </div>
             </div>
 
-            {hasLinked && (
+            {hasLinked && !showAssign && (
               <div className="item-sub" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <i className="ti ti-refresh" style={{ color: 'var(--tv-positive)' }}></i>
-                Linked accounts &amp; their transactions sync automatically. Use “Sync now” to pull the latest immediately.
+                Assigned linked accounts &amp; their transactions sync automatically. Use “Sync now” to pull the latest immediately.
+              </div>
+            )}
+
+            {/* Assignment picker: choose which linked accounts belong to this business. */}
+            {showAssign && (
+              <div style={{ marginBottom: 16 }}>
+                <div className="item-sub" style={{ marginBottom: 10 }}>
+                  Tick the linked accounts that belong to <strong>{selectedBusiness?.name || 'this business'}</strong>. Only these (plus manual accounts) show here.
+                </div>
+                {availableLinked.length === 0 ? (
+                  <div className="empty-state" style={{ padding: '20px' }}>
+                    <i className="ti ti-link-off"></i>
+                    <p>No linked accounts yet. Link a bank/credit account from the Accounts page first.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="card-grid">
+                      {availableLinked.map((a) => {
+                        const checked = assignDraft.has(String(a.rawId));
+                        const v = accountVisual(a.type);
+                        return (
+                          <button key={a.key} type="button" onClick={() => toggleAssignDraft(a.rawId)}
+                            className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left',
+                              boxShadow: checked ? '0 0 0 2px var(--tv-forest)' : undefined }}>
+                            <div className={`tv-checkbox ${checked ? 'checked' : ''}`}>{checked && <i className="ti ti-check"></i>}</div>
+                            <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {a.name}{a.mask ? ` ••${a.mask}` : ''}
+                              </div>
+                              <div className="item-sub">{accountTypeLabel(a.type)}{a.institution ? ` · ${a.institution}` : ''} · {currency(a.balance)}</div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                      <button className="btn btn-primary btn-sm" onClick={saveAssign} disabled={savingAssign}>
+                        <i className={`ti ${savingAssign ? 'ti-loader spin' : 'ti-check'}`}></i> {savingAssign ? ' Saving…' : ` Save (${assignDraft.size} selected)`}
+                      </button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowAssign(false)}>Cancel</button>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
@@ -1065,7 +1169,17 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             {allAccounts.length === 0 ? (
               <div className="empty-state">
                 <i className="ti ti-building-bank"></i>
-                <p>No accounts yet. Link a bank/credit account from the Accounts page, or add a manual account here.</p>
+                {hasAnyLinked ? (
+                  <>
+                    <p style={{ fontWeight: 600, color: 'var(--tv-text-primary)', marginBottom: 4 }}>No business accounts selected</p>
+                    <p style={{ marginBottom: 12 }}>You have linked accounts — choose which ones belong to this business.</p>
+                    <button className="btn btn-primary" onClick={openAssign} disabled={!selectedBusiness}>
+                      <i className="ti ti-link"></i> Assign accounts
+                    </button>
+                  </>
+                ) : (
+                  <p>No accounts yet. Link a bank/credit account from the Accounts page, or add a manual account here.</p>
+                )}
               </div>
             ) : (
               <div className="card-grid">

@@ -413,6 +413,16 @@ export const api = {
   deleteBusinessAccount: (id) =>
     request(`/api/v1/business/manual/accounts/${id}`, { method: "DELETE" }),
 
+  // Which linked (aggregation) accounts are assigned to a business (so the
+  // business page shows only business accounts, not the whole aggregation).
+  getBusinessLinkedAccounts: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/linked-accounts`),
+  setBusinessLinkedAccounts: (businessId, accountIds) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/linked-accounts`, {
+      method: "PUT",
+      body: JSON.stringify({ accountIds }),
+    }),
+
   // Per-account business transactions (persisted server-side).
   // Pass accountId to filter to a single account; omit for the unified list.
   getBusinessTransactions: (businessId, accountId) =>

@@ -28,6 +28,7 @@ public class ManualBusinessController {
     private final BusinessInvoiceRepository invoiceRepo;
     private final ReconciledTransactionRepository reconciledRepo;
     private final TransactionOverrideRepository overrideRepo;
+    private final BusinessLinkedAccountRepository linkedRepo;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -66,6 +67,7 @@ public class ManualBusinessController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         transactionRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         invoiceRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        linkedRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -117,6 +119,44 @@ public class ManualBusinessController {
         transactionRepo.deleteByAccountIdAndUserId(a.getId(), userId());
         accountRepo.delete(a);
         return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Linked-account assignment ---------------- */
+
+    /** Aggregation account ids assigned to this business (what the business page shows). */
+    @GetMapping("/businesses/{businessId}/linked-accounts")
+    public List<String> listLinkedAccounts(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return linkedRepo.findByBusinessIdAndUserId(businessId, userId()).stream()
+                .map(BusinessLinkedAccount::getLinkedAccountId)
+                .toList();
+    }
+
+    /** Replace the set of linked accounts assigned to this business. Body:
+     *  {@code { "accountIds": ["12","34", ...] }}. Returns the saved set. */
+    @PutMapping("/businesses/{businessId}/linked-accounts")
+    @Transactional
+    public List<String> setLinkedAccounts(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Object raw = body.get("accountIds");
+        java.util.LinkedHashSet<String> wanted = new java.util.LinkedHashSet<>();
+        if (raw instanceof List<?> list) {
+            for (Object o : list) {
+                String s = str(o);
+                if (s != null) wanted.add(s);
+            }
+        }
+        linkedRepo.deleteByBusinessIdAndUserId(businessId, userId());
+        for (String aid : wanted) {
+            BusinessLinkedAccount r = new BusinessLinkedAccount();
+            r.setUserId(userId());
+            r.setBusinessId(businessId);
+            r.setLinkedAccountId(aid);
+            linkedRepo.save(r);
+        }
+        return new java.util.ArrayList<>(wanted);
     }
 
     /* ---------------- Transactions ---------------- */
