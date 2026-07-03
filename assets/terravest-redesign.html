@@ -2837,6 +2837,24 @@ a { text-decoration: none; color: inherit; }
       <div id="page-realestate" class="page">
         <div class="page-header"><div><div class="page-title">Properties</div><div class="page-subtitle">Your real estate portfolio</div></div><div class="page-actions" style="align-items:center;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add property</button></div></div>
 
+        <!-- Edit-property state: clicking "Edit" on a card scrolls here, the form flashes a
+             forest ring, and the header names the property being edited (accent border + badge). -->
+        <div class="card" style="margin-bottom:16px;border-left:4px solid var(--tv-forest);box-shadow:0 0 0 3px var(--tv-forest);">
+          <div class="section-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <i class="ti ti-pencil" style="color:var(--tv-forest);"></i> Edit property
+            <span class="badge badge-green" style="font-size:11px;font-weight:500;">1842 Elmwood Drive, Austin TX</span>
+          </div>
+          <div style="font-size:12.5px;color:var(--tv-text-muted);margin:-4px 0 14px;">Update any detail and save your changes.</div>
+          <div class="grid-3" style="gap:12px;">
+            <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Address</label><input class="form-input" value="1842 Elmwood Drive, Austin TX"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option selected>Primary residence</option><option>Rental property</option><option>Land</option></select></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Current value</label><input class="form-input" value="$187,000"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Mortgage balance</label><input class="form-input" value="$120,000"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">APR (%)</label><input class="form-input" value="6.25"></div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px;"><button class="btn btn-secondary"><i class="ti ti-x"></i> Cancel</button><button class="btn btn-primary"><i class="ti ti-check"></i> Update property</button></div>
+        </div>
+
         <!-- Add-property form -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title">Add a property</div><button class="btn btn-secondary btn-sm"><i class="ti ti-wand"></i> Auto-fill</button></div>
