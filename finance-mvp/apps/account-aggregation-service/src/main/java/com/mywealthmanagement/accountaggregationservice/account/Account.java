@@ -55,6 +55,11 @@ public class Account {
     @Column(nullable = false)
     private String currency;
 
+    /** Plaid account holder category: "business" | "personal" | "unrecognized" (nullable).
+     *  Drives auto-detection of business accounts on the business page. */
+    @Column(name = "holder_category")
+    private String holderCategory;
+
     // --- Credit-card / liability details (nullable; populated via Plaid Liabilities) ---
 
     /** Credit limit for cards/lines of credit (Plaid balances.limit). */

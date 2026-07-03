@@ -491,6 +491,10 @@ public class PlaidService {
                         ? plaidAccount.getBalances().getIsoCurrencyCode()
                         : "USD"
         );
+        // Business vs personal, when the institution reports it (Plaid holder_category).
+        account.setHolderCategory(
+                plaidAccount.getHolderCategory() != null ? plaidAccount.getHolderCategory().getValue() : null
+        );
         return account;
     }
 

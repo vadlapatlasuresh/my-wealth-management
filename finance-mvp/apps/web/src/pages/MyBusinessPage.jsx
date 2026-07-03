@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'rea
 import { currency, rangeStart } from '../utils/format';
 import { api } from '../api';
 import LastRefreshed from '../components/LastRefreshed';
+import PlaidLinkButton from '../components/PlaidLinkButton';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -132,8 +133,20 @@ function normLinkedAccount(a) {
     creditLimit: a.creditLimit != null ? Number(a.creditLimit) : null,
     minimumPayment: a.minimumPayment != null ? Number(a.minimumPayment) : null,
     nextPaymentDueDate: a.nextPaymentDueDate || null,
+    holderCategory: (a.holderCategory || '').toLowerCase(),
     autoSynced: true, canDelete: false,
   };
+}
+
+/* Auto-detect whether a linked (raw) account is a business account. Prefers
+   Plaid's holder_category; falls back to a name/official-name keyword heuristic
+   when the institution didn't report one. */
+function isBusinessLinked(a) {
+  const hc = (a.holderCategory || '').toLowerCase();
+  if (hc === 'business') return true;
+  if (hc === 'personal') return false;
+  const s = `${a.name || ''} ${a.officialName || ''}`.toLowerCase();
+  return /\bbusiness\b|\bbiz\b|commercial|\bllc\b|\binc\b|\bl\.?l\.?c\b/.test(s);
 }
 /* Normalize a manual business account into the shared shape. */
 function normManualAccount(a) {
@@ -380,16 +393,27 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* ------------------------------------------------------------------ */
   /* Normalized accounts (linked + manual)                              */
   /* ------------------------------------------------------------------ */
-  /* Only linked accounts the user has assigned to this business are shown —
-     the business page reflects the business, not the whole aggregation. Manual
-     accounts are business by definition. */
+  /* Which linked accounts count as business:
+     - if the user has explicitly assigned accounts to this business, honor that;
+     - otherwise auto-detect (Plaid holder_category / name heuristic).
+     Manual accounts are business by definition. */
+  const autoBusinessIds = useMemo(
+    () => new Set((accounts || []).filter(isBusinessLinked).map((a) => String(a.id))),
+    [accounts]
+  );
+  const effectiveLinkedIds = useMemo(
+    () => (assignedLinkedIds.size > 0 ? assignedLinkedIds : autoBusinessIds),
+    [assignedLinkedIds, autoBusinessIds]
+  );
+  const usingAutoDetect = assignedLinkedIds.size === 0;
+
   const allAccounts = useMemo(() => {
     const linked = (accounts || [])
-      .filter((a) => assignedLinkedIds.has(String(a.id)))
+      .filter((a) => effectiveLinkedIds.has(String(a.id)))
       .map(normLinkedAccount);
     const manual = (bizAccounts || []).map(normManualAccount);
     return [...linked, ...manual];
-  }, [accounts, bizAccounts, assignedLinkedIds]);
+  }, [accounts, bizAccounts, effectiveLinkedIds]);
 
   const linkedById = useMemo(() => {
     const m = new Map();
@@ -422,9 +446,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* Unified transactions (auto-synced linked + manual)                 */
   /* ------------------------------------------------------------------ */
   const unifiedTx = useMemo(() => {
-    // Only transactions from linked accounts assigned to this business.
+    // Only transactions from linked accounts counted as business (assigned or auto-detected).
     const linked = (transactions || [])
-      .filter((t) => assignedLinkedIds.has(String(t.accountId)))
+      .filter((t) => effectiveLinkedIds.has(String(t.accountId)))
       .map((t) => ({ ...t, source: 'Linked' }));
     const manual = (bizTransactions || []).map((t) => ({
       source: 'Manual', id: t.id,
@@ -458,7 +482,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         canDelete: t.source === 'Manual',
       };
     });
-  }, [transactions, bizTransactions, assignedLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
+  }, [transactions, bizTransactions, effectiveLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
 
   /* Dropdown option sets, derived from the data. */
   const categoryOptions = useMemo(() => {
@@ -680,8 +704,36 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   /* ---- Linked-account assignment ---- */
   function openAssign() {
-    setAssignDraft(new Set(assignedLinkedIds));
+    // Seed with what's currently shown (explicit assignment, or the auto-detected set).
+    setAssignDraft(new Set(effectiveLinkedIds));
     setShowAssign(true);
+  }
+  /* Revert to auto-detect: clear explicit assignment for this business. */
+  async function resetAssignToAuto() {
+    if (!selectedBusiness) return;
+    setSavingAssign(true);
+    try {
+      await api.setBusinessLinkedAccounts(selectedBusiness.id, []);
+      setAssignedLinkedIds(new Set());
+      setShowAssign(false);
+    } catch (err) {
+      setError(err?.message || 'Could not reset assignment.');
+    } finally {
+      setSavingAssign(false);
+    }
+  }
+
+  /* Unlink a linked institution (removes its accounts, transactions & holdings). */
+  async function handleUnlink(account) {
+    if (!account?.plaidItemId) return;
+    const label = account.institution || account.name || 'this institution';
+    if (!window.confirm(`Unlink ${label}?\n\nThis disconnects the institution and removes its linked account(s) — including any others under the same login — from TerraVest. You can re-link anytime.`)) return;
+    try {
+      await api.unlinkItem(account.plaidItemId);
+      await refreshEverything();
+    } catch (err) {
+      setError(err?.message || 'Could not unlink the account.');
+    }
   }
   function toggleAssignDraft(id) {
     setAssignDraft((prev) => {
@@ -1061,12 +1113,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   {currency(cashTotal)} cash{creditCards.length > 0 ? ` · ${currency(creditOwed)} owed` : ''}
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {hasAnyLinked && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <PlaidLinkButton onLinkSuccess={refreshEverything}>
+                  <i className="ti ti-plug"></i> Link account
+                </PlaidLinkButton>
+                {hasAnyLinked && selectedBusiness && (
                   <button className="btn btn-secondary btn-sm" onClick={() => (showAssign ? setShowAssign(false) : openAssign())}
-                    disabled={!selectedBusiness} title={!selectedBusiness ? 'Add a business first' : 'Choose which linked accounts are business'}>
-                    <i className={`ti ${showAssign ? 'ti-x' : 'ti-link'}`}></i>
-                    {showAssign ? ' Cancel' : ' Assign accounts'}
+                    title="Choose which linked accounts are business">
+                    <i className={`ti ${showAssign ? 'ti-x' : 'ti-adjustments'}`}></i>
+                    {showAssign ? ' Cancel' : ' Edit accounts'}
                   </button>
                 )}
                 <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAccount((v) => !v)}>
@@ -1077,9 +1132,18 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             </div>
 
             {hasLinked && !showAssign && (
-              <div className="item-sub" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div className="item-sub" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <i className="ti ti-refresh" style={{ color: 'var(--tv-positive)' }}></i>
-                Assigned linked accounts &amp; their transactions sync automatically. Use “Sync now” to pull the latest immediately.
+                {usingAutoDetect
+                  ? 'Business accounts are auto-detected and sync automatically.'
+                  : 'Showing your chosen business accounts; they sync automatically.'}
+                {' '}Use “Sync now” to pull the latest.
+                {hasAnyLinked && selectedBusiness && (
+                  <button onClick={openAssign}
+                    style={{ background: 'none', border: 'none', padding: 0, color: 'var(--tv-forest)', cursor: 'pointer', fontWeight: 600 }}>
+                    {usingAutoDetect ? 'Pick manually' : 'Edit selection'}
+                  </button>
+                )}
               </div>
             )}
 
@@ -1087,7 +1151,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             {showAssign && (
               <div style={{ marginBottom: 16 }}>
                 <div className="item-sub" style={{ marginBottom: 10 }}>
-                  Tick the linked accounts that belong to <strong>{selectedBusiness?.name || 'this business'}</strong>. Only these (plus manual accounts) show here.
+                  Business accounts are auto-detected. Tick to override which linked accounts belong to <strong>{selectedBusiness?.name || 'this business'}</strong> — only these (plus manual accounts) show here.
                 </div>
                 {availableLinked.length === 0 ? (
                   <div className="empty-state" style={{ padding: '20px' }}>
@@ -1116,10 +1180,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         );
                       })}
                     </div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                       <button className="btn btn-primary btn-sm" onClick={saveAssign} disabled={savingAssign}>
                         <i className={`ti ${savingAssign ? 'ti-loader spin' : 'ti-check'}`}></i> {savingAssign ? ' Saving…' : ` Save (${assignDraft.size} selected)`}
                       </button>
+                      {!usingAutoDetect && (
+                        <button className="btn btn-secondary btn-sm" onClick={resetAssignToAuto} disabled={savingAssign} title="Clear manual selection and auto-detect business accounts">
+                          <i className="ti ti-wand"></i> Reset to auto-detect
+                        </button>
+                      )}
                       <button className="btn btn-secondary btn-sm" onClick={() => setShowAssign(false)}>Cancel</button>
                     </div>
                   </>
@@ -1189,6 +1258,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     onView={() => { setFAccount(a.key); setActiveTab('tx'); requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
                     onAddTx={a.source === 'Manual' ? () => openAddTx(a.key) : null}
                     onDelete={a.canDelete ? () => handleDeleteAccount(a.rawId) : null}
+                    onUnlink={a.source === 'Linked' && a.plaidItemId ? () => handleUnlink(a) : null}
                   />
                 ))}
               </div>
@@ -1702,7 +1772,7 @@ function SortableTh({ k, label, align, sortKey, sortDir, onSort }) {
 /* ------------------------------------------------------------------ */
 /* Account card — distinguishes checking / savings / credit / linked.  */
 /* ------------------------------------------------------------------ */
-function AccountCard({ account, active, onView, onAddTx, onDelete }) {
+function AccountCard({ account, active, onView, onAddTx, onDelete, onUnlink }) {
   const v = accountVisual(account.type);
   const cc = isCardType(account.type);
   const limit = account.creditLimit || 0;
@@ -1750,7 +1820,8 @@ function AccountCard({ account, active, onView, onAddTx, onDelete }) {
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
         <button className="btn btn-secondary btn-sm" onClick={onView}><i className="ti ti-list"></i> {cc ? 'Charges' : 'Activity'}</button>
         {onAddTx && <button className="btn btn-secondary btn-sm" onClick={onAddTx}><i className="ti ti-plus"></i> Add</button>}
-        {onDelete && <button className="icon-btn" title="Delete account" style={{ marginLeft: 'auto' }} onClick={onDelete}><i className="ti ti-trash"></i></button>}
+        {onUnlink && <button className="icon-btn" title="Unlink institution" style={{ marginLeft: 'auto' }} onClick={onUnlink}><i className="ti ti-unlink"></i></button>}
+        {onDelete && <button className="icon-btn" title="Delete account" style={{ marginLeft: onUnlink ? 0 : 'auto' }} onClick={onDelete}><i className="ti ti-trash"></i></button>}
       </div>
     </div>
   );

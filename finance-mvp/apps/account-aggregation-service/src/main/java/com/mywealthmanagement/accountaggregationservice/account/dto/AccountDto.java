@@ -29,4 +29,6 @@ public class AccountDto {
     private BigDecimal aprPercentage;
     // The Plaid item (institution connection) this account belongs to — used to unlink.
     private String plaidItemId;
+    // "business" | "personal" | "unrecognized" (nullable) — auto-detects business accounts.
+    private String holderCategory;
 }
