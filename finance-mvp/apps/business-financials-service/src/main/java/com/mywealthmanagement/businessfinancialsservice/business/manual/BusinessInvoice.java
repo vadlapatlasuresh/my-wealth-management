@@ -6,16 +6,20 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * A bank/credit/loan account attached to a {@link ManualBusiness}.
+ * A trackable invoice attached to a {@link ManualBusiness}. Backs the
+ * "Business Tools" tab (create / send / track) and the pending-payments view.
+ *
+ * <p>status: OPEN | PAID | OVERDUE
  */
 @Entity
-@Table(name = "business_accounts")
+@Table(name = "business_invoices")
 @Data
 @NoArgsConstructor
-public class BusinessAccount {
+public class BusinessInvoice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,19 +32,19 @@ public class BusinessAccount {
     private Long businessId;
 
     @Column(nullable = false)
-    private String name;
+    private String customer;
 
-    private String institution;
+    @Column(nullable = false, precision = 18, scale = 2)
+    private BigDecimal amount;
 
-    /** CHECKING | SAVINGS | CREDIT_CARD | LOAN */
-    private String type;
+    @Column(nullable = false)
+    private String status = "OPEN";
 
-    @Column(precision = 18, scale = 2)
-    private BigDecimal balance;
+    @Column(name = "issued_at")
+    private LocalDate issuedAt;
 
-    /** Credit limit for CREDIT_CARD accounts; null for other account types. */
-    @Column(name = "credit_limit", precision = 18, scale = 2)
-    private BigDecimal creditLimit;
+    @Column(name = "due_date")
+    private LocalDate dueDate;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
