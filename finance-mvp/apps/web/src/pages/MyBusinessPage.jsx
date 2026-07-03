@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { currency } from '../utils/format';
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from 'react';
+import { currency, rangeStart } from '../utils/format';
 import { api } from '../api';
 import LastRefreshed from '../components/LastRefreshed';
 
@@ -11,17 +11,23 @@ const LS_SELECTED = 'tv_business_selected';
 /* Entity types offered when adding a business. */
 const ENTITY_TYPES = ['LLC', 'S-Corp', 'C-Corp', 'Sole Prop', 'Partnership'];
 
-/* Account types offered when adding an account. */
+/* Account types offered when adding a manual account. */
 const ACCOUNT_TYPES = ['CHECKING', 'SAVINGS', 'CREDIT_CARD', 'LOAN'];
 
-/* Common expense/charge categories for the transaction form. */
+/* Categories offered when adding a manual transaction. */
 const TX_CATEGORIES = [
-  'Payroll', 'Rent', 'Software & SaaS', 'Marketing', 'Utilities',
-  'Insurance', 'Travel', 'Meals', 'Supplies', 'Taxes', 'Income', 'Other',
+  'Payroll', 'Rent', 'Software & SaaS', 'Marketing', 'Utilities', 'Insurance',
+  'Travel', 'Meals', 'Supplies', 'Taxes', 'Professional Services', 'Income', 'Other',
 ];
+
+const DATE_RANGES = ['All', '1W', '1M', '3M', '1Y', 'Custom'];
+
+/* Types a user can assign when overriding a transaction's derived type. */
+const ASSIGNABLE_TYPES = ['Income', 'Expense', 'Payroll', 'Vendor Payment', 'Transfer', 'Card Payment', 'Refund', 'Tax'];
 
 /* Inner tabs. */
 const TABS = [
+  { id: 'tx', label: 'Transactions', icon: 'ti-arrows-exchange' },
   { id: 'cards', label: 'Credit Card & Expenses', icon: 'ti-credit-card' },
   { id: 'tools', label: 'Business Tools', icon: 'ti-tools' },
 ];
@@ -30,7 +36,7 @@ const TABS = [
 /* Small helpers                                                       */
 /* ------------------------------------------------------------------ */
 
-/* Renders a date like "May 20, 2026" (business records use ISO date strings). */
+/* Renders a date like "May 20, 2026" (records use ISO date strings). */
 function bizDate(iso) {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -48,70 +54,149 @@ function statusBadge(status) {
   const s = (status || '').toUpperCase();
   if (s === 'PAID') return 'badge-green';
   if (s === 'OVERDUE') return 'badge-red';
-  return 'badge-amber'; // OPEN / default
+  return 'badge-amber';
 }
 
-/* Safe JSON read from localStorage with a fallback. */
+/* Safe JSON read/write from localStorage (failures are non-fatal). */
 function readLS(key, fallback) {
   try {
     const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : fallback;
   } catch {
     return fallback;
   }
 }
-
-/* Safe JSON write to localStorage (failures are non-fatal). */
 function writeLS(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* ignore quota / private-mode errors */
-  }
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* ignore */ }
 }
 
-/* Human label for an account type. */
-function accountTypeLabel(type) {
-  switch ((type || '').toUpperCase()) {
-    case 'CHECKING': return 'Checking';
-    case 'SAVINGS': return 'Savings';
-    case 'CREDIT_CARD': return 'Credit Card';
-    case 'LOAN': return 'Loan';
-    default: return type || '—';
+/* ---- Account type handling. Linked (Plaid) accounts use lowercase
+   depository|credit|loan|investment|other; manual accounts use uppercase
+   CHECKING|SAVINGS|CREDIT_CARD|LOAN. These helpers accept both. ---- */
+function normType(type, subtype) {
+  const t = (type || '').toLowerCase();
+  const s = (subtype || '').toLowerCase();
+  if (t === 'credit' || t === 'credit_card' || s.includes('credit')) return 'credit';
+  if (t === 'checking') return 'checking';
+  if (t === 'savings') return 'savings';
+  if (t === 'depository') return s === 'savings' ? 'savings' : 'checking';
+  if (t === 'loan') return 'loan';
+  if (t === 'investment') return 'investment';
+  return 'other';
+}
+function isCardType(t) { return t === 'credit'; }
+function isBankType(t) { return t === 'checking' || t === 'savings'; }
+
+function accountTypeLabel(t) {
+  switch (t) {
+    case 'checking': return 'Checking';
+    case 'savings': return 'Savings';
+    case 'credit': return 'Credit Card';
+    case 'loan': return 'Loan';
+    case 'investment': return 'Investment';
+    default: return 'Account';
   }
 }
-
-/* Badge variant for an account type. */
-function accountTypeBadge(type) {
-  switch ((type || '').toUpperCase()) {
-    case 'CHECKING': return 'badge-forest';
-    case 'SAVINGS': return 'badge-green';
-    case 'CREDIT_CARD': return 'badge-amber';
-    case 'LOAN': return 'badge-red';
+function accountTypeBadge(t) {
+  switch (t) {
+    case 'checking': return 'badge-forest';
+    case 'savings': return 'badge-green';
+    case 'credit': return 'badge-amber';
+    case 'loan': return 'badge-red';
     default: return 'badge-gray';
   }
 }
-
-/* Icon + tone (colored chip) for an account type — the visual language that
-   distinguishes checking vs. savings vs. credit vs. loan across the page. */
-function accountVisual(type) {
-  switch ((type || '').toUpperCase()) {
-    case 'CHECKING': return { icon: 'ti-building-bank', tone: 'icon-forest', accent: 'var(--tv-forest)' };
-    case 'SAVINGS': return { icon: 'ti-pig-money', tone: 'icon-green', accent: 'var(--tv-positive)' };
-    case 'CREDIT_CARD': return { icon: 'ti-credit-card', tone: 'icon-amber', accent: 'var(--tv-warning)' };
-    case 'LOAN': return { icon: 'ti-file-dollar', tone: 'icon-red', accent: 'var(--tv-negative)' };
+/* Icon + tone + accent color per account type — the shared visual language. */
+function accountVisual(t) {
+  switch (t) {
+    case 'checking': return { icon: 'ti-building-bank', tone: 'icon-forest', accent: 'var(--tv-forest)' };
+    case 'savings': return { icon: 'ti-pig-money', tone: 'icon-green', accent: 'var(--tv-positive)' };
+    case 'credit': return { icon: 'ti-credit-card', tone: 'icon-amber', accent: 'var(--tv-warning)' };
+    case 'loan': return { icon: 'ti-file-dollar', tone: 'icon-red', accent: 'var(--tv-negative)' };
+    case 'investment': return { icon: 'ti-chart-line', tone: 'icon-purple', accent: '#6B46C1' };
     default: return { icon: 'ti-wallet', tone: 'icon-blue', accent: 'var(--tv-forest-light)' };
   }
 }
 
-function isCreditCard(a) {
-  return (a?.type || '').toUpperCase() === 'CREDIT_CARD';
+/* Normalize a linked (Plaid) account into the shared shape. */
+function normLinkedAccount(a) {
+  const type = normType(a.type, a.subtype);
+  return {
+    key: `lin-${a.id}`, source: 'Linked', rawId: a.id, type, subtype: a.subtype,
+    plaidAccountId: a.plaidAccountId, plaidItemId: a.plaidItemId,
+    name: a.name || a.officialName || `Account ${a.id}`,
+    institution: a.officialName && a.officialName !== a.name ? a.officialName : null,
+    mask: a.mask,
+    balance: Number(a.currentBalance) || 0,
+    available: a.availableBalance != null ? Number(a.availableBalance) : null,
+    creditLimit: a.creditLimit != null ? Number(a.creditLimit) : null,
+    minimumPayment: a.minimumPayment != null ? Number(a.minimumPayment) : null,
+    nextPaymentDueDate: a.nextPaymentDueDate || null,
+    autoSynced: true, canDelete: false,
+  };
+}
+/* Normalize a manual business account into the shared shape. */
+function normManualAccount(a) {
+  const type = normType(a.type);
+  return {
+    key: `man-${a.id}`, source: 'Manual', rawId: a.id, type, subtype: null,
+    plaidAccountId: null, plaidItemId: null,
+    name: a.name, institution: a.institution, mask: null,
+    balance: Number(a.balance) || 0,
+    available: null,
+    creditLimit: a.creditLimit != null ? Number(a.creditLimit) : null,
+    minimumPayment: null, nextPaymentDueDate: null,
+    autoSynced: false, canDelete: true,
+  };
 }
 
-/* Build a 6-month revenue series from REAL dashboard data only.
-   When there's no real trend data we return a zeroed series (honest empty
-   chart) rather than fabricating revenue numbers. */
+/* Stable external id for reconciliation (linked vs manual). */
+function txExternalId(t) {
+  return t.source === 'Linked'
+    ? `lin-${t.plaidTransactionId || t.id}`
+    : `man-${t.id}`;
+}
+
+/* Coarse transaction TYPE bucket for tagging + filtering. Uses amount sign
+   (positive = money in, negative = money out — matching the Transactions page),
+   the resolved account, and keyword heuristics over name/merchant/category. */
+function classifyTxType(amount, category, name, merchant, acctType) {
+  const hay = `${name || ''} ${merchant || ''} ${category || ''}`.toLowerCase();
+  if (/refund|reversal|\breturn\b|chargeback|adjustment/.test(hay)) return 'Refund';
+  if (/\btax(es)?\b|\birs\b|franchise tax|estimated payment|sales tax/.test(hay)) return 'Tax';
+  if (/transfer|\bxfer\b|zelle|wire|book transfer|internal transfer/.test(hay)) return 'Transfer';
+  if (isCardType(acctType) && amount > 0) return 'Card Payment';
+  if (/payroll|gusto|\badp\b|paychex|salary|wages/.test(hay)) return 'Payroll';
+  if (amount > 0) return 'Income';
+  if (/vendor|supplier|invoice|professional service|contractor|consult/.test(hay)) return 'Vendor Payment';
+  return 'Expense';
+}
+
+/* Icon + tone for a transaction row, by type. */
+function txTypeVisual(type) {
+  switch (type) {
+    case 'Income': return { icon: 'ti-arrow-down-left', tone: 'icon-green' };
+    case 'Card Payment': return { icon: 'ti-credit-card', tone: 'icon-forest' };
+    case 'Transfer': return { icon: 'ti-arrows-exchange', tone: 'icon-blue' };
+    case 'Refund': return { icon: 'ti-receipt-refund', tone: 'icon-green' };
+    case 'Tax': return { icon: 'ti-building-bank', tone: 'icon-amber' };
+    case 'Payroll': return { icon: 'ti-users', tone: 'icon-purple' };
+    case 'Vendor Payment': return { icon: 'ti-truck-delivery', tone: 'icon-amber' };
+    default: return { icon: 'ti-shopping-bag', tone: 'icon-red' };
+  }
+}
+
+/* Status badge variant. */
+function txStatusBadge(status) {
+  switch (status) {
+    case 'Reconciled': return 'badge-green';
+    case 'Pending': return 'badge-amber';
+    case 'Failed': return 'badge-red';
+    default: return 'badge-gray'; // Cleared
+  }
+}
+
+/* Build a 6-month revenue series from REAL dashboard data only (no fabrication). */
 function buildRevenueSeries(dashboard) {
   const apiSeries = dashboard?.revenueTrend || dashboard?.revenueSeries;
   if (Array.isArray(apiSeries) && apiSeries.length) {
@@ -120,13 +205,8 @@ function buildRevenueSeries(dashboard) {
       value: Number(p.value ?? p.amount ?? 0),
     }));
   }
-  return [5, 4, 3, 2, 1, 0].map((monthsAgo) => ({
-    label: monthLabel(monthsAgo),
-    value: 0,
-  }));
+  return [5, 4, 3, 2, 1, 0].map((m) => ({ label: monthLabel(m), value: 0 }));
 }
-
-/* Short month label N months back from now (0 = current month). */
 function monthLabel(monthsAgo) {
   const d = new Date();
   d.setDate(1);
@@ -134,8 +214,8 @@ function monthLabel(monthsAgo) {
   return d.toLocaleDateString('en-US', { month: 'short' });
 }
 
-export default function MyBusinessPage({ user, formatDate }) {
-  /* ---- QuickBooks-backed state (existing behavior, preserved) ---- */
+export default function MyBusinessPage({ user, formatDate, accounts = [], transactions = [], loadAll }) {
+  /* ---- QuickBooks-backed state ---- */
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -146,18 +226,16 @@ export default function MyBusinessPage({ user, formatDate }) {
   const [qboInvoices, setQboInvoices] = useState([]);
   const [expenses, setExpenses] = useState([]);
 
-  /* ---- Server-persisted multi-business state ---- */
+  /* ---- Server-persisted business state ---- */
   const [businesses, setBusinesses] = useState([]);
   const [selectedId, setSelectedId] = useState(() => readLS(LS_SELECTED, null));
-
-  /* Per-business, server-persisted collections. */
-  const [accounts, setAccounts] = useState([]);
-  const [transactions, setTransactions] = useState([]);
+  const [bizAccounts, setBizAccounts] = useState([]);         // manual accounts
+  const [bizTransactions, setBizTransactions] = useState([]); // manual transactions
   const [manualInvoices, setManualInvoices] = useState([]);
+  const [reconciledSet, setReconciledSet] = useState(() => new Set());
 
   /* ---- UI state ---- */
-  const [activeTab, setActiveTab] = useState('cards');
-  const [txFilter, setTxFilter] = useState('ALL'); // 'ALL' | accountId
+  const [activeTab, setActiveTab] = useState('tx');
 
   const [showAddBusiness, setShowAddBusiness] = useState(false);
   const [bizForm, setBizForm] = useState({ name: '', industry: '', entityType: 'LLC', ein: '' });
@@ -167,15 +245,35 @@ export default function MyBusinessPage({ user, formatDate }) {
 
   const [showAddTx, setShowAddTx] = useState(false);
   const [txForm, setTxForm] = useState({
-    accountId: '', date: todayISO(), description: '', merchant: '', category: 'Software & SaaS', amount: '', direction: 'out',
+    accountKey: '', date: todayISO(), description: '', merchant: '', category: 'Software & SaaS', amount: '', direction: 'out',
   });
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
 
+  /* ---- Transaction filters ---- */
+  const [search, setSearch] = useState('');
+  const [fAccount, setFAccount] = useState('ALL');   // 'ALL' | account key
+  const [fCategory, setFCategory] = useState('ALL');
+  const [fType, setFType] = useState('ALL');
+  const [fStatus, setFStatus] = useState('ALL');
+  const [fDirection, setFDirection] = useState('ALL'); // ALL | IN | OUT
+  const [dateRange, setDateRange] = useState('All');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [minAmt, setMinAmt] = useState('');
+  const [maxAmt, setMaxAmt] = useState('');
+  const [fTag, setFTag] = useState('ALL');
+  const [sortKey, setSortKey] = useState('date');
+  const [sortDir, setSortDir] = useState('desc');
+
+  /* User type/tag overrides (extId -> { type, tags[] }) + inline editor state. */
+  const [overridesMap, setOverridesMap] = useState(() => new Map());
+  const [editingKey, setEditingKey] = useState(null);
+  const [editForm, setEditForm] = useState({ type: '', tags: '' });
+
   const txSectionRef = useRef(null);
 
-  /* The business object currently selected (falls back to first). */
   const selectedBusiness = useMemo(() => {
     if (!businesses.length) return null;
     return businesses.find((b) => b.id === selectedId) || businesses[0];
@@ -184,7 +282,7 @@ export default function MyBusinessPage({ user, formatDate }) {
   /* ------------------------------------------------------------------ */
   /* Data loading                                                       */
   /* ------------------------------------------------------------------ */
-  const loadAll = useCallback(async () => {
+  const loadBusinessQbo = useCallback(async () => {
     setLoading(true);
     setError('');
     const [conn, dash, inv, exp] = await Promise.allSettled([
@@ -193,79 +291,248 @@ export default function MyBusinessPage({ user, formatDate }) {
       api.getBusinessInvoices(),
       api.getBusinessExpenses(),
     ]);
-
     if (conn.status === 'fulfilled') setConnection(conn.value || null);
     if (dash.status === 'fulfilled') setDashboard(dash.value || null);
     if (inv.status === 'fulfilled') setQboInvoices(Array.isArray(inv.value) ? inv.value : (inv.value?.items || []));
     if (exp.status === 'fulfilled') setExpenses(Array.isArray(exp.value) ? exp.value : (exp.value?.items || []));
-
-    const allFailed = [conn, dash, inv, exp].every((r) => r.status === 'rejected');
-    if (allFailed) {
+    if ([conn, dash, inv, exp].every((r) => r.status === 'rejected')) {
       setError(conn.reason?.message || 'Could not load business data. Please try again.');
     }
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { loadBusinessQbo(); }, [loadBusinessQbo]);
 
   const loadBusinesses = useCallback(async () => {
     try {
       const list = await api.getManualBusinesses();
       setBusinesses(Array.isArray(list) ? list : []);
-    } catch {
-      /* leave empty; the API error is non-fatal for the QBO path */
-    }
+    } catch { /* non-fatal */ }
   }, []);
-
   useEffect(() => { loadBusinesses(); }, [loadBusinesses]);
 
-  /* Keep the (UI-only) selection valid and persisted. */
+  const loadReconciliations = useCallback(async () => {
+    try {
+      const ids = await api.getReconciliations();
+      setReconciledSet(new Set(Array.isArray(ids) ? ids : []));
+    } catch { /* non-fatal; nothing reconciled */ }
+  }, []);
+  useEffect(() => { loadReconciliations(); }, [loadReconciliations]);
+
+  const loadOverrides = useCallback(async () => {
+    try {
+      const list = await api.getTxOverrides();
+      const m = new Map();
+      (Array.isArray(list) ? list : []).forEach((o) =>
+        m.set(o.externalId, { type: o.type || null, tags: Array.isArray(o.tags) ? o.tags : [] }));
+      setOverridesMap(m);
+    } catch { /* non-fatal; no overrides */ }
+  }, []);
+  useEffect(() => { loadOverrides(); }, [loadOverrides]);
+
   useEffect(() => {
     if (!businesses.length) return;
-    const stillValid = businesses.some((b) => b.id === selectedId);
-    if (!stillValid) {
-      setSelectedId(businesses[0].id);
-      return;
-    }
+    if (!businesses.some((b) => b.id === selectedId)) { setSelectedId(businesses[0].id); return; }
     writeLS(LS_SELECTED, selectedId);
   }, [selectedId, businesses]);
 
-  /* Load per-business accounts + transactions + invoices together. Reused by
-     the header refresh and the Sync button so everything stays current. */
   const loadBusinessDetail = useCallback(async (businessId) => {
-    if (!businessId) {
-      setAccounts([]); setTransactions([]); setManualInvoices([]);
-      return;
-    }
+    if (!businessId) { setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); return; }
     const [acc, tx, inv] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
     ]);
-    setAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
-    setTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
+    setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
+    setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      if (cancelled) return;
-      await loadBusinessDetail(selectedBusiness?.id);
-    })();
+    (async () => { if (!cancelled) await loadBusinessDetail(selectedBusiness?.id); })();
     return () => { cancelled = true; };
   }, [selectedBusiness, loadBusinessDetail]);
 
-  /* Full refresh: QuickBooks dashboard + the selected business's live data. */
+  /* Full refresh: linked accounts/transactions (App-level) + QuickBooks + business detail. */
   const refreshEverything = useCallback(async () => {
-    await Promise.all([loadAll(), loadBusinessDetail(selectedBusiness?.id)]);
-  }, [loadAll, loadBusinessDetail, selectedBusiness]);
+    await Promise.all([
+      loadAll ? loadAll() : Promise.resolve(),
+      loadBusinessQbo(),
+      loadBusinessDetail(selectedBusiness?.id),
+      loadReconciliations(),
+      loadOverrides(),
+    ]);
+  }, [loadAll, loadBusinessQbo, loadBusinessDetail, loadReconciliations, loadOverrides, selectedBusiness]);
 
-  /* Reset the transaction filter if the selected account disappears. */
-  useEffect(() => {
-    if (txFilter === 'ALL') return;
-    if (!accounts.some((a) => String(a.id) === String(txFilter))) setTxFilter('ALL');
-  }, [accounts, txFilter]);
+  /* ------------------------------------------------------------------ */
+  /* Normalized accounts (linked + manual)                              */
+  /* ------------------------------------------------------------------ */
+  const allAccounts = useMemo(() => {
+    const linked = (accounts || []).map(normLinkedAccount);
+    const manual = (bizAccounts || []).map(normManualAccount);
+    return [...linked, ...manual];
+  }, [accounts, bizAccounts]);
+
+  const linkedById = useMemo(() => {
+    const m = new Map();
+    (accounts || []).forEach((a) => a?.id != null && m.set(String(a.id), a));
+    return m;
+  }, [accounts]);
+  const linkedByPlaid = useMemo(() => {
+    const m = new Map();
+    (accounts || []).forEach((a) => a?.plaidAccountId && m.set(a.plaidAccountId, a));
+    return m;
+  }, [accounts]);
+
+  /* Resolve a raw transaction to its normalized account key. */
+  const resolveAcctKey = useCallback((t) => {
+    if (t.source === 'Linked') {
+      if (t.accountId != null && linkedById.has(String(t.accountId))) return `lin-${t.accountId}`;
+      if (t.plaidAccountId && linkedByPlaid.has(t.plaidAccountId)) return `lin-${linkedByPlaid.get(t.plaidAccountId).id}`;
+      return null;
+    }
+    return t.accountId != null ? `man-${t.accountId}` : null;
+  }, [linkedById, linkedByPlaid]);
+
+  const accountByKey = useMemo(() => {
+    const m = new Map();
+    allAccounts.forEach((a) => m.set(a.key, a));
+    return m;
+  }, [allAccounts]);
+
+  /* ------------------------------------------------------------------ */
+  /* Unified transactions (auto-synced linked + manual)                 */
+  /* ------------------------------------------------------------------ */
+  const unifiedTx = useMemo(() => {
+    const linked = (transactions || []).map((t) => ({ ...t, source: 'Linked' }));
+    const manual = (bizTransactions || []).map((t) => ({
+      source: 'Manual', id: t.id,
+      name: t.description, merchantName: t.merchant,
+      amount: Number(t.amount) || 0,
+      date: t.postedAt, category: t.category || 'Uncategorized',
+      accountId: t.accountId, plaidAccountId: null, pending: false,
+    }));
+
+    return [...linked, ...manual].map((t) => {
+      const acctKey = resolveAcctKey(t);
+      const acct = acctKey ? accountByKey.get(acctKey) : null;
+      const amount = Number(t.amount) || 0;
+      const name = t.name || t.description || t.merchantName || 'Transaction';
+      const category = t.category || 'Uncategorized';
+      const derivedType = classifyTxType(amount, category, name, t.merchantName, acct?.type);
+      const extId = txExternalId(t);
+      const ov = overridesMap.get(extId);
+      const type = ov?.type || derivedType;
+      const tags = ov?.tags || [];
+      let status = 'Cleared';
+      if (reconciledSet.has(extId)) status = 'Reconciled';
+      else if (t.pending === true) status = 'Pending';
+      return {
+        key: `${t.source}-${t.id}`,
+        extId, source: t.source, rawId: t.id,
+        name, merchant: t.merchantName || null,
+        amount, date: t.date, category,
+        type, derivedType, typeOverridden: !!ov?.type, tags, status,
+        acctKey, acct,
+        canDelete: t.source === 'Manual',
+      };
+    });
+  }, [transactions, bizTransactions, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
+
+  /* Dropdown option sets, derived from the data. */
+  const categoryOptions = useMemo(() => {
+    const s = new Set();
+    unifiedTx.forEach((t) => t.category && s.add(t.category));
+    return ['ALL', ...Array.from(s).sort()];
+  }, [unifiedTx]);
+  const typeOptions = useMemo(() => {
+    const s = new Set();
+    unifiedTx.forEach((t) => s.add(t.type));
+    return ['ALL', ...Array.from(s).sort()];
+  }, [unifiedTx]);
+  const tagOptions = useMemo(() => {
+    const s = new Set();
+    unifiedTx.forEach((t) => t.tags.forEach((tag) => s.add(tag)));
+    return ['ALL', ...Array.from(s).sort()];
+  }, [unifiedTx]);
+
+  const hasActiveFilters =
+    search || fAccount !== 'ALL' || fCategory !== 'ALL' || fType !== 'ALL' ||
+    fStatus !== 'ALL' || fDirection !== 'ALL' || fTag !== 'ALL' || dateRange !== 'All' || minAmt || maxAmt;
+
+  function clearFilters() {
+    setSearch(''); setFAccount('ALL'); setFCategory('ALL'); setFType('ALL');
+    setFStatus('ALL'); setFDirection('ALL'); setFTag('ALL'); setDateRange('All');
+    setCustomFrom(''); setCustomTo(''); setMinAmt(''); setMaxAmt('');
+  }
+
+  const filteredTx = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let from = null, to = null;
+    if (dateRange === 'Custom') {
+      from = customFrom ? new Date(customFrom + 'T00:00:00') : null;
+      to = customTo ? new Date(customTo + 'T23:59:59') : null;
+    } else if (dateRange !== 'All') {
+      from = rangeStart(dateRange);
+    }
+    const lo = minAmt !== '' ? Math.abs(Number(minAmt)) : null;
+    const hi = maxAmt !== '' ? Math.abs(Number(maxAmt)) : null;
+
+    return unifiedTx.filter((t) => {
+      if (q && !t.name.toLowerCase().includes(q) &&
+        !t.category.toLowerCase().includes(q) &&
+        !(t.merchant || '').toLowerCase().includes(q) &&
+        !t.tags.some((tag) => tag.toLowerCase().includes(q))) return false;
+      if (fAccount !== 'ALL' && t.acctKey !== fAccount) return false;
+      if (fCategory !== 'ALL' && t.category !== fCategory) return false;
+      if (fType !== 'ALL' && t.type !== fType) return false;
+      if (fTag !== 'ALL' && !t.tags.includes(fTag)) return false;
+      if (fStatus !== 'ALL' && t.status !== fStatus) return false;
+      if (fDirection === 'IN' && t.amount < 0) return false;
+      if (fDirection === 'OUT' && t.amount >= 0) return false;
+      if (from || to) {
+        const d = t.date ? new Date(t.date) : null;
+        if (!d || Number.isNaN(d.getTime())) return false;
+        if (from && d < from) return false;
+        if (to && d > to) return false;
+      }
+      const mag = Math.abs(t.amount);
+      if (lo != null && mag < lo) return false;
+      if (hi != null && mag > hi) return false;
+      return true;
+    });
+  }, [unifiedTx, search, fAccount, fCategory, fType, fTag, fStatus, fDirection, dateRange, customFrom, customTo, minAmt, maxAmt]);
+
+  const sortedTx = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const val = (t) => {
+      switch (sortKey) {
+        case 'amount': return t.amount;
+        case 'name': return t.name.toLowerCase();
+        case 'category': return t.category.toLowerCase();
+        case 'date':
+        default: return t.date ? new Date(t.date).getTime() : 0;
+      }
+    };
+    return [...filteredTx].sort((a, b) => {
+      const av = val(a), bv = val(b);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [filteredTx, sortKey, sortDir]);
+
+  function toggleSort(key) {
+    if (sortKey === key) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(key); setSortDir(key === 'name' || key === 'category' ? 'asc' : 'desc'); }
+  }
+
+  const txTotals = useMemo(() => {
+    let moneyIn = 0, moneyOut = 0;
+    filteredTx.forEach((t) => { if (t.amount >= 0) moneyIn += t.amount; else moneyOut += t.amount; });
+    return { moneyIn, moneyOut, net: moneyIn + moneyOut, count: filteredTx.length };
+  }, [filteredTx]);
 
   /* ------------------------------------------------------------------ */
   /* API actions                                                        */
@@ -273,7 +540,8 @@ export default function MyBusinessPage({ user, formatDate }) {
   async function handleSync() {
     setSyncing(true);
     try {
-      await api.syncBusiness();
+      // Linked accounts also auto-sync on a schedule; this is a manual "sync now".
+      await Promise.allSettled([api.syncBusiness(), api.syncTransactions()]);
       await refreshEverything();
     } catch (e) {
       setError(e?.message || 'Sync failed.');
@@ -286,11 +554,8 @@ export default function MyBusinessPage({ user, formatDate }) {
     setConnecting(true);
     try {
       const res = await api.connectBusiness();
-      if (res?.authorizeUrl) {
-        window.location.href = res.authorizeUrl;
-        return;
-      }
-      await loadAll();
+      if (res?.authorizeUrl) { window.location.href = res.authorizeUrl; return; }
+      await loadBusinessQbo();
     } catch (e) {
       setError(e?.message || 'Could not connect QuickBooks.');
     } finally {
@@ -298,124 +563,137 @@ export default function MyBusinessPage({ user, formatDate }) {
     }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Business CRUD                                                       */
-  /* ------------------------------------------------------------------ */
+  async function handleReconcileToggle(t) {
+    const isRec = reconciledSet.has(t.extId);
+    // Optimistic update.
+    setReconciledSet((prev) => {
+      const next = new Set(prev);
+      if (isRec) next.delete(t.extId); else next.add(t.extId);
+      return next;
+    });
+    try {
+      if (isRec) await api.removeReconciliation(t.extId);
+      else await api.addReconciliation(t.extId);
+    } catch (e) {
+      // Roll back on failure.
+      setReconciledSet((prev) => {
+        const next = new Set(prev);
+        if (isRec) next.add(t.extId); else next.delete(t.extId);
+        return next;
+      });
+      setError(e?.message || 'Could not update reconciliation.');
+    }
+  }
+
+  /* ---- Transaction type/tag overrides ---- */
+  function openEditOverride(t) {
+    setEditingKey(t.key);
+    setEditForm({ type: t.typeOverridden ? t.type : '', tags: t.tags.join(', ') });
+  }
+  async function saveOverride(t) {
+    const type = editForm.type || null;
+    const tags = editForm.tags.split(',').map((s) => s.trim()).filter(Boolean);
+    const cleared = !type && tags.length === 0;
+    // Optimistic update.
+    setOverridesMap((prev) => {
+      const next = new Map(prev);
+      if (cleared) next.delete(t.extId);
+      else next.set(t.extId, { type, tags });
+      return next;
+    });
+    setEditingKey(null);
+    try {
+      if (cleared) await api.deleteTxOverride(t.extId);
+      else await api.setTxOverride(t.extId, { type, tags });
+    } catch (e) {
+      setError(e?.message || 'Could not save override.');
+      loadOverrides(); // resync on failure
+    }
+  }
+
+  /* ---- Business CRUD ---- */
   async function handleAddBusiness(e) {
     e.preventDefault();
     const name = bizForm.name.trim();
     if (!name) return;
     try {
       const created = await api.createManualBusiness({
-        name,
-        industry: bizForm.industry.trim(),
-        entityType: bizForm.entityType,
-        ein: bizForm.ein.trim(),
+        name, industry: bizForm.industry.trim(), entityType: bizForm.entityType, ein: bizForm.ein.trim(),
       });
       setBusinesses((prev) => [...prev, created]);
       setSelectedId(created.id);
       setBizForm({ name: '', industry: '', entityType: 'LLC', ein: '' });
       setShowAddBusiness(false);
-    } catch (err) {
-      setError(err?.message || 'Could not add business.');
-    }
+    } catch (err) { setError(err?.message || 'Could not add business.'); }
   }
-
   async function handleDeleteBusiness(id) {
     try {
       await api.deleteManualBusiness(id);
       setBusinesses((prev) => prev.filter((b) => b.id !== id));
-    } catch (err) {
-      setError(err?.message || 'Could not delete business.');
-    }
+    } catch (err) { setError(err?.message || 'Could not delete business.'); }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Account CRUD                                                        */
-  /* ------------------------------------------------------------------ */
+  /* ---- Manual account CRUD ---- */
   async function handleAddAccount(e) {
     e.preventDefault();
     const name = acctForm.name.trim();
     if (!name || !selectedBusiness) return;
     try {
       const created = await api.createBusinessAccount(selectedBusiness.id, {
-        name,
-        institution: acctForm.institution.trim(),
-        type: acctForm.type,
+        name, institution: acctForm.institution.trim(), type: acctForm.type,
         balance: Number(acctForm.balance) || 0,
         creditLimit: acctForm.type === 'CREDIT_CARD' && acctForm.creditLimit !== ''
-          ? Number(acctForm.creditLimit) || 0
-          : null,
+          ? Number(acctForm.creditLimit) || 0 : null,
       });
-      setAccounts((prev) => [...prev, created]);
+      setBizAccounts((prev) => [...prev, created]);
       setAcctForm({ name: '', institution: '', type: 'CHECKING', balance: '', creditLimit: '' });
       setShowAddAccount(false);
-    } catch (err) {
-      setError(err?.message || 'Could not add account.');
-    }
+    } catch (err) { setError(err?.message || 'Could not add account.'); }
   }
-
-  async function handleDeleteAccount(id) {
+  async function handleDeleteAccount(rawId) {
     try {
-      await api.deleteBusinessAccount(id);
-      setAccounts((prev) => prev.filter((a) => a.id !== id));
-      setTransactions((prev) => prev.filter((t) => String(t.accountId) !== String(id)));
-    } catch (err) {
-      setError(err?.message || 'Could not delete account.');
-    }
+      await api.deleteBusinessAccount(rawId);
+      setBizAccounts((prev) => prev.filter((a) => a.id !== rawId));
+      setBizTransactions((prev) => prev.filter((t) => String(t.accountId) !== String(rawId)));
+    } catch (err) { setError(err?.message || 'Could not delete account.'); }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Transaction CRUD                                                    */
-  /* ------------------------------------------------------------------ */
-  function openAddTx(accountId) {
-    setActiveTab('cards');
-    setTxForm((f) => ({
-      ...f,
-      accountId: accountId != null ? String(accountId) : (accounts[0] ? String(accounts[0].id) : ''),
-      date: todayISO(),
-    }));
+  /* ---- Manual transaction CRUD ---- */
+  function openAddTx(accountKey) {
+    setActiveTab('tx');
+    const manualKeys = allAccounts.filter((a) => a.source === 'Manual');
+    const preferred = (accountKey && accountKey.startsWith('man-')) ? accountKey : (manualKeys[0]?.key || '');
+    setTxForm((f) => ({ ...f, accountKey: preferred, date: todayISO() }));
     setShowAddTx(true);
     requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   }
-
   async function handleAddTx(e) {
     e.preventDefault();
     if (!selectedBusiness) return;
-    const accountId = txForm.accountId || (accounts[0] && accounts[0].id);
-    if (!accountId) { setError('Add a bank or credit account first.'); return; }
+    const acct = accountByKey.get(txForm.accountKey);
+    if (!acct || acct.source !== 'Manual') { setError('Pick a manual account to add a transaction to.'); return; }
     const magnitude = Math.abs(Number(txForm.amount) || 0);
     if (!txForm.description.trim() || !magnitude) return;
     const signed = txForm.direction === 'in' ? magnitude : -magnitude;
     try {
       const created = await api.createBusinessTransaction(selectedBusiness.id, {
-        accountId: Number(accountId),
-        description: txForm.description.trim(),
-        merchant: txForm.merchant.trim(),
-        category: txForm.category,
-        amount: signed,
-        postedAt: txForm.date || todayISO(),
+        accountId: acct.rawId, description: txForm.description.trim(), merchant: txForm.merchant.trim(),
+        category: txForm.category, amount: signed, postedAt: txForm.date || todayISO(),
       });
-      setTransactions((prev) => [created, ...prev]);
-      setTxForm({ accountId: String(accountId), date: todayISO(), description: '', merchant: '', category: 'Software & SaaS', amount: '', direction: 'out' });
+      setBizTransactions((prev) => [created, ...prev]);
+      setTxForm({ accountKey: txForm.accountKey, date: todayISO(), description: '', merchant: '', category: 'Software & SaaS', amount: '', direction: 'out' });
       setShowAddTx(false);
-    } catch (err) {
-      setError(err?.message || 'Could not add transaction.');
-    }
+    } catch (err) { setError(err?.message || 'Could not add transaction.'); }
   }
-
-  async function handleDeleteTx(id) {
+  async function handleDeleteTx(t) {
+    if (t.source !== 'Manual') return;
     try {
-      await api.deleteBusinessTransaction(id);
-      setTransactions((prev) => prev.filter((t) => t.id !== id));
-    } catch (err) {
-      setError(err?.message || 'Could not delete transaction.');
-    }
+      await api.deleteBusinessTransaction(t.rawId);
+      setBizTransactions((prev) => prev.filter((x) => x.id !== t.rawId));
+    } catch (err) { setError(err?.message || 'Could not delete transaction.'); }
   }
 
-  /* ------------------------------------------------------------------ */
-  /* Invoice CRUD                                                        */
-  /* ------------------------------------------------------------------ */
+  /* ---- Invoice CRUD ---- */
   async function handleAddInvoice(e) {
     e.preventDefault();
     if (!selectedBusiness) return;
@@ -424,35 +702,42 @@ export default function MyBusinessPage({ user, formatDate }) {
     if (!customer || !amount) return;
     try {
       const created = await api.createManualInvoice(selectedBusiness.id, {
-        customer,
-        amount,
-        status: invForm.status,
-        dueDate: invForm.dueDate || null,
+        customer, amount, status: invForm.status, dueDate: invForm.dueDate || null,
       });
       setManualInvoices((prev) => [created, ...prev]);
       setInvForm({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
       setShowAddInvoice(false);
-    } catch (err) {
-      setError(err?.message || 'Could not create invoice.');
-    }
+    } catch (err) { setError(err?.message || 'Could not create invoice.'); }
   }
-
   async function handleMarkInvoicePaid(id) {
     try {
       const updated = await api.updateManualInvoice(id, { status: 'PAID' });
       setManualInvoices((prev) => prev.map((i) => (i.id === id ? updated : i)));
-    } catch (err) {
-      setError(err?.message || 'Could not update invoice.');
-    }
+    } catch (err) { setError(err?.message || 'Could not update invoice.'); }
   }
-
   async function handleDeleteInvoice(id) {
     try {
       await api.deleteManualInvoice(id);
       setManualInvoices((prev) => prev.filter((i) => i.id !== id));
-    } catch (err) {
-      setError(err?.message || 'Could not delete invoice.');
-    }
+    } catch (err) { setError(err?.message || 'Could not delete invoice.'); }
+  }
+
+  /* CSV export of the current filtered transaction view. */
+  function exportCsv() {
+    const header = ['Date', 'Description', 'Merchant', 'Account', 'Category', 'Type', 'Tags', 'Status', 'Source', 'Amount'];
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = sortedTx.map((t) => [
+      bizDate(t.date), t.name, t.merchant || '', t.acct?.name || '—',
+      t.category, t.type, t.tags.join('; '), t.status, t.source, t.amount,
+    ].map(esc).join(','));
+    const csv = [header.map(esc).join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'business-transactions.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   /* ------------------------------------------------------------------ */
@@ -461,48 +746,28 @@ export default function MyBusinessPage({ user, formatDate }) {
   const connected = connection?.connected ?? dashboard?.connected ?? false;
   const companyName = connection?.companyName || dashboard?.companyName || 'Your Business';
   const changePct = Number(dashboard?.revenueChangePct ?? 0);
-  const hasContext = connected || !!selectedBusiness;
+  const hasLinked = (accounts || []).length > 0;
+  const hasContext = connected || !!selectedBusiness || hasLinked;
 
-  /* Split accounts by role for the overview. */
-  const bankAccounts = useMemo(() => accounts.filter((a) => !isCreditCard(a)), [accounts]);
-  const creditCards = useMemo(() => accounts.filter((a) => isCreditCard(a)), [accounts]);
+  const bankAccounts = useMemo(() => allAccounts.filter((a) => isBankType(a.type)), [allAccounts]);
+  const creditCards = useMemo(() => allAccounts.filter((a) => isCardType(a.type)), [allAccounts]);
+  const cashTotal = useMemo(() => bankAccounts.reduce((s, a) => s + a.balance, 0), [bankAccounts]);
+  const creditOwed = useMemo(() => creditCards.reduce((s, a) => s + a.balance, 0), [creditCards]);
 
-  /* Cash = sum of non-credit account balances. */
-  const cashTotal = useMemo(
-    () => bankAccounts.reduce((s, a) => s + (Number(a.balance) || 0), 0),
-    [bankAccounts]
-  );
-  /* Credit owed = sum of credit-card balances. */
-  const creditOwed = useMemo(
-    () => creditCards.reduce((s, a) => s + (Number(a.balance) || 0), 0),
-    [creditCards]
-  );
-
-  /* Unified merged invoices (manual first, then QuickBooks read-only). */
   const allInvoices = useMemo(() => {
     const m = manualInvoices.map((i) => ({
-      key: `m-${i.id}`, id: i.id, manual: true,
-      customer: i.customer, amount: Number(i.amount) || 0,
-      status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
+      key: `m-${i.id}`, id: i.id, manual: true, customer: i.customer,
+      amount: Number(i.amount) || 0, status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
     }));
     const q = qboInvoices.map((i) => ({
-      key: `q-${i.id}`, id: i.id, manual: false,
-      customer: i.customer, amount: Number(i.amount) || 0,
-      status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
+      key: `q-${i.id}`, id: i.id, manual: false, customer: i.customer,
+      amount: Number(i.amount) || 0, status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
     }));
     return [...m, ...q];
   }, [manualInvoices, qboInvoices]);
+  const pendingInvoices = useMemo(() => allInvoices.filter((i) => i.status !== 'PAID'), [allInvoices]);
+  const pendingTotal = useMemo(() => pendingInvoices.reduce((s, i) => s + i.amount, 0), [pendingInvoices]);
 
-  const pendingInvoices = useMemo(
-    () => allInvoices.filter((i) => i.status !== 'PAID'),
-    [allInvoices]
-  );
-  const pendingTotal = useMemo(
-    () => pendingInvoices.reduce((s, i) => s + i.amount, 0),
-    [pendingInvoices]
-  );
-
-  /* Manual KPI figures live on the business record (used when not connected). */
   const manualFigures = useMemo(() => ({
     revenueMtd: Number(selectedBusiness?.revenueMtd) || 0,
     expensesMtd: Number(selectedBusiness?.expensesMtd) || 0,
@@ -511,15 +776,12 @@ export default function MyBusinessPage({ user, formatDate }) {
 
   const kpi = connected
     ? {
-        revenueMtd: dashboard?.revenueMtd,
-        expensesMtd: dashboard?.expensesMtd,
-        netProfitMtd: dashboard?.netProfitMtd,
-        cashBalance: dashboard?.cashBalance,
+        revenueMtd: dashboard?.revenueMtd, expensesMtd: dashboard?.expensesMtd,
+        netProfitMtd: dashboard?.netProfitMtd, cashBalance: dashboard?.cashBalance,
         outstandingInvoices: dashboard?.outstandingInvoices,
       }
     : {
-        revenueMtd: manualFigures.revenueMtd,
-        expensesMtd: manualFigures.expensesMtd,
+        revenueMtd: manualFigures.revenueMtd, expensesMtd: manualFigures.expensesMtd,
         netProfitMtd: manualFigures.revenueMtd - manualFigures.expensesMtd,
         cashBalance: cashTotal,
         outstandingInvoices: pendingTotal || manualFigures.outstandingInvoices,
@@ -528,32 +790,18 @@ export default function MyBusinessPage({ user, formatDate }) {
   const revenueSeries = useMemo(() => buildRevenueSeries(connected ? dashboard : null), [connected, dashboard]);
   const maxRevenue = Math.max(1, ...revenueSeries.map((p) => p.value));
 
-  /* Account lookup for rendering transaction rows. */
-  const accountById = useMemo(() => {
-    const m = new Map();
-    accounts.forEach((a) => m.set(String(a.id), a));
-    return m;
-  }, [accounts]);
-
-  /* Transactions honoring the account filter, newest first (already sorted server-side). */
-  const filteredTx = useMemo(() => {
-    if (txFilter === 'ALL') return transactions;
-    return transactions.filter((t) => String(t.accountId) === String(txFilter));
-  }, [transactions, txFilter]);
-
-  /* Spending-by-category from money-out transactions (charges/expenses). */
   const spendingByCategory = useMemo(() => {
     const totals = new Map();
-    transactions.forEach((t) => {
-      const amt = Number(t.amount) || 0;
-      if (amt >= 0) return; // only outflows
-      const cat = t.category || 'Uncategorized';
-      totals.set(cat, (totals.get(cat) || 0) + Math.abs(amt));
+    unifiedTx.forEach((t) => {
+      if (t.amount >= 0) return;
+      totals.set(t.category, (totals.get(t.category) || 0) + Math.abs(t.amount));
     });
     const rows = [...totals.entries()].map(([label, value]) => ({ label, value }));
     rows.sort((a, b) => b.value - a.value);
     return rows.slice(0, 6);
-  }, [transactions]);
+  }, [unifiedTx]);
+
+  const manualAccountCount = useMemo(() => allAccounts.filter((a) => a.source === 'Manual').length, [allAccounts]);
 
   /* ------------------------------------------------------------------ */
   /* Render                                                              */
@@ -573,7 +821,7 @@ export default function MyBusinessPage({ user, formatDate }) {
               </span>
             )}
             {!loading && !connected && (
-              <span className="badge badge-gray" style={{ marginLeft: '8px' }}>Not connected</span>
+              <span className="badge badge-gray" style={{ marginLeft: '8px' }}>QuickBooks not connected</span>
             )}
             {!connected && selectedBusiness?.entityType && (
               <span className="badge badge-gold" style={{ marginLeft: '8px' }}>{selectedBusiness.entityType}</span>
@@ -586,16 +834,14 @@ export default function MyBusinessPage({ user, formatDate }) {
           </div>
         </div>
         <div className="page-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {(connected || selectedBusiness) && <LastRefreshed onRefresh={refreshEverything} />}
-          {(connected || selectedBusiness) && (
-            <button className="btn btn-secondary btn-sm" onClick={handleSync} disabled={syncing}>
-              <i className={`ti ti-refresh ${syncing ? 'spin' : ''}`}></i> {syncing ? 'Syncing…' : 'Sync'}
-            </button>
-          )}
+          <LastRefreshed onRefresh={refreshEverything} />
+          <button className="btn btn-secondary btn-sm" onClick={handleSync} disabled={syncing}>
+            <i className={`ti ti-refresh ${syncing ? 'spin' : ''}`}></i> {syncing ? 'Syncing…' : 'Sync now'}
+          </button>
         </div>
       </div>
 
-      {/* Business switcher + add/manage */}
+      {/* Business switcher */}
       <div className="card" style={{ marginBottom: 16 }}>
         <div className="section-header">
           <div className="section-title">
@@ -611,14 +857,9 @@ export default function MyBusinessPage({ user, formatDate }) {
         {businesses.length > 0 && (
           <div className="seg-control" style={{ flexWrap: 'wrap', marginBottom: showAddBusiness ? 14 : 0 }}>
             {businesses.map((b) => (
-              <button
-                key={b.id}
-                className={`seg-btn ${selectedBusiness?.id === b.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(b.id)}
-                title={b.industry ? `${b.name} · ${b.industry}` : b.name}
-              >
-                <i className="ti ti-switch-horizontal" style={{ marginRight: 4 }}></i>
-                {b.name}
+              <button key={b.id} className={`seg-btn ${selectedBusiness?.id === b.id ? 'active' : ''}`}
+                onClick={() => setSelectedId(b.id)} title={b.industry ? `${b.name} · ${b.industry}` : b.name}>
+                <i className="ti ti-switch-horizontal" style={{ marginRight: 4 }}></i>{b.name}
               </button>
             ))}
           </div>
@@ -629,37 +870,28 @@ export default function MyBusinessPage({ user, formatDate }) {
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Business name *</label>
-                <input className="form-input" value={bizForm.name}
-                  onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })}
-                  placeholder="e.g. Acme Ventures LLC" autoFocus />
+                <input className="form-input" value={bizForm.name} onChange={(e) => setBizForm({ ...bizForm, name: e.target.value })} placeholder="e.g. Acme Ventures LLC" autoFocus />
               </div>
               <div className="form-group">
                 <label className="form-label">Industry</label>
-                <input className="form-input" value={bizForm.industry}
-                  onChange={(e) => setBizForm({ ...bizForm, industry: e.target.value })}
-                  placeholder="e.g. Consulting" />
+                <input className="form-input" value={bizForm.industry} onChange={(e) => setBizForm({ ...bizForm, industry: e.target.value })} placeholder="e.g. Consulting" />
               </div>
             </div>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Entity type</label>
-                <select className="form-select" value={bizForm.entityType}
-                  onChange={(e) => setBizForm({ ...bizForm, entityType: e.target.value })}>
+                <select className="form-select" value={bizForm.entityType} onChange={(e) => setBizForm({ ...bizForm, entityType: e.target.value })}>
                   {ENTITY_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">EIN (optional)</label>
-                <input className="form-input" value={bizForm.ein}
-                  onChange={(e) => setBizForm({ ...bizForm, ein: e.target.value })}
-                  placeholder="12-3456789" />
+                <input className="form-input" value={bizForm.ein} onChange={(e) => setBizForm({ ...bizForm, ein: e.target.value })} placeholder="12-3456789" />
               </div>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="submit" className="btn btn-primary btn-sm" disabled={!bizForm.name.trim()}>
-                <i className="ti ti-plus"></i> Add business
-              </button>
-            </div>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={!bizForm.name.trim()}>
+              <i className="ti ti-plus"></i> Add business
+            </button>
           </form>
         )}
 
@@ -678,8 +910,7 @@ export default function MyBusinessPage({ user, formatDate }) {
               </div>
               <div className="item-right">
                 {businesses.length > 1 && (
-                  <button className="icon-btn" title="Delete this business"
-                    onClick={() => handleDeleteBusiness(selectedBusiness.id)}>
+                  <button className="icon-btn" title="Delete this business" onClick={() => handleDeleteBusiness(selectedBusiness.id)}>
                     <i className="ti ti-trash"></i>
                   </button>
                 )}
@@ -714,9 +945,7 @@ export default function MyBusinessPage({ user, formatDate }) {
             <div className="item-icon icon-blue"><i className="ti ti-plug"></i></div>
             <div className="item-main">
               <div className="item-name">Connect QuickBooks</div>
-              <div className="item-sub">
-                Link QuickBooks to auto-sync revenue, expenses, invoices, and your cash position.
-              </div>
+              <div className="item-sub">Link QuickBooks to auto-sync revenue, expenses, invoices, and your cash position.</div>
             </div>
             <div className="item-right">
               <button className="btn btn-primary btn-sm" onClick={handleConnect} disabled={connecting}>
@@ -729,21 +958,14 @@ export default function MyBusinessPage({ user, formatDate }) {
       )}
 
       {loading ? (
-        <div className="card">
-          <div className="empty-state">
-            <i className="ti ti-loader spin"></i>
-            <p>Loading business data…</p>
-          </div>
-        </div>
+        <div className="card"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading business data…</p></div></div>
       ) : !hasContext ? (
         <div className="card">
           <div className="empty-state">
             <i className="ti ti-building-store"></i>
             <p style={{ fontWeight: 600, color: 'var(--tv-text-primary)', marginBottom: 4 }}>No business yet</p>
-            <p style={{ marginBottom: 12 }}>Add a business above or connect QuickBooks to see your dashboard.</p>
-            <button className="btn btn-primary" onClick={() => setShowAddBusiness(true)}>
-              <i className="ti ti-plus"></i> Add a business
-            </button>
+            <p style={{ marginBottom: 12 }}>Add a business, link a bank account, or connect QuickBooks to get started.</p>
+            <button className="btn btn-primary" onClick={() => setShowAddBusiness(true)}><i className="ti ti-plus"></i> Add a business</button>
           </div>
         </div>
       ) : (
@@ -751,140 +973,108 @@ export default function MyBusinessPage({ user, formatDate }) {
           {/* KPI Row */}
           <div className="kpi-grid">
             <div className="kpi-card">
-              <div className="kpi-label">
-                <i className="ti ti-arrow-up" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Revenue (MTD)
-              </div>
+              <div className="kpi-label"><i className="ti ti-arrow-up" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Revenue (MTD)</div>
               <div className="kpi-value">{currency(kpi.revenueMtd)}</div>
               {connected ? (
                 <div className={`kpi-delta ${changePct >= 0 ? 'pos' : 'neg'}`}>
                   <i className={changePct >= 0 ? 'ti ti-arrow-up-right' : 'ti ti-arrow-down-right'}></i>
                   {changePct >= 0 ? '+' : ''}{changePct.toFixed(1)}% vs last month
                 </div>
-              ) : (
-                <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>Connect to track changes</div>
-              )}
+              ) : (<div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>Connect to track changes</div>)}
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">
-                <i className="ti ti-arrow-down" style={{ fontSize: '13px', color: 'var(--tv-negative)' }}></i> Expenses (MTD)
-              </div>
+              <div className="kpi-label"><i className="ti ti-arrow-down" style={{ fontSize: '13px', color: 'var(--tv-negative)' }}></i> Expenses (MTD)</div>
               <div className="kpi-value">{currency(kpi.expensesMtd)}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">
-                <i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Profit (MTD)
-              </div>
+              <div className="kpi-label"><i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Profit (MTD)</div>
               <div className="kpi-value">{currency(kpi.netProfitMtd)}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">
-                <i className="ti ti-cash" style={{ fontSize: '13px', color: 'var(--tv-gold)' }}></i> Cash Balance
-              </div>
+              <div className="kpi-label"><i className="ti ti-cash" style={{ fontSize: '13px', color: 'var(--tv-gold)' }}></i> Cash Balance</div>
               <div className="kpi-value">{currency(kpi.cashBalance)}</div>
             </div>
             <div className="kpi-card">
-              <div className="kpi-label">
-                <i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices
-              </div>
+              <div className="kpi-label"><i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices</div>
               <div className="kpi-value">{currency(kpi.outstandingInvoices)}</div>
             </div>
           </div>
 
-          {!connected && (
-            <div className="card" style={{ marginBottom: 16, background: 'var(--tv-sage-pale)' }}>
-              <div className="list-item" style={{ padding: 0 }}>
-                <div className="item-icon icon-amber"><i className="ti ti-info-circle"></i></div>
-                <div className="item-main">
-                  <div className="item-name">Showing your entered data</div>
-                  <div className="item-sub">
-                    Cash and outstanding totals are computed from the accounts and invoices below.
-                    Connect QuickBooks for live revenue &amp; expense figures.
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Accounts overview — the live "main view" across account types */}
+          {/* Connected accounts overview */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="section-header">
               <div className="section-title">
                 <i className="ti ti-building-bank" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
-                Accounts
+                Connected accounts
                 <span className="badge badge-gray" style={{ marginLeft: 8 }}>
-                  {currency(cashTotal)} cash
-                  {creditCards.length > 0 ? ` · ${currency(creditOwed)} owed` : ''}
+                  {currency(cashTotal)} cash{creditCards.length > 0 ? ` · ${currency(creditOwed)} owed` : ''}
                 </span>
               </div>
               <button className="btn btn-secondary btn-sm" onClick={() => setShowAddAccount((v) => !v)}>
                 <i className={`ti ${showAddAccount ? 'ti-x' : 'ti-plus'}`}></i>
-                {showAddAccount ? ' Cancel' : ' Add account'}
+                {showAddAccount ? ' Cancel' : ' Add manual account'}
               </button>
             </div>
+
+            {hasLinked && (
+              <div className="item-sub" style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <i className="ti ti-refresh" style={{ color: 'var(--tv-positive)' }}></i>
+                Linked accounts &amp; their transactions sync automatically. Use “Sync now” to pull the latest immediately.
+              </div>
+            )}
 
             {showAddAccount && (
               <form onSubmit={handleAddAccount} style={{ marginBottom: 16 }}>
                 <div className="grid-2">
                   <div className="form-group">
                     <label className="form-label">Account name *</label>
-                    <input className="form-input" value={acctForm.name}
-                      onChange={(e) => setAcctForm({ ...acctForm, name: e.target.value })}
-                      placeholder="e.g. Operating Checking" autoFocus />
+                    <input className="form-input" value={acctForm.name} onChange={(e) => setAcctForm({ ...acctForm, name: e.target.value })} placeholder="e.g. Operating Checking" autoFocus />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Institution</label>
-                    <input className="form-input" value={acctForm.institution}
-                      onChange={(e) => setAcctForm({ ...acctForm, institution: e.target.value })}
-                      placeholder="e.g. Chase" />
+                    <input className="form-input" value={acctForm.institution} onChange={(e) => setAcctForm({ ...acctForm, institution: e.target.value })} placeholder="e.g. Chase" />
                   </div>
                 </div>
                 <div className="grid-2">
                   <div className="form-group">
                     <label className="form-label">Type</label>
-                    <select className="form-select" value={acctForm.type}
-                      onChange={(e) => setAcctForm({ ...acctForm, type: e.target.value })}>
-                      {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{accountTypeLabel(t)}</option>)}
+                    <select className="form-select" value={acctForm.type} onChange={(e) => setAcctForm({ ...acctForm, type: e.target.value })}>
+                      {ACCOUNT_TYPES.map((t) => <option key={t} value={t}>{accountTypeLabel(normType(t))}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
                     <label className="form-label">{acctForm.type === 'CREDIT_CARD' ? 'Current balance owed' : 'Balance'}</label>
-                    <input className="form-input" type="number" step="0.01" value={acctForm.balance}
-                      onChange={(e) => setAcctForm({ ...acctForm, balance: e.target.value })}
-                      placeholder="0.00" />
+                    <input className="form-input" type="number" step="0.01" value={acctForm.balance} onChange={(e) => setAcctForm({ ...acctForm, balance: e.target.value })} placeholder="0.00" />
                   </div>
                 </div>
                 {acctForm.type === 'CREDIT_CARD' && (
                   <div className="grid-2">
                     <div className="form-group">
                       <label className="form-label">Credit limit</label>
-                      <input className="form-input" type="number" step="0.01" value={acctForm.creditLimit}
-                        onChange={(e) => setAcctForm({ ...acctForm, creditLimit: e.target.value })}
-                        placeholder="e.g. 25000" />
+                      <input className="form-input" type="number" step="0.01" value={acctForm.creditLimit} onChange={(e) => setAcctForm({ ...acctForm, creditLimit: e.target.value })} placeholder="e.g. 25000" />
                     </div>
                   </div>
                 )}
-                <button type="submit" className="btn btn-primary btn-sm" disabled={!acctForm.name.trim()}>
+                <button type="submit" className="btn btn-primary btn-sm" disabled={!acctForm.name.trim() || !selectedBusiness}>
                   <i className="ti ti-plus"></i> Add account
                 </button>
+                {!selectedBusiness && <div className="item-sub" style={{ marginTop: 6 }}>Add a business first to attach manual accounts.</div>}
               </form>
             )}
 
-            {accounts.length === 0 ? (
+            {allAccounts.length === 0 ? (
               <div className="empty-state">
                 <i className="ti ti-building-bank"></i>
-                <p>No accounts yet. Add a checking, savings, or credit card account.</p>
+                <p>No accounts yet. Link a bank/credit account from the Accounts page, or add a manual account here.</p>
               </div>
             ) : (
               <div className="card-grid">
-                {accounts.map((a) => (
-                  <AccountCard
-                    key={a.id}
-                    account={a}
-                    active={String(txFilter) === String(a.id)}
-                    onView={() => { setTxFilter(String(a.id)); setActiveTab('cards');
-                      requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
-                    onAddTx={() => openAddTx(a.id)}
-                    onDelete={() => handleDeleteAccount(a.id)}
+                {allAccounts.map((a) => (
+                  <AccountCard key={a.key} account={a}
+                    active={fAccount === a.key}
+                    onView={() => { setFAccount(a.key); setActiveTab('tx'); requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }}
+                    onAddTx={a.source === 'Manual' ? () => openAddTx(a.key) : null}
+                    onDelete={a.canDelete ? () => handleDeleteAccount(a.rawId) : null}
                   />
                 ))}
               </div>
@@ -901,192 +1091,283 @@ export default function MyBusinessPage({ user, formatDate }) {
           </div>
 
           {/* ============================================================ */}
-          {/* TAB 1 — Credit Card & Expenses                               */}
+          {/* TAB — Transactions (auto-synced + manual, comprehensive)     */}
           {/* ============================================================ */}
-          {activeTab === 'cards' && (
+          {activeTab === 'tx' && (
             <>
-              {/* Credit card focus + spending categories */}
-              <div className="grid-2" style={{ marginBottom: 16 }}>
-                <div className="card">
-                  <div className="section-header">
-                    <div className="section-title">
-                      <i className="ti ti-credit-card" style={{ marginRight: 6, color: 'var(--tv-warning)' }}></i>
-                      Credit cards
-                    </div>
-                  </div>
-                  {creditCards.length === 0 ? (
-                    <div className="empty-state">
-                      <i className="ti ti-credit-card"></i>
-                      <p>No credit card yet. Add one above to track balance, limit &amp; charges.</p>
-                    </div>
-                  ) : (
-                    creditCards.map((c) => <CreditCardPanel key={c.id} card={c}
-                      onViewCharges={() => { setTxFilter(String(c.id)); requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }} />)
-                  )}
+              {/* Filtered totals */}
+              <div className="kpi-grid" style={{ marginBottom: 16 }}>
+                <div className="kpi-card">
+                  <div className="kpi-label"><i className="ti ti-arrow-down-left" style={{ color: 'var(--tv-positive)' }}></i> Money In</div>
+                  <div className="kpi-value">{currency(txTotals.moneyIn)}</div>
                 </div>
-
-                <div className="card">
-                  <div className="section-header">
-                    <div className="section-title">
-                      <i className="ti ti-chart-donut" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
-                      Spending by category
-                    </div>
-                    <span className="badge badge-gray">From transactions</span>
+                <div className="kpi-card">
+                  <div className="kpi-label"><i className="ti ti-arrow-up-right" style={{ color: 'var(--tv-negative)' }}></i> Money Out</div>
+                  <div className="kpi-value">{currency(Math.abs(txTotals.moneyOut))}</div>
+                </div>
+                <div className="kpi-card">
+                  <div className="kpi-label"><i className="ti ti-equal" style={{ color: 'var(--tv-forest-light)' }}></i> Net</div>
+                  <div className="kpi-value">{currency(txTotals.net)}</div>
+                  <div className={`kpi-delta ${txTotals.net >= 0 ? 'pos' : 'neg'}`}>
+                    <i className="ti ti-list"></i> {txTotals.count} transaction{txTotals.count === 1 ? '' : 's'}
                   </div>
-                  {spendingByCategory.length === 0 ? (
-                    <div className="empty-state">
-                      <i className="ti ti-chart-donut"></i>
-                      <p>No spend recorded yet. Add transactions to see category breakdowns.</p>
-                    </div>
-                  ) : (
-                    <CategoryBars rows={spendingByCategory} />
-                  )}
                 </div>
               </div>
 
-              {/* Transactions — filterable, unified or per account */}
-              <div className="card" style={{ marginBottom: 16 }} ref={txSectionRef}>
+              <div className="card" ref={txSectionRef}>
                 <div className="section-header">
                   <div className="section-title">
                     <i className="ti ti-arrows-exchange" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
                     Transactions
                   </div>
-                  <button className="btn btn-secondary btn-sm" onClick={() => (showAddTx ? setShowAddTx(false) : openAddTx(txFilter !== 'ALL' ? txFilter : null))}
-                    disabled={accounts.length === 0}>
-                    <i className={`ti ${showAddTx ? 'ti-x' : 'ti-plus'}`}></i>
-                    {showAddTx ? ' Cancel' : ' Add transaction'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-secondary btn-sm" onClick={exportCsv} disabled={sortedTx.length === 0} title="Export current view to CSV">
+                      <i className="ti ti-download"></i> Export
+                    </button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => (showAddTx ? setShowAddTx(false) : openAddTx(fAccount !== 'ALL' ? fAccount : null))}
+                      disabled={manualAccountCount === 0} title={manualAccountCount === 0 ? 'Add a manual account to log a transaction' : 'Add a manual transaction'}>
+                      <i className={`ti ${showAddTx ? 'ti-x' : 'ti-plus'}`}></i>{showAddTx ? ' Cancel' : ' Add manual'}
+                    </button>
+                  </div>
                 </div>
 
-                {/* Account filter */}
-                <div className="seg-control" style={{ flexWrap: 'wrap', marginBottom: 14 }}>
-                  <button className={`seg-btn ${txFilter === 'ALL' ? 'active' : ''}`} onClick={() => setTxFilter('ALL')}>
-                    <i className="ti ti-layout-grid" style={{ marginRight: 4 }}></i>All accounts
-                  </button>
-                  {accounts.map((a) => {
-                    const v = accountVisual(a.type);
-                    return (
-                      <button key={a.id} className={`seg-btn ${String(txFilter) === String(a.id) ? 'active' : ''}`}
-                        onClick={() => setTxFilter(String(a.id))} title={accountTypeLabel(a.type)}>
-                        <i className={`ti ${v.icon}`} style={{ marginRight: 4 }}></i>{a.name}
+                {/* Filter bar (row 1): search + account + category + type + status + direction */}
+                <div className="filter-bar">
+                  <div className="filter-search">
+                    <i className="ti ti-search"></i>
+                    <input type="text" placeholder="Search description, merchant, or category…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                  </div>
+                  <select className="form-select filter-select" value={fAccount} onChange={(e) => setFAccount(e.target.value)} title="Account">
+                    <option value="ALL">All accounts</option>
+                    {creditCards.length > 0 && (
+                      <optgroup label="Credit cards">
+                        {creditCards.map((c) => <option key={c.key} value={c.key}>{c.name}</option>)}
+                      </optgroup>
+                    )}
+                    {bankAccounts.length > 0 && (
+                      <optgroup label="Bank accounts">
+                        {bankAccounts.map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
+                      </optgroup>
+                    )}
+                    {allAccounts.filter((a) => !isBankType(a.type) && !isCardType(a.type)).length > 0 && (
+                      <optgroup label="Other">
+                        {allAccounts.filter((a) => !isBankType(a.type) && !isCardType(a.type)).map((a) => <option key={a.key} value={a.key}>{a.name}</option>)}
+                      </optgroup>
+                    )}
+                  </select>
+                  <select className="form-select filter-select" value={fCategory} onChange={(e) => setFCategory(e.target.value)} title="Category">
+                    {categoryOptions.map((c) => <option key={c} value={c}>{c === 'ALL' ? 'All categories' : c}</option>)}
+                  </select>
+                  <select className="form-select filter-select" value={fType} onChange={(e) => setFType(e.target.value)} title="Type">
+                    {typeOptions.map((t) => <option key={t} value={t}>{t === 'ALL' ? 'All types' : t}</option>)}
+                  </select>
+                  <select className="form-select filter-select" value={fStatus} onChange={(e) => setFStatus(e.target.value)} title="Status">
+                    {['ALL', 'Pending', 'Cleared', 'Reconciled'].map((s) => <option key={s} value={s}>{s === 'ALL' ? 'All statuses' : s}</option>)}
+                  </select>
+                  <div className="seg-control">
+                    {['ALL', 'IN', 'OUT'].map((d) => (
+                      <button key={d} className={`seg-btn ${fDirection === d ? 'active' : ''}`} onClick={() => setFDirection(d)}>
+                        {d === 'ALL' ? 'All' : d === 'IN' ? 'In' : 'Out'}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
                 </div>
 
-                {/* Add transaction form */}
+                {/* Filter bar (row 2): date + amount range */}
+                <div className="filter-bar" style={{ marginTop: 10, flexWrap: 'wrap', gap: 10 }}>
+                  {tagOptions.length > 1 && (
+                    <select className="form-select filter-select" value={fTag} onChange={(e) => setFTag(e.target.value)} title="Tag">
+                      {tagOptions.map((tg) => <option key={tg} value={tg}>{tg === 'ALL' ? 'All tags' : `#${tg}`}</option>)}
+                    </select>
+                  )}
+                  <select className="form-select filter-select" value={dateRange} onChange={(e) => setDateRange(e.target.value)} title="Date range">
+                    {DATE_RANGES.map((r) => (
+                      <option key={r} value={r}>
+                        {r === 'All' ? 'All time' : r === 'Custom' ? 'Custom range…' : `Last ${r.replace('1W', '1 week').replace('1M', '1 month').replace('3M', '3 months').replace('1Y', '1 year')}`}
+                      </option>
+                    ))}
+                  </select>
+                  {dateRange === 'Custom' && (
+                    <>
+                      <input type="date" className="form-input" style={{ width: 150 }} value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} title="From date" />
+                      <span style={{ color: 'var(--tv-text-muted)', alignSelf: 'center' }}>→</span>
+                      <input type="date" className="form-input" style={{ width: 150 }} value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} title="To date" />
+                    </>
+                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <input type="number" className="form-input" style={{ width: 110 }} placeholder="Min $" value={minAmt} onChange={(e) => setMinAmt(e.target.value)} title="Minimum amount" />
+                    <span style={{ color: 'var(--tv-text-muted)' }}>–</span>
+                    <input type="number" className="form-input" style={{ width: 110 }} placeholder="Max $" value={maxAmt} onChange={(e) => setMaxAmt(e.target.value)} title="Maximum amount" />
+                  </div>
+                  {hasActiveFilters && (
+                    <button className="btn btn-secondary btn-sm" onClick={clearFilters} title="Clear all filters">
+                      <i className="ti ti-filter-off"></i> Clear
+                    </button>
+                  )}
+                </div>
+
+                {/* Add manual transaction */}
                 {showAddTx && (
-                  <form onSubmit={handleAddTx} style={{ marginBottom: 14 }}>
+                  <form onSubmit={handleAddTx} style={{ margin: '14px 0' }}>
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Account *</label>
-                        <select className="form-select" value={txForm.accountId}
-                          onChange={(e) => setTxForm({ ...txForm, accountId: e.target.value })}>
-                          {accounts.map((a) => (
-                            <option key={a.id} value={a.id}>{a.name} · {accountTypeLabel(a.type)}</option>
+                        <select className="form-select" value={txForm.accountKey} onChange={(e) => setTxForm({ ...txForm, accountKey: e.target.value })}>
+                          {allAccounts.filter((a) => a.source === 'Manual').map((a) => (
+                            <option key={a.key} value={a.key}>{a.name} · {accountTypeLabel(a.type)}</option>
                           ))}
                         </select>
                       </div>
                       <div className="form-group">
                         <label className="form-label">Date</label>
-                        <input className="form-input" type="date" value={txForm.date}
-                          onChange={(e) => setTxForm({ ...txForm, date: e.target.value })} />
+                        <input className="form-input" type="date" value={txForm.date} onChange={(e) => setTxForm({ ...txForm, date: e.target.value })} />
                       </div>
                     </div>
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Description *</label>
-                        <input className="form-input" value={txForm.description}
-                          onChange={(e) => setTxForm({ ...txForm, description: e.target.value })}
-                          placeholder="e.g. AWS invoice" autoFocus />
+                        <input className="form-input" value={txForm.description} onChange={(e) => setTxForm({ ...txForm, description: e.target.value })} placeholder="e.g. AWS invoice" autoFocus />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Merchant</label>
-                        <input className="form-input" value={txForm.merchant}
-                          onChange={(e) => setTxForm({ ...txForm, merchant: e.target.value })}
-                          placeholder="e.g. Amazon Web Services" />
+                        <input className="form-input" value={txForm.merchant} onChange={(e) => setTxForm({ ...txForm, merchant: e.target.value })} placeholder="e.g. Amazon Web Services" />
                       </div>
                     </div>
                     <div className="grid-3">
                       <div className="form-group">
                         <label className="form-label">Category</label>
-                        <select className="form-select" value={txForm.category}
-                          onChange={(e) => setTxForm({ ...txForm, category: e.target.value })}>
+                        <select className="form-select" value={txForm.category} onChange={(e) => setTxForm({ ...txForm, category: e.target.value })}>
                           {TX_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
                       <div className="form-group">
                         <label className="form-label">Direction</label>
-                        <select className="form-select" value={txForm.direction}
-                          onChange={(e) => setTxForm({ ...txForm, direction: e.target.value })}>
+                        <select className="form-select" value={txForm.direction} onChange={(e) => setTxForm({ ...txForm, direction: e.target.value })}>
                           <option value="out">Money out (charge / expense)</option>
                           <option value="in">Money in (deposit / payment)</option>
                         </select>
                       </div>
                       <div className="form-group">
                         <label className="form-label">Amount *</label>
-                        <input className="form-input" type="number" step="0.01" min="0" value={txForm.amount}
-                          onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })}
-                          placeholder="0.00" />
+                        <input className="form-input" type="number" step="0.01" min="0" value={txForm.amount} onChange={(e) => setTxForm({ ...txForm, amount: e.target.value })} placeholder="0.00" />
                       </div>
                     </div>
-                    <button type="submit" className="btn btn-primary btn-sm"
-                      disabled={!txForm.description.trim() || !(Number(txForm.amount) > 0)}>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!txForm.description.trim() || !(Number(txForm.amount) > 0)}>
                       <i className="ti ti-plus"></i> Add transaction
                     </button>
                   </form>
                 )}
 
-                {filteredTx.length === 0 ? (
+                {unifiedTx.length === 0 ? (
                   <div className="empty-state">
                     <i className="ti ti-arrows-exchange"></i>
-                    <p>{transactions.length === 0
-                      ? 'No transactions yet. Add one to start tracking activity.'
-                      : 'No transactions for this account.'}</p>
+                    <p style={{ fontWeight: 600, color: 'var(--tv-text-primary)', marginBottom: 4 }}>No transactions yet</p>
+                    <p>Link a bank or credit account to auto-sync activity, or add a manual transaction.</p>
                   </div>
+                ) : sortedTx.length === 0 ? (
+                  <div className="empty-state"><i className="ti ti-filter-off"></i><p>No transactions match your filters.</p></div>
                 ) : (
-                  <div className="table-scroll">
+                  <div className="table-scroll" style={{ marginTop: 4 }}>
                     <table className="tv-table">
                       <thead>
                         <tr>
-                          <th>Date</th>
-                          <th>Description</th>
-                          <th>Account</th>
-                          <th>Category</th>
-                          <th style={{ textAlign: 'right' }}>Amount</th>
-                          <th style={{ width: 40 }}></th>
+                          <SortableTh k="name" label="Description" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                          {fAccount === 'ALL' && <th>Account</th>}
+                          <SortableTh k="category" label="Category" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                          <th>Type</th>
+                          <th>Status</th>
+                          <SortableTh k="date" label="Date" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                          <SortableTh k="amount" label="Amount" align="right" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                          <th style={{ width: 70 }}></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredTx.map((t) => {
-                          const acc = accountById.get(String(t.accountId));
-                          const v = accountVisual(acc?.type);
-                          const amt = Number(t.amount) || 0;
-                          const out = amt < 0;
+                        {sortedTx.map((t) => {
+                          const v = txTypeVisual(t.type);
+                          const colSpan = fAccount === 'ALL' ? 8 : 7;
                           return (
-                            <tr key={t.id}>
-                              <td style={{ color: 'var(--tv-text-muted)', whiteSpace: 'nowrap' }}>{bizDate(t.postedAt)}</td>
-                              <td style={{ fontWeight: 500 }}>
-                                {t.description}
-                                {t.merchant && <div className="item-sub" style={{ fontWeight: 400 }}>{t.merchant}</div>}
-                              </td>
-                              <td>
-                                <span className="badge badge-gray" title={accountTypeLabel(acc?.type)}>
-                                  <i className={`ti ${v.icon}`}></i> {acc?.name || '—'}
-                                </span>
-                              </td>
-                              <td>{t.category ? <span className="badge badge-forest">{t.category}</span> : <span style={{ color: 'var(--tv-text-muted)' }}>—</span>}</td>
-                              <td style={{ textAlign: 'right' }}>
-                                <span className={`item-amount ${out ? 'amount-neg' : 'amount-pos'}`}>
-                                  {out ? '-' : '+'}{currency(Math.abs(amt))}
-                                </span>
-                              </td>
-                              <td style={{ textAlign: 'right' }}>
-                                <button className="icon-btn" title="Delete transaction" onClick={() => handleDeleteTx(t.id)}>
-                                  <i className="ti ti-trash"></i>
-                                </button>
-                              </td>
-                            </tr>
+                            <Fragment key={t.key}>
+                              <tr>
+                                <td>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <div className={`item-icon ${v.tone}`} style={{ width: 32, height: 32, fontSize: 15 }}><i className={`ti ${v.icon}`}></i></div>
+                                    <div>
+                                      <div style={{ fontWeight: 500 }}>{t.name}</div>
+                                      {t.merchant && t.merchant !== t.name && <div className="item-sub">{t.merchant}</div>}
+                                      {t.tags.length > 0 && (
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 3 }}>
+                                          {t.tags.map((tag) => (
+                                            <button key={tag} className="badge badge-gold" onClick={() => setFTag(tag)} title={`Filter by #${tag}`}
+                                              style={{ border: 'none', cursor: 'pointer' }}>#{tag}</button>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                                {fAccount === 'ALL' && (
+                                  <td>
+                                    {t.acct ? (
+                                      <button className="badge badge-gray" onClick={() => setFAccount(t.acctKey)} title={`Show only ${t.acct.name}`}
+                                        style={{ border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                                        <i className={`ti ${accountVisual(t.acct.type).icon}`} style={{ fontSize: 13 }}></i> {t.acct.name}
+                                      </button>
+                                    ) : (<span style={{ color: 'var(--tv-text-muted)' }}>—</span>)}
+                                  </td>
+                                )}
+                                <td><span className="badge badge-gray">{t.category}</span></td>
+                                <td>
+                                  <span className={`badge ${t.typeOverridden ? 'badge-forest' : 'badge-gray'}`}
+                                    title={t.typeOverridden ? `Overridden (auto: ${t.derivedType})` : 'Auto-classified'}>
+                                    {t.typeOverridden && <i className="ti ti-pencil" style={{ fontSize: 10 }}></i>} {t.type}
+                                  </span>
+                                </td>
+                                <td><span className={`badge ${txStatusBadge(t.status)}`}>{t.status}</span></td>
+                                <td style={{ color: 'var(--tv-text-muted)', whiteSpace: 'nowrap' }}>{bizDate(t.date)}</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <span className={`item-amount ${t.amount >= 0 ? 'amount-pos' : 'amount-neg'}`}>
+                                    {t.amount >= 0 ? '+' : ''}{currency(t.amount)}
+                                  </span>
+                                </td>
+                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                  <button className="icon-btn" title="Edit type & tags" onClick={() => openEditOverride(t)}>
+                                    <i className="ti ti-tag"></i>
+                                  </button>
+                                  <button className="icon-btn" title={t.status === 'Reconciled' ? 'Un-reconcile' : 'Mark reconciled'}
+                                    onClick={() => handleReconcileToggle(t)}>
+                                    <i className={`ti ${t.status === 'Reconciled' ? 'ti-checks' : 'ti-check'}`}
+                                      style={{ color: t.status === 'Reconciled' ? 'var(--tv-positive)' : undefined }}></i>
+                                  </button>
+                                  {t.canDelete && (
+                                    <button className="icon-btn" title="Delete transaction" onClick={() => handleDeleteTx(t)}>
+                                      <i className="ti ti-trash"></i>
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                              {editingKey === t.key && (
+                                <tr>
+                                  <td colSpan={colSpan} style={{ background: 'var(--tv-bg)' }}>
+                                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', padding: '4px 2px 8px' }}>
+                                      <div className="form-group" style={{ margin: 0 }}>
+                                        <label className="form-label">Type</label>
+                                        <select className="form-select" value={editForm.type} onChange={(e) => setEditForm({ ...editForm, type: e.target.value })}>
+                                          <option value="">Auto ({t.derivedType})</option>
+                                          {ASSIGNABLE_TYPES.map((x) => <option key={x} value={x}>{x}</option>)}
+                                        </select>
+                                      </div>
+                                      <div className="form-group" style={{ margin: 0, flex: 1, minWidth: 220 }}>
+                                        <label className="form-label">Tags (comma-separated)</label>
+                                        <input className="form-input" value={editForm.tags} onChange={(e) => setEditForm({ ...editForm, tags: e.target.value })}
+                                          placeholder="e.g. deductible, q3, client-acme" />
+                                      </div>
+                                      <button className="btn btn-primary btn-sm" onClick={() => saveOverride(t)}><i className="ti ti-check"></i> Save</button>
+                                      <button className="btn btn-secondary btn-sm" onClick={() => setEditingKey(null)}><i className="ti ti-x"></i> Cancel</button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </Fragment>
                           );
                         })}
                       </tbody>
@@ -1094,8 +1375,38 @@ export default function MyBusinessPage({ user, formatDate }) {
                   </div>
                 )}
               </div>
+            </>
+          )}
 
-              {/* QuickBooks expenses (read-only, kept) */}
+          {/* ============================================================ */}
+          {/* TAB — Credit Card & Expenses                                 */}
+          {/* ============================================================ */}
+          {activeTab === 'cards' && (
+            <>
+              <div className="grid-2" style={{ marginBottom: 16 }}>
+                <div className="card">
+                  <div className="section-header">
+                    <div className="section-title"><i className="ti ti-credit-card" style={{ marginRight: 6, color: 'var(--tv-warning)' }}></i>Credit cards</div>
+                  </div>
+                  {creditCards.length === 0 ? (
+                    <div className="empty-state"><i className="ti ti-credit-card"></i><p>No credit card yet. Link one from the Accounts page or add one manually above.</p></div>
+                  ) : (
+                    creditCards.map((c) => <CreditCardPanel key={c.key} card={c}
+                      onViewCharges={() => { setFAccount(c.key); setActiveTab('tx'); requestAnimationFrame(() => txSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })); }} />)
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="section-header">
+                    <div className="section-title"><i className="ti ti-chart-donut" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Spending by category</div>
+                    <span className="badge badge-gray">All accounts</span>
+                  </div>
+                  {spendingByCategory.length === 0 ? (
+                    <div className="empty-state"><i className="ti ti-chart-donut"></i><p>No spend recorded yet.</p></div>
+                  ) : (<CategoryBars rows={spendingByCategory} />)}
+                </div>
+              </div>
+
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
                   <div className="section-title">
@@ -1104,27 +1415,18 @@ export default function MyBusinessPage({ user, formatDate }) {
                   </div>
                 </div>
                 {expenses.length === 0 ? (
-                  <div className="empty-state">
-                    <i className="ti ti-receipt"></i>
-                    <p>No synced expenses. Connect QuickBooks to pull expense bills automatically.</p>
-                  </div>
+                  <div className="empty-state"><i className="ti ti-receipt"></i><p>No synced expenses. Connect QuickBooks to pull expense bills automatically.</p></div>
                 ) : (
                   <div className="table-scroll">
                     <table className="tv-table">
-                      <thead>
-                        <tr>
-                          <th>Vendor</th><th>Category</th><th>Date</th><th style={{ textAlign: 'right' }}>Amount</th>
-                        </tr>
-                      </thead>
+                      <thead><tr><th>Vendor</th><th>Category</th><th>Date</th><th style={{ textAlign: 'right' }}>Amount</th></tr></thead>
                       <tbody>
                         {expenses.map((exp) => (
                           <tr key={exp.id}>
                             <td style={{ fontWeight: 500 }}>{exp.vendor || '—'}</td>
                             <td><span className="badge badge-gray">{exp.category || 'Uncategorized'}</span></td>
                             <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(exp.date)}</td>
-                            <td style={{ textAlign: 'right' }}>
-                              <span className="item-amount amount-neg">{currency(exp.amount)}</span>
-                            </td>
+                            <td style={{ textAlign: 'right' }}><span className="item-amount amount-neg">{currency(exp.amount)}</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -1136,35 +1438,24 @@ export default function MyBusinessPage({ user, formatDate }) {
           )}
 
           {/* ============================================================ */}
-          {/* TAB 2 — Business Tools                                        */}
+          {/* TAB — Business Tools                                         */}
           {/* ============================================================ */}
           {activeTab === 'tools' && (
             <>
-              {/* Quick actions */}
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
-                  <div className="section-title">
-                    <i className="ti ti-bolt" style={{ marginRight: 6, color: 'var(--tv-gold)' }}></i>
-                    Quick actions
-                  </div>
+                  <div className="section-title"><i className="ti ti-bolt" style={{ marginRight: 6, color: 'var(--tv-gold)' }}></i>Quick actions</div>
                 </div>
                 <div className="card-grid">
-                  <QuickAction icon="ti-file-invoice" tone="icon-blue" label="Create invoice"
-                    desc="Bill a customer" onClick={() => setShowAddInvoice(true)} />
-                  <QuickAction icon="ti-cash-register" tone="icon-green" label="Record payment"
-                    desc="Mark an invoice paid" onClick={() => document.getElementById('mb-invoices')?.scrollIntoView({ behavior: 'smooth' })} />
-                  <QuickAction icon="ti-arrows-exchange" tone="icon-forest" label="Add transaction"
-                    desc="Log a charge or deposit" onClick={() => openAddTx(null)} />
-                  <QuickAction icon="ti-building-bank" tone="icon-forest" label="Add account"
-                    desc="Bank or credit card" onClick={() => { setActiveTab('cards'); setShowAddAccount(true); }} />
-                  <QuickAction icon="ti-plug" tone="icon-amber" label={connected ? 'QuickBooks synced' : 'Connect QuickBooks'}
-                    desc={connected ? 'Auto-sync on' : 'Auto-sync your books'} onClick={connected ? handleSync : handleConnect} />
-                  <QuickAction icon="ti-report-analytics" tone="icon-purple" label="Revenue trend"
-                    desc="Last 6 months" onClick={() => document.getElementById('mb-revenue')?.scrollIntoView({ behavior: 'smooth' })} />
+                  <QuickAction icon="ti-file-invoice" tone="icon-blue" label="Create invoice" desc="Bill a customer" onClick={() => setShowAddInvoice(true)} />
+                  <QuickAction icon="ti-cash-register" tone="icon-green" label="Record payment" desc="Mark an invoice paid" onClick={() => document.getElementById('mb-invoices')?.scrollIntoView({ behavior: 'smooth' })} />
+                  <QuickAction icon="ti-arrows-exchange" tone="icon-forest" label="Add transaction" desc="Log a charge or deposit" onClick={() => openAddTx(null)} />
+                  <QuickAction icon="ti-building-bank" tone="icon-forest" label="Add manual account" desc="Bank or credit card" onClick={() => setShowAddAccount(true)} />
+                  <QuickAction icon="ti-plug" tone="icon-amber" label={connected ? 'QuickBooks synced' : 'Connect QuickBooks'} desc={connected ? 'Auto-sync on' : 'Auto-sync your books'} onClick={connected ? handleSync : handleConnect} />
+                  <QuickAction icon="ti-report-analytics" tone="icon-purple" label="Revenue trend" desc="Last 6 months" onClick={() => document.getElementById('mb-revenue')?.scrollIntoView({ behavior: 'smooth' })} />
                 </div>
               </div>
 
-              {/* Pending payments */}
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
                   <div className="section-title">
@@ -1174,31 +1465,23 @@ export default function MyBusinessPage({ user, formatDate }) {
                   </div>
                 </div>
                 {pendingInvoices.length === 0 ? (
-                  <div className="empty-state">
-                    <i className="ti ti-checks"></i>
-                    <p>No pending payments — you're all caught up.</p>
-                  </div>
+                  <div className="empty-state"><i className="ti ti-checks"></i><p>No pending payments — you're all caught up.</p></div>
                 ) : (
                   <div>
                     {pendingInvoices.map((i) => (
                       <div key={i.key} className="list-item">
-                        <div className={`item-icon ${i.status === 'OVERDUE' ? 'icon-red' : 'icon-amber'}`}>
-                          <i className="ti ti-file-invoice"></i>
-                        </div>
+                        <div className={`item-icon ${i.status === 'OVERDUE' ? 'icon-red' : 'icon-amber'}`}><i className="ti ti-file-invoice"></i></div>
                         <div className="item-main">
                           <div className="item-name">{i.customer}</div>
                           <div className="item-sub">
                             <span className={`badge ${statusBadge(i.status)}`}>{i.status}</span>
-                            {i.dueDate ? ` · Due ${bizDate(i.dueDate)}` : ''}
-                            {!i.manual ? ' · QuickBooks' : ''}
+                            {i.dueDate ? ` · Due ${bizDate(i.dueDate)}` : ''}{!i.manual ? ' · QuickBooks' : ''}
                           </div>
                         </div>
                         <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className="item-amount">{currency(i.amount)}</div>
                           {i.manual && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleMarkInvoicePaid(i.id)}>
-                              <i className="ti ti-check"></i> Mark paid
-                            </button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleMarkInvoicePaid(i.id)}><i className="ti ti-check"></i> Mark paid</button>
                           )}
                         </div>
                       </div>
@@ -1207,16 +1490,11 @@ export default function MyBusinessPage({ user, formatDate }) {
                 )}
               </div>
 
-              {/* Invoices — create + track */}
               <div className="card" id="mb-invoices" style={{ marginBottom: 16 }}>
                 <div className="section-header">
-                  <div className="section-title">
-                    <i className="ti ti-file-invoice" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
-                    Invoices
-                  </div>
+                  <div className="section-title"><i className="ti ti-file-invoice" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Invoices</div>
                   <button className="btn btn-secondary btn-sm" onClick={() => setShowAddInvoice((v) => !v)}>
-                    <i className={`ti ${showAddInvoice ? 'ti-x' : 'ti-plus'}`}></i>
-                    {showAddInvoice ? ' Cancel' : ' Create invoice'}
+                    <i className={`ti ${showAddInvoice ? 'ti-x' : 'ti-plus'}`}></i>{showAddInvoice ? ' Cancel' : ' Create invoice'}
                   </button>
                 </div>
 
@@ -1225,77 +1503,49 @@ export default function MyBusinessPage({ user, formatDate }) {
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Customer *</label>
-                        <input className="form-input" value={invForm.customer}
-                          onChange={(e) => setInvForm({ ...invForm, customer: e.target.value })}
-                          placeholder="e.g. Acme Corp" autoFocus />
+                        <input className="form-input" value={invForm.customer} onChange={(e) => setInvForm({ ...invForm, customer: e.target.value })} placeholder="e.g. Acme Corp" autoFocus />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Amount *</label>
-                        <input className="form-input" type="number" step="0.01" min="0" value={invForm.amount}
-                          onChange={(e) => setInvForm({ ...invForm, amount: e.target.value })}
-                          placeholder="0.00" />
+                        <input className="form-input" type="number" step="0.01" min="0" value={invForm.amount} onChange={(e) => setInvForm({ ...invForm, amount: e.target.value })} placeholder="0.00" />
                       </div>
                     </div>
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Due date</label>
-                        <input className="form-input" type="date" value={invForm.dueDate}
-                          onChange={(e) => setInvForm({ ...invForm, dueDate: e.target.value })} />
+                        <input className="form-input" type="date" value={invForm.dueDate} onChange={(e) => setInvForm({ ...invForm, dueDate: e.target.value })} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Status</label>
-                        <select className="form-select" value={invForm.status}
-                          onChange={(e) => setInvForm({ ...invForm, status: e.target.value })}>
-                          <option value="OPEN">Open</option>
-                          <option value="OVERDUE">Overdue</option>
-                          <option value="PAID">Paid</option>
+                        <select className="form-select" value={invForm.status} onChange={(e) => setInvForm({ ...invForm, status: e.target.value })}>
+                          <option value="OPEN">Open</option><option value="OVERDUE">Overdue</option><option value="PAID">Paid</option>
                         </select>
                       </div>
                     </div>
-                    <button type="submit" className="btn btn-primary btn-sm"
-                      disabled={!invForm.customer.trim() || !(Number(invForm.amount) > 0)}>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!invForm.customer.trim() || !(Number(invForm.amount) > 0) || !selectedBusiness}>
                       <i className="ti ti-send"></i> Create &amp; send
                     </button>
+                    {!selectedBusiness && <div className="item-sub" style={{ marginTop: 6 }}>Add a business first to create invoices.</div>}
                   </form>
                 )}
 
                 {allInvoices.length === 0 ? (
-                  <div className="empty-state">
-                    <i className="ti ti-file-invoice"></i>
-                    <p>No invoices yet. Create one to bill a customer and track payment.</p>
-                  </div>
+                  <div className="empty-state"><i className="ti ti-file-invoice"></i><p>No invoices yet. Create one to bill a customer and track payment.</p></div>
                 ) : (
                   <div className="table-scroll">
                     <table className="tv-table">
-                      <thead>
-                        <tr>
-                          <th>Customer</th>
-                          <th style={{ textAlign: 'right' }}>Amount</th>
-                          <th>Status</th>
-                          <th>Due date</th>
-                          <th>Source</th>
-                          <th style={{ width: 40 }}></th>
-                        </tr>
-                      </thead>
+                      <thead><tr><th>Customer</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Due date</th><th>Source</th><th style={{ width: 40 }}></th></tr></thead>
                       <tbody>
                         {allInvoices.map((inv) => (
                           <tr key={inv.key}>
                             <td style={{ fontWeight: 500 }}>{inv.customer || '—'}</td>
-                            <td style={{ textAlign: 'right' }}>
-                              <span className="item-amount">{currency(inv.amount)}</span>
-                            </td>
+                            <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(inv.amount)}</span></td>
                             <td><span className={`badge ${statusBadge(inv.status)}`}>{inv.status}</span></td>
                             <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(inv.dueDate)}</td>
-                            <td>
-                              <span className={`badge ${inv.manual ? 'badge-forest' : 'badge-green'}`}>
-                                {inv.manual ? 'Manual' : 'QuickBooks'}
-                              </span>
-                            </td>
+                            <td><span className={`badge ${inv.manual ? 'badge-forest' : 'badge-green'}`}>{inv.manual ? 'Manual' : 'QuickBooks'}</span></td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {inv.manual && (
-                                <button className="icon-btn" title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}>
-                                  <i className="ti ti-trash"></i>
-                                </button>
+                                <button className="icon-btn" title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}><i className="ti ti-trash"></i></button>
                               )}
                             </td>
                           </tr>
@@ -1306,13 +1556,9 @@ export default function MyBusinessPage({ user, formatDate }) {
                 )}
               </div>
 
-              {/* Revenue trend */}
               <div className="card" id="mb-revenue" style={{ marginBottom: 16 }}>
                 <div className="section-header">
-                  <div className="section-title">
-                    <i className="ti ti-chart-bar" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
-                    Revenue trend
-                  </div>
+                  <div className="section-title"><i className="ti ti-chart-bar" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Revenue trend</div>
                   <span className="badge badge-gray">Last 6 months</span>
                 </div>
                 <RevenueBarChart series={revenueSeries} max={maxRevenue} />
@@ -1326,128 +1572,128 @@ export default function MyBusinessPage({ user, formatDate }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Account card — visually distinguishes checking / savings / credit.  */
+/* A sortable table header cell with a direction indicator.            */
+/* ------------------------------------------------------------------ */
+function SortableTh({ k, label, align, sortKey, sortDir, onSort }) {
+  const active = sortKey === k;
+  const icon = active ? (sortDir === 'asc' ? 'ti-arrow-up' : 'ti-arrow-down') : 'ti-arrows-sort';
+  return (
+    <th onClick={() => onSort(k)} style={{ cursor: 'pointer', userSelect: 'none', textAlign: align || 'left', whiteSpace: 'nowrap' }}
+      title={`Sort by ${label}`} aria-sort={active ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+      {label} <i className={`ti ${icon}`} style={{ fontSize: 13, opacity: active ? 0.9 : 0.35, verticalAlign: 'middle' }}></i>
+    </th>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Account card — distinguishes checking / savings / credit / linked.  */
 /* ------------------------------------------------------------------ */
 function AccountCard({ account, active, onView, onAddTx, onDelete }) {
   const v = accountVisual(account.type);
-  const cc = isCreditCard(account);
-  const balance = Number(account.balance) || 0;
-  const limit = Number(account.creditLimit) || 0;
-  const available = Math.max(0, limit - balance);
-  const util = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : 0;
+  const cc = isCardType(account.type);
+  const limit = account.creditLimit || 0;
+  const available = account.available != null ? account.available : Math.max(0, limit - account.balance);
+  const util = limit > 0 ? Math.min(100, Math.round((account.balance / limit) * 100)) : 0;
   const utilColor = util >= 80 ? 'var(--tv-negative)' : util >= 50 ? 'var(--tv-warning)' : 'var(--tv-positive)';
 
   return (
-    <div className="card" style={{
-      borderTop: `3px solid ${v.accent}`,
-      boxShadow: active ? '0 0 0 2px var(--tv-forest)' : undefined,
-    }}>
+    <div className="card" style={{ borderTop: `3px solid ${v.accent}`, boxShadow: active ? '0 0 0 2px var(--tv-forest)' : undefined }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
         <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {account.name}
+            {account.name}{account.mask ? ` ••${account.mask}` : ''}
           </div>
           <div className="item-sub">{account.institution || accountTypeLabel(account.type)}</div>
         </div>
-        <span className={`badge ${accountTypeBadge(account.type)}`}>{accountTypeLabel(account.type)}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+          <span className={`badge ${accountTypeBadge(account.type)}`}>{accountTypeLabel(account.type)}</span>
+          <span className={`badge ${account.autoSynced ? 'badge-green' : 'badge-gray'}`} title={account.autoSynced ? 'Auto-synced (linked)' : 'Manually entered'}>
+            {account.autoSynced ? 'Linked' : 'Manual'}
+          </span>
+        </div>
       </div>
 
       <div className="stat-tile-label">{cc ? 'Balance owed' : 'Current balance'}</div>
-      <div className="stat-tile-value" style={{ color: cc ? 'var(--tv-negative)' : 'var(--tv-text-primary)' }}>
-        {currency(balance)}
-      </div>
+      <div className="stat-tile-value" style={{ color: cc ? 'var(--tv-negative)' : 'var(--tv-text-primary)' }}>{currency(account.balance)}</div>
 
       {cc && limit > 0 && (
         <div style={{ marginTop: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--tv-text-muted)' }}>
-            <span>{util}% used</span>
-            <span>{currency(available)} available</span>
+            <span>{util}% used</span><span>{currency(available)} available</span>
           </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${util}%`, background: utilColor }}></div>
-          </div>
+          <div className="progress-bar"><div className="progress-fill" style={{ width: `${util}%`, background: utilColor }}></div></div>
           <div style={{ fontSize: 11.5, color: 'var(--tv-text-muted)', marginTop: 4 }}>
-            Limit {currency(limit)}
+            Limit {currency(limit)}{account.minimumPayment ? ` · Min ${currency(account.minimumPayment)}` : ''}
+            {account.nextPaymentDueDate ? ` · Due ${bizDate(account.nextPaymentDueDate)}` : ''}
           </div>
         </div>
       )}
+      {!cc && account.available != null && (
+        <div style={{ fontSize: 11.5, color: 'var(--tv-text-muted)', marginTop: 6 }}>{currency(account.available)} available</div>
+      )}
 
       <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <button className="btn btn-secondary btn-sm" onClick={onView}>
-          <i className="ti ti-list"></i> {cc ? 'Charges' : 'Activity'}
-        </button>
-        <button className="btn btn-secondary btn-sm" onClick={onAddTx}>
-          <i className="ti ti-plus"></i> Add
-        </button>
-        <button className="icon-btn" title="Delete account" style={{ marginLeft: 'auto' }} onClick={onDelete}>
-          <i className="ti ti-trash"></i>
-        </button>
+        <button className="btn btn-secondary btn-sm" onClick={onView}><i className="ti ti-list"></i> {cc ? 'Charges' : 'Activity'}</button>
+        {onAddTx && <button className="btn btn-secondary btn-sm" onClick={onAddTx}><i className="ti ti-plus"></i> Add</button>}
+        {onDelete && <button className="icon-btn" title="Delete account" style={{ marginLeft: 'auto' }} onClick={onDelete}><i className="ti ti-trash"></i></button>}
       </div>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Credit card detail panel (Tab 1).                                   */
+/* Credit card detail panel (Credit Card & Expenses tab).              */
 /* ------------------------------------------------------------------ */
 function CreditCardPanel({ card, onViewCharges }) {
-  const balance = Number(card.balance) || 0;
-  const limit = Number(card.creditLimit) || 0;
-  const available = Math.max(0, limit - balance);
-  const util = limit > 0 ? Math.min(100, Math.round((balance / limit) * 100)) : 0;
+  const limit = card.creditLimit || 0;
+  const available = card.available != null ? card.available : Math.max(0, limit - card.balance);
+  const util = limit > 0 ? Math.min(100, Math.round((card.balance / limit) * 100)) : 0;
   const utilColor = util >= 80 ? 'var(--tv-negative)' : util >= 50 ? 'var(--tv-warning)' : 'var(--tv-positive)';
   return (
     <div style={{ marginBottom: 12 }}>
       <div className="list-item" style={{ padding: '4px 0' }}>
         <div className="item-icon icon-amber"><i className="ti ti-credit-card"></i></div>
         <div className="item-main">
-          <div className="item-name">{card.name}</div>
-          <div className="item-sub">{card.institution || 'Credit Card'}</div>
+          <div className="item-name">{card.name}{card.mask ? ` ••${card.mask}` : ''}</div>
+          <div className="item-sub">{card.institution || 'Credit Card'} · <span className={`badge ${card.autoSynced ? 'badge-green' : 'badge-gray'}`}>{card.autoSynced ? 'Linked' : 'Manual'}</span></div>
         </div>
-        <div className="item-right">
-          <div className="item-amount amount-neg">{currency(balance)}</div>
-          <div className="item-sub">owed</div>
-        </div>
+        <div className="item-right"><div className="item-amount amount-neg">{currency(card.balance)}</div><div className="item-sub">owed</div></div>
       </div>
       {limit > 0 ? (
         <>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--tv-text-muted)', marginTop: 8 }}>
-            <span>{util}% of {currency(limit)} limit</span>
-            <span>{currency(available)} available</span>
+            <span>{util}% of {currency(limit)} limit</span><span>{currency(available)} available</span>
           </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${util}%`, background: utilColor }}></div>
-          </div>
+          <div className="progress-bar"><div className="progress-fill" style={{ width: `${util}%`, background: utilColor }}></div></div>
+          {(card.minimumPayment || card.nextPaymentDueDate) && (
+            <div style={{ fontSize: 11.5, color: 'var(--tv-text-muted)', marginTop: 6 }}>
+              {card.minimumPayment ? `Min payment ${currency(card.minimumPayment)}` : ''}
+              {card.minimumPayment && card.nextPaymentDueDate ? ' · ' : ''}
+              {card.nextPaymentDueDate ? `Due ${bizDate(card.nextPaymentDueDate)}` : ''}
+            </div>
+          )}
         </>
-      ) : (
-        <div className="item-sub" style={{ marginTop: 6 }}>Add a credit limit to see utilization.</div>
-      )}
-      <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={onViewCharges}>
-        <i className="ti ti-list"></i> View recent charges
-      </button>
+      ) : (<div className="item-sub" style={{ marginTop: 6 }}>Add a credit limit to see utilization.</div>)}
+      <button className="btn btn-secondary btn-sm" style={{ marginTop: 10 }} onClick={onViewCharges}><i className="ti ti-list"></i> View recent charges</button>
     </div>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Quick-action tile (Tab 2).                                          */
+/* Quick-action tile (Business Tools tab).                             */
 /* ------------------------------------------------------------------ */
 function QuickAction({ icon, tone, label, desc, onClick }) {
   return (
-    <button className="card" onClick={onClick}
-      style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+    <button className="card" onClick={onClick} style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
       <div className={`item-icon ${tone}`}><i className={`ti ${icon}`}></i></div>
-      <div>
-        <div className="item-name">{label}</div>
-        <div className="item-sub">{desc}</div>
-      </div>
+      <div><div className="item-name">{label}</div><div className="item-sub">{desc}</div></div>
     </button>
   );
 }
 
 /* ------------------------------------------------------------------ */
-/* Horizontal category-spend bars (Tab 1).                             */
+/* Horizontal category-spend bars.                                     */
 /* ------------------------------------------------------------------ */
 function CategoryBars({ rows }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
@@ -1459,9 +1705,7 @@ function CategoryBars({ rows }) {
             <span style={{ color: 'var(--tv-text-primary)', fontWeight: 500 }}>{r.label}</span>
             <span className="item-amount">{currency(r.value)}</span>
           </div>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${(r.value / max) * 100}%`, background: 'var(--tv-forest-light)' }}></div>
-          </div>
+          <div className="progress-bar"><div className="progress-fill" style={{ width: `${(r.value / max) * 100}%`, background: 'var(--tv-forest-light)' }}></div></div>
         </div>
       ))}
     </div>
@@ -1472,18 +1716,13 @@ function CategoryBars({ rows }) {
 /* Inline SVG bar chart for the 6-month revenue trend.                */
 /* ------------------------------------------------------------------ */
 function RevenueBarChart({ series, max }) {
-  const width = 560;
-  const height = 160;
-  const padBottom = 24;
-  const padTop = 8;
+  const width = 560, height = 160, padBottom = 24, padTop = 8;
   const usableH = height - padBottom - padTop;
   const slot = width / series.length;
   const barW = Math.min(48, slot * 0.55);
-
   return (
     <div style={{ width: '100%', overflowX: 'auto' }}>
-      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height}
-        preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue over the last six months">
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue over the last six months">
         {series.map((p, i) => {
           const h = Math.max(2, (p.value / max) * usableH);
           const x = i * slot + (slot - barW) / 2;
@@ -1491,14 +1730,9 @@ function RevenueBarChart({ series, max }) {
           const isLast = i === series.length - 1;
           return (
             <g key={p.label}>
-              <rect x={x} y={y} width={barW} height={h} rx={6}
-                fill={isLast ? 'var(--tv-forest)' : 'var(--tv-forest-light)'} opacity={isLast ? 1 : 0.75} />
-              <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="10" fill="var(--tv-text-secondary)">
-                {compactMoney(p.value)}
-              </text>
-              <text x={x + barW / 2} y={height - 6} textAnchor="middle" fontSize="11" fill="var(--tv-text-muted)">
-                {p.label}
-              </text>
+              <rect x={x} y={y} width={barW} height={h} rx={6} fill={isLast ? 'var(--tv-forest)' : 'var(--tv-forest-light)'} opacity={isLast ? 1 : 0.75} />
+              <text x={x + barW / 2} y={y - 4} textAnchor="middle" fontSize="10" fill="var(--tv-text-secondary)">{compactMoney(p.value)}</text>
+              <text x={x + barW / 2} y={height - 6} textAnchor="middle" fontSize="11" fill="var(--tv-text-muted)">{p.label}</text>
             </g>
           );
         })}
@@ -1507,7 +1741,6 @@ function RevenueBarChart({ series, max }) {
   );
 }
 
-/* Compact money for chart labels: $42k, $1.2k, $500. */
 function compactMoney(n) {
   const v = Number(n) || 0;
   if (v >= 1000) return `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k`;

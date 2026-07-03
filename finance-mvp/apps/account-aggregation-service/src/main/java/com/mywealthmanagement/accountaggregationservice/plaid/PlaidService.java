@@ -513,6 +513,10 @@ public class PlaidService {
         );
         transaction.setDate(plaidTxn.getDate());
         transaction.setCategory(resolveCategory(plaidTxn));
+        transaction.setMerchantName(plaidTxn.getMerchantName());
+        // Plaid's `pending` flag powers status tracking (pending vs cleared). A pending
+        // transaction later re-syncs as cleared under the same transaction id.
+        transaction.setPending(plaidTxn.getPending());
         return transaction;
     }
 

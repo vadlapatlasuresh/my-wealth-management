@@ -196,6 +196,9 @@ export const api = {
   refreshHoldings: () => request("/api/v1/aggregation/holdings/refresh", { method: "POST" }),
   getInvestmentTransactions: () => request("/api/v1/aggregation/investment-transactions"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
+  // Pull-based transaction sync (linked accounts also auto-sync on a schedule + via webhook).
+  syncTransactions: () =>
+    request("/api/v1/aggregation/transactions/sync", { method: "POST" }),
   // Recurring bills/subscriptions detected from transaction history (upcoming first).
   getRecurringBills: () => request("/api/v1/aggregation/recurring-bills"),
   // Tax: educational federal estimate + the rule set (brackets/deductions) for a year.
@@ -440,6 +443,32 @@ export const api = {
     }),
   deleteManualInvoice: (id) =>
     request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
+
+  // Reconciliation flags (per-user) for linked or manual transactions, keyed by a
+  // stable external id (e.g. "lin-<plaidTransactionId>" or "man-<id>").
+  getReconciliations: () => request("/api/v1/business/manual/reconciliations"),
+  addReconciliation: (externalId) =>
+    request("/api/v1/business/manual/reconciliations", {
+      method: "POST",
+      body: JSON.stringify({ externalId }),
+    }),
+  removeReconciliation: (externalId) =>
+    request(`/api/v1/business/manual/reconciliations/${encodeURIComponent(externalId)}`, {
+      method: "DELETE",
+    }),
+
+  // Per-user transaction type/tag overrides, keyed by the same external id.
+  getTxOverrides: () => request("/api/v1/business/manual/tx-overrides"),
+  // payload: { type?: string|null, tags?: string[] }. Empty type + no tags clears it.
+  setTxOverride: (externalId, payload) =>
+    request(`/api/v1/business/manual/tx-overrides/${encodeURIComponent(externalId)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteTxOverride: (externalId) =>
+    request(`/api/v1/business/manual/tx-overrides/${encodeURIComponent(externalId)}`, {
+      method: "DELETE",
+    }),
 
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),

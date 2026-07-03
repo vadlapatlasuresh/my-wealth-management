@@ -481,7 +481,7 @@ export default function AppLayout(props) {
                 />
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} loadAll={loadAll} />} />
-              <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} />} />
+              <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} accounts={accounts} transactions={transactions} loadAll={loadAll} />} />
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/calculators" element={<CalculatorsPage />} />
               <Route path="/goals" element={<GoalsPage />} />
