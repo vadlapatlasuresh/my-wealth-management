@@ -1055,6 +1055,10 @@ a { text-decoration: none; color: inherit; }
       frosted translucent cards (backdrop-filter) over a soft gradient.
     • AI Assistant: response styles (Concise/Balanced/Detailed), persisted conversation, voice input,
       markdown answers, copy/regenerate/feedback, prompt library; backend chat is now topic-aware.
+    • AI Assistant: multi-model chat — Auto Mode picks the best engine (Claude/Gemini/ChatGPT) per
+      question by cost, complexity, speed and uptime; manual model switch preserves chat history;
+      each reply is badged with the model that answered. Prompts cover all 8 finance areas and share
+      only aggregate, PII/NPI-free data with the models.
   -->
   <div class="main-area">
     <!-- Top bar -->
@@ -3540,6 +3544,15 @@ a { text-decoration: none; color: inherit; }
           </div>
           <div class="page-actions">
             <button class="btn btn-secondary btn-sm">Scope: All accounts <i class="ti ti-chevron-down"></i></button>
+            <label style="display:inline-flex;align-items:center;gap:5px;" title="Auto Mode picks the best model per question; switching keeps your chat history">
+              <i class="ti ti-cpu" style="color:var(--tv-forest);"></i>
+              <select class="form-input" style="height:32px;padding:0 26px 0 8px;font-size:12.5px;">
+                <option>Auto Mode — best model per question</option>
+                <option>Claude (Anthropic)</option>
+                <option>Gemini (Google)</option>
+                <option>ChatGPT (OpenAI)</option>
+              </select>
+            </label>
             <div style="display:inline-flex;border:1px solid var(--tv-border);border-radius:var(--radius-sm);overflow:hidden;">
               <button class="btn-sm" style="padding:6px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;">Concise</button>
               <button class="btn-sm" style="padding:6px 12px;background:var(--tv-forest);color:#fff;border-radius:0;border-left:1px solid var(--tv-border);">Balanced</button>

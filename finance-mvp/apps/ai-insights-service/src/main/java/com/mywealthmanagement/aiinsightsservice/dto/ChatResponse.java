@@ -9,4 +9,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ChatResponse {
     private String reply;
+
+    /** Label of the model that actually produced the reply (e.g. Claude, Gemini, ChatGPT). */
+    private String model;
+
+    public ChatResponse(String reply) {
+        this.reply = reply;
+    }
 }
