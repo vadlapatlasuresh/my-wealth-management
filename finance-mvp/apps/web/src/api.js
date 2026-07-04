@@ -305,6 +305,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }), // NEW
+  // Update a tracked debt (e.g. refresh balance/APR/min from its linked account). Clears cached scenarios.
+  updateDebt: (id, payload) =>
+    request(`/api/v1/planning/debt-scenarios/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  // Remove a tracked debt (ownership-scoped on the backend). Also clears cached payoff scenarios.
+  deleteDebt: (id) =>
+    request(`/api/v1/planning/debt-scenarios/${encodeURIComponent(id)}`, { method: "DELETE" }),
   // The planning service returns camelCase (debtFreeDate, totalInterestPaid, …) but the
   // Debt Lab cards read snake_case. Normalize so both shapes are present + a friendly date.
   runDebtScenario: async (payload) => {

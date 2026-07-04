@@ -33,7 +33,14 @@ class DebtDtoValidationTest {
     }
 
     private DebtDto valid() {
-        return new DebtDto(null, "Visa", new BigDecimal("1000"), new BigDecimal("19.99"), new BigDecimal("50"));
+        return new DebtDto(null, "Visa", new BigDecimal("1000"), new BigDecimal("19.99"), new BigDecimal("50"), null);
+    }
+
+    @Test
+    void plaidAccountIdIsOptional() {
+        DebtDto d = valid();
+        d.setPlaidAccountId("acct_123");
+        assertThat(validator.validate(d)).isEmpty();
     }
 
     @Test

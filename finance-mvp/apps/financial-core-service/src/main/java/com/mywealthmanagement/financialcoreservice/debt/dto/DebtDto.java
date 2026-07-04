@@ -31,4 +31,7 @@ public class DebtDto {
     @NotNull(message = "minPayment is required")
     @PositiveOrZero(message = "minPayment must be zero or positive")
     private BigDecimal minPayment;
+
+    // Optional link to the Plaid account this debt was imported from (null for manual debts).
+    private String plaidAccountId;
 }
