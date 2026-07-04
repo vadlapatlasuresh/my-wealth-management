@@ -359,7 +359,7 @@ function AutoTranslate() {
 export default function AppLayout(props) {
   const {
     snapshot, accounts, transactions, insights, paymentIntents,
-    debtScenarios, debtLoading, strategy, extraPayment, planTab,
+    debtScenarios, debtBaseline, debtLoading, strategy, extraPayment, planTab,
     billPayStep, user, billPayForm, billPaySubmitting, lastBillPayIntent,
     properties, creditCards, fundingAccounts, loading, error,
     setPage, setAuthMode, setAuthForm, setSnapshot, setAccounts,
@@ -444,6 +444,7 @@ export default function AppLayout(props) {
                   extraPayment={extraPayment}
                   setExtraPayment={setExtraPayment}
                   debtScenarios={debtScenarios}
+                  debtBaseline={debtBaseline}
                   onRunAllScenarios={runAllDebtScenarios}
                   debtLoading={debtLoading}
                   formatDate={formatDate}
@@ -475,6 +476,7 @@ export default function AppLayout(props) {
                   extraPayment={extraPayment}
                   setExtraPayment={setExtraPayment}
                   debtScenarios={debtScenarios}
+                  debtBaseline={debtBaseline}
                   onRunAllScenarios={runAllDebtScenarios}
                   debtLoading={debtLoading}
                   formatDate={formatDate}
