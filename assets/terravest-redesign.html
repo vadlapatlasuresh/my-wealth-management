@@ -1017,6 +1017,11 @@ a { text-decoration: none; color: inherit; }
 
   <!-- ===================== MAIN ===================== -->
   <!--
+    CHANGELOG — 2026-07-04 (debt lab · compare strategies)
+    • Compare strategies: added an extra-payment impact banner (what your extra $/mo saves in
+      interest + months vs paying minimums only), a per-strategy "Targets <debt> first" line tying
+      each card to your actual debts, and auto-run of the comparison right after importing accounts.
+
     CHANGELOG — 2026-07-04 (debt lab)
     • Debt Lab: "Import from accounts" — pull linked credit cards, personal loans & mortgages into the
       payoff plan with balance / APR / minimum payment pre-filled (editable picker, skips already-added,
@@ -1857,6 +1862,12 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Extra-payment impact vs minimums-only baseline -->
+        <div class="card" style="margin-bottom:12px;border-left:4px solid var(--tv-positive);display:flex;align-items:center;gap:12px;">
+          <i class="ti ti-rocket" style="color:var(--tv-positive);font-size:22px;"></i>
+          <div style="font-size:13.5px;">Your extra <strong>$300/mo</strong> on the <strong>avalanche</strong> plan saves <strong style="color:var(--tv-positive);">$3,180</strong> in interest and gets you debt-free <strong>1 yr 4 mo</strong> sooner versus paying only the minimums.</div>
+        </div>
+
         <!-- Strategy comparison cards (with Cheapest / Fastest badges + cost bars) -->
         <div class="section-title">Compare your payoff strategies</div>
         <div class="grid-3">
@@ -1868,6 +1879,7 @@ a { text-decoration: none; color: inherit; }
               <span class="badge badge-gold" style="margin-left:auto;"><i class="ti ti-coin"></i> Cheapest</span>
               <span class="badge badge-forest"><i class="ti ti-bolt"></i> Fastest</span>
             </div>
+            <div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><i class="ti ti-target" style="color:var(--tv-forest-light);"></i> Targets <strong style="color:var(--tv-text-primary);">Visa Card</strong> first <span style="opacity:.7;">· highest APR</span></div>
             <!-- Total interest + relative cost bar -->
             <div style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-positive);text-transform:none;">$4,120</span></div>
@@ -1902,6 +1914,7 @@ a { text-decoration: none; color: inherit; }
               <div style="width:36px;height:36px;background:var(--tv-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tv-text-secondary);font-size:15px;">2</div>
               <div style="font-size:15px;font-weight:600;">Snowball</div>
             </div>
+            <div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><i class="ti ti-target" style="color:var(--tv-forest-light);"></i> Targets <strong style="color:var(--tv-text-primary);">Visa Card</strong> first <span style="opacity:.7;">· smallest balance</span></div>
             <div style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-negative);text-transform:none;">$4,580</span></div>
               <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--tv-negative);"></div></div>
@@ -1934,6 +1947,7 @@ a { text-decoration: none; color: inherit; }
               <div style="width:36px;height:36px;background:var(--tv-border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--tv-text-secondary);font-size:15px;">3</div>
               <div style="font-size:15px;font-weight:600;">Hybrid</div>
             </div>
+            <div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:10px;display:flex;align-items:center;gap:5px;"><i class="ti ti-target" style="color:var(--tv-forest-light);"></i> Targets <strong style="color:var(--tv-text-primary);">Visa Card</strong> first <span style="opacity:.7;">· highest APR</span></div>
             <div style="margin-bottom:12px;">
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--tv-text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;"><span>Total interest</span><span style="font-family:var(--font-display);font-size:15px;color:var(--tv-warning);text-transform:none;">$4,310</span></div>
               <div class="progress-bar"><div class="progress-fill" style="width:94%;background:var(--tv-warning);"></div></div>

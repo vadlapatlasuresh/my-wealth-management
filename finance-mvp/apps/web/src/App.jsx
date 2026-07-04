@@ -31,6 +31,9 @@ export default function App() {
   const [insights, setInsights] = useState([]);
   const [paymentIntents, setPaymentIntents] = useState([]);
   const [debtScenarios, setDebtScenarios] = useState({});
+  // Current strategy run with $0 extra — the "minimums only" baseline, so the Debt Lab can show
+  // what the extra payment actually buys (interest + months saved). Null until a comparison runs.
+  const [debtBaseline, setDebtBaseline] = useState(null);
   const [debtLoading, setDebtLoading] = useState(false);
   const [strategy, setStrategy] = useState("AVALANCHE");
   const [extraPayment, setExtraPayment] = useState(300);
@@ -312,20 +315,17 @@ export default function App() {
   async function runAllDebtScenarios() {
     setDebtLoading(true);
     try {
-      const strategies = ["AVALANCHE", "SNOWBALL", "HYBRID"];
-      const results = await Promise.all(
-        strategies.map((s) =>
-          api.runDebtScenario({
-            strategy: s,
-            extra_payment_monthly: Number(extraPayment)
-          })
-        )
-      );
-      setDebtScenarios({
-        AVALANCHE: results[0],
-        SNOWBALL: results[1],
-        HYBRID: results[2]
-      });
+      const extra = Number(extraPayment);
+      // Run all three strategies at the chosen extra payment, plus the current strategy at $0 extra
+      // (the minimums-only baseline) so the Debt Lab can quantify what the extra buys — one batch.
+      const [avalanche, snowball, hybrid, baseline] = await Promise.all([
+        api.runDebtScenario({ strategy: "AVALANCHE", extra_payment_monthly: extra }),
+        api.runDebtScenario({ strategy: "SNOWBALL", extra_payment_monthly: extra }),
+        api.runDebtScenario({ strategy: "HYBRID", extra_payment_monthly: extra }),
+        extra > 0 ? api.runDebtScenario({ strategy, extra_payment_monthly: 0 }) : Promise.resolve(null),
+      ]);
+      setDebtScenarios({ AVALANCHE: avalanche, SNOWBALL: snowball, HYBRID: hybrid });
+      setDebtBaseline(baseline);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -426,6 +426,7 @@ export default function App() {
       insights={insights}
       paymentIntents={paymentIntents}
       debtScenarios={debtScenarios}
+      debtBaseline={debtBaseline}
       debtLoading={debtLoading}
       strategy={strategy}
       extraPayment={extraPayment}

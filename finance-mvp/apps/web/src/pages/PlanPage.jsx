@@ -86,7 +86,7 @@ function fmtMonths(m) {
 
 export default function PlanPage({
   planTab, setPlanTab, strategy, setStrategy, extraPayment, setExtraPayment,
-  debtScenarios, onRunAllScenarios, debtLoading, formatDate,
+  debtScenarios, debtBaseline, onRunAllScenarios, debtLoading, formatDate,
 }) {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(
@@ -642,14 +642,17 @@ export default function PlanPage({
     [accountsList]
   );
 
-  // Which debt the active strategy attacks first — Avalanche/Hybrid target the highest APR,
-  // Snowball the smallest balance. Powers the "focus this first" nudge.
-  const focusDebt = useMemo(() => {
+  // Which debt a given strategy attacks first — Avalanche/Hybrid target the highest APR,
+  // Snowball the smallest balance. Used by both the "focus first" nudge and the per-card chip.
+  function firstTargetFor(stratName) {
     if (!debts.length) return null;
     const rows = debts.map((d) => ({ ...d, _apr: Number(d.apr) || 0, _bal: Number(d.balance) || 0 }));
-    if (strategy === "SNOWBALL") return rows.reduce((lo, d) => (d._bal < lo._bal ? d : lo));
+    if (stratName === "SNOWBALL") return rows.reduce((lo, d) => (d._bal < lo._bal ? d : lo));
     return rows.reduce((hi, d) => (d._apr > hi._apr ? d : hi));
-  }, [debts, strategy]);
+  }
+  // The debt the *current* plan attacks first.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const focusDebt = useMemo(() => firstTargetFor(strategy), [debts, strategy]);
   // Pick the strategy with the lowest total interest among the ones that have results.
   const recommendedStrategy = useMemo(() => {
     const entries = Object.entries(debtScenarios).filter(([, r]) => r && r.total_interest_paid != null);
@@ -680,6 +683,18 @@ export default function PlanPage({
     };
   }, [debtScenarios]);
   const getDeltaClass = (v) => (v >= 0 ? "pos" : "neg");
+
+  // What the extra monthly payment buys vs paying only the minimums. The baseline is the current
+  // strategy run at $0 extra; comparing it to the same strategy at the chosen extra isolates the
+  // impact of the extra payment (interest + months saved).
+  const extraImpact = useMemo(() => {
+    const cur = debtScenarios[strategy];
+    if (!debtBaseline || !cur) return null;
+    const interestSaved = Math.round((Number(debtBaseline.total_interest_paid) || 0) - (Number(cur.total_interest_paid) || 0));
+    const monthsSaved = Math.round((Number(debtBaseline.months_to_debt_free) || 0) - (Number(cur.months_to_debt_free) || 0));
+    if (interestSaved <= 0 && monthsSaved <= 0) return null;
+    return { interestSaved, monthsSaved };
+  }, [debtBaseline, debtScenarios, strategy]);
 
   async function addDebt() {
     if (!newDebt.name.trim()) return;
@@ -753,8 +768,8 @@ export default function PlanPage({
       const res = await api.getDebts();
       setDebts(res || []);
       setShowImport(false);
-      setNotice(`Imported ${chosen.length} account${chosen.length === 1 ? "" : "s"} into your Debt Lab.`);
-      if (debtCompare) onRunAllScenarios();
+      setNotice(`Imported ${chosen.length} account${chosen.length === 1 ? "" : "s"} into your Debt Lab — comparing payoff strategies…`);
+      onRunAllScenarios(); // imported debts flow straight into a strategy comparison
     } catch (e) {
       setNotice(e?.message || "Couldn't import some accounts — please try again.");
     } finally {
@@ -1607,6 +1622,19 @@ export default function PlanPage({
             )}
           </div>
 
+          {extraImpact && (
+            <div className="card" style={{ marginBottom: 12, borderLeft: "4px solid var(--tv-positive)", display: "flex", alignItems: "center", gap: 12 }}>
+              <i className="ti ti-rocket" style={{ color: "var(--tv-positive)", fontSize: 22 }}></i>
+              <div style={{ fontSize: 13.5 }}>
+                Your extra <strong>{currency(extraPayment)}/mo</strong> on the <strong style={{ textTransform: "capitalize" }}>{strategy.toLowerCase()}</strong> plan
+                {extraImpact.interestSaved > 0 && <> saves <strong style={{ color: "var(--tv-positive)" }}>{currency(extraImpact.interestSaved)}</strong> in interest</>}
+                {extraImpact.interestSaved > 0 && extraImpact.monthsSaved > 0 && " and"}
+                {extraImpact.monthsSaved > 0 && <> gets you debt-free <strong>{fmtMonths(extraImpact.monthsSaved)}</strong> sooner</>}
+                {" "}versus paying only the minimums.
+              </div>
+            </div>
+          )}
+
           {!debtCompare ? (
             <div className="card">
               <div className="empty-state">
@@ -1649,7 +1677,19 @@ export default function PlanPage({
                       {isFastest && !isCheapest && <span className="badge badge-forest" title="Debt-free soonest"><i className="ti ti-bolt"></i> Fastest</span>}
                     </div>
                   </div>
-                  <p style={{ fontSize: 12, color: "var(--tv-text-secondary)", margin: "6px 0 14px", lineHeight: 1.5 }}>{info.blurb}</p>
+                  <p style={{ fontSize: 12, color: "var(--tv-text-secondary)", margin: "6px 0 10px", lineHeight: 1.5 }}>{info.blurb}</p>
+
+                  {/* Which of the user's debts this strategy attacks first */}
+                  {(() => {
+                    const target = firstTargetFor(name);
+                    return target ? (
+                      <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 5 }}>
+                        <i className="ti ti-target" style={{ color: "var(--tv-forest-light)" }}></i>
+                        Targets <strong style={{ color: "var(--tv-text-primary)" }}>{target.name}</strong> first
+                        <span style={{ opacity: 0.7 }}>· {name === "SNOWBALL" ? "smallest balance" : "highest APR"}</span>
+                      </div>
+                    ) : null;
+                  })()}
 
                   {/* Total interest — the key differentiator, with a relative cost bar */}
                   <div style={{ marginBottom: 12 }}>
