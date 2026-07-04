@@ -16,4 +16,11 @@ public class ChatRequest {
     private String message;
 
     private List<String> history;
+
+    /**
+     * Preferred AI model for this turn: {@code auto} (default), {@code claude}, {@code gemini},
+     * or {@code chatgpt}. Auto Mode picks the best available model; a manual choice is honored
+     * when that model is configured. Unknown values fall back to auto.
+     */
+    private String model;
 }

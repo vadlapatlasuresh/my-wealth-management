@@ -18,6 +18,16 @@ const SCOPES = [
 
 const STYLES = ['Concise', 'Balanced', 'Detailed'];
 
+/* AI models the user can pick. "Auto" lets the backend router choose the best model per
+   question (weighing cost, complexity, speed, and availability). Switching models mid-chat
+   preserves the conversation — history is sent with every turn regardless of model. */
+const MODELS = [
+  { key: 'auto', label: 'Auto', menu: 'Auto Mode — best model per question', icon: 'ti ti-wand' },
+  { key: 'claude', label: 'Claude', menu: 'Claude (Anthropic)', icon: 'ti ti-sparkles' },
+  { key: 'gemini', label: 'Gemini', menu: 'Gemini (Google)', icon: 'ti ti-diamond' },
+  { key: 'chatgpt', label: 'ChatGPT', menu: 'ChatGPT (OpenAI)', icon: 'ti ti-message-2' },
+];
+
 /* Prompt library grouped by capability — shown in the empty state. */
 const PROMPT_LIBRARY = [
   { cat: 'Spending', icon: 'ti ti-receipt', prompts: ['Where am I overspending?', 'How do I build a budget that sticks?'] },
@@ -114,6 +124,7 @@ export default function AIAssistantPage({ user }) {
   const [listening, setListening] = useState(false);
 
   const [responseStyle, setResponseStyle] = useState(() => localStorage.getItem('tv_ai_style') || 'Balanced');
+  const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('tv_ai_model') || 'auto');
   const [selectedScopes, setSelectedScopes] = useState(() => new Set(SCOPES.map((s) => s.key)));
 
   const selectedLabels = SCOPES.filter((s) => selectedScopes.has(s.key)).map((s) => s.label);
@@ -127,6 +138,7 @@ export default function AIAssistantPage({ user }) {
   // Persist conversation + style.
   useEffect(() => { localStorage.setItem('tv_ai_chat', JSON.stringify(messages.slice(-50))); }, [messages]);
   useEffect(() => { localStorage.setItem('tv_ai_style', responseStyle); }, [responseStyle]);
+  useEffect(() => { localStorage.setItem('tv_ai_model', selectedModel); }, [selectedModel]);
 
   const toggleScope = (key) => setSelectedScopes((prev) => {
     const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next;
@@ -177,9 +189,10 @@ export default function AIAssistantPage({ user }) {
 
     setSending(true);
     try {
-      const res = await api.chatWithAssistant(directive, history);
+      const res = await api.chatWithAssistant(directive, history, selectedModel);
       const reply = (res && res.reply) || 'No response.';
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply, ts: Date.now() }]);
+      const model = (res && res.model) || null;
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply, model, ts: Date.now() }]);
     } catch (err) {
       setChatError(err.message || 'The assistant could not respond. Please try again.');
     } finally { setSending(false); }
@@ -331,7 +344,16 @@ export default function AIAssistantPage({ user }) {
             <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <i className="ti ti-message-chatbot" style={{ color: 'var(--tv-forest)' }}></i> Ask the Assistant
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              {/* AI model — Auto Mode picks the best engine; manual switch keeps your history */}
+              <label style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                title="Choose the AI model. Auto Mode picks the best one per question; switching keeps your chat.">
+                <i className="ti ti-cpu" style={{ color: 'var(--tv-forest)' }}></i>
+                <select className="form-input" value={selectedModel} onChange={(e) => setSelectedModel(e.target.value)}
+                  style={{ height: 32, padding: '0 26px 0 8px', fontSize: '12.5px', minWidth: 118 }}>
+                  {MODELS.map((m) => (<option key={m.key} value={m.key}>{m.menu}</option>))}
+                </select>
+              </label>
               {/* Response style */}
               <div className="seg-control">
                 {STYLES.map((s) => (
@@ -380,8 +402,14 @@ export default function AIAssistantPage({ user }) {
                     {/* Assistant action row */}
                     {!isUser && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: 11, color: 'var(--tv-text-muted)' }}>
-                        <span style={{ marginRight: 4 }}>{fmtTime(m.ts)}</span>
-                        <button className="icon-btn" style={{ width: 24, height: 24 }} title="Copy" onClick={() => copyMessage(m.text, i)}>
+                        <span>{fmtTime(m.ts)}</span>
+                        {m.model && (
+                          <span className="badge badge-forest" style={{ fontSize: 10, padding: '1px 6px' }}
+                            title="Model that answered this message">
+                            <i className="ti ti-cpu" style={{ fontSize: 10, marginRight: 3 }}></i>{m.model}
+                          </span>
+                        )}
+                        <button className="icon-btn" style={{ width: 24, height: 24, marginLeft: 2 }} title="Copy" onClick={() => copyMessage(m.text, i)}>
                           <i className={`ti ${copiedAt === i ? 'ti-check' : 'ti-copy'}`} style={{ fontSize: 13 }}></i>
                         </button>
                         <button className="icon-btn" style={{ width: 24, height: 24, color: m.feedback === 'up' ? 'var(--tv-positive)' : undefined }} title="Helpful" onClick={() => setFeedback(i, 'up')}>
@@ -422,7 +450,7 @@ export default function AIAssistantPage({ user }) {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--tv-text-muted)', marginBottom: '10px' }}>
             <i className="ti ti-wand" style={{ color: 'var(--tv-forest)' }}></i>
-            <span>Considering: <strong style={{ color: 'var(--tv-text-secondary)' }}>{selectedLabels.length ? selectedLabels.join(', ') : 'all areas'}</strong> · <strong>{responseStyle}</strong> answers</span>
+            <span>Considering: <strong style={{ color: 'var(--tv-text-secondary)' }}>{selectedLabels.length ? selectedLabels.join(', ') : 'all areas'}</strong> · <strong>{responseStyle}</strong> answers · Model: <strong>{(MODELS.find((m) => m.key === selectedModel) || MODELS[0]).label}</strong></span>
           </div>
 
           {chatError && (

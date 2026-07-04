@@ -6,6 +6,7 @@ import com.mywealthmanagement.aiinsightsservice.dto.InsightDto;
 import com.mywealthmanagement.aiinsightsservice.entity.Insight;
 import com.mywealthmanagement.aiinsightsservice.provider.AiProvider;
 import com.mywealthmanagement.aiinsightsservice.provider.GeneratedInsight;
+import com.mywealthmanagement.aiinsightsservice.provider.ModelRouter;
 import com.mywealthmanagement.aiinsightsservice.repository.InsightRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +28,7 @@ public class AiController {
 
     private final InsightRepository insightRepository;
     private final AiProvider aiProvider;
+    private final ModelRouter modelRouter;
 
     @GetMapping("/insights")
     public List<InsightDto> getInsights() {
@@ -51,8 +53,11 @@ public class AiController {
     public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
         // userId is available for future personalization of the chat reply.
         currentUserId();
-        String reply = aiProvider.chat(request.getMessage(), request.getHistory());
-        return new ChatResponse(reply);
+        // Auto Mode / manual model switching is handled by the router, which owns all three
+        // chat models at once and preserves the caller's history across switches.
+        ModelRouter.ChatResult result =
+                modelRouter.chat(request.getMessage(), request.getHistory(), request.getModel());
+        return new ChatResponse(result.reply(), result.model());
     }
 
     private List<Insight> generateAndPersist(Long userId) {

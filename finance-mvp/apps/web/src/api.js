@@ -492,8 +492,8 @@ export const api = {
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
-  chatWithAssistant: (message, history = []) =>
-    request("/api/v1/ai/chat", { method: "POST", body: JSON.stringify({ message, history }) }),
+  chatWithAssistant: (message, history = [], model = "auto") =>
+    request("/api/v1/ai/chat", { method: "POST", body: JSON.stringify({ message, history, model }) }),
 
   // Payment Service (Phase 6)
   getPaymentIntents: () => request("/api/v1/payments/bill-pay-intents"),

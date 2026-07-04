@@ -29,7 +29,7 @@ public class AnthropicAiProvider implements AiProvider {
 
     private static final Logger log = LoggerFactory.getLogger(AnthropicAiProvider.class);
     private static final Set<String> VALID_SEVERITIES = Set.of("INFO", "WARNING", "ACTIONABLE");
-    private static final String DISCLAIMER = "_Educational information, not personalized financial advice._";
+    private static final String DISCLAIMER = SystemPrompts.DISCLAIMER;
 
     private final AnthropicClient anthropic;
     private final FinancialSummaryClient summaryClient;
@@ -56,14 +56,7 @@ public class AnthropicAiProvider implements AiProvider {
                     ? "No financial snapshot was available for this user; give broadly applicable guidance."
                     : summary;
 
-            String system = "You are a careful personal-finance analyst. Using the user's financial snapshot, "
-                    + "produce 3 to 5 specific, actionable insights. Respond with ONLY a JSON array (no prose, no "
-                    + "markdown fences). Each element must be an object with exactly these string fields: "
-                    + "\"title\" (short), \"reason\" (1-2 sentences grounded in the user's numbers), "
-                    + "\"severity\" (one of INFO, WARNING, ACTIONABLE), and \"suggestedAction\" (a concrete next step). "
-                    + "Do not give individualized investment, tax, or legal advice; keep it educational.";
-
-            String reply = anthropic.complete(system, context);
+            String reply = anthropic.complete(SystemPrompts.insights(), context);
             List<GeneratedInsight> parsed = parseInsights(reply);
             if (parsed.isEmpty()) {
                 log.warn("Claude returned no parseable insights; falling back to mock.");
@@ -83,20 +76,10 @@ public class AnthropicAiProvider implements AiProvider {
         }
         try {
             String summary = summaryClient.fetchSummaryText();
-
-            StringBuilder system = new StringBuilder();
-            system.append("You are TerraVest's financial assistant — warm, concise, and practical. ")
-                    .append("Answer the user's question with grounded, educational guidance. ")
-                    .append("Use Markdown with short bullet points where helpful. ")
-                    .append("Do NOT provide individualized investment, tax, or legal advice; keep it general and educational. ")
-                    .append("Always end your reply with this exact line on its own: ").append(DISCLAIMER).append("\n");
-            if (!summary.isBlank()) {
-                system.append("\nUse the following snapshot of the user's finances as context when relevant:\n")
-                        .append(summary);
-            }
+            String system = SystemPrompts.chat(summary);
 
             String userMessage = buildUserMessage(message, history);
-            String reply = anthropic.complete(system.toString(), userMessage);
+            String reply = anthropic.complete(system, userMessage);
             if (reply == null || reply.isBlank()) {
                 return fallback.chat(message, history);
             }
