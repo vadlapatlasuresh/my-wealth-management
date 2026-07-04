@@ -458,7 +458,7 @@ body{
   <div class="caption-chip"><span class="num">2</span> Sign In — MFA Code</div>
 </div>
 
-<!-- ===================== 3. SIGN UP — KYC ===================== -->
+<!-- ===================== 3. SIGN UP — SLIM (create account) ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen">
     <div class="dynamic-island"></div>
@@ -467,19 +467,20 @@ body{
       <div class="nav-back"><i class="ti ti-chevron-left"></i>Sign in</div>
       <div class="nav-large" style="padding-top:0;"><h1>Create account</h1></div>
       <div class="scroll" style="padding-top:4px;">
-        <div class="sec-label" style="margin-top:0;">Account type</div>
+        <div class="muted" style="font-size:12.5px;margin:0 2px 4px;line-height:1.5;">Just the essentials to get you in — we verify your identity right after.</div>
+
+        <div class="sec-label" style="margin-top:12px;">Account type</div>
         <div class="segmented"><div class="seg on">Individual</div><div class="seg">Business</div></div>
 
-        <div class="sec-label">Your details</div>
+        <div class="sec-label">Your name</div>
         <div style="display:flex;gap:10px;">
           <div class="field" style="flex:1;"><span class="typed">Dana</span></div>
           <div class="field" style="flex:1;"><span class="typed">Reyes</span></div>
         </div>
-        <div class="field"><i class="ti ti-calendar"></i><span style="color:var(--tv-text-muted);font-size:12px;">Date of birth</span><span class="typed" style="margin-left:auto;">Mar 14, 1990</span></div>
 
         <div class="sec-label">Email</div>
-        <div class="field" style="margin-bottom:6px;"><i class="ti ti-mail"></i><span class="typed">dana.reyes@gmail.com</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Email verified</span></div>
-        <div class="muted" style="font-size:12px;margin:0 2px 4px;">Verified with a 6-digit code · dev hint: 528193</div>
+        <div class="field" style="margin-bottom:6px;"><i class="ti ti-mail"></i><span class="typed">dana.reyes@gmail.com</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Verified</span></div>
+        <div class="muted" style="font-size:12px;margin:0 2px 4px;">Confirmed with a 6-digit code · dev hint: 528193</div>
 
         <div class="sec-label">Password</div>
         <div class="field" style="margin-bottom:6px;"><i class="ti ti-lock"></i><span class="typed">••••••••••</span><i class="ti ti-eye" style="margin-left:auto;"></i></div>
@@ -488,30 +489,15 @@ body{
         <div class="field" style="margin-top:8px;"><i class="ti ti-lock-check"></i><span class="typed">••••••••••</span><i class="ti ti-check pos" style="margin-left:auto;font-size:18px;"></i></div>
 
         <div class="sec-label">Phone</div>
-        <div class="field"><i class="ti ti-phone"></i><span class="typed">(415) 555-4821</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Phone verified</span></div>
-        <div class="muted" style="font-size:12px;margin:-6px 2px 0;">Verified via SMS code · dev hint: 470216</div>
+        <div class="field"><i class="ti ti-phone"></i><span class="typed">(415) 555-4821</span><span class="badge green" style="margin-left:auto;"><i class="ti ti-circle-check" style="font-size:12px;"></i> Verified</span></div>
+        <div class="muted" style="font-size:12px;margin:-6px 2px 0;">Confirmed via SMS · becomes your 2FA number · dev hint: 470216</div>
 
-        <div class="sec-label">Address</div>
-        <div class="field"><i class="ti ti-map-pin"></i><span class="typed">742 Evergreen Terrace</span></div>
-        <div class="field"><i class="ti ti-map-pin"></i><span class="ph">Apt, suite (optional)</span></div>
-        <div style="display:flex;gap:10px;">
-          <div class="field" style="flex:1.4;"><span class="typed">San Francisco</span></div>
-          <div class="field" style="flex:.6;"><span class="typed">CA</span></div>
-        </div>
-        <div style="display:flex;gap:10px;">
-          <div class="field" style="flex:1;"><span class="typed">94103</span></div>
-          <div class="field" style="flex:1;"><span class="typed">United States</span></div>
+        <div class="row" style="align-items:flex-start;gap:9px;border:1px solid var(--tv-border-light);border-radius:13px;margin-top:14px;background:var(--tv-sage-pale);padding:11px 12px;">
+          <i class="ti ti-shield-lock" style="color:var(--tv-forest);font-size:18px;margin-top:1px;"></i>
+          <div class="s" style="font-size:12px;line-height:1.45;color:var(--tv-text-secondary);">Next, we verify your identity (a legal requirement to open a financial account). Takes about a minute.</div>
         </div>
 
-        <div class="sec-label">Preferred MFA channel</div>
-        <div class="segmented"><div class="seg on">Email</div><div class="seg">SMS</div></div>
-        <div class="muted" style="font-size:12px;margin:6px 2px 0;">Where we send your sign-in code.</div>
-
-        <div class="sec-label">Social Security Number</div>
-        <div class="field" style="margin-bottom:6px;"><i class="ti ti-id"></i><span class="typed">123-45-6789</span><i class="ti ti-shield-lock" style="margin-left:auto;color:var(--tv-forest);"></i></div>
-        <div class="muted" style="font-size:12px;margin:0 2px;">Encrypted at rest — only the last 4 are ever shown.</div>
-
-        <div class="row" style="border:1px solid var(--tv-border);border-radius:13px;margin-top:14px;background:#fff;">
+        <div class="row" style="border:1px solid var(--tv-border);border-radius:13px;margin-top:10px;background:#fff;">
           <i class="ti ti-square-check-filled" style="color:var(--tv-forest);font-size:22px;"></i>
           <div class="body"><div class="s" style="font-size:12.5px;line-height:1.4;color:var(--tv-text-secondary);">I agree to the <b style="color:var(--tv-forest);">Terms</b> & <b style="color:var(--tv-forest);">Privacy Policy</b>.</div></div>
         </div>
@@ -521,7 +507,115 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">3</span> Sign Up — KYC</div>
+  <div class="caption-chip"><span class="num">3</span> Sign Up — Create Account</div>
+</div>
+
+<!-- ===================== 3B. KYC GATE — PERSONAL (mandatory) ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="scroll" style="padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tv-forest);background:var(--tv-sage-pale);padding:5px 11px;border-radius:999px;width:max-content;"><i class="ti ti-shield-check"></i> Verify your identity</div>
+        <div style="font-family:var(--display);font-size:25px;margin:10px 0 4px;">Welcome, Dana</div>
+        <div class="muted" style="font-size:12.5px;line-height:1.5;">U.S. regulations (KYC/AML) require us to verify a few details before your account opens. Encrypted, never sold.</div>
+
+        <div class="pbar" style="margin:16px 0 8px;"><span style="width:33%;background:var(--tv-forest);"></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <div class="dots"><span class="d on"></span><span class="d"></span><span class="d"></span></div>
+          <div class="muted" style="font-size:11px;">Step 1 of 3 · Personal</div>
+        </div>
+
+        <div class="sec-label">Date of birth</div>
+        <div class="field"><i class="ti ti-calendar"></i><span style="color:var(--tv-text-muted);font-size:12px;">Date of birth</span><span class="typed" style="margin-left:auto;">Mar 14, 1990</span></div>
+
+        <div class="sec-label">Social Security Number</div>
+        <div class="field" style="margin-bottom:6px;"><i class="ti ti-id"></i><span class="typed">•••-••-6789</span><i class="ti ti-shield-lock" style="margin-left:auto;color:var(--tv-forest);"></i></div>
+        <div class="muted" style="font-size:11.5px;line-height:1.5;margin:0 2px;">Required by federal law to open a financial account. AES-256 encrypted, write-once — only the last 4 digits are ever shown.</div>
+
+        <button class="btn" style="margin-top:20px;">Save & continue</button>
+        <div style="display:flex;gap:7px;align-items:center;justify-content:center;margin:14px 0 4px;color:var(--tv-text-muted);font-size:11.5px;"><i class="ti ti-lock" style="color:var(--tv-forest);"></i> AES-256 · SOC 2 · We never sell your data</div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num" style="color:var(--tv-gold-light);">3·1</span> KYC Gate — Personal</div>
+</div>
+
+<!-- ===================== 3C. KYC GATE — ADDRESS ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="scroll" style="padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tv-forest);background:var(--tv-sage-pale);padding:5px 11px;border-radius:999px;width:max-content;"><i class="ti ti-map-pin"></i> Home address</div>
+        <div style="font-family:var(--display);font-size:25px;margin:10px 0 4px;">Where do you live?</div>
+        <div class="muted" style="font-size:12.5px;line-height:1.5;">Your legal residential address, used for account verification and statements.</div>
+
+        <div class="pbar" style="margin:16px 0 8px;"><span style="width:66%;background:var(--tv-forest);"></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <div class="dots"><span class="d on" style="width:7px;border-radius:50%;background:var(--tv-forest);"></span><span class="d on"></span><span class="d"></span></div>
+          <div class="muted" style="font-size:11px;">Step 2 of 3 · Address</div>
+        </div>
+
+        <div class="sec-label">Street address</div>
+        <div class="field"><i class="ti ti-map-pin"></i><span class="typed">742 Evergreen Terrace</span></div>
+        <div class="field"><i class="ti ti-map-pin"></i><span class="ph">Apt, suite (optional)</span></div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1.4;"><span class="typed">San Francisco</span></div>
+          <div class="field" style="flex:.6;"><span class="typed">CA</span></div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;"><span class="typed">94103</span></div>
+          <div class="field" style="flex:1;"><span class="typed">United States</span><i class="ti ti-chevron-down" style="margin-left:auto;"></i></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button class="btn" style="flex:0 0 auto;width:56px;background:#fff;color:var(--tv-forest);border:1px solid var(--tv-border);"><i class="ti ti-arrow-left"></i></button>
+          <button class="btn" style="flex:1;">Save & continue</button>
+        </div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num" style="color:var(--tv-gold-light);">3·2</span> KYC Gate — Address</div>
+</div>
+
+<!-- ===================== 3D. KYC GATE — PREFERENCES & SECURITY ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="scroll" style="padding-top:8px;">
+        <div style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tv-forest);background:var(--tv-sage-pale);padding:5px 11px;border-radius:999px;width:max-content;"><i class="ti ti-shield-lock"></i> Preferences & security</div>
+        <div style="font-family:var(--display);font-size:25px;margin:10px 0 4px;">Last step</div>
+        <div class="muted" style="font-size:12.5px;line-height:1.5;">Choose how we reach you — then you're in.</div>
+
+        <div class="pbar" style="margin:16px 0 8px;"><span style="width:100%;background:var(--tv-forest);"></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
+          <div class="dots"><span class="d on" style="width:7px;border-radius:50%;background:var(--tv-forest);"></span><span class="d on" style="width:7px;border-radius:50%;background:var(--tv-forest);"></span><span class="d on"></span></div>
+          <div class="muted" style="font-size:11px;">Step 3 of 3 · Preferences</div>
+        </div>
+
+        <div class="sec-label">Notifications</div>
+        <div class="row" style="background:#fff;border:1px solid var(--tv-border);border-radius:13px;margin-bottom:8px;"><i class="ti ti-shield-check" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t" style="font-size:13.5px;font-weight:600;">Security alerts <span class="muted" style="font-weight:500;">· always on</span></div><div class="s" style="font-size:11.5px;">Sign-in & account-change notices</div></div><div class="toggle on" style="opacity:.6;"></div></div>
+        <div class="row" style="background:#fff;border:1px solid var(--tv-border);border-radius:13px;margin-bottom:8px;"><i class="ti ti-mail" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t" style="font-size:13.5px;font-weight:600;">Email updates</div><div class="s" style="font-size:11.5px;">Reminders, deals, product news</div></div><div class="toggle on"></div></div>
+        <div class="row" style="background:#fff;border:1px solid var(--tv-border);border-radius:13px;"><i class="ti ti-device-mobile" style="color:var(--tv-forest);font-size:19px;"></i><div class="body"><div class="t" style="font-size:13.5px;font-weight:600;">Push notifications</div><div class="s" style="font-size:11.5px;">Real-time alerts on your devices</div></div><div class="toggle"></div></div>
+
+        <div class="sec-label">Two-factor authentication</div>
+        <div class="muted" style="font-size:11.5px;line-height:1.5;margin:0 2px 8px;"><i class="ti ti-shield-lock" style="color:var(--tv-forest);"></i> Required on every sign-in — can't be turned off. Where should we send codes?</div>
+        <div class="segmented"><div class="seg on"><i class="ti ti-mail" style="font-size:15px;"></i> Email</div><div class="seg"><i class="ti ti-device-mobile-message" style="font-size:15px;"></i> SMS</div></div>
+
+        <button class="btn" style="margin-top:20px;"><i class="ti ti-check"></i> Finish & enter TerraVest</button>
+        <div style="display:flex;gap:7px;align-items:center;justify-content:center;margin:14px 0 4px;color:var(--tv-text-muted);font-size:11.5px;"><i class="ti ti-lock" style="color:var(--tv-forest);"></i> AES-256 · SOC 2 · We never sell your data</div>
+      </div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num" style="color:var(--tv-gold-light);">3·3</span> KYC Gate — Preferences & Security</div>
 </div>
 
 <!-- ===================== 4. SIGN UP — VERIFY EMAIL / PHONE ===================== -->

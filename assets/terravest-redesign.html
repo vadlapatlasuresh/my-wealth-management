@@ -3308,17 +3308,16 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
-        <!-- ===== SIGNUP (KYC) ===== -->
-        <div class="section-header"><div class="section-title">Create your account</div><span class="badge badge-gray">Identity verified</span></div>
+        <!-- ===== SIGNUP (SLIM — minimum to create a verified session) ===== -->
+        <div class="section-header"><div class="section-title">Create your account</div><span class="badge badge-gray">Just the essentials</span></div>
         <div class="card">
           <div class="seg-control" style="margin-bottom:16px;">
             <button class="seg-btn active"><i class="ti ti-user"></i> Individual</button>
             <button class="seg-btn"><i class="ti ti-building"></i> Business</button>
           </div>
-          <div class="grid-3" style="margin-bottom:14px;">
+          <div class="grid-2" style="margin-bottom:14px;">
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">First name *</label><input class="form-input" placeholder="Alex"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Last name *</label><input class="form-input" placeholder="Kim"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Date of birth *</label><input class="form-input" type="date"></div>
           </div>
           <div class="grid-2" style="margin-bottom:14px;">
             <div class="form-group" style="margin-bottom:0;">
@@ -3334,35 +3333,49 @@ a { text-decoration: none; color: inherit; }
               <div style="display:flex;gap:8px;align-items:center;">
                 <input class="form-input" placeholder="(415) 555-0142" style="flex:1;">
                 <button class="btn btn-secondary btn-sm">Verify</button>
-                <span class="badge badge-gray">Unverified</span>
+                <span class="badge badge-green"><i class="ti ti-check"></i> Verified</span>
               </div>
             </div>
           </div>
-          <div class="grid-3" style="margin-bottom:14px;">
-            <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Address line 1 *</label><input class="form-input" placeholder="820 Marina Blvd"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Line 2</label><input class="form-input" placeholder="Apt 4"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">City *</label><input class="form-input" placeholder="San Francisco"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">State *</label><input class="form-input" placeholder="CA"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Postal code *</label><input class="form-input" placeholder="94123"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Country *</label><select class="form-select"><option>United States</option><option>Canada</option></select></div>
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Password *</label><input class="form-input" type="password" placeholder="At least 12 characters"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Confirm password *</label><input class="form-input" type="password" placeholder="Re-enter password"></div>
           </div>
-          <div class="grid-2" style="margin-bottom:14px;align-items:end;">
+          <div style="display:flex;gap:10px;align-items:flex-start;background:var(--tv-sage-pale);border-radius:var(--radius-md);padding:11px 13px;margin-bottom:14px;">
+            <i class="ti ti-shield-lock" style="color:var(--tv-forest);margin-top:2px;"></i>
+            <p style="font-size:12.5px;color:var(--tv-text-secondary);line-height:1.5;margin:0;">Next, we verify your identity — a legal requirement (KYC/AML) to open a financial account. Sensitive details (SSN, DOB, address) are collected there, not here, so they stay out of the sign-up step.</p>
+          </div>
+          <button class="btn btn-primary"><i class="ti ti-user-plus"></i> Create account</button>
+          <p style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;">Protected by bank-grade encryption &middot; Powered by Plaid</p>
+        </div>
+
+        <!-- ===== MANDATORY PROFILE-COMPLETION GATE (post-signup KYC) ===== -->
+        <div class="section-header" style="margin-top:8px;"><div class="section-title">Complete your profile</div><span class="badge badge-amber">Required · blocks the app until done</span></div>
+        <div class="card">
+          <!-- Stepper -->
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <span style="display:flex;align-items:center;gap:7px;font-weight:600;color:var(--tv-forest);"><span style="width:26px;height:26px;border-radius:50%;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;">1</span> Personal</span>
+            <span style="flex:1;height:2px;background:var(--tv-border);"></span>
+            <span style="display:flex;align-items:center;gap:7px;font-weight:600;color:var(--tv-text-muted);"><span style="width:26px;height:26px;border-radius:50%;background:var(--tv-white);border:2px solid var(--tv-border);display:flex;align-items:center;justify-content:center;font-size:13px;">2</span> Address</span>
+            <span style="flex:1;height:2px;background:var(--tv-border);"></span>
+            <span style="display:flex;align-items:center;gap:7px;font-weight:600;color:var(--tv-text-muted);"><span style="width:26px;height:26px;border-radius:50%;background:var(--tv-white);border:2px solid var(--tv-border);display:flex;align-items:center;justify-content:center;font-size:13px;">3</span> Preferences</span>
+          </div>
+          <div class="progress-bar" style="margin-bottom:6px;"><div class="progress-fill" style="width:33%;"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--tv-text-muted);margin-bottom:16px;"><span>Step 1 of 3 &middot; Personal</span><span>33% complete</span></div>
+
+          <div style="display:flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--tv-forest);background:var(--tv-sage-pale);padding:5px 11px;border-radius:999px;width:max-content;margin-bottom:14px;"><i class="ti ti-shield-check"></i> Verify your identity</div>
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Date of birth *</label><input class="form-input" type="date"></div>
             <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Social Security Number *</label>
-              <input class="form-input" placeholder="123-45-6789">
-              <div style="font-size:12px;color:var(--tv-text-muted);margin-top:5px;">Encrypted at rest &mdash; only the last 4 are ever shown.</div>
-            </div>
-            <div class="form-group" style="margin-bottom:0;">
-              <label class="form-label">Preferred MFA channel *</label>
-              <div class="seg-control">
-                <button class="seg-btn active"><i class="ti ti-mail"></i> Email</button>
-                <button class="seg-btn"><i class="ti ti-device-mobile-message"></i> SMS</button>
-              </div>
+              <label class="form-label" style="color:var(--tv-gold);">Social Security Number *</label>
+              <input class="form-input" value="•••-••-6789">
+              <div style="font-size:12px;color:var(--tv-text-muted);margin-top:5px;line-height:1.5;"><i class="ti ti-shield-lock"></i> Required by federal law (KYC/AML). AES-256 encrypted, write-once &mdash; only the last 4 are ever shown.</div>
             </div>
           </div>
           <hr class="divider">
-          <button class="btn btn-primary"><i class="ti ti-user-plus"></i> Create account</button>
-          <p style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;">Protected by bank-grade encryption &middot; Powered by Plaid</p>
+          <p style="font-size:12px;color:var(--tv-text-muted);margin-bottom:12px;"><i class="ti ti-info-circle"></i> Remaining steps: <b>Address</b> (line 1/2, city, state, postal, country) and <b>Preferences &amp; Security</b> (notification preferences with security alerts locked on, plus 2FA channel confirmation).</p>
+          <button class="btn btn-primary"><i class="ti ti-arrow-right"></i> Save &amp; continue</button>
+          <p style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;"><i class="ti ti-lock"></i> AES-256 &middot; SOC 2 &middot; We never sell your data</p>
         </div>
       </div>
 
