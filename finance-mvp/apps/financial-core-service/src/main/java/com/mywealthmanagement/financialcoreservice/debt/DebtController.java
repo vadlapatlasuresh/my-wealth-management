@@ -34,4 +34,16 @@ public class DebtController {
         DebtDto newDebt = debtService.addDebt(debtDto);
         return ResponseEntity.ok(newDebt);
     }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<DebtDto> updateDebt(@PathVariable Long id, @Valid @RequestBody DebtDto debtDto) {
+        DebtDto updated = debtService.updateDebt(id, debtDto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDebt(@PathVariable Long id) {
+        debtService.deleteDebt(id);
+        return ResponseEntity.noContent().build();
+    }
 }

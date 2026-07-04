@@ -34,6 +34,11 @@ public class Debt {
     @Column(name = "min_payment", nullable = false)
     private BigDecimal minPayment;
 
+    // The linked Plaid account this debt was imported from (null for manually-entered debts).
+    // Lets the Debt Lab refresh balance / APR / min payment from the account on demand.
+    @Column(name = "plaid_account_id")
+    private String plaidAccountId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

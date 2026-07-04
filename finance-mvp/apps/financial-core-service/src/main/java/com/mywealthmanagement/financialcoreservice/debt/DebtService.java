@@ -4,8 +4,11 @@ import com.mywealthmanagement.financialcoreservice.debt.dto.DebtDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -33,9 +36,46 @@ public class DebtService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
     public DebtDto addDebt(DebtDto debtDto) {
-        Debt debt = new Debt(getUserId(), debtDto.getName(), debtDto.getBalance(), debtDto.getApr(), debtDto.getMinPayment());
-        return convertToDto(debtRepository.save(debt));
+        Long userId = getUserId();
+        Debt debt = new Debt(userId, debtDto.getName(), debtDto.getBalance(), debtDto.getApr(), debtDto.getMinPayment());
+        debt.setPlaidAccountId(debtDto.getPlaidAccountId());
+        DebtDto saved = convertToDto(debtRepository.save(debt));
+        // The debt set changed — any previously cached payoff scenarios for this user are now stale.
+        debtScenarioRepository.deleteByUserId(userId);
+        return saved;
+    }
+
+    @Transactional
+    public DebtDto updateDebt(Long debtId, DebtDto debtDto) {
+        Long userId = getUserId();
+        Debt debt = debtRepository.findById(debtId)
+                .filter(d -> userId.equals(d.getUserId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Debt not found"));
+        debt.setName(debtDto.getName());
+        debt.setBalance(debtDto.getBalance());
+        debt.setApr(debtDto.getApr());
+        debt.setMinPayment(debtDto.getMinPayment());
+        // Only overwrite the account link when the caller supplies one (keeps an existing link intact).
+        if (debtDto.getPlaidAccountId() != null) {
+            debt.setPlaidAccountId(debtDto.getPlaidAccountId());
+        }
+        DebtDto saved = convertToDto(debtRepository.save(debt));
+        // Balances/rates changed — drop cached scenarios so the next compare recomputes.
+        debtScenarioRepository.deleteByUserId(userId);
+        return saved;
+    }
+
+    @Transactional
+    public void deleteDebt(Long debtId) {
+        Long userId = getUserId();
+        Debt debt = debtRepository.findById(debtId)
+                .filter(d -> userId.equals(d.getUserId()))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Debt not found"));
+        debtRepository.delete(debt);
+        // Removing a debt changes the payoff math — drop cached scenarios so the next compare recomputes.
+        debtScenarioRepository.deleteByUserId(userId);
     }
 
     public DebtScenarioDto runDebtScenario(DebtScenarioRequest request) {
@@ -128,7 +168,8 @@ public class DebtService {
     }
 
     private DebtDto convertToDto(Debt debt) {
-        return new DebtDto(debt.getId(), debt.getName(), debt.getBalance(), debt.getApr(), debt.getMinPayment());
+        return new DebtDto(debt.getId(), debt.getName(), debt.getBalance(), debt.getApr(), debt.getMinPayment(),
+                debt.getPlaidAccountId());
     }
 
     private DebtScenarioDto convertToDto(DebtScenario scenario) {

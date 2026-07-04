@@ -177,6 +177,12 @@ export default function PlanPage({
   const [debts, setDebts] = useState([]);
   const [addingDebt, setAddingDebt] = useState(false);
   const [newDebt, setNewDebt] = useState({ name: "", balance: "", apr: "", minPayment: "" });
+  // Import-from-linked-accounts flow: pre-fill debts from the user's linked credit cards & loans.
+  const [showImport, setShowImport] = useState(false);
+  const [importRows, setImportRows] = useState([]); // [{ accountId, name, balance, apr, minPayment, type, subtype, creditLimit, dueDate, include, alreadyTracked }]
+  const [importing, setImporting] = useState(false);
+  const [deletingDebtId, setDeletingDebtId] = useState(null);
+  const [refreshingDebtId, setRefreshingDebtId] = useState(null); // null | debt id | "all"
 
   const monthLabel = useMemo(() => {
     const [y, m] = currentMonth.split("-").map(Number);
@@ -629,6 +635,21 @@ export default function PlanPage({
     if (!debts.length) return null;
     return debts.reduce((hi, d) => (Number(d.apr || 0) > Number(hi.apr || 0) ? d : hi), debts[0]);
   }, [debts]);
+
+  // Linked liability accounts (credit cards + loans/mortgages) available to import as debts.
+  const linkableAccounts = useMemo(
+    () => accountsList.filter((a) => ["credit", "loan"].includes((a.type || "").toLowerCase())),
+    [accountsList]
+  );
+
+  // Which debt the active strategy attacks first — Avalanche/Hybrid target the highest APR,
+  // Snowball the smallest balance. Powers the "focus this first" nudge.
+  const focusDebt = useMemo(() => {
+    if (!debts.length) return null;
+    const rows = debts.map((d) => ({ ...d, _apr: Number(d.apr) || 0, _bal: Number(d.balance) || 0 }));
+    if (strategy === "SNOWBALL") return rows.reduce((lo, d) => (d._bal < lo._bal ? d : lo));
+    return rows.reduce((hi, d) => (d._apr > hi._apr ? d : hi));
+  }, [debts, strategy]);
   // Pick the strategy with the lowest total interest among the ones that have results.
   const recommendedStrategy = useMemo(() => {
     const entries = Object.entries(debtScenarios).filter(([, r]) => r && r.total_interest_paid != null);
@@ -673,9 +694,143 @@ export default function PlanPage({
       setDebts(res || []);
       setNewDebt({ name: "", balance: "", apr: "", minPayment: "" });
       setAddingDebt(false);
+      if (debtCompare) onRunAllScenarios(); // debts changed — refresh the (now stale) comparison
     } catch (e) {
       console.error("add debt failed", e);
       setNotice("Could not add debt. Please try again.");
+    }
+  }
+
+  // Build the import proposal from linked credit cards & loans and open the picker. Values are
+  // pre-filled from Plaid (balance / APR / min payment) and stay editable before importing.
+  function openImport() {
+    if (!linkableAccounts.length) {
+      setNotice("No linked credit cards or loans found — link one on the Accounts page first.");
+      return;
+    }
+    const trackedNames = new Set(debts.map((d) => (d.name || "").trim().toLowerCase()));
+    const rows = linkableAccounts.map((a) => {
+      const label = (a.officialName || a.name || "Account").trim();
+      const name = `${label}${a.mask ? ` ····${a.mask}` : ""}`;
+      return {
+        accountId: a.id,
+        plaidAccountId: a.plaidAccountId || null,
+        name,
+        balance: Math.abs(Number(a.currentBalance) || 0),
+        apr: a.aprPercentage != null ? Number(a.aprPercentage) : "",
+        minPayment: a.minimumPayment != null ? Number(a.minimumPayment) : "",
+        type: (a.type || "").toLowerCase(),
+        subtype: a.subtype || "",
+        creditLimit: a.creditLimit != null ? Number(a.creditLimit) : null,
+        dueDate: a.nextPaymentDueDate || null,
+        alreadyTracked: trackedNames.has(name.toLowerCase()),
+        include: !trackedNames.has(name.toLowerCase()),
+      };
+    });
+    setImportRows(rows);
+    setShowImport(true);
+  }
+
+  const updateImportRow = (id, patch) =>
+    setImportRows((rows) => rows.map((r) => (r.accountId === id ? { ...r, ...patch } : r)));
+
+  // Bulk-create debts from the checked rows, then refresh the list + any open comparison.
+  async function importSelected() {
+    const chosen = importRows.filter((r) => r.include && !r.alreadyTracked && r.name.trim());
+    if (!chosen.length) { setShowImport(false); return; }
+    setImporting(true);
+    setNotice("");
+    try {
+      for (const r of chosen) {
+        await api.addDebt({
+          name: r.name.trim(),
+          balance: Number(r.balance) || 0,
+          apr: Number(r.apr) || 0,
+          minPayment: Number(r.minPayment) || 0,
+          plaidAccountId: r.plaidAccountId || null,
+        });
+      }
+      const res = await api.getDebts();
+      setDebts(res || []);
+      setShowImport(false);
+      setNotice(`Imported ${chosen.length} account${chosen.length === 1 ? "" : "s"} into your Debt Lab.`);
+      if (debtCompare) onRunAllScenarios();
+    } catch (e) {
+      setNotice(e?.message || "Couldn't import some accounts — please try again.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  // Remove a tracked debt (manual or imported); refresh list + any open comparison.
+  async function removeDebt(debt) {
+    if (!debt?.id) return;
+    if (!window.confirm(`Remove "${debt.name}" from your Debt Lab? This doesn't touch the linked account.`)) return;
+    setDeletingDebtId(debt.id);
+    try {
+      await api.deleteDebt(debt.id);
+      const res = await api.getDebts();
+      setDebts(res || []);
+      if (debtCompare) onRunAllScenarios();
+    } catch (e) {
+      setNotice(e?.message || "Couldn't remove that debt — please try again.");
+    } finally {
+      setDeletingDebtId(null);
+    }
+  }
+
+  // The linked account behind an imported debt (matched by Plaid account id), or null.
+  const accountForDebt = (debt) =>
+    debt?.plaidAccountId ? accountsList.find((a) => a.plaidAccountId === debt.plaidAccountId) || null : null;
+
+  // Fresh balance / APR / min payment for a debt from its linked account (falls back to the
+  // debt's current values when the bank didn't share APR or a minimum).
+  const refreshPayload = (debt, acct) => ({
+    name: debt.name,
+    balance: Math.abs(Number(acct.currentBalance) || 0),
+    apr: acct.aprPercentage != null ? Number(acct.aprPercentage) : Number(debt.apr) || 0,
+    minPayment: acct.minimumPayment != null ? Number(acct.minimumPayment) : Number(debt.minPayment) || 0,
+    plaidAccountId: debt.plaidAccountId,
+  });
+
+  // How many tracked debts are still linked to a currently-linked account (drives the header button).
+  const linkedDebtCount = useMemo(
+    () => debts.filter((d) => accountForDebt(d)).length,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [debts, accountsList]
+  );
+
+  // Pull the latest figures from one debt's linked account.
+  async function refreshDebtFromAccount(debt) {
+    const acct = accountForDebt(debt);
+    if (!acct) { setNotice("Couldn't find the linked account for this debt — it may have been unlinked."); return; }
+    setRefreshingDebtId(debt.id);
+    try {
+      await api.updateDebt(debt.id, refreshPayload(debt, acct));
+      setDebts(await api.getDebts() || []);
+      setNotice(`Refreshed ${debt.name} from your linked account.`);
+      if (debtCompare) onRunAllScenarios();
+    } catch (e) {
+      setNotice(e?.message || "Couldn't refresh from the account — please try again.");
+    } finally {
+      setRefreshingDebtId(null);
+    }
+  }
+
+  // Re-sync every linked debt from its account in one click.
+  async function refreshAllLinked() {
+    const linked = debts.map((d) => ({ d, acct: accountForDebt(d) })).filter((x) => x.acct);
+    if (!linked.length) return;
+    setRefreshingDebtId("all");
+    try {
+      for (const { d, acct } of linked) await api.updateDebt(d.id, refreshPayload(d, acct));
+      setDebts(await api.getDebts() || []);
+      setNotice(`Refreshed ${linked.length} linked debt${linked.length === 1 ? "" : "s"} from your accounts.`);
+      if (debtCompare) onRunAllScenarios();
+    } catch (e) {
+      setNotice(e?.message || "Couldn't refresh some debts — please try again.");
+    } finally {
+      setRefreshingDebtId(null);
     }
   }
 
@@ -1331,7 +1486,22 @@ export default function PlanPage({
           <div className="card" style={{ marginBottom: 20 }}>
             <div className="section-header">
               <div className="section-title">Your debts</div>
-              <button className="btn btn-secondary btn-sm" onClick={() => setAddingDebt((s) => !s)}><i className="ti ti-plus"></i> Add debt</button>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                {linkedDebtCount > 0 && (
+                  <button className="btn btn-secondary btn-sm" onClick={refreshAllLinked} disabled={refreshingDebtId != null}
+                    title="Update balances, APR & minimums for all linked debts from their accounts">
+                    <i className={`ti ${refreshingDebtId === "all" ? "ti-loader spin" : "ti-refresh"}`}></i> Refresh linked
+                  </button>
+                )}
+                <button className="btn btn-primary btn-sm" onClick={openImport} disabled={importing}
+                  title="Pull balances, APR & minimum payments from your linked credit cards and loans">
+                  <i className="ti ti-building-bank"></i> Import from accounts
+                  {linkableAccounts.length > 0 && (
+                    <span className="badge badge-forest" style={{ marginLeft: 6 }}>{linkableAccounts.length}</span>
+                  )}
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => setAddingDebt((s) => !s)}><i className="ti ti-plus"></i> Add manually</button>
+              </div>
             </div>
 
             {addingDebt && (
@@ -1351,24 +1521,65 @@ export default function PlanPage({
 
             {debts.length === 0 ? (
               <div className="empty-state">
-                <i className="ti ti-mood-happy"></i>
-                <p>No debts tracked. Add one above to model a payoff plan.</p>
+                <i className={linkableAccounts.length ? "ti ti-building-bank" : "ti ti-mood-happy"}></i>
+                {linkableAccounts.length ? (
+                  <>
+                    <p style={{ fontWeight: 600, color: "var(--tv-text-primary)", marginBottom: 4 }}>
+                      {linkableAccounts.length} linked account{linkableAccounts.length === 1 ? "" : "s"} ready to import
+                    </p>
+                    <p>Pull in your credit cards, personal loans and mortgages with balances, APR and minimum payments already filled in.</p>
+                    <button className="btn btn-primary btn-sm" style={{ marginTop: 10 }} onClick={openImport}>
+                      <i className="ti ti-building-bank"></i> Import from accounts
+                    </button>
+                  </>
+                ) : (
+                  <p>No debts tracked. Add one manually, or link a card or loan on the Accounts page to import it here.</p>
+                )}
               </div>
             ) : (
               <div className="table-scroll">
                 <table className="tv-table">
-                  <thead><tr><th>Debt name</th><th>Balance</th><th>APR</th><th>Min payment</th></tr></thead>
+                  <thead><tr><th>Debt name</th><th>Balance</th><th>APR</th><th>Min payment</th><th></th></tr></thead>
                   <tbody>
-                    {debts.map((debt, idx) => (
-                      <tr key={debt.id || idx}>
-                        <td>{debt.name}</td>
-                        <td>{currency(debt.balance)}</td>
-                        <td><span style={{ color: debt.apr > 15 ? "var(--tv-negative)" : debt.apr > 8 ? "var(--tv-warning)" : "var(--tv-positive)", fontWeight: 600 }}>{debt.apr}%</span></td>
-                        <td>{currency(debt.minPayment)}</td>
-                      </tr>
-                    ))}
+                    {debts.map((debt, idx) => {
+                      const isFocus = focusDebt && (debt.id ? debt.id === focusDebt.id : debt.name === focusDebt.name);
+                      const linked = !!accountForDebt(debt);
+                      const busy = refreshingDebtId === debt.id || refreshingDebtId === "all";
+                      return (
+                        <tr key={debt.id || idx} style={isFocus ? { background: "var(--tv-sage-pale)" } : undefined}>
+                          <td>
+                            {debt.name}
+                            {linked && (
+                              <span className="badge badge-forest" style={{ marginLeft: 8 }} title="Imported from a linked account — refreshable">
+                                <i className="ti ti-link"></i> Linked
+                              </span>
+                            )}
+                            {isFocus && (
+                              <span className="badge badge-gold" style={{ marginLeft: 8 }} title={`Your ${strategy.toLowerCase()} plan attacks this debt first`}>
+                                <i className="ti ti-target"></i> Focus first
+                              </span>
+                            )}
+                          </td>
+                          <td>{currency(debt.balance)}</td>
+                          <td><span style={{ color: debt.apr > 15 ? "var(--tv-negative)" : debt.apr > 8 ? "var(--tv-warning)" : "var(--tv-positive)", fontWeight: 600 }}>{debt.apr}%</span></td>
+                          <td>{currency(debt.minPayment)}</td>
+                          <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                            {linked && (
+                              <button className="icon-btn" title="Refresh this debt from its linked account"
+                                disabled={busy} onClick={() => refreshDebtFromAccount(debt)}>
+                                <i className={`ti ${refreshingDebtId === debt.id ? "ti-loader spin" : "ti-refresh"}`}></i>
+                              </button>
+                            )}
+                            <button className="icon-btn" style={{ color: "var(--tv-negative)" }} title="Remove this debt"
+                              disabled={deletingDebtId === debt.id} onClick={() => removeDebt(debt)}>
+                              <i className={`ti ${deletingDebtId === debt.id ? "ti-loader spin" : "ti-trash"}`}></i>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                     <tr style={{ background: "var(--tv-bg)", fontWeight: 600 }}>
-                      <td>Total</td><td>{currency(totalDebtBalance)}</td><td></td><td>{currency(totalMinPayment)}</td>
+                      <td>Total</td><td>{currency(totalDebtBalance)}</td><td></td><td>{currency(totalMinPayment)}</td><td></td>
                     </tr>
                   </tbody>
                 </table>
@@ -1483,12 +1694,128 @@ export default function PlanPage({
           </div>
           )}
 
+          {debtCompare && focusDebt && (
+            <div className="card" style={{ marginTop: 14, borderLeft: "4px solid var(--tv-gold)", display: "flex", alignItems: "center", gap: 12 }}>
+              <i className="ti ti-target" style={{ color: "var(--tv-gold)", fontSize: 22 }}></i>
+              <div style={{ fontSize: 13.5 }}>
+                Next action: with <strong style={{ textTransform: "capitalize" }}>{strategy.toLowerCase()}</strong>, pay the minimum on everything and
+                throw {extraPayment > 0 ? <>your extra <strong>{currency(extraPayment)}/mo</strong></> : "any extra you can"} at{" "}
+                <strong>{focusDebt.name}</strong>{" "}
+                ({strategy === "SNOWBALL" ? "smallest balance" : "highest APR"}). Once it's clear, roll that payment into the next debt.
+              </div>
+            </div>
+          )}
+
           {debtCompare && debtCompare.allEqual && (
             <p style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: 12, textAlign: "center" }}>
               <i className="ti ti-info-circle"></i> All three strategies give the same result for your current debts — they happen to prioritize the same one. Differences appear as your debts vary in balance and rate.
             </p>
           )}
           <p style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: 14, textAlign: "center" }}><i className="ti ti-info-circle"></i> Assumes on-time payments and no new debt.</p>
+
+          {/* Import-from-linked-accounts picker */}
+          {showImport && (() => {
+            const selectable = importRows.filter((r) => !r.alreadyTracked);
+            const selectedCount = selectable.filter((r) => r.include).length;
+            const allSelected = selectable.length > 0 && selectedCount === selectable.length;
+            const fmtType = (r) => {
+              if (r.subtype) return r.subtype.replace(/\b\w/g, (c) => c.toUpperCase());
+              return r.type === "credit" ? "Credit Card" : r.type === "loan" ? "Loan" : "Account";
+            };
+            return (
+              <div onClick={() => !importing && setShowImport(false)}
+                style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
+                  alignItems: "center", justifyContent: "center", zIndex: 1100, padding: 16 }}>
+                <div onClick={(e) => e.stopPropagation()} className="card"
+                  style={{ width: "min(680px, 100%)", maxHeight: "88vh", display: "flex", flexDirection: "column", padding: 0 }}>
+                  {/* Header */}
+                  <div style={{ padding: "16px 18px", borderBottom: "1px solid var(--tv-border)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div className="section-title" style={{ marginBottom: 2 }}>
+                        <i className="ti ti-building-bank" style={{ color: "var(--tv-forest)", marginRight: 6 }}></i> Import debts from linked accounts
+                      </div>
+                      <button className="icon-btn" onClick={() => !importing && setShowImport(false)} title="Cancel"><i className="ti ti-x"></i></button>
+                    </div>
+                    <div className="item-sub" style={{ fontSize: 12.5 }}>
+                      Balances, APR and minimum payments are pre-filled from your linked cards & loans — edit anything before importing.
+                    </div>
+                    {selectable.length > 0 && (
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 12.5, marginTop: 10, cursor: "pointer" }}>
+                        <input type="checkbox" checked={allSelected}
+                          onChange={() => setImportRows((rows) => rows.map((r) => (r.alreadyTracked ? r : { ...r, include: !allSelected })))} />
+                        Select all ({selectedCount}/{selectable.length})
+                      </label>
+                    )}
+                  </div>
+                  {/* Body */}
+                  <div style={{ padding: "8px 18px", overflowY: "auto" }}>
+                    {importRows.map((r) => {
+                      const util = r.type === "credit" && r.creditLimit > 0
+                        ? Math.round((Number(r.balance) / r.creditLimit) * 100) : null;
+                      return (
+                        <div key={r.accountId} style={{
+                          borderBottom: "1px solid var(--tv-border-light)", padding: "12px 0",
+                          opacity: r.alreadyTracked ? 0.55 : 1,
+                        }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <input type="checkbox" checked={r.include} disabled={r.alreadyTracked}
+                              onChange={() => updateImportRow(r.accountId, { include: !r.include })} />
+                            <div className={`item-icon ${r.type === "credit" ? "icon-red" : "icon-amber"}`} style={{ width: 30, height: 30, fontSize: 15 }}>
+                              <i className={r.type === "credit" ? "ti ti-credit-card" : "ti ti-businessplan"}></i>
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</div>
+                              <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                                <span className={`badge ${r.type === "credit" ? "badge-red" : "badge-amber"}`}>{fmtType(r)}</span>
+                                {util != null && <span title="Credit utilization">{util}% utilized</span>}
+                                {r.dueDate && <span><i className="ti ti-calendar-due" style={{ fontSize: 10 }}></i> due {r.dueDate}</span>}
+                              </div>
+                            </div>
+                            {r.alreadyTracked && <span className="badge badge-gray"><i className="ti ti-check"></i> Already added</span>}
+                          </div>
+                          {!r.alreadyTracked && r.include && (
+                            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10, paddingLeft: 34 }}>
+                              <div>
+                                <label className="form-label" style={{ fontSize: 10.5, margin: 0 }}>Balance</label>
+                                <input type="number" className="form-input" style={{ width: 120, height: 32 }} value={r.balance}
+                                  onChange={(e) => updateImportRow(r.accountId, { balance: e.target.value })} />
+                              </div>
+                              <div>
+                                <label className="form-label" style={{ fontSize: 10.5, margin: 0 }}>APR %</label>
+                                <input type="number" className="form-input" style={{ width: 90, height: 32 }} value={r.apr} placeholder="0"
+                                  onChange={(e) => updateImportRow(r.accountId, { apr: e.target.value })} />
+                              </div>
+                              <div>
+                                <label className="form-label" style={{ fontSize: 10.5, margin: 0 }}>Min payment</label>
+                                <input type="number" className="form-input" style={{ width: 120, height: 32 }} value={r.minPayment} placeholder="0"
+                                  onChange={(e) => updateImportRow(r.accountId, { minPayment: e.target.value })} />
+                              </div>
+                            </div>
+                          )}
+                          {!r.alreadyTracked && r.include && (r.apr === "" || r.minPayment === "") && (
+                            <div style={{ fontSize: 11, color: "var(--tv-warning)", marginTop: 6, paddingLeft: 34 }}>
+                              <i className="ti ti-alert-triangle"></i> Your bank didn't share {r.apr === "" ? "an APR" : ""}{r.apr === "" && r.minPayment === "" ? " or " : ""}{r.minPayment === "" ? "a minimum payment" : ""} — add {r.apr === "" && r.minPayment === "" ? "them" : "it"} for an accurate plan.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Footer */}
+                  <div style={{ padding: "14px 18px", borderTop: "1px solid var(--tv-border)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 12.5, color: "var(--tv-text-muted)" }}>{selectedCount} selected to import</span>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowImport(false)} disabled={importing}>Cancel</button>
+                      <button className="btn btn-primary btn-sm" onClick={importSelected} disabled={importing || selectedCount === 0}>
+                        <i className={`ti ${importing ? "ti-loader spin" : "ti-download"}`}></i>
+                        {importing ? "Importing…" : `Import ${selectedCount || ""}`.trim()}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </>
