@@ -34,22 +34,6 @@ function scorePassword(pwd) {
 // Digits-only extraction, used for phone/SSN/EIN masking + length checks.
 const digits = (v) => (v || "").replace(/\D/g, "");
 
-// Mask SSN as 123-45-6789 while typing.
-function maskSsn(v) {
-  const d = digits(v).slice(0, 9);
-  const a = d.slice(0, 3);
-  const b = d.slice(3, 5);
-  const c = d.slice(5, 9);
-  return [a, b, c].filter(Boolean).join("-").replace(/^(\d{3})(\d)/, "$1-$2");
-}
-
-// Mask EIN as 12-3456789 while typing.
-function maskEin(v) {
-  const d = digits(v).slice(0, 9);
-  if (d.length <= 2) return d;
-  return `${d.slice(0, 2)}-${d.slice(2)}`;
-}
-
 // Pretty phone formatting for US-style 10-digit numbers: (123) 456-7890.
 function maskPhone(v) {
   const d = digits(v).slice(0, 10);
@@ -109,7 +93,6 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     });
 
   const accountType = authForm.accountType || "INDIVIDUAL";
-  const isBusiness = accountType === "BUSINESS";
   const phoneVerified = !!authForm.phoneVerified;
   const phoneDigits = digits(authForm.phone);
 
@@ -159,7 +142,6 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
   };
 
   const emailVerified = !!authForm.emailVerified;
-  const mfaChannel = authForm.mfaChannel || "EMAIL";
 
   // When the email changes, any prior verification is no longer valid.
   const handleEmailChange = (raw) => {
@@ -286,7 +268,9 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
   // Login only needs a valid email + a password.
   const loginValid = isEmail(authForm.email) && !!authForm.password;
 
-  // Signup requires the full, validated field set for the chosen account type.
+  // Signup collects only the minimum needed to create a verified, authenticated
+  // account. Sensitive KYC (DOB, address, SSN/EIN) is deferred to the mandatory
+  // ProfileGate after sign-up — data minimization keeps PII out of this step.
   const signupValid =
     !!(authForm.firstName || "").trim() &&
     !!(authForm.lastName || "").trim() &&
@@ -295,16 +279,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     confirmPwd === authForm.password &&
     !!authForm.agreedToTerms &&
     phoneVerified && // phone verification is REQUIRED in this flow
-    emailVerified && // email verification is REQUIRED in this flow
-    !!(authForm.dateOfBirth || "").trim() &&
-    !!(authForm.addressLine1 || "").trim() &&
-    !!(authForm.city || "").trim() &&
-    !!(authForm.state || "").trim() &&
-    !!(authForm.postalCode || "").trim() &&
-    !!(authForm.country || "").trim() &&
-    (isBusiness
-      ? !!(authForm.businessName || "").trim() && !!(authForm.ein || "").trim()
-      : !!(authForm.ssn || "").trim());
+    emailVerified;   // email verification is REQUIRED in this flow
 
   const canSubmit = isLogin ? loginValid : signupValid;
 
@@ -799,192 +774,20 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
               </div>
             )}
 
-            {/* ───────────────────────── INDIVIDUAL: SSN ───────────────────────── */}
-            {!isLogin && !isBusiness && (
-              <div className="form-group">
-                <label className="form-label">Social Security Number</label>
-                <input
-                  className="form-input"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="123-45-6789"
-                  value={authForm.ssn || ""}
-                  onChange={(e) => setField("ssn", maskSsn(e.target.value))}
-                />
-                <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 6 }}>
-                  <i className="ti ti-id"></i> Only the last 4 digits are stored.
-                </div>
-              </div>
-            )}
-
-            {/* ───────────────────────── BUSINESS: NAME + EIN ───────────────────────── */}
-            {!isLogin && isBusiness && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Business name</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    autoComplete="organization"
-                    placeholder="Acme Holdings LLC"
-                    value={authForm.businessName || ""}
-                    onChange={(e) => setField("businessName", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">EIN</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    placeholder="12-3456789"
-                    value={authForm.ein || ""}
-                    onChange={(e) => setField("ein", maskEin(e.target.value))}
-                  />
-                  <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 6 }}>
-                    <i className="ti ti-building-bank"></i> Used to link & verify your business.
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* ───────────────────────── DATE OF BIRTH (signup) ───────────────────────── */}
+            {/* KYC (date of birth, address, SSN/EIN) and 2FA channel are intentionally
+                NOT collected here — data minimization. They're gathered right after
+                sign-up in the mandatory ProfileGate, once the session is verified. */}
             {!isLogin && (
-              <div className="form-group">
-                <label className="form-label">Date of birth</label>
-                <input
-                  className="form-input"
-                  type="date"
-                  autoComplete="bday"
-                  value={authForm.dateOfBirth || ""}
-                  onChange={(e) => setField("dateOfBirth", e.target.value)}
-                  required
-                />
-              </div>
-            )}
-
-            {/* ───────────────────────── ADDRESS (signup) ───────────────────────── */}
-            {!isLogin && (
-              <>
-                <div className="form-group">
-                  <label className="form-label">Address line 1</label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    autoComplete="address-line1"
-                    placeholder="123 Main St"
-                    value={authForm.addressLine1 || ""}
-                    onChange={(e) => setField("addressLine1", e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Address line 2 <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(optional)</span></label>
-                  <input
-                    className="form-input"
-                    type="text"
-                    autoComplete="address-line2"
-                    placeholder="Apt, suite, etc."
-                    value={authForm.addressLine2 || ""}
-                    onChange={(e) => setField("addressLine2", e.target.value)}
-                  />
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">City</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      autoComplete="address-level2"
-                      placeholder="San Francisco"
-                      value={authForm.city || ""}
-                      onChange={(e) => setField("city", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">State / Region</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      autoComplete="address-level1"
-                      placeholder="CA"
-                      value={authForm.state || ""}
-                      onChange={(e) => setField("state", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div className="form-group">
-                    <label className="form-label">Postal code</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      autoComplete="postal-code"
-                      placeholder="94105"
-                      value={authForm.postalCode || ""}
-                      onChange={(e) => setField("postalCode", e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Country</label>
-                    <input
-                      className="form-input"
-                      type="text"
-                      autoComplete="country-name"
-                      placeholder="United States"
-                      value={authForm.country || ""}
-                      onChange={(e) => setField("country", e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* ───────────────────────── PREFERRED MFA CHANNEL (signup) ───────────────────────── */}
-            {!isLogin && (
-              <div className="form-group">
-                <label className="form-label">Preferred sign-in verification</label>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                  {[
-                    { key: "EMAIL", icon: "ti ti-mail", title: "Email", sub: "Code sent to your inbox" },
-                    { key: "SMS", icon: "ti ti-device-mobile", title: "SMS", sub: "Code texted to your phone" },
-                  ].map((opt) => {
-                    const active = mfaChannel === opt.key;
-                    return (
-                      <button
-                        type="button"
-                        key={opt.key}
-                        onClick={() => setField("mfaChannel", opt.key)}
-                        className="card"
-                        style={{
-                          textAlign: "left",
-                          padding: "12px 14px",
-                          cursor: "pointer",
-                          border: `1.5px solid ${active ? "var(--tv-forest)" : "var(--tv-border)"}`,
-                          background: active ? "var(--tv-sage-pale)" : "var(--tv-white)",
-                          display: "flex",
-                          gap: 10,
-                          alignItems: "center",
-                        }}
-                      >
-                        <div className="item-icon" style={{ color: active ? "var(--tv-forest)" : "var(--tv-text-muted)" }}>
-                          <i className={opt.icon}></i>
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600, fontSize: 13.5, color: "var(--tv-text-primary)" }}>{opt.title}</div>
-                          <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)" }}>{opt.sub}</div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+              <div
+                style={{
+                  display: "flex", gap: 10, alignItems: "flex-start",
+                  background: "var(--tv-sage-pale)", border: "1px solid var(--tv-border-light)",
+                  borderRadius: "var(--radius-md)", padding: "11px 13px", marginBottom: 4,
+                  fontSize: 12, color: "var(--tv-text-secondary)", lineHeight: 1.5,
+                }}
+              >
+                <i className="ti ti-shield-lock" style={{ color: "var(--tv-forest)", marginTop: 1 }}></i>
+                <span>Next, we'll verify your identity (a legal requirement to open a financial account). It takes about a minute.</span>
               </div>
             )}
 

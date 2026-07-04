@@ -1288,6 +1288,55 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 }
 
 /* =============================================
+   PROFILE GATE — mandatory post-signup KYC (blocking, full-screen)
+   ============================================= */
+.gate-screen {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 380px at 100% -8%, rgba(201,151,58,.08), transparent 60%),
+    radial-gradient(760px 420px at -8% 12%, rgba(61,138,104,.10), transparent 55%),
+    var(--tv-bg);
+  display: flex; flex-direction: column;
+}
+.gate-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px clamp(16px, 5vw, 40px);
+  border-bottom: 1px solid var(--tv-border-light);
+}
+.gate-brand { display: flex; align-items: center; gap: 10px; }
+.gate-secure {
+  font-size: 12px; color: var(--tv-text-muted); font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.gate-body {
+  flex: 1; display: flex; align-items: flex-start; justify-content: center;
+  padding: clamp(20px, 5vw, 48px) 16px 60px;
+}
+.gate-card {
+  width: 100%; max-width: 560px; padding: 28px clamp(20px, 4vw, 34px) 26px;
+  box-shadow: var(--shadow-lg);
+}
+.gate-eyebrow {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--tv-forest); background: var(--tv-sage-pale);
+  padding: 5px 11px; border-radius: 99px;
+}
+.gate-subhead {
+  font-size: 12px; font-weight: 700; color: var(--tv-text-secondary);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 10px;
+}
+.gate-help {
+  font-size: 11.5px; color: var(--tv-text-muted); line-height: 1.5;
+  margin-top: 6px; display: flex; gap: 6px; align-items: flex-start;
+}
+.gate-help > i { margin-top: 1px; flex-shrink: 0; }
+.gate-help.err { color: var(--tv-negative); }
+@media (max-width: 560px) {
+  .gate-secure { display: none; }
+}
+
+/* =============================================
    RESPONSIVE / MOBILE
    The app is a desktop flex shell (sidebar + main). Below 900px we turn the
    sidebar into an off-canvas drawer (toggled by the topbar hamburger) so the

@@ -2,8 +2,24 @@ import { useState, useMemo, useEffect } from "react";
 import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
 import AppLayout from "./components/AppLayout";
+import ProfileGate from "./components/ProfileGate";
 import useIdleLogout from "./hooks/useIdleLogout";
 import { formatDate } from "./utils/format";
+
+// A profile clears the mandatory KYC gate once identity + address are on file.
+// SSN (individual) or EIN (business) satisfies the identity requirement; both are
+// stored server-side, so this survives reloads without a client-only flag.
+function isProfileComplete(p) {
+  if (!p) return false;
+  const addressOk =
+    !!p.addressLine1 && !!p.city && !!p.state && !!p.postalCode && !!p.country;
+  const dobOk = !!p.dateOfBirth;
+  const identityOk =
+    (p.accountType || "INDIVIDUAL") === "BUSINESS"
+      ? !!p.einMasked || !!p.businessName
+      : !!p.ssnMasked;
+  return addressOk && dobOk && identityOk;
+}
 
 export default function App() {
   const [page, setPage] = useState("home");
@@ -30,6 +46,10 @@ export default function App() {
     country: "United States"
   });
   const [user, setUser] = useState(null);
+  // KYC gate: the signed-in user's profile + whether we've fetched it yet.
+  // `profileChecked` prevents a dashboard→gate flash before the profile loads.
+  const [profile, setProfile] = useState(null);
+  const [profileChecked, setProfileChecked] = useState(false);
   const [billPayForm, setBillPayForm] = useState({
     payee_kind: "card", // "card" = pay one of your cards, "external" = pay a biller
     card_account_id: "",
@@ -180,11 +200,26 @@ export default function App() {
     async function init() {
       if (api.getToken()) {
         setUser({ email: getStoredEmail() || authForm.email, name: getStoredName() });
+        await refreshProfile();
         return loadAll();
       }
     }
     init();
   }, []);
+
+  // Fetch the profile that the KYC gate is keyed off. Best-effort: a failure here
+  // must not strand the user, so we mark it checked either way.
+  async function refreshProfile() {
+    try {
+      const p = await api.getProfile();
+      setProfile(p);
+      return p;
+    } catch {
+      return null;
+    } finally {
+      setProfileChecked(true);
+    }
+  }
 
   // Shared success path: store the session for a token-bearing auth response
   // (from login, MFA verify, or register) and load the dashboard. AuthPage owns
@@ -199,6 +234,8 @@ export default function App() {
     setAuthToken(response.token, email, name);
     setUser({ email, name });
     setError("");
+    // Load the profile first so the KYC gate can decide before the dashboard paints.
+    await refreshProfile();
     await loadAll();
   }
 
@@ -299,6 +336,8 @@ export default function App() {
   function handleLogout() {
     setAuthToken("");
     setUser(null);
+    setProfile(null);
+    setProfileChecked(false);
     setSnapshot(null);
     setAccounts([]);
     setTransactions([]);
@@ -312,6 +351,8 @@ export default function App() {
     function onUnauthorized() {
       setAuthToken("");
       setUser(null);
+      setProfile(null);
+      setProfileChecked(false);
       setError("Your session expired. Please sign in again.");
     }
     window.addEventListener("auth:unauthorized", onUnauthorized);
@@ -350,6 +391,29 @@ export default function App() {
         setError={setError}
         onSubmit={submitAuth}
         onAuthenticated={onAuthenticated}
+      />
+    );
+  }
+
+  // Wait for the profile check before deciding gate-vs-dashboard, so an
+  // already-complete user never sees the gate flash on load.
+  if (!profileChecked) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--tv-bg)", color: "var(--tv-text-muted)", fontSize: 14 }}>
+        <i className="ti ti-loader-2" style={{ marginRight: 8 }}></i> Loading your account…
+      </div>
+    );
+  }
+
+  // Mandatory KYC gate: block the app until identity + address are on file.
+  // Only gate when we actually loaded a profile — a transient fetch failure
+  // (profile === null) must not lock an already-onboarded user out of the app.
+  if (profile && !isProfileComplete(profile)) {
+    return (
+      <ProfileGate
+        profile={profile}
+        user={user}
+        onComplete={async () => { await refreshProfile(); await loadAll(); }}
       />
     );
   }
