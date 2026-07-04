@@ -86,6 +86,7 @@ check "notif preferences"   GET "/api/v1/notifications/preferences"   200
 check "audit/me"            GET "/api/v1/audit/me?size=5"             200
 check "disclaimers"         GET "/api/v1/content/disclaimers"         200
 check "planning/goals"      GET "/api/v1/planning/goals"              200
+check "debt-scenarios list" GET "/api/v1/planning/debt-scenarios"     200
 check "business dashboard"  GET "/api/v1/business/dashboard"          200
 check "invest/brokers"      GET "/api/v1/invest/brokers"              200
 
@@ -97,6 +98,20 @@ check "update profile"      PUT  "/api/v1/auth/me"                    200 '{"cit
 check "plaid link-token"    POST "/api/v1/aggregation/link-token/create" 200
 check "ai/chat (gemini)"    POST "/api/v1/ai/chat"                    200 '{"message":"What is net worth in one sentence?","history":[]}'
 check "test notification"   POST "/api/v1/notifications/test"         200
+
+# Debt Lab round-trip: add (with account link) -> update (refresh) -> delete.
+# Exercises the import/refresh/remove endpoints added for the linked-accounts feature.
+DEBT_ID="$(curl -s -m 20 -X POST "$GATEWAY/api/v1/planning/debt-scenarios/add" \
+  -H "Authorization: Bearer ${TOKEN:-}" -H "Content-Type: application/json" \
+  -d '{"name":"Smoke Card","balance":1000,"apr":19.99,"minPayment":50,"plaidAccountId":"smoke-acct"}' | jval id)"
+if [ -n "$DEBT_ID" ]; then
+  printf "  ✅ %-44s %s\n" "add debt (linked)" "id=$DEBT_ID"; pass=$((pass+1))
+  check "update debt (refresh)" PUT    "/api/v1/planning/debt-scenarios/$DEBT_ID" 200 '{"name":"Smoke Card","balance":900,"apr":19.99,"minPayment":45,"plaidAccountId":"smoke-acct"}'
+  check "compare strategies"    POST   "/api/v1/planning/debt-scenarios"          200 '{"strategy":"AVALANCHE","extra_payment_monthly":300}'
+  check "delete debt"           DELETE "/api/v1/planning/debt-scenarios/$DEBT_ID" 204
+else
+  printf "  ❌ %-44s %s\n" "add debt (linked)" "no id returned"; fail=$((fail+1))
+fi
 
 echo
 echo "-------------------------------------------"
