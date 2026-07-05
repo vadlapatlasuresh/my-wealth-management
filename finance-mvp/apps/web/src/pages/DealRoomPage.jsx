@@ -37,6 +37,27 @@ const humanize = (v) => (v ? v.split('_').map((w) => w.charAt(0) + w.slice(1).to
 
 const fmtPct = (n) => `${Number(n)}%`;
 
+// Representative annual return % for a deal, used to compare against a bank rate.
+// Fixed/hybrid: midpoint of the annual range (or whichever bound is set).
+// Equity: target IRR. Returns null when the deal quotes no usable return.
+function dealAnnualRate(deal) {
+  const lo = deal.annualReturnMin != null ? Number(deal.annualReturnMin) : null;
+  const hi = deal.annualReturnMax != null ? Number(deal.annualReturnMax) : null;
+  const irr = deal.targetIrr != null ? Number(deal.targetIrr) : null;
+  let fixed = null;
+  if (lo != null && hi != null) fixed = (lo + hi) / 2;
+  else if (lo != null) fixed = lo;
+  else if (hi != null) fixed = hi;
+  if (deal.returnType === 'EQUITY') return Number.isFinite(irr) ? irr : null;
+  // FIXED, HYBRID, or unspecified — prefer the quoted annual return, fall back to IRR.
+  if (fixed != null) return fixed;
+  return Number.isFinite(irr) ? irr : null;
+}
+
+// Grow a principal at an annual rate (%) for a number of months, compounded annually.
+const grow = (principal, annualPct, months) =>
+  principal * Math.pow(1 + annualPct / 100, months / 12);
+
 // Short return summary for cards (e.g. "12–24% / yr" or "18% IRR").
 function returnSummary(deal) {
   const parts = [];
@@ -659,6 +680,8 @@ function DealDetail({ deal, onBack, onNotice }) {
             </div>
           )}
 
+          <DealVsBank deal={deal} />
+
           {documents.length > 0 && (
             <>
               <hr className="divider" />
@@ -739,6 +762,184 @@ function DealDetail({ deal, onBack, onNotice }) {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Signed money delta, e.g. "+$4,200" / "−$150".
+function signedCurrency(n) {
+  const v = Number(n) || 0;
+  const s = currency(Math.abs(v));
+  return v < 0 ? `−${s}` : `+${s}`;
+}
+
+const BANK_RATE_DEFAULT = 4; // typical high-yield savings, editable by the user.
+
+// "Put your idle cash to work" — compares investing a chosen amount in THIS deal
+// against leaving it in a bank savings account, over 1 year and the deal's hold period.
+// Pulls the user's liquid (cash/savings) balances so they can fund the comparison in one tap.
+function DealVsBank({ deal }) {
+  const rate = dealAnnualRate(deal);
+  const [accounts, setAccounts] = useState([]);
+  const [srcId, setSrcId] = useState(''); // '' = custom amount
+  const min = deal.minInvestment != null ? Number(deal.minInvestment) : null;
+  const [amount, setAmount] = useState(min != null && min > 0 ? min : 10000);
+  const [bankRate, setBankRate] = useState(BANK_RATE_DEFAULT);
+  const [dealRate, setDealRate] = useState(rate != null ? rate : 8);
+
+  useEffect(() => {
+    let active = true;
+    api.getAccounts()
+      .then((res) => {
+        const list = (Array.isArray(res) ? res : res?.items || [])
+          .filter((a) => (a.type || '').toLowerCase() === 'depository')
+          .map((a) => ({
+            id: a.accountId || a.id,
+            name: a.officialName || a.name || 'Account',
+            subtype: a.subtype,
+            balance: Number(a.availableBalance ?? a.currentBalance ?? 0),
+          }))
+          .filter((a) => a.id && a.balance > 0)
+          .sort((x, y) => y.balance - x.balance);
+        if (active) setAccounts(list);
+      })
+      .catch(() => {});
+    return () => { active = false; };
+  }, []);
+
+  // Deal quotes no usable return — nothing to compare against.
+  if (rate == null) return null;
+
+  const totalLiquid = accounts.reduce((s, a) => s + a.balance, 0);
+  const amt = Number(amount) || 0;
+  const months = deal.holdPeriodMonths != null && Number(deal.holdPeriodMonths) > 0 ? Number(deal.holdPeriodMonths) : null;
+  const showHold = months != null && months !== 12;
+
+  const dealYr = grow(amt, dealRate, 12);
+  const bankYr = grow(amt, bankRate, 12);
+  const dealGainYr = dealYr - amt;
+  const bankGainYr = bankYr - amt;
+  const edgeYr = dealGainYr - bankGainYr;
+
+  const dealHold = showHold ? grow(amt, dealRate, months) : null;
+  const bankHold = showHold ? grow(amt, bankRate, months) : null;
+
+  const pickSource = (id) => {
+    setSrcId(id);
+    if (id) {
+      const a = accounts.find((x) => x.id === id);
+      if (a) setAmount(Math.round(a.balance));
+    }
+  };
+
+  const useAllLiquid = () => { setSrcId(''); setAmount(Math.round(totalLiquid)); };
+
+  const belowMin = min != null && min > 0 && amt < min;
+  const overBalance = srcId && amt > (accounts.find((a) => a.id === srcId)?.balance ?? Infinity);
+
+  const sel = { padding: '8px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'white', width: '100%' };
+
+  return (
+    <>
+      <hr className="divider" />
+      <div className="section-title">Put your cash to work</div>
+      <p style={{ fontSize: '12.5px', color: 'var(--tv-text-muted)', lineHeight: 1.6, marginTop: '-4px', marginBottom: '12px' }}>
+        See what an investment here could earn versus leaving the same cash in a savings account.
+      </p>
+
+      {/* Fund-from picker (only if the user has linked liquid accounts) */}
+      {accounts.length > 0 && (
+        <div style={{ marginBottom: '12px' }}>
+          <label style={fieldLabel}>Fund from a linked account</label>
+          <select style={sel} value={srcId} onChange={(e) => pickSource(e.target.value)}>
+            <option value="">Custom amount</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}{a.subtype ? ` · ${a.subtype}` : ''} — {currency(a.balance)}
+              </option>
+            ))}
+          </select>
+          <button type="button" onClick={useAllLiquid}
+            style={{ marginTop: '6px', background: 'none', border: 'none', padding: 0, color: 'var(--tv-forest)', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}>
+            Use all my liquid cash ({currency(totalLiquid)})
+          </button>
+        </div>
+      )}
+
+      {/* Amount + the two rates */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '10px', alignItems: 'end' }}>
+        <div>
+          <label style={fieldLabel}>Amount to invest</label>
+          <input style={inputStyle} type="number" min="0" step="1000" value={amount}
+            onChange={(e) => { setSrcId(''); setAmount(e.target.value); }} />
+        </div>
+        <div>
+          <label style={fieldLabel}>This deal (%/yr)</label>
+          <input style={inputStyle} type="number" min="0" step="0.5" value={dealRate} onChange={(e) => setDealRate(e.target.value)} />
+        </div>
+        <div>
+          <label style={fieldLabel}>Bank (%/yr)</label>
+          <input style={inputStyle} type="number" min="0" step="0.5" value={bankRate} onChange={(e) => setBankRate(e.target.value)} />
+        </div>
+      </div>
+
+      {belowMin && (
+        <div style={{ fontSize: '11.5px', color: 'var(--tv-gold)', marginTop: '8px' }}>
+          <i className="ti ti-alert-triangle"></i> Below this deal’s {currency(min)} minimum investment.
+        </div>
+      )}
+      {overBalance && (
+        <div style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)', marginTop: '8px' }}>
+          <i className="ti ti-info-circle"></i> More than the selected account’s balance.
+        </div>
+      )}
+
+      {/* Side-by-side projection */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '14px' }}>
+        <CompareCard label="This deal" accent months={showHold ? months : null}
+          rate={dealRate} yrValue={dealYr} yrGain={dealGainYr} holdValue={dealHold} holdGain={showHold ? dealHold - amt : null} />
+        <CompareCard label="Bank savings" months={showHold ? months : null}
+          rate={bankRate} yrValue={bankYr} yrGain={bankGainYr} holdValue={bankHold} holdGain={showHold ? bankHold - amt : null} />
+      </div>
+
+      {/* The punchline */}
+      <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: 'var(--radius-md)',
+        background: edgeYr >= 0 ? 'var(--tv-positive-bg)' : 'var(--tv-negative-bg)',
+        color: edgeYr >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)', fontSize: '13px', lineHeight: 1.5 }}>
+        {edgeYr >= 0 ? (
+          <><i className="ti ti-trending-up"></i> That’s <strong>{signedCurrency(edgeYr)}</strong> more in the first year than a {Number(bankRate)}% savings account — {currency(amt)} → <strong>{currency(dealYr)}</strong> vs {currency(bankYr)}.</>
+        ) : (
+          <><i className="ti ti-trending-down"></i> At these rates the savings account earns <strong>{signedCurrency(-edgeYr)}</strong> more over the first year.</>
+        )}
+      </div>
+
+      <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '8px', lineHeight: 1.5 }}>
+        Illustrative only — projections compound the rates you enter and are not a guarantee. Private deals carry risk of loss; savings rates vary.
+      </div>
+    </>
+  );
+}
+
+// One column of the deal-vs-bank projection.
+function CompareCard({ label, accent, rate, yrValue, yrGain, months, holdValue, holdGain }) {
+  const gainColor = (g) => (g >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)');
+  return (
+    <div style={{ border: `1px solid ${accent ? 'var(--tv-forest)' : 'var(--tv-border)'}`,
+      borderRadius: 'var(--radius-md)', padding: '12px', background: accent ? 'var(--tv-forest)' : 'transparent', color: accent ? 'white' : 'inherit' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+        <span style={{ fontWeight: 600, fontSize: '13px' }}>{label}</span>
+        <span style={{ fontSize: '11px', opacity: accent ? 0.85 : 0.7 }}>{Number(rate)}%/yr</span>
+      </div>
+      <div style={{ fontSize: '11px', opacity: accent ? 0.8 : 0.6 }}>In 1 year</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '19px', lineHeight: 1.2 }}>{currency(yrValue)}</div>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: accent ? 'var(--tv-gold-light)' : gainColor(yrGain) }}>{signedCurrency(yrGain)}</div>
+      {months != null && holdValue != null && (
+        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${accent ? 'rgba(255,255,255,0.2)' : 'var(--tv-border)'}` }}>
+          <div style={{ fontSize: '11px', opacity: accent ? 0.8 : 0.6 }}>Over {months} months</div>
+          <div style={{ fontFamily: 'var(--font-display)', fontSize: '16px', lineHeight: 1.2 }}>{currency(holdValue)}</div>
+          <div style={{ fontSize: '12px', fontWeight: 600, color: accent ? 'var(--tv-gold-light)' : gainColor(holdGain) }}>{signedCurrency(holdGain)}</div>
+        </div>
+      )}
     </div>
   );
 }
