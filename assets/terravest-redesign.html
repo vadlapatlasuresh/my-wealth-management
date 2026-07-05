@@ -3743,7 +3743,7 @@ a { text-decoration: none; color: inherit; }
         <div class="page-header">
           <div>
             <div class="page-title">Goals</div>
-            <div class="page-subtitle">Track progress toward what matters</div>
+            <div class="page-subtitle">Link savings accounts and watch progress update automatically — or log contributions by hand</div>
           </div>
           <div class="page-actions">
             <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> New goal</button>
@@ -3752,8 +3752,8 @@ a { text-decoration: none; color: inherit; }
 
         <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-target" style="font-size:13px;color:var(--tv-forest-light)"></i> Goals</div><div class="kpi-value">3</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-pig-money" style="font-size:13px;color:var(--tv-forest-light)"></i> Saved so far</div><div class="kpi-value">$46,000</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag-2" style="font-size:13px;color:var(--tv-forest)"></i> Still needed</div><div class="kpi-value">$74,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-pig-money" style="font-size:13px;color:var(--tv-forest-light)"></i> Saved so far</div><div class="kpi-value">$53,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag-2" style="font-size:13px;color:var(--tv-forest)"></i> Still needed</div><div class="kpi-value">$69,000</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-flag" style="font-size:13px;color:var(--tv-gold)"></i> Total target</div><div class="kpi-value">$120,000</div></div>
         </div>
 
@@ -3764,11 +3764,19 @@ a { text-decoration: none; color: inherit; }
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Name</label><input class="form-input" placeholder="e.g. Vacation fund"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option>Savings</option><option>Net worth</option><option>Debt payoff</option><option>Custom</option></select></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target amount</label><input class="form-input" placeholder="$10,000"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Already saved</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Starting balance <span style="color:var(--tv-text-muted);font-weight:400;">(manual base)</span></label><input class="form-input" placeholder="$0"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Target date</label><input class="form-input" type="date"></div>
-            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Fund from account <span style="color:var(--tv-text-muted);font-weight:400;">(optional)</span></label><select class="form-select"><option>Not linked</option><option>Ally Savings · savings — $9,000</option><option>Chase Checking · checking — $4,200</option></select></div>
-            <div style="display:flex;align-items:end;"><button class="btn btn-primary" style="width:100%;justify-content:center;"><i class="ti ti-plus"></i> Create goal</button></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Tracking</label><select class="form-select"><option>Account balance</option><option>Growth since linking</option><option>Manual only</option></select></div>
           </div>
+          <div class="form-group" style="margin:12px 0 0;">
+            <label class="form-label">Fund from accounts <span style="color:var(--tv-text-muted);font-weight:400;">(optional — pick any)</span></label>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;">
+              <button class="btn btn-primary btn-sm"><i class="ti ti-check" style="margin-right:4px;"></i> Ally Savings · savings — $9,000</button>
+              <button class="btn btn-secondary btn-sm">Chase Checking · checking — $4,200</button>
+              <button class="btn btn-secondary btn-sm">Vanguard Cash · savings — $6,500</button>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Create goal</button></div>
         </div>
 
         <div class="grid-2">
@@ -3781,20 +3789,42 @@ a { text-decoration: none; color: inherit; }
               </div>
               <div style="text-align:right;">
                 <div style="font-size:11px;color:var(--tv-text-muted);text-transform:uppercase;letter-spacing:.4px;">Still needed</div>
-                <div style="font-family:var(--font-display);font-size:19px;color:var(--tv-forest);">$11,000</div>
+                <div style="font-family:var(--font-display);font-size:19px;color:var(--tv-forest);">$6,000</div>
               </div>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:45%;background:var(--tv-forest);"></div></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$9,000 of $20,000</span><span style="color:var(--tv-text-muted);">45%</span></div>
-            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $650/mo for 2y 3m</div>
-            <div style="display:flex;gap:6px;margin-top:10px;"><button class="btn btn-secondary btn-sm">+$100</button><button class="btn btn-secondary btn-sm">+$500</button></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:70%;background:var(--tv-forest);"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$14,000 of $20,000</span><span style="color:var(--tv-text-muted);">70%</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-top:8px;">
+              <div style="font-size:12px;color:var(--tv-text-muted);">Save $650/mo for 9 months</div>
+              <div style="display:flex;gap:6px;"><button class="btn btn-secondary btn-sm">+$100</button><button class="btn btn-secondary btn-sm">+$500</button></div>
+            </div>
+            <!-- Manual contribution ledger -->
+            <div style="display:flex;gap:6px;align-items:center;margin-top:10px;">
+              <input class="form-input" placeholder="Log an amount…" style="height:34px;font-size:12.5px;">
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Log</button>
+            </div>
+            <!-- Tracking mode + linked accounts -->
             <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--tv-border-light);">
-              <div style="display:flex;align-items:center;gap:8px;">
-                <i class="ti ti-building-bank" style="color:var(--tv-text-muted);"></i>
-                <select class="form-select" style="flex:1;height:34px;font-size:12.5px;"><option>Ally Savings · savings — $9,000</option><option>Link a savings account…</option></select>
-                <button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Sync</button>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                <span style="font-size:12px;color:var(--tv-text-muted);">Tracking</span>
+                <select class="form-select" style="flex:1;height:32px;font-size:12.5px;"><option>Account balance</option><option>Growth since linking</option><option>Manual only</option></select>
               </div>
-              <div style="font-size:12px;color:var(--tv-text-muted);margin-top:6px;">Tracking <strong>Ally Savings</strong> · balance $9,000</div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:4px;">
+                <i class="ti ti-building-bank" style="color:var(--tv-text-muted);"></i>
+                <span style="flex:1;">Ally Savings</span>
+                <span style="color:var(--tv-text-secondary);">+$9,000</span>
+                <i class="ti ti-unlink" style="color:var(--tv-text-muted);cursor:pointer;"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin-bottom:8px;">
+                <i class="ti ti-building-bank" style="color:var(--tv-text-muted);"></i>
+                <span style="flex:1;">Vanguard Cash <span style="color:var(--tv-text-muted);">· offline</span></span>
+                <span style="color:var(--tv-text-secondary);">+$5,000</span>
+                <i class="ti ti-unlink" style="color:var(--tv-text-muted);cursor:pointer;"></i>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <select class="form-select" style="flex:1;height:34px;font-size:12.5px;"><option>Link a savings account…</option><option>Chase Checking · checking — $4,200</option></select>
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-link"></i> Link</button>
+              </div>
             </div>
           </div>
 
@@ -3812,6 +3842,7 @@ a { text-decoration: none; color: inherit; }
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:22%;background:var(--tv-forest);"></div></div>
             <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$17,000 of $80,000</span><span style="color:var(--tv-text-muted);">22%</span></div>
+            <div style="font-size:12px;color:var(--tv-negative);margin-top:6px;"><i class="ti ti-alert-triangle"></i> A linked account is in another currency and isn't counted.</div>
             <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $2,100/mo for 2y 6m</div>
           </div>
 
@@ -3824,9 +3855,9 @@ a { text-decoration: none; color: inherit; }
               </div>
               <span class="badge badge-green"><i class="ti ti-check"></i> Goal reached</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:80%;background:var(--tv-positive);"></div></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$20,000 of $20,000</span><span style="color:var(--tv-text-muted);">80% funded · target met early</span></div>
-            <div style="font-size:12px;color:var(--tv-text-muted);margin-top:8px;">Save $0/mo — fully funded</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--tv-positive);"></div></div>
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$22,000 of $20,000</span><span style="color:var(--tv-text-muted);">100%</span></div>
+            <div style="font-size:12px;color:var(--tv-positive);margin-top:6px;"><i class="ti ti-confetti"></i> $2,000 over target</div>
           </div>
         </div>
       </div>

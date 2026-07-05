@@ -29,6 +29,14 @@ public class Goal {
     @Column(name = "goal_type", nullable = false)
     private String goalType = "SAVINGS"; // SAVINGS | DEBT_PAYOFF | NET_WORTH | CUSTOM
 
+    // How auto progress is derived from linked accounts: MANUAL | BALANCE | CONTRIBUTIONS.
+    @Column(name = "tracking_mode", nullable = false)
+    private String trackingMode = "MANUAL";
+
+    // Optional display currency; linked accounts in a different currency are skipped from auto totals.
+    @Column(name = "currency")
+    private String currency;
+
     @Column(name = "target_amount", nullable = false)
     private BigDecimal targetAmount = BigDecimal.ZERO;
 

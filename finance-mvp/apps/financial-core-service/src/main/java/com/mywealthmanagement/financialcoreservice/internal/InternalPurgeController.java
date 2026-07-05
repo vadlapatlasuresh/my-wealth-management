@@ -4,6 +4,8 @@ import com.mywealthmanagement.financialcoreservice.budget.BudgetRepository;
 import com.mywealthmanagement.financialcoreservice.debt.DebtRepository;
 import com.mywealthmanagement.financialcoreservice.debt.DebtScenarioRepository;
 import com.mywealthmanagement.financialcoreservice.financialcore.NetWorthSnapshotRepository;
+import com.mywealthmanagement.financialcoreservice.goals.GoalAccountLinkRepository;
+import com.mywealthmanagement.financialcoreservice.goals.GoalContributionRepository;
 import com.mywealthmanagement.financialcoreservice.goals.GoalRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,8 @@ public class InternalPurgeController {
     private final DebtRepository debtRepository;
     private final DebtScenarioRepository debtScenarioRepository;
     private final GoalRepository goalRepository;
+    private final GoalAccountLinkRepository goalAccountLinkRepository;
+    private final GoalContributionRepository goalContributionRepository;
     private final NetWorthSnapshotRepository netWorthSnapshotRepository;
     private final com.mywealthmanagement.financialcoreservice.tax.TaxProfileRepository taxProfileRepository;
     private final com.mywealthmanagement.financialcoreservice.tax.TaxEstimateSnapshotRepository taxEstimateSnapshotRepository;
@@ -60,6 +64,8 @@ public class InternalPurgeController {
         debtScenarioRepository.deleteByUserId(userId);
         debtRepository.deleteByUserId(userId);
         budgetRepository.deleteByUserId(userId);          // budget lines cascade via JPA
+        goalContributionRepository.deleteByUserId(userId);
+        goalAccountLinkRepository.deleteByUserId(userId);
         goalRepository.deleteByUserId(userId);
         netWorthSnapshotRepository.deleteByUserId(userId);
         taxProfileRepository.deleteByUserId(userId);

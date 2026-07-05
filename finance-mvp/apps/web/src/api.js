@@ -288,6 +288,15 @@ export const api = {
     request(`/api/v1/planning/goals/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteGoal: (id) =>
     request(`/api/v1/planning/goals/${id}`, { method: "DELETE" }),
+  // Server-side account links (a goal's linked balances feed its auto-tracked progress).
+  linkGoalAccount: (id, accountId) =>
+    request(`/api/v1/planning/goals/${id}/links`, { method: "POST", body: JSON.stringify({ accountId }) }),
+  unlinkGoalAccount: (id, accountId) =>
+    request(`/api/v1/planning/goals/${id}/links/${accountId}`, { method: "DELETE" }),
+  // Manual contribution ledger.
+  getGoalContributions: (id) => request(`/api/v1/planning/goals/${id}/contributions`),
+  addGoalContribution: (id, amount, note) =>
+    request(`/api/v1/planning/goals/${id}/contributions`, { method: "POST", body: JSON.stringify({ amount, note }) }),
 
   // Alternative investments (financial-core). Real brokerage linking now goes through
   // Plaid (see getHoldings / getInvestmentTransactions above) rather than a manual flow.

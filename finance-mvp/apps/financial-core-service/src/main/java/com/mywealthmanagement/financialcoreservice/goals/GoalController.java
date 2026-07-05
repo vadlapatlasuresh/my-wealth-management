@@ -34,4 +34,28 @@ public class GoalController {
         goalService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    // ---- Account links ----
+
+    @PostMapping("/{id}/links")
+    public GoalDto linkAccount(@PathVariable Long id, @Valid @RequestBody GoalLinkDto dto) {
+        return goalService.linkAccount(id, dto.getAccountId());
+    }
+
+    @DeleteMapping("/{id}/links/{accountId}")
+    public GoalDto unlinkAccount(@PathVariable Long id, @PathVariable Long accountId) {
+        return goalService.unlinkAccount(id, accountId);
+    }
+
+    // ---- Manual contribution ledger ----
+
+    @GetMapping("/{id}/contributions")
+    public List<GoalContributionDto> contributions(@PathVariable Long id) {
+        return goalService.contributions(id);
+    }
+
+    @PostMapping("/{id}/contributions")
+    public GoalDto addContribution(@PathVariable Long id, @Valid @RequestBody GoalContributionDto dto) {
+        return goalService.addContribution(id, dto);
+    }
 }
