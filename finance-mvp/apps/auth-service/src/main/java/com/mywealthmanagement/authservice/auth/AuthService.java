@@ -259,6 +259,30 @@ public class AuthService {
         }).orElse(false);
     }
 
+    /** Outcome of an authenticated password change. */
+    public enum ChangeResult { OK, WRONG_CURRENT, SAME_AS_OLD, NOT_FOUND }
+
+    /**
+     * Change the signed-in user's password: verify the current password, reject a no-op
+     * re-use of the same password, then store the new hash. Policy (length/complexity) is
+     * enforced by the controller via {@link PasswordPolicy} before this is called.
+     */
+    public ChangeResult changePassword(Long userId, String currentPassword, String newPassword) {
+        return userRepository.findById(userId).map(u -> {
+            if (currentPassword == null || !passwordEncoder.matches(currentPassword, u.getPasswordHash())) {
+                auditClient.record(String.valueOf(u.getId()), "auth.password.change", "FAILURE", "wrong current password");
+                return ChangeResult.WRONG_CURRENT;
+            }
+            if (passwordEncoder.matches(newPassword, u.getPasswordHash())) {
+                return ChangeResult.SAME_AS_OLD;
+            }
+            u.setPasswordHash(passwordEncoder.encode(newPassword));
+            userRepository.save(u);
+            auditClient.record(String.valueOf(u.getId()), "auth.password.change", "SUCCESS", null);
+            return ChangeResult.OK;
+        }).orElse(ChangeResult.NOT_FOUND);
+    }
+
     /**
      * Permanently remove a user: first purge all downstream financial data across
      * services (best-effort), then delete the identity. Idempotent. Audit logs are

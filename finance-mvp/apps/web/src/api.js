@@ -124,6 +124,14 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload)
     }),
+  // Active password strength policy (drives the UI requirements checklist).
+  getPasswordPolicy: () => request("/api/v1/auth/password/policy"),
+  // Change the signed-in user's password (verifies the current one server-side).
+  changePassword: (currentPassword, newPassword) =>
+    request("/api/v1/auth/password/change", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword })
+    }),
   // Consent ledger: record a ToS/Privacy acceptance (authenticated) + read the
   // signed-in user's full acceptance history.
   acceptDisclaimer: (key, version = 1) =>

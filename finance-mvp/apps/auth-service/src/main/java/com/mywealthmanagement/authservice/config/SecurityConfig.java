@@ -34,7 +34,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/auth/me/export").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/v1/auth/me").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/auth/me").authenticated()
-                .requestMatchers("/api/v1/auth/**").permitAll() // login/register/mfa/email are public
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/password/change").authenticated() // change while signed in
+                .requestMatchers("/api/v1/auth/**").permitAll() // login/register/mfa/email/forgot/policy are public
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/internal/**").permitAll() // server-to-server; guarded by X-Internal-Key

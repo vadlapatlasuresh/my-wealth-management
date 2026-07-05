@@ -25,4 +25,6 @@ public class AuditEventDto {
     private String outcome;
     private String metadata;
     private LocalDateTime createdAt;
+    private String geoCity;      // resolved from sourceIp (nullable)
+    private String geoCountry;   // resolved from sourceIp (nullable)
 }

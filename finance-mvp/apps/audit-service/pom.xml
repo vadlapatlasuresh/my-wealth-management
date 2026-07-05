@@ -89,6 +89,14 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Offline geo-IP: resolve a login's source IP to city/country from a local
+             MaxMind GeoLite2-City database. No external API calls. -->
+        <dependency>
+            <groupId>com.maxmind.geoip2</groupId>
+            <artifactId>geoip2</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
         <!-- Actuator: /actuator/health for container + uptime healthchecks -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

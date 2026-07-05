@@ -42,6 +42,15 @@ public class AuditEvent {
     @Column(name = "user_agent", length = 512)
     private String userAgent;
 
+    // Geo-location resolved from source_ip via MaxMind GeoLite2 (nullable when the
+    // GeoIP db is not configured or the IP can't be resolved). Derived/enrichment
+    // data — intentionally NOT part of the tamper-evident hash (see AuditChainService).
+    @Column(name = "geo_city", length = 128)
+    private String geoCity;
+
+    @Column(name = "geo_country", length = 128)
+    private String geoCountry;
+
     @Column(name = "latency_ms")
     private Integer latencyMs;
 

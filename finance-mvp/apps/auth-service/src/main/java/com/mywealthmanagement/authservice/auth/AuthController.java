@@ -28,6 +28,7 @@ public class AuthController {
     private final OtpService otpService;
     private final NotificationClient notificationClient;
     private final ExportClient exportClient;
+    private final PasswordPolicy passwordPolicy;
 
     @Value("${mfa.enabled:true}")
     private boolean mfaEnabled;
@@ -149,6 +150,41 @@ public class AuthController {
                 ? ResponseEntity.ok(Map.of("reset", true, "message", "Password updated — you can now sign in."))
                 : ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("reset", false,
                         "message", "Could not reset the password. Please try again."));
+    }
+
+    /** The active password policy, so the client can render a matching requirements checklist. */
+    @GetMapping("/password/policy")
+    public ResponseEntity<Map<String, Object>> passwordPolicyInfo() {
+        return ResponseEntity.ok(passwordPolicy.describe());
+    }
+
+    /** Change the signed-in user's password (verifies the current password + enforces policy). */
+    @PostMapping("/password/change")
+    public ResponseEntity<Map<String, Object>> changePassword(@RequestBody Map<String, String> body) {
+        Long userId = currentUserId();
+        if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+        String currentPassword = body.get("currentPassword");
+        String newPassword = body.get("newPassword");
+
+        java.util.List<String> unmet = passwordPolicy.violations(newPassword);
+        if (!unmet.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "changed", false,
+                    "message", "New password does not meet the requirements.",
+                    "requirements", unmet));
+        }
+
+        AuthService.ChangeResult result = authService.changePassword(userId, currentPassword, newPassword);
+        return switch (result) {
+            case OK -> ResponseEntity.ok(Map.of("changed", true, "message", "Password updated successfully."));
+            case WRONG_CURRENT -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "changed", false, "message", "Your current password is incorrect."));
+            case SAME_AS_OLD -> ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                    "changed", false, "message", "New password must be different from your current password."));
+            case NOT_FOUND -> ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                    "changed", false, "message", "Account not found."));
+        };
     }
 
     /** Full profile for the signed-in user (SSN/EIN masked). */
