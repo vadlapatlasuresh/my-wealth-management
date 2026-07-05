@@ -107,6 +107,12 @@ export default function GoalsPage() {
   const totalSaved = useMemo(() => goals.reduce((s, g) => s + Number(g.savedAmount ?? g.currentAmount ?? 0), 0), [goals]);
   const totalNeeded = Math.max(0, totalTarget - totalSaved);
 
+  // Live sum of the balances the user has ticked in the create form — previews what will count.
+  const selectedBalance = useMemo(
+    () => form.accountIds.reduce((s, id) => s + (Number(acctById[id]?.currentBalance) || 0), 0),
+    [form.accountIds, acctById]
+  );
+
   return (
     <div className="page active">
       <div className="page-header">
@@ -186,6 +192,17 @@ export default function GoalsPage() {
                   );
                 })}
               </div>
+              {form.accountIds.length > 0 && (
+                <div style={{ fontSize: 12.5, marginTop: 8, color: "var(--tv-text-secondary)" }}>
+                  {form.trackingMode === "CONTRIBUTIONS" ? (
+                    <><i className="ti ti-seedling" style={{ color: "var(--tv-forest-light)" }}></i> Tracking starts at <strong style={{ color: "var(--tv-text-primary)" }}>$0</strong> — only new deposits after linking will count.</>
+                  ) : form.trackingMode === "MANUAL" ? (
+                    <><i className="ti ti-info-circle"></i> Linked for reference — balances won't auto-count in Manual mode.</>
+                  ) : (
+                    <><i className="ti ti-pig-money" style={{ color: "var(--tv-forest-light)" }}></i> <strong style={{ color: "var(--tv-text-primary)" }}>{currency(selectedBalance)}</strong> from {form.accountIds.length} account{form.accountIds.length > 1 ? "s" : ""} will count toward this goal.</>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
