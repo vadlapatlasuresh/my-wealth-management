@@ -82,6 +82,11 @@ public class InternalNotificationController {
         if (Boolean.parseBoolean(str(body.get("email"), "false"))) {
             sendEmail(n);
         }
+        // Optional SMS delivery (best-effort) when requested: only to users who opted in
+        // (smsEnabled) and have a verified phone on file.
+        if (Boolean.parseBoolean(str(body.get("sms"), "false"))) {
+            sendSms(n);
+        }
         // Push delivery (best-effort): only to users who opted in (pushEnabled) and have
         // a registered device, and only when a real PUSH provider is active.
         sendPush(n);
@@ -108,11 +113,33 @@ public class InternalNotificationController {
         try {
             ChannelProvider provider = channelRouter.providerFor(Channel.EMAIL);
             if (provider == null) return; // mock/none — nothing to send
+            // Respect the email channel toggle: a user who turned email off gets none.
+            // A user with no preference row keeps the on-by-default behavior.
+            boolean emailOn = preferenceRepository.findByUserId(n.getUserId())
+                    .map(NotificationPreference::isEmailEnabled).orElse(true);
+            if (!emailOn) return;
             String email = authEmailClient.emailFor(n.getUserId());
             if (email == null) return;
             provider.send(email, n.getTitle(), n.getBody(), Map.of("type", "alert"));
         } catch (Exception e) {
             log.warn("alert email for user {} failed: {}", n.getUserId(), e.getMessage());
+        }
+    }
+
+    private void sendSms(Notification n) {
+        try {
+            ChannelProvider provider = channelRouter.providerFor(Channel.SMS);
+            if (provider == null) return; // mock/none — nothing to send
+            boolean optedIn = preferenceRepository.findByUserId(n.getUserId())
+                    .map(NotificationPreference::isSmsEnabled).orElse(false);
+            if (!optedIn) return; // SMS is opt-in (smsEnabled defaults false)
+            String phone = authEmailClient.verifiedPhoneFor(n.getUserId());
+            if (phone == null) return; // no verified number — nothing to text
+            // SMS has no subject; the title leads the body so the text stands alone.
+            String text = n.getTitle() + ": " + n.getBody();
+            provider.send(phone, null, text, Map.of("type", "alert"));
+        } catch (Exception e) {
+            log.warn("alert SMS for user {} failed: {}", n.getUserId(), e.getMessage());
         }
     }
 
@@ -122,6 +149,8 @@ public class InternalNotificationController {
             case "weeklySummary" -> !p.isWeeklySummary();
             case "paymentAlerts" -> !p.isPaymentAlerts();
             case "budgetAlerts" -> !p.isBudgetAlerts();
+            case "dealAlerts" -> !p.isDealAlerts();
+            case "dealBoardWeekly" -> !p.isDealBoardWeekly();
             case "email" -> !p.isEmailEnabled();
             default -> false;
         }).orElse(false);

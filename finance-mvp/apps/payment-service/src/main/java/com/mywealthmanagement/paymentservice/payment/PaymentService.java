@@ -23,6 +23,7 @@ public class PaymentService {
     private final BillPayIntentRepository repository;
     private final PaymentProvider paymentProvider;
     private final com.mywealthmanagement.paymentservice.audit.AuditClient auditClient;
+    private final ReminderNotifier reminderNotifier;
 
     private Long currentUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -129,6 +130,14 @@ public class PaymentService {
         BillPayIntent saved = repository.save(intent);
         auditClient.record(String.valueOf(userId), "billpay.create", "SUCCESS",
                 "intentId=" + saved.getId() + ";amount=" + amount + ";status=" + saved.getStatus());
+
+        // Best-effort receipt: a payment that settled immediately gets a "payment sent"
+        // notification with the amount, payee, funding + destination account and confirmation.
+        // Scheduled (future-dated) payments are covered by the tiered reminders instead.
+        if ("COMPLETED".equals(saved.getStatus())) {
+            reminderNotifier.confirmPayment(userId, saved.getAmount(), saved.getPayee(),
+                    saved.getFromAccount(), saved.getToAccount(), saved.getConfirmationNumber());
+        }
         return toDto(saved);
     }
 

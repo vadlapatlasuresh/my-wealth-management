@@ -23,6 +23,9 @@ public class NotificationPreference {
     @Column(name = "push_enabled", nullable = false)
     private boolean pushEnabled;
 
+    @Column(name = "sms_enabled", nullable = false)
+    private boolean smsEnabled;
+
     @Column(name = "weekly_summary", nullable = false)
     private boolean weeklySummary;
 
@@ -31,6 +34,12 @@ public class NotificationPreference {
 
     @Column(name = "payment_alerts", nullable = false)
     private boolean paymentAlerts;
+
+    @Column(name = "deal_alerts", nullable = false)
+    private boolean dealAlerts;
+
+    @Column(name = "deal_board_weekly", nullable = false)
+    private boolean dealBoardWeekly;
 
     public NotificationPreference(Long userId) {
         this.userId = userId;

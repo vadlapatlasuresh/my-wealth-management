@@ -48,6 +48,9 @@ class PlaidServiceTest {
     @Mock
     private InvestmentTransactionRepository investmentTransactionRepository;
 
+    @Mock
+    private com.mywealthmanagement.accountaggregationservice.comms.NotificationClient notificationClient;
+
     private PlaidService plaidService;
 
     @BeforeEach
@@ -58,7 +61,8 @@ class PlaidServiceTest {
                 accountRepository,
                 transactionRepository,
                 holdingRepository,
-                investmentTransactionRepository
+                investmentTransactionRepository,
+                notificationClient
         );
         ReflectionTestUtils.setField(plaidService, "plaidClientName", "My Wealth Management");
         ReflectionTestUtils.setField(plaidService, "plaidWebhookUrl", "");

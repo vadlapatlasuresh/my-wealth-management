@@ -10,7 +10,10 @@ import lombok.NoArgsConstructor;
 public class PreferenceDto {
     private boolean emailEnabled;
     private boolean pushEnabled;
+    private boolean smsEnabled;
     private boolean weeklySummary;
     private boolean budgetAlerts;
     private boolean paymentAlerts;
+    private boolean dealAlerts;
+    private boolean dealBoardWeekly;
 }

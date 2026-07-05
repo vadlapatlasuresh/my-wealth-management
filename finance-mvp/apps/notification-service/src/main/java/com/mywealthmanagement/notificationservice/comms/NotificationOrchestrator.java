@@ -143,8 +143,8 @@ public class NotificationOrchestrator {
     }
 
     /**
-     * Existing preferences only model email/push toggles. SMS and IN_APP have no
-     * explicit flag, so they default to allowed.
+     * Channel-level opt-in/out. EMAIL, PUSH and SMS each have an explicit toggle;
+     * IN_APP is always allowed (the in-app inbox is the fallback of record).
      */
     private boolean preferenceAllows(Channel channel, NotificationPreference prefs) {
         if (prefs == null) {
@@ -153,7 +153,8 @@ public class NotificationOrchestrator {
         return switch (channel) {
             case EMAIL -> prefs.isEmailEnabled();
             case PUSH -> prefs.isPushEnabled();
-            case SMS, IN_APP -> true;
+            case SMS -> prefs.isSmsEnabled();
+            case IN_APP -> true;
         };
     }
 

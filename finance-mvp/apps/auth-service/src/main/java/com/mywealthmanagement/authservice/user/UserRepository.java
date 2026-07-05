@@ -5,10 +5,15 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByEmail(String email);
+
+    /** All user ids — used server-to-server to broadcast (e.g. a new marketplace deal). */
+    @Query("select u.id from User u")
+    List<Long> findAllIds();
 
     // Customer-care search by email or name (case-insensitive, paged).
     Page<User> findByEmailContainingIgnoreCaseOrNameContainingIgnoreCase(

@@ -28,6 +28,16 @@ public class InternalUserController {
         this.userRepository = userRepository;
     }
 
+    /** All user ids, for server-to-server broadcasts (e.g. notifying everyone of a new deal). */
+    @GetMapping("/ids")
+    public ResponseEntity<Map<String, java.util.List<Long>>> ids(
+            @RequestHeader(value = "X-Internal-Key", required = false) String key) {
+        if (StringUtils.hasText(internalKey) && !internalKey.equals(key)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
+        }
+        return ResponseEntity.ok(Map.of("ids", userRepository.findAllIds()));
+    }
+
     @GetMapping("/{userId}/email")
     public ResponseEntity<Map<String, String>> email(@PathVariable Long userId,
                                                      @RequestHeader(value = "X-Internal-Key", required = false) String key) {
@@ -37,7 +47,9 @@ public class InternalUserController {
         return userRepository.findById(userId)
                 .map(u -> ResponseEntity.ok(Map.of(
                         "email", u.getEmail() == null ? "" : u.getEmail(),
-                        "name", u.getName() == null ? "" : u.getName())))
+                        "name", u.getName() == null ? "" : u.getName(),
+                        "phone", u.getPhone() == null ? "" : u.getPhone(),
+                        "phoneVerified", String.valueOf(Boolean.TRUE.equals(u.getPhoneVerified())))))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

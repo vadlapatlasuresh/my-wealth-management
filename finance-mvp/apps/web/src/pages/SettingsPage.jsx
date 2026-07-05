@@ -35,18 +35,25 @@ function downloadTextFile(filename, text) {
 const DEFAULT_PREFS = {
   emailEnabled: true,
   pushEnabled: false,
+  smsEnabled: false,
   weeklySummary: true,
   budgetAlerts: true,
   paymentAlerts: true,
+  dealAlerts: true,
+  dealBoardWeekly: true,
 };
 
-// Backend-backed notification toggles, in render order.
+// Backend-backed notification toggles, in render order. Grouped as channels first
+// (how we reach you) then categories (what we tell you about).
 const NOTIFICATION_ROWS = [
   { key: 'emailEnabled', label: 'Email notifications', help: 'Account alerts and statements by email' },
   { key: 'pushEnabled', label: 'Push notifications', help: 'Real-time alerts on your devices' },
-  { key: 'weeklySummary', label: 'Weekly summary', help: 'A digest of your activity every Monday' },
+  { key: 'smsEnabled', label: 'SMS text alerts', help: 'Time-sensitive alerts by text to your verified phone' },
+  { key: 'weeklySummary', label: 'Weekly summary', help: 'A digest of your net worth every Monday' },
   { key: 'budgetAlerts', label: 'Budget alerts', help: 'Notify me when I approach budget limits' },
   { key: 'paymentAlerts', label: 'Payment alerts', help: 'Reminders for upcoming and completed payments' },
+  { key: 'dealAlerts', label: 'Deal alerts', help: 'Investor interest, lead updates and deal changes' },
+  { key: 'dealBoardWeekly', label: 'Weekly deal board', help: 'A weekly roundup of the deals you follow' },
 ];
 
 export default function SettingsPage() {
@@ -123,9 +130,12 @@ export default function SettingsPage() {
         setPrefs((prev) => ({
           emailEnabled: saved.emailEnabled ?? prev.emailEnabled,
           pushEnabled: saved.pushEnabled ?? prev.pushEnabled,
+          smsEnabled: saved.smsEnabled ?? prev.smsEnabled,
           weeklySummary: saved.weeklySummary ?? prev.weeklySummary,
           budgetAlerts: saved.budgetAlerts ?? prev.budgetAlerts,
           paymentAlerts: saved.paymentAlerts ?? prev.paymentAlerts,
+          dealAlerts: saved.dealAlerts ?? prev.dealAlerts,
+          dealBoardWeekly: saved.dealBoardWeekly ?? prev.dealBoardWeekly,
         }));
       } catch {
         // Keep defaults; surface a gentle, non-blocking error.
@@ -143,9 +153,12 @@ export default function SettingsPage() {
   const toPayload = (p) => ({
     emailEnabled: p.emailEnabled,
     pushEnabled: p.pushEnabled,
+    smsEnabled: p.smsEnabled,
     weeklySummary: p.weeklySummary,
     budgetAlerts: p.budgetAlerts,
     paymentAlerts: p.paymentAlerts,
+    dealAlerts: p.dealAlerts,
+    dealBoardWeekly: p.dealBoardWeekly,
   });
 
   // Optimistic toggle for backend-backed prefs; revert + show error on failure.

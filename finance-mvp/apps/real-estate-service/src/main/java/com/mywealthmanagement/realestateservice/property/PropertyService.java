@@ -18,6 +18,7 @@ public class PropertyService {
 
     private final PropertyRepository propertyRepository;
     private final PropertyValuationProvider valuationProvider;
+    private final com.mywealthmanagement.realestateservice.comms.NotificationClient notificationClient;
 
     // Helper to get userId from authenticated context
     private Long getUserId() {
@@ -38,7 +39,13 @@ public class PropertyService {
         Property property = new Property();
         property.setUserId(getUserId());
         applyEditableFields(property, dto);
-        return convertToDto(propertyRepository.save(property));
+        Property saved = propertyRepository.save(property);
+        // Best-effort: confirm the property was linked to their portfolio (in-app + email).
+        String where = saved.getAddress() == null || saved.getAddress().isBlank()
+                ? "A property" : "\"" + saved.getAddress() + "\"";
+        notificationClient.notify(saved.getUserId(), "PROPERTY", "Property added",
+                where + " was added to your real-estate portfolio. We'll keep its value and equity up to date.");
+        return convertToDto(saved);
     }
 
     public PropertyDto updateProperty(Long id, PropertyDto dto) {
