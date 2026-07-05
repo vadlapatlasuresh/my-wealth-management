@@ -3106,7 +3106,18 @@ a { text-decoration: none; color: inherit; }
           <div class="card">
             <div class="section-title">Password</div>
             <div class="form-group"><label class="form-label">Current password</label><input type="password" class="form-input" value="········"></div>
-            <div class="form-group"><label class="form-label">New password</label><input type="password" class="form-input"></div>
+            <div class="form-group"><label class="form-label">New password</label><input type="password" class="form-input" placeholder="At least 12 characters"></div>
+            <div style="margin:0 0 14px;padding:10px 12px;border:1px solid var(--tv-border);border-radius:8px;background:var(--tv-sage-pale);">
+              <div class="setting-help" style="margin:0 0 8px;font-weight:600;">Your password must include:</div>
+              <div style="display:grid;gap:6px;font-size:13px;color:var(--tv-text-muted);">
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> At least 12 characters</div>
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> An uppercase letter (A–Z)</div>
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> A lowercase letter (a–z)</div>
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> A number (0–9)</div>
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> A special character (!@#$%…)</div>
+                <div style="display:flex;align-items:center;gap:8px;"><i class="ti ti-circle"></i> No spaces</div>
+              </div>
+            </div>
             <div class="form-group" style="margin-bottom:14px;"><label class="form-label">Confirm new password</label><input type="password" class="form-input"></div>
             <button class="btn btn-primary"><i class="ti ti-key"></i> Update password</button>
           </div>
@@ -3129,19 +3140,19 @@ a { text-decoration: none; color: inherit; }
           <div class="card">
             <div class="section-title">Login history</div>
             <div class="list-item">
-              <div class="item-icon icon-green"><i class="ti ti-login"></i></div>
-              <div class="item-main"><div class="item-name">Sign in</div><div class="item-sub">Jun 7, 09:14 · 73.12.x.x</div></div>
-              <div class="item-right"><span class="badge badge-green">Success</span></div>
+              <div class="item-icon icon-green"><i class="ti ti-login-2"></i></div>
+              <div class="item-main"><div class="item-name">Signed in</div><div class="item-sub"><i class="ti ti-device-desktop"></i> Chrome on macOS · <i class="ti ti-map-pin"></i> Austin, United States</div></div>
+              <div class="item-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><span style="font-size:13px;color:var(--tv-text-muted);white-space:nowrap;">2 min ago</span><span class="badge badge-green">Success</span></div>
             </div>
             <div class="list-item">
-              <div class="item-icon icon-red"><i class="ti ti-lock-x"></i></div>
-              <div class="item-main"><div class="item-name">Sign in attempt</div><div class="item-sub">Jun 7, 09:13 · 73.12.x.x</div></div>
-              <div class="item-right"><span class="badge badge-red">Failure</span></div>
+              <div class="item-icon icon-red"><i class="ti ti-shield-x"></i></div>
+              <div class="item-main"><div class="item-name">Signed in</div><div class="item-sub"><i class="ti ti-device-desktop"></i> Unknown device · <i class="ti ti-map-pin"></i> 98.4.x.x</div></div>
+              <div class="item-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><span style="font-size:13px;color:var(--tv-text-muted);white-space:nowrap;">3 min ago</span><span class="badge badge-red">Failure</span></div>
             </div>
             <div class="list-item">
-              <div class="item-icon icon-green"><i class="ti ti-login"></i></div>
-              <div class="item-main"><div class="item-name">Sign in</div><div class="item-sub">Jun 6, 20:02 · 73.12.x.x</div></div>
-              <div class="item-right"><span class="badge badge-green">Success</span></div>
+              <div class="item-icon icon-green"><i class="ti ti-login-2"></i></div>
+              <div class="item-main"><div class="item-name">Signed in</div><div class="item-sub"><i class="ti ti-device-desktop"></i> Safari on iOS · <i class="ti ti-map-pin"></i> Austin, United States</div></div>
+              <div class="item-right" style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;"><span style="font-size:13px;color:var(--tv-text-muted);white-space:nowrap;">Yesterday</span><span class="badge badge-green">Success</span></div>
             </div>
           </div>
         </div>

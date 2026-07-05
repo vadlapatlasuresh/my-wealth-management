@@ -23,6 +23,7 @@ public class AuditController {
     private final AuditEventRepository repository;
     private final AuditChainService chainService;
     private final AuditStatsService statsService;
+    private final com.mywealthmanagement.auditservice.geo.GeoIpService geoIpService;
 
     @Value("${audit.ingest.key:}")
     private String ingestKey;
@@ -49,6 +50,12 @@ public class AuditController {
         e.setLatencyMs(dto.getLatencyMs());
         e.setOutcome(dto.getOutcome());
         e.setMetadata(dto.getMetadata());
+        // Enrich with offline geo-IP (no-op / null when GeoIP is disabled or unresolved).
+        var geo = geoIpService.resolve(dto.getSourceIp());
+        if (geo != null) {
+            e.setGeoCity(truncate(geo.city(), 128));
+            e.setGeoCountry(truncate(geo.country(), 128));
+        }
         chainService.append(e); // hash-chained, tamper-evident insert
         return ResponseEntity.accepted().build();
     }
@@ -111,7 +118,8 @@ public class AuditController {
     private AuditEventDto toDto(AuditEvent a) {
         return new AuditEventDto(a.getId(), a.getUserId(), a.getActorType(), a.getAction(),
                 a.getService(), a.getMethod(), a.getPath(), a.getStatus(), a.getSourceIp(),
-                a.getUserAgent(), a.getLatencyMs(), a.getOutcome(), a.getMetadata(), a.getCreatedAt());
+                a.getUserAgent(), a.getLatencyMs(), a.getOutcome(), a.getMetadata(), a.getCreatedAt(),
+                a.getGeoCity(), a.getGeoCountry());
     }
 
     private static String emptyToNull(String s) { return StringUtils.hasText(s) ? s : null; }
