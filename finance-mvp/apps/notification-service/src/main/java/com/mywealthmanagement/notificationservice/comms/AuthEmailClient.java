@@ -30,6 +30,19 @@ public class AuthEmailClient {
 
     /** The user's email, or null if it can't be resolved. */
     public String emailFor(Long userId) {
+        return contact(userId, "email", false);
+    }
+
+    /**
+     * The user's phone in E.164, or null if it can't be resolved or is not verified.
+     * SMS only ever goes to a confirmed number, so an unverified phone is treated as absent.
+     */
+    public String verifiedPhoneFor(Long userId) {
+        return contact(userId, "phone", true);
+    }
+
+    /** Shared internal contact lookup; {@code requireVerified} gates on the {field}Verified flag. */
+    private String contact(Long userId, String field, boolean requireVerified) {
         if (userId == null) return null;
         try {
             Map<?, ?> res = http.get()
@@ -37,11 +50,16 @@ public class AuthEmailClient {
                     .header("X-Internal-Key", internalKey)
                     .retrieve()
                     .body(Map.class);
-            Object email = res == null ? null : res.get("email");
-            String value = email == null ? null : email.toString();
-            return (value == null || value.isBlank()) ? null : value;
+            if (res == null) return null;
+            Object raw = res.get(field);
+            String value = raw == null ? null : raw.toString();
+            if (value == null || value.isBlank()) return null;
+            if (requireVerified && !Boolean.parseBoolean(String.valueOf(res.get(field + "Verified")))) {
+                return null;
+            }
+            return value;
         } catch (Exception e) {
-            log.debug("email lookup failed for user {}: {}", userId, e.getMessage());
+            log.debug("{} lookup failed for user {}: {}", field, userId, e.getMessage());
             return null;
         }
     }

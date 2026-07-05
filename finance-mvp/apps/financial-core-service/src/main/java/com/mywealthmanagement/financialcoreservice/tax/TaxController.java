@@ -29,6 +29,7 @@ public class TaxController {
     private final TaxEstimateHistoryService taxEstimateHistoryService;
     private final com.mywealthmanagement.financialcoreservice.tax.ocr.TextractReader textractReader;
     private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+    private final com.mywealthmanagement.financialcoreservice.comms.AlertNotifier alertNotifier;
 
     /**
      * Estimate federal tax from the supplied figures, with deduction/credit tips. NOT tax advice.
@@ -48,6 +49,12 @@ public class TaxController {
                 taxEstimateHistoryService.record(getUserId(), estimate);
             } catch (Exception ignored) {
                 // history is a convenience; the estimate itself must always succeed
+            }
+            // Best-effort: notify the user of the tax run result (what-ifs use record=false).
+            try {
+                alertNotifier.notify(getUserId(), "TAX", "Tax estimate updated", taxSummary(estimate));
+            } catch (Exception ignored) {
+                // notifying must never fail the estimate
             }
         }
         return estimate;
@@ -230,6 +237,27 @@ public class TaxController {
                 capitalGains,
                 netInvestmentIncome,
                 num(body.get("educationExpenses")).max(BigDecimal.ZERO));
+    }
+
+    /** One-line human summary of a tax run: year, headline tax, and refund/owe. */
+    private static String taxSummary(TaxEstimate e) {
+        String tax = money(e.getTotalTax());
+        BigDecimal refund = e.getRefundOrOwed();
+        String outcome;
+        if (refund == null || refund.signum() == 0) {
+            outcome = "no refund or balance due";
+        } else if (refund.signum() > 0) {
+            outcome = "an estimated refund of " + money(refund);
+        } else {
+            outcome = "an estimated " + money(refund.abs()) + " owed";
+        }
+        return "Your " + e.getYear() + " estimate is ready: about " + tax
+                + " in federal tax, with " + outcome + ". This is an educational estimate, not tax advice.";
+    }
+
+    private static String money(BigDecimal v) {
+        if (v == null) return "$0";
+        return "$" + v.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString();
     }
 
     private static BigDecimal sum(BigDecimal... values) {

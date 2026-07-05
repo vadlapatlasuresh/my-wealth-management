@@ -38,6 +38,8 @@ public class DealService {
     private final DealDocumentRepository documentRepository;
     private final DealWatchRepository watchRepository;
     private final LeadNotifier leadNotifier;
+    private final com.mywealthmanagement.realestateservice.comms.NotificationClient notificationClient;
+    private final DealBroadcaster dealBroadcaster;
     private final com.mywealthmanagement.realestateservice.audit.AuditClient auditClient;
 
     private Long getUserId() {
@@ -135,7 +137,10 @@ public class DealService {
         doc.setLabel(label);
         doc.setUrl(url);
         doc.setDocType(trimUpperOrNull(dto.getDocType()));
-        return toDocumentDto(documentRepository.save(doc));
+        DealDocumentDto saved = toDocumentDto(documentRepository.save(doc));
+        // Best-effort: let everyone watching this deal know a new document landed.
+        notifyWatchers(deal, watcher -> leadNotifier.notifyWatcherNewDocument(watcher, deal.getTitle(), label));
+        return saved;
     }
 
     /** Documents for a deal — same visibility as the deal (OPEN or owner). */
@@ -268,6 +273,10 @@ public class DealService {
 
         // Best-effort: notify the sponsor in-app. Never fail the interest if this errors.
         leadNotifier.notifyNewInterest(deal.getUserId(), deal.getTitle(), name);
+        // Confirm the registration back to the investor so they know it went through.
+        notificationClient.notify(userId, "DEAL", "Interest registered",
+                "You registered interest in \"" + deal.getTitle()
+                        + "\". The sponsor has been notified and may reach out with next steps.", "dealAlerts");
         return saved;
     }
 
@@ -289,7 +298,7 @@ public class DealService {
 
     /** Owner-only: update the lead status of an interest on one of the owner's deals. */
     public DealInterestDto updateLeadStatus(Long dealId, Long interestId, String status) {
-        findOwnedOrThrow(dealId); // 404 unless caller owns the deal
+        Deal deal = findOwnedOrThrow(dealId); // 404 unless caller owns the deal
         DealInterest interest = interestRepository.findById(interestId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Interest not found"));
         if (!interest.getDealId().equals(dealId)) {
@@ -300,7 +309,10 @@ public class DealService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lead status: " + status);
         }
         interest.setStatus(next);
-        return toInterestDto(interestRepository.save(interest));
+        DealInterestDto result = toInterestDto(interestRepository.save(interest));
+        // Best-effort: keep the investor informed of where their interest stands.
+        leadNotifier.notifyLeadStatusChanged(interest.getInterestedUserId(), deal.getTitle(), next);
+        return result;
     }
 
     /** Owner-only: the list of investors who expressed interest in one of the owner's deals. */
@@ -334,17 +346,48 @@ public class DealService {
         applyEditableFields(deal, dto, true);
         Deal saved = dealRepository.save(deal);
         auditClient.record(String.valueOf(saved.getUserId()), "deal.create", "SUCCESS", "dealId=" + saved.getId());
+        // A deal created directly as OPEN is immediately live — broadcast it to the marketplace.
+        if ("OPEN".equals(saved.getStatus())) {
+            dealBroadcaster.broadcastNewDeal(saved.getUserId(), saved.getTitle(), saved.getCategory());
+        }
         return toDto(saved);
     }
 
     public DealDto updateDeal(Long id, DealDto dto) {
         Deal deal = findOwnedOrThrow(id);
+        String previousStatus = deal.getStatus();
         applyEditableFields(deal, dto, false);
-        return toDto(dealRepository.save(deal));
+        Deal saved = dealRepository.save(deal);
+        // Best-effort: a status change (e.g. OPEN -> FUNDED / CLOSED) is worth telling watchers about.
+        if (previousStatus != null && !previousStatus.equals(saved.getStatus())) {
+            notifyWatchers(saved,
+                    watcher -> leadNotifier.notifyWatcherStatusChanged(watcher, saved.getTitle(), saved.getStatus()));
+        }
+        // Publishing (DRAFT/other -> OPEN) makes the deal live — broadcast it to the marketplace.
+        if (!"OPEN".equals(previousStatus) && "OPEN".equals(saved.getStatus())) {
+            dealBroadcaster.broadcastNewDeal(saved.getUserId(), saved.getTitle(), saved.getCategory());
+        }
+        return toDto(saved);
     }
 
     public void deleteDeal(Long id) {
         dealRepository.delete(findOwnedOrThrow(id));
+    }
+
+    /**
+     * Fan out a deal notification to every user watching {@code deal}, skipping the owner
+     * (who triggered the change). Best-effort: a lookup/dispatch error never fails the action.
+     */
+    private void notifyWatchers(Deal deal, java.util.function.Consumer<Long> notify) {
+        try {
+            for (DealWatch watch : watchRepository.findByDealId(deal.getId())) {
+                if (!watch.getUserId().equals(deal.getUserId())) {
+                    notify.accept(watch.getUserId());
+                }
+            }
+        } catch (Exception e) {
+            // Notifying watchers must never break the deal update itself.
+        }
     }
 
     private Deal findOwnedOrThrow(Long id) {

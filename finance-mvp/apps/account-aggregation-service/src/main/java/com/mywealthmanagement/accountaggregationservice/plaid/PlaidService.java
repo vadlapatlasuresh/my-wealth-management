@@ -61,6 +61,7 @@ public class PlaidService {
     private final TransactionRepository transactionRepository;
     private final HoldingRepository holdingRepository;
     private final InvestmentTransactionRepository investmentTransactionRepository;
+    private final com.mywealthmanagement.accountaggregationservice.comms.NotificationClient notificationClient;
 
     @Value("${plaid.client-name}")
     private String plaidClientName;
@@ -119,7 +120,7 @@ public class PlaidService {
         );
         plaidItemRepository.save(plaidItem);
 
-        fetchAccounts(request.getUserId(), plaidItem);
+        List<Account> linkedAccounts = fetchAccounts(request.getUserId(), plaidItem);
         // Enrich any credit-card accounts with statement balance / minimum payment /
         // next due date for bill reminders. Best-effort: LIABILITIES is optional, so an
         // item with no credit cards (or where the product isn't ready yet) must not fail
@@ -153,6 +154,15 @@ public class PlaidService {
             log.warn("Initial transactions fetch deferred for item {} (will sync on webhook/next read): {}",
                     plaidItem.getPlaidItemId(), e.getMessage());
         }
+
+        // Best-effort: confirm the successful link to the user (in-app + email).
+        int count = linkedAccounts == null ? 0 : linkedAccounts.size();
+        String noun = count == 1 ? "account" : "accounts";
+        notificationClient.notify(request.getUserId(), "ACCOUNT",
+                "Accounts linked",
+                count > 0
+                        ? "We linked " + count + " " + noun + " to TerraVest. Your balances and transactions are syncing now."
+                        : "Your bank connection was added to TerraVest. Accounts will appear as they finish syncing.");
     }
 
     /**

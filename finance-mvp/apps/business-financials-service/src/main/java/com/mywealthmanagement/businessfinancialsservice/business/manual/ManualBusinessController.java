@@ -29,6 +29,7 @@ public class ManualBusinessController {
     private final ReconciledTransactionRepository reconciledRepo;
     private final TransactionOverrideRepository overrideRepo;
     private final BusinessLinkedAccountRepository linkedRepo;
+    private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -49,7 +50,10 @@ public class ManualBusinessController {
         if (b.getName() == null || b.getName().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "name is required");
         }
-        return businessRepo.save(b);
+        ManualBusiness saved = businessRepo.save(b);
+        notificationClient.notify(userId(), "BUSINESS", "Business added",
+                "\"" + saved.getName() + "\" is set up on TerraVest. You can now track its P&L, invoices and expenses.");
+        return saved;
     }
 
     @PutMapping("/businesses/{id}")
@@ -250,7 +254,11 @@ public class ManualBusinessController {
         }
         if (inv.getStatus() == null) inv.setStatus("OPEN");
         if (inv.getIssuedAt() == null) inv.setIssuedAt(LocalDate.now());
-        return invoiceRepo.save(inv);
+        BusinessInvoice saved = invoiceRepo.save(inv);
+        String due = saved.getDueDate() != null ? " Due " + saved.getDueDate() + "." : "";
+        notificationClient.notify(userId(), "BUSINESS", "Invoice created",
+                "Invoice for " + usd(saved.getAmount()) + " to " + saved.getCustomer() + " was created." + due);
+        return saved;
     }
 
     /** Update an invoice's status (e.g. mark paid). Other fields optional. */
@@ -258,11 +266,18 @@ public class ManualBusinessController {
     public BusinessInvoice updateInvoice(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        String priorStatus = inv.getStatus();
         if (body.containsKey("customer")) inv.setCustomer(str(body.get("customer")));
         if (body.containsKey("amount")) inv.setAmount(money(body.get("amount")));
         if (body.containsKey("status")) inv.setStatus(str(body.get("status")));
         if (body.containsKey("dueDate")) inv.setDueDate(date(body.get("dueDate")));
-        return invoiceRepo.save(inv);
+        BusinessInvoice saved = invoiceRepo.save(inv);
+        // Notify when an invoice is newly marked paid — a positive, cash-in-the-door moment.
+        if (!"PAID".equalsIgnoreCase(priorStatus) && "PAID".equalsIgnoreCase(saved.getStatus())) {
+            notificationClient.notify(userId(), "BUSINESS", "Invoice paid",
+                    saved.getCustomer() + " paid " + usd(saved.getAmount()) + ". Nice — that's money in the door.");
+        }
+        return saved;
     }
 
     @DeleteMapping("/invoices/{id}")
@@ -380,6 +395,11 @@ public class ManualBusinessController {
     }
 
     /* ---------------- helpers ---------------- */
+
+    /** Compact USD for notification copy, e.g. 1500 -> "$1500". Null-safe. */
+    private static String usd(java.math.BigDecimal amount) {
+        return amount == null ? "$0" : "$" + amount.stripTrailingZeros().toPlainString();
+    }
 
     private String str(Object o) {
         if (o == null) return null;

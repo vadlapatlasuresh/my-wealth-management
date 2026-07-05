@@ -38,6 +38,33 @@ public class InternalPurgeController {
         }
     }
 
+    /**
+     * Total expense spend for a user in a calendar month (YYYY-MM). Sums the absolute value
+     * of outflow (negative-amount) transactions. Powers the weekly budget email in
+     * financial-core, which has no per-user token in its scheduled job. Server-to-server only.
+     */
+    @GetMapping("/{userId}/spend")
+    public ResponseEntity<Map<String, Object>> monthlySpend(
+            @PathVariable Long userId,
+            @RequestParam("month") String month,
+            @RequestHeader(value = "X-Internal-Key", required = false) String key) {
+        requireInternal(key);
+        java.time.LocalDate start;
+        try {
+            start = java.time.LocalDate.parse(month + "-01");
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "month must be YYYY-MM");
+        }
+        java.time.LocalDate end = start.plusMonths(1).minusDays(1);
+        java.math.BigDecimal spent = transactionRepository
+                .findByUserIdAndDateBetween(userId, start, end).stream()
+                .map(t -> t.getAmount())
+                .filter(a -> a != null && a.signum() < 0)
+                .map(java.math.BigDecimal::abs)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        return ResponseEntity.ok(Map.of("month", month, "spent", spent));
+    }
+
     /** GDPR data export: this service's data for the user (encrypted Plaid tokens excluded). */
     @GetMapping("/{userId}/export")
     public ResponseEntity<Map<String, Object>> export(@PathVariable Long userId,

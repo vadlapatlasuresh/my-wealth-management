@@ -24,6 +24,7 @@ public class DebtService {
 
     private final DebtRepository debtRepository;
     private final DebtScenarioRepository debtScenarioRepository;
+    private final com.mywealthmanagement.financialcoreservice.comms.AlertNotifier alertNotifier;
 
     // Helper to get userId from authenticated context
     private Long getUserId() {
@@ -164,7 +165,25 @@ public class DebtService {
                 : extraPayment.compareTo(BigDecimal.ZERO) > 0 ? "Medium" : "High";
 
         DebtScenario newScenario = new DebtScenario(userId, strategy, extraPayment, monthsToDebtFree, totalInterestPaid, debtFreeDate, liquidity);
-        return convertToDto(debtScenarioRepository.save(newScenario));
+        DebtScenarioDto result = convertToDto(debtScenarioRepository.save(newScenario));
+
+        // Best-effort: notify what the user just ran in Debt Lab. Only fires on a fresh
+        // compute (cache hits above return early), so auto-run compares don't spam.
+        String extraLabel = extraPayment.signum() > 0
+                ? " with $" + extraPayment.stripTrailingZeros().toPlainString() + "/mo extra"
+                : " (minimums only)";
+        alertNotifier.notify(userId, "DEBT", "Debt Lab strategy compared",
+                "You compared the " + prettyStrategy(strategy) + " strategy" + extraLabel
+                        + ": debt-free in " + monthsToDebtFree + " months with $"
+                        + totalInterestPaid.setScale(0, RoundingMode.HALF_UP).toPlainString() + " total interest.");
+        return result;
+    }
+
+    /** "AVALANCHE" -> "Avalanche" for human-readable copy. */
+    private static String prettyStrategy(String strategy) {
+        if (strategy == null || strategy.isBlank()) return "payoff";
+        String lower = strategy.toLowerCase();
+        return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
     }
 
     private DebtDto convertToDto(Debt debt) {

@@ -44,12 +44,15 @@ public class NotificationController {
         NotificationPreference pref = preferenceRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     NotificationPreference p = new NotificationPreference(userId);
-                    // defaults: all true except pushEnabled=false
+                    // defaults: opt-out categories on, intrusive channels (push/SMS) off
                     p.setEmailEnabled(true);
                     p.setPushEnabled(false);
+                    p.setSmsEnabled(false);
                     p.setWeeklySummary(true);
                     p.setBudgetAlerts(true);
                     p.setPaymentAlerts(true);
+                    p.setDealAlerts(true);
+                    p.setDealBoardWeekly(true);
                     return preferenceRepository.save(p);
                 });
         return ResponseEntity.ok(toDto(pref));
@@ -62,9 +65,12 @@ public class NotificationController {
                 .orElseGet(() -> new NotificationPreference(userId));
         pref.setEmailEnabled(body.isEmailEnabled());
         pref.setPushEnabled(body.isPushEnabled());
+        pref.setSmsEnabled(body.isSmsEnabled());
         pref.setWeeklySummary(body.isWeeklySummary());
         pref.setBudgetAlerts(body.isBudgetAlerts());
         pref.setPaymentAlerts(body.isPaymentAlerts());
+        pref.setDealAlerts(body.isDealAlerts());
+        pref.setDealBoardWeekly(body.isDealBoardWeekly());
         NotificationPreference saved = preferenceRepository.save(pref);
         return ResponseEntity.ok(toDto(saved));
     }
@@ -110,9 +116,12 @@ public class NotificationController {
         return new PreferenceDto(
                 p.isEmailEnabled(),
                 p.isPushEnabled(),
+                p.isSmsEnabled(),
                 p.isWeeklySummary(),
                 p.isBudgetAlerts(),
-                p.isPaymentAlerts()
+                p.isPaymentAlerts(),
+                p.isDealAlerts(),
+                p.isDealBoardWeekly()
         );
     }
 }
