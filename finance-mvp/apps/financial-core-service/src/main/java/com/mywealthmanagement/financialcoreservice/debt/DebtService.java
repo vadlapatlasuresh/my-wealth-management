@@ -1,6 +1,7 @@
 package com.mywealthmanagement.financialcoreservice.debt;
 
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtDto;
+import com.mywealthmanagement.financialcoreservice.debt.dto.DebtPayoffDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioDto;
 import com.mywealthmanagement.financialcoreservice.debt.dto.DebtScenarioRequest;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -87,96 +88,181 @@ public class DebtService {
         String strategy = (request.getStrategy() == null || request.getStrategy().isBlank())
                 ? "AVALANCHE" : request.getStrategy().toUpperCase();
         BigDecimal extraPayment = request.getExtraPaymentMonthly() != null
-                ? request.getExtraPaymentMonthly() : BigDecimal.ZERO;
+                ? request.getExtraPaymentMonthly().max(BigDecimal.ZERO) : BigDecimal.ZERO;
+        List<Long> priorityIds = request.getPriorityDebtIds() != null ? request.getPriorityDebtIds() : List.of();
+        boolean hasPriority = !priorityIds.isEmpty();
 
-        // Check if scenario already exists
-        List<DebtScenario> existingScenarios = debtScenarioRepository.findByUserIdAndStrategyAndExtraPaymentMonthly(
-                userId, strategy, extraPayment);
+        String liquidity = extraPayment.compareTo(BigDecimal.valueOf(500)) >= 0 ? "Low"
+                : extraPayment.signum() > 0 ? "Medium" : "High";
 
-        if (!existingScenarios.isEmpty()) {
-            return convertToDto(existingScenarios.get(0));
-        }
-
-        // No debts → return a trivially solved scenario instead of an empty loop.
+        // No debts → trivially solved.
         if (debts.isEmpty()) {
-            DebtScenario empty = new DebtScenario(userId, strategy, extraPayment, 0,
-                    BigDecimal.ZERO, LocalDate.now(), "High");
-            return convertToDto(debtScenarioRepository.save(empty));
+            DebtScenarioDto dto = new DebtScenarioDto(strategy, 0, BigDecimal.ZERO, LocalDate.now(), liquidity);
+            dto.setTotalPaid(BigDecimal.ZERO);
+            dto.setMonthlyBudget(extraPayment);
+            dto.setPaysOff(true);
+            dto.setPerDebt(List.of());
+            return dto;
         }
 
-        // Simulate debt payoff logic
-        int monthsToDebtFree = 0;
-        BigDecimal totalInterestPaid = BigDecimal.ZERO;
+        SimResult sim = simulate(debts, strategy, extraPayment, priorityIds);
+        LocalDate debtFreeDate = sim.paysOff ? LocalDate.now().plusMonths(sim.months) : null;
 
-        // Create mutable copies of debts for simulation
-        List<Debt> simulatedDebts = debts.stream()
-                .map(d -> new Debt(d.getUserId(), d.getName(), d.getBalance(), d.getApr(), d.getMinPayment()))
+        DebtScenarioDto dto = new DebtScenarioDto(strategy, sim.months, sim.totalInterest, debtFreeDate, liquidity);
+        dto.setTotalPaid(sim.totalPaid);
+        dto.setMonthlyBudget(sim.monthlyBudget);
+        dto.setPaysOff(sim.paysOff);
+        dto.setPerDebt(sim.perDebt);
+
+        // Persist a scalar summary + notify only for pure-strategy runs (not exploratory pay-off-first
+        // tweaks), and only the first time a given (strategy, extra) combo is computed — so the auto-run
+        // compare (3 strategies + baseline) doesn't spam notifications.
+        if (!hasPriority) {
+            List<DebtScenario> existing = debtScenarioRepository.findByUserIdAndStrategyAndExtraPaymentMonthly(
+                    userId, strategy, extraPayment);
+            boolean firstTime = existing.isEmpty();
+            debtScenarioRepository.deleteAll(existing);
+            debtScenarioRepository.save(new DebtScenario(userId, strategy, extraPayment,
+                    sim.months, sim.totalInterest, debtFreeDate, liquidity));
+            if (firstTime) {
+                String extraLabel = extraPayment.signum() > 0
+                        ? " with $" + extraPayment.stripTrailingZeros().toPlainString() + "/mo extra"
+                        : " (minimums only)";
+                String outcome = sim.paysOff
+                        ? "debt-free in " + sim.months + " months with $"
+                            + sim.totalInterest.setScale(0, RoundingMode.HALF_UP).toPlainString() + " total interest."
+                        : "at this rate the balance never fully clears — try adding an extra payment.";
+                alertNotifier.notify(userId, "DEBT", "Debt Lab strategy compared",
+                        "You compared the " + prettyStrategy(strategy) + " strategy" + extraLabel + ": " + outcome);
+            }
+        }
+        return dto;
+    }
+
+    // 50-year horizon. If a plan still owes anything past this, its minimum payments can't out-run
+    // the interest — we report it as "never pays off" rather than a bogus finite date.
+    private static final int MAX_MONTHS = 600;
+
+    /**
+     * Month-by-month payoff simulation with the correct snowball/avalanche mechanic: a constant
+     * monthly budget (every debt's minimum + the extra) is kept whole, so when a debt clears its
+     * freed-up minimum rolls onto the next target. "Pay off first" ids are attacked before the
+     * strategy order. Returns accurate months, total interest, and a per-debt timeline.
+     */
+    SimResult simulate(List<Debt> debts, String strategy, BigDecimal extraPayment, List<Long> priorityIds) {
+        List<SimDebt> sim = debts.stream().map(SimDebt::new).collect(Collectors.toList());
+
+        BigDecimal budget = extraPayment;
+        for (SimDebt d : sim) budget = budget.add(d.minPayment);
+
+        BigDecimal totalInterest = BigDecimal.ZERO;
+        int month = 0;
+        boolean paysOff = true;
+
+        while (sim.stream().anyMatch(d -> d.balance.signum() > 0)) {
+            month++;
+            if (month > MAX_MONTHS) { paysOff = false; break; }
+
+            // 1) Accrue this month's interest on every unpaid debt.
+            for (SimDebt d : sim) {
+                if (d.balance.signum() <= 0) continue;
+                BigDecimal rate = d.apr.divide(BigDecimal.valueOf(1200), 8, RoundingMode.HALF_UP);
+                BigDecimal interest = d.balance.multiply(rate).setScale(2, RoundingMode.HALF_UP);
+                d.balance = d.balance.add(interest);
+                d.interest = d.interest.add(interest);
+                totalInterest = totalInterest.add(interest);
+            }
+
+            List<SimDebt> order = orderedTargets(sim, strategy, priorityIds);
+            BigDecimal available = budget;
+
+            // 2) Pay each unpaid debt's minimum first (so minimums are always honored).
+            for (SimDebt d : order) {
+                if (available.signum() <= 0) break;
+                if (d.balance.signum() <= 0) continue;
+                BigDecimal pay = d.minPayment.min(d.balance).min(available);
+                applyPayment(d, pay, month);
+                available = available.subtract(pay);
+            }
+            // 3) Throw everything left (extra + freed-up minimums) at the debts in target order.
+            for (SimDebt d : order) {
+                if (available.signum() <= 0) break;
+                if (d.balance.signum() <= 0) continue;
+                BigDecimal pay = d.balance.min(available);
+                applyPayment(d, pay, month);
+                available = available.subtract(pay);
+            }
+        }
+
+        List<DebtPayoffDto> perDebt = sim.stream()
+                .sorted(Comparator.comparingInt((SimDebt d) -> d.payoffMonth == null ? Integer.MAX_VALUE : d.payoffMonth)
+                        .thenComparing(d -> d.name == null ? "" : d.name))
+                .map(d -> new DebtPayoffDto(d.id, d.name, d.startBalance, d.apr,
+                        d.payoffMonth,
+                        d.payoffMonth == null ? null : LocalDate.now().plusMonths(d.payoffMonth),
+                        d.interest.setScale(2, RoundingMode.HALF_UP),
+                        d.paid.setScale(2, RoundingMode.HALF_UP)))
                 .collect(Collectors.toList());
 
-        // Simple simulation loop (can be more sophisticated)
-        while (simulatedDebts.stream().anyMatch(d -> d.getBalance().compareTo(BigDecimal.ZERO) > 0)) {
-            monthsToDebtFree++;
-            BigDecimal availableForExtra = extraPayment;
+        SimResult r = new SimResult();
+        r.months = paysOff ? month : MAX_MONTHS;
+        r.totalInterest = totalInterest.setScale(2, RoundingMode.HALF_UP);
+        r.totalPaid = sim.stream().map(d -> d.paid).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP);
+        r.monthlyBudget = budget.setScale(2, RoundingMode.HALF_UP);
+        r.paysOff = paysOff;
+        r.perDebt = perDebt;
+        return r;
+    }
 
-            // Sort debts based on strategy
-            if (strategy.equals("AVALANCHE")) {
-                simulatedDebts.sort(Comparator.comparing(Debt::getApr).reversed()); // Highest APR first
-            } else if (strategy.equals("SNOWBALL")) {
-                simulatedDebts.sort(Comparator.comparing(Debt::getBalance)); // Smallest balance first
-            } else { // HYBRID: smallest balance among the high-APR half — quick wins + interest savings
-                simulatedDebts.sort(Comparator.comparing(Debt::getApr).reversed()
-                        .thenComparing(Debt::getBalance));
-            }
-
-            for (Debt debt : simulatedDebts) {
-                if (debt.getBalance().compareTo(BigDecimal.ZERO) <= 0) continue;
-
-                BigDecimal monthlyInterestRate = debt.getApr().divide(BigDecimal.valueOf(1200), 6, RoundingMode.HALF_UP);
-                BigDecimal interestForMonth = debt.getBalance().multiply(monthlyInterestRate).setScale(2, RoundingMode.HALF_UP);
-                totalInterestPaid = totalInterestPaid.add(interestForMonth);
-
-                BigDecimal payment = debt.getMinPayment();
-                if (payment.compareTo(debt.getBalance().add(interestForMonth)) > 0) {
-                    payment = debt.getBalance().add(interestForMonth); // Don't overpay if balance is low
-                }
-
-                BigDecimal principalPaid = payment.subtract(interestForMonth);
-                debt.setBalance(debt.getBalance().subtract(principalPaid));
-
-                // Apply extra payment
-                if (availableForExtra.compareTo(BigDecimal.ZERO) > 0) {
-                    BigDecimal extraPrincipalPaid = availableForExtra;
-                    if (extraPrincipalPaid.compareTo(debt.getBalance()) > 0) {
-                        extraPrincipalPaid = debt.getBalance();
-                    }
-                    debt.setBalance(debt.getBalance().subtract(extraPrincipalPaid));
-                    availableForExtra = availableForExtra.subtract(extraPrincipalPaid);
-                }
-            }
-
-            if (monthsToDebtFree > 120) { // Prevent infinite loops for unrealistic scenarios
-                break;
-            }
+    private void applyPayment(SimDebt d, BigDecimal pay, int month) {
+        if (pay.signum() <= 0) return;
+        d.balance = d.balance.subtract(pay);
+        d.paid = d.paid.add(pay);
+        if (d.balance.signum() <= 0 && d.payoffMonth == null) {
+            d.balance = BigDecimal.ZERO;
+            d.payoffMonth = month;
         }
+    }
 
-        LocalDate debtFreeDate = LocalDate.now().plusMonths(monthsToDebtFree);
-        // More extra payment = less liquidity kept on hand.
-        String liquidity = extraPayment.compareTo(BigDecimal.valueOf(500)) >= 0 ? "Low"
-                : extraPayment.compareTo(BigDecimal.ZERO) > 0 ? "Medium" : "High";
+    /** Debts still owed, ordered so the extra attacks pay-off-first ids first, then the strategy order. */
+    private List<SimDebt> orderedTargets(List<SimDebt> sim, String strategy, List<Long> priorityIds) {
+        List<SimDebt> unpaid = sim.stream().filter(d -> d.balance.signum() > 0).collect(Collectors.toList());
+        Comparator<SimDebt> byStrategy;
+        if ("SNOWBALL".equals(strategy)) {
+            byStrategy = Comparator.comparing((SimDebt d) -> d.balance);                       // smallest balance first
+        } else if ("HYBRID".equals(strategy)) {
+            byStrategy = Comparator.comparing((SimDebt d) -> d.apr).reversed().thenComparing(d -> d.balance);
+        } else {
+            byStrategy = Comparator.comparing((SimDebt d) -> d.apr).reversed();                // AVALANCHE: highest APR first
+        }
+        List<SimDebt> ordered = new ArrayList<>();
+        for (Long id : priorityIds) {
+            unpaid.stream().filter(d -> id.equals(d.id) && !ordered.contains(d)).findFirst().ifPresent(ordered::add);
+        }
+        unpaid.stream().sorted(byStrategy).filter(d -> !ordered.contains(d)).forEach(ordered::add);
+        return ordered;
+    }
 
-        DebtScenario newScenario = new DebtScenario(userId, strategy, extraPayment, monthsToDebtFree, totalInterestPaid, debtFreeDate, liquidity);
-        DebtScenarioDto result = convertToDto(debtScenarioRepository.save(newScenario));
+    /** Mutable per-debt state during a simulation run. */
+    private static final class SimDebt {
+        final Long id; final String name; final BigDecimal startBalance; final BigDecimal apr; final BigDecimal minPayment;
+        BigDecimal balance; BigDecimal interest = BigDecimal.ZERO; BigDecimal paid = BigDecimal.ZERO;
+        Integer payoffMonth;
+        SimDebt(Debt d) {
+            this.id = d.getId();
+            this.name = d.getName();
+            this.apr = d.getApr() != null ? d.getApr() : BigDecimal.ZERO;
+            this.minPayment = d.getMinPayment() != null ? d.getMinPayment().max(BigDecimal.ZERO) : BigDecimal.ZERO;
+            this.startBalance = d.getBalance() != null ? d.getBalance() : BigDecimal.ZERO;
+            this.balance = this.startBalance;
+            if (this.balance.signum() <= 0) this.payoffMonth = 0; // already clear
+        }
+    }
 
-        // Best-effort: notify what the user just ran in Debt Lab. Only fires on a fresh
-        // compute (cache hits above return early), so auto-run compares don't spam.
-        String extraLabel = extraPayment.signum() > 0
-                ? " with $" + extraPayment.stripTrailingZeros().toPlainString() + "/mo extra"
-                : " (minimums only)";
-        alertNotifier.notify(userId, "DEBT", "Debt Lab strategy compared",
-                "You compared the " + prettyStrategy(strategy) + " strategy" + extraLabel
-                        + ": debt-free in " + monthsToDebtFree + " months with $"
-                        + totalInterestPaid.setScale(0, RoundingMode.HALF_UP).toPlainString() + " total interest.");
-        return result;
+    /** Aggregate result of a simulation run. */
+    static final class SimResult {
+        int months; BigDecimal totalInterest; BigDecimal totalPaid; BigDecimal monthlyBudget;
+        boolean paysOff; List<DebtPayoffDto> perDebt;
     }
 
     /** "AVALANCHE" -> "Avalanche" for human-readable copy. */
@@ -189,9 +275,5 @@ public class DebtService {
     private DebtDto convertToDto(Debt debt) {
         return new DebtDto(debt.getId(), debt.getName(), debt.getBalance(), debt.getApr(), debt.getMinPayment(),
                 debt.getPlaidAccountId());
-    }
-
-    private DebtScenarioDto convertToDto(DebtScenario scenario) {
-        return new DebtScenarioDto(scenario.getStrategy(), scenario.getMonthsToDebtFree(), scenario.getTotalInterestPaid(), scenario.getDebtFreeDate(), scenario.getLiquidity());
     }
 }
