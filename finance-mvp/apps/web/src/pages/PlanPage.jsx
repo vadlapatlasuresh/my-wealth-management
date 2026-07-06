@@ -183,6 +183,12 @@ export default function PlanPage({
   const [importing, setImporting] = useState(false);
   const [deletingDebtId, setDeletingDebtId] = useState(null);
   const [refreshingDebtId, setRefreshingDebtId] = useState(null); // null | debt id | "all"
+  // "Pay off first" selection — debt ids the user wants attacked first, in the order they picked.
+  const [priorityIds, setPriorityIds] = useState([]);
+  const togglePriority = (id) =>
+    setPriorityIds((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
+  // Run the comparison honoring the "pay off first" picks. Used by the button + every debt change.
+  const runCompare = () => onRunAllScenarios(priorityIds);
 
   const monthLabel = useMemo(() => {
     const [y, m] = currentMonth.split("-").map(Number);
@@ -709,7 +715,7 @@ export default function PlanPage({
       setDebts(res || []);
       setNewDebt({ name: "", balance: "", apr: "", minPayment: "" });
       setAddingDebt(false);
-      if (debtCompare) onRunAllScenarios(); // debts changed — refresh the (now stale) comparison
+      if (debtCompare) runCompare(); // debts changed — refresh the (now stale) comparison
     } catch (e) {
       console.error("add debt failed", e);
       setNotice("Could not add debt. Please try again.");
@@ -769,7 +775,7 @@ export default function PlanPage({
       setDebts(res || []);
       setShowImport(false);
       setNotice(`Imported ${chosen.length} account${chosen.length === 1 ? "" : "s"} into your Debt Lab — comparing payoff strategies…`);
-      onRunAllScenarios(); // imported debts flow straight into a strategy comparison
+      runCompare(); // imported debts flow straight into a strategy comparison
     } catch (e) {
       setNotice(e?.message || "Couldn't import some accounts — please try again.");
     } finally {
@@ -786,7 +792,7 @@ export default function PlanPage({
       await api.deleteDebt(debt.id);
       const res = await api.getDebts();
       setDebts(res || []);
-      if (debtCompare) onRunAllScenarios();
+      if (debtCompare) runCompare();
     } catch (e) {
       setNotice(e?.message || "Couldn't remove that debt — please try again.");
     } finally {
@@ -824,7 +830,7 @@ export default function PlanPage({
       await api.updateDebt(debt.id, refreshPayload(debt, acct));
       setDebts(await api.getDebts() || []);
       setNotice(`Refreshed ${debt.name} from your linked account.`);
-      if (debtCompare) onRunAllScenarios();
+      if (debtCompare) runCompare();
     } catch (e) {
       setNotice(e?.message || "Couldn't refresh from the account — please try again.");
     } finally {
@@ -841,7 +847,7 @@ export default function PlanPage({
       for (const { d, acct } of linked) await api.updateDebt(d.id, refreshPayload(d, acct));
       setDebts(await api.getDebts() || []);
       setNotice(`Refreshed ${linked.length} linked debt${linked.length === 1 ? "" : "s"} from your accounts.`);
-      if (debtCompare) onRunAllScenarios();
+      if (debtCompare) runCompare();
     } catch (e) {
       setNotice(e?.message || "Couldn't refresh some debts — please try again.");
     } finally {
@@ -1554,14 +1560,24 @@ export default function PlanPage({
             ) : (
               <div className="table-scroll">
                 <table className="tv-table">
-                  <thead><tr><th>Debt name</th><th>Balance</th><th>APR</th><th>Min payment</th><th></th></tr></thead>
+                  <thead><tr><th style={{ width: 54 }} title="Pay off first">Order</th><th>Debt name</th><th>Balance</th><th>APR</th><th>Min payment</th><th></th></tr></thead>
                   <tbody>
                     {debts.map((debt, idx) => {
                       const isFocus = focusDebt && (debt.id ? debt.id === focusDebt.id : debt.name === focusDebt.name);
                       const linked = !!accountForDebt(debt);
                       const busy = refreshingDebtId === debt.id || refreshingDebtId === "all";
+                      const priorityRank = debt.id != null ? priorityIds.indexOf(debt.id) : -1;
+                      const pinned = priorityRank >= 0;
                       return (
                         <tr key={debt.id || idx} style={isFocus ? { background: "var(--tv-sage-pale)" } : undefined}>
+                          <td>
+                            <button className="icon-btn" title={pinned ? "Paying off first — click to unpin" : "Pay this off first"}
+                              onClick={() => debt.id != null && togglePriority(debt.id)}
+                              style={{ color: pinned ? "var(--tv-forest)" : "var(--tv-text-muted)", position: "relative" }}>
+                              <i className={`ti ${pinned ? "ti-pin-filled" : "ti-pin"}`}></i>
+                              {pinned && <span style={{ fontSize: 11, fontWeight: 700, marginLeft: 2 }}>{priorityRank + 1}</span>}
+                            </button>
+                          </td>
                           <td>
                             {debt.name}
                             {linked && (
@@ -1594,21 +1610,27 @@ export default function PlanPage({
                       );
                     })}
                     <tr style={{ background: "var(--tv-bg)", fontWeight: 600 }}>
-                      <td>Total</td><td>{currency(totalDebtBalance)}</td><td></td><td>{currency(totalMinPayment)}</td><td></td>
+                      <td></td><td>Total</td><td>{currency(totalDebtBalance)}</td><td></td><td>{currency(totalMinPayment)}</td><td></td>
                     </tr>
                   </tbody>
                 </table>
               </div>
             )}
 
-            <div style={{ marginTop: 16, display: "flex", alignItems: "flex-end", gap: 10 }}>
+            <div style={{ marginTop: 16, display: "flex", alignItems: "flex-end", gap: 10, flexWrap: "wrap" }}>
               <div>
                 <label className="form-label">Extra monthly payment</label>
                 <input type="number" className="form-input" value={extraPayment} onChange={(e) => setExtraPayment(Number(e.target.value))} style={{ width: 150 }} />
               </div>
-              <button type="button" className="btn btn-primary" onClick={onRunAllScenarios} disabled={debtLoading}>
+              <button type="button" className="btn btn-primary" onClick={runCompare} disabled={debtLoading}>
                 {debtLoading ? "Running…" : "Compare strategies"}
               </button>
+              {priorityIds.length > 0 && (
+                <span style={{ fontSize: 12, color: "var(--tv-forest)", display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <i className="ti ti-pin-filled"></i> {priorityIds.length} debt{priorityIds.length === 1 ? "" : "s"} set to pay off first
+                  <button className="btn btn-secondary btn-sm" style={{ marginLeft: 2 }} onClick={() => setPriorityIds([])}>Clear</button>
+                </span>
+              )}
             </div>
           </div>
 
@@ -1745,6 +1767,62 @@ export default function PlanPage({
               </div>
             </div>
           )}
+
+          {/* Per-debt payoff timeline for the selected plan — what to pay off, when, and the cost */}
+          {debtCompare && (() => {
+            const plan = debtScenarios[strategy];
+            if (!plan) return null;
+            const perDebt = Array.isArray(plan.per_debt) ? plan.per_debt : [];
+            return (
+              <div className="card" style={{ marginTop: 14 }}>
+                <div className="section-header" style={{ marginBottom: 8 }}>
+                  <div className="section-title" style={{ marginBottom: 0, textTransform: "capitalize" }}>
+                    <i className="ti ti-list-check" style={{ color: "var(--tv-forest-light)", marginRight: 6 }}></i>
+                    Payoff timeline · {strategy.toLowerCase()}
+                  </div>
+                  <span style={{ fontSize: 12, color: "var(--tv-text-muted)" }}>Order each debt clears &amp; what it costs</span>
+                </div>
+                {plan.pays_off === false && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", marginBottom: 12, background: "var(--tv-negative-bg)", color: "var(--tv-negative)", border: "1px solid var(--tv-negative)", borderRadius: "var(--radius-md)", fontSize: 13 }}>
+                    <i className="ti ti-alert-triangle"></i>
+                    <span>At this rate the minimum payments don't out-run the interest — the balance never fully clears. Add an extra monthly payment above to break through.</span>
+                  </div>
+                )}
+                {perDebt.length > 0 && (
+                  <div className="table-scroll">
+                    <table className="tv-table">
+                      <thead><tr><th style={{ width: 36 }}>#</th><th>Debt</th><th>Paid off</th><th>Interest</th><th>Total paid</th></tr></thead>
+                      <tbody>
+                        {perDebt.map((d, i) => (
+                          <tr key={d.id ?? i}>
+                            <td style={{ color: "var(--tv-text-muted)", fontWeight: 600 }}>{d.months_to_payoff != null ? i + 1 : "—"}</td>
+                            <td>{d.name}{d.apr != null && <span style={{ color: "var(--tv-text-muted)", fontSize: 12 }}> · {Number(d.apr)}%</span>}</td>
+                            <td>
+                              {d.months_to_payoff != null
+                                ? <><strong>{d.payoff_date || "—"}</strong> <span style={{ color: "var(--tv-text-muted)", fontSize: 12 }}>· {fmtMonths(d.months_to_payoff)}</span></>
+                                : <span style={{ color: "var(--tv-negative)" }}>never at this rate</span>}
+                            </td>
+                            <td>{currency(d.total_interest)}</td>
+                            <td>{currency(d.total_paid)}</td>
+                          </tr>
+                        ))}
+                        <tr style={{ background: "var(--tv-bg)", fontWeight: 600 }}>
+                          <td></td><td>All debts</td>
+                          <td>{plan.pays_off === false ? "—" : <><strong>{plan.debt_free_date}</strong> <span style={{ color: "var(--tv-text-muted)", fontSize: 12 }}>· {fmtMonths(plan.months_to_debt_free)}</span></>}</td>
+                          <td>{currency(plan.total_interest_paid)}</td>
+                          <td>{currency(plan.total_paid)}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+                <p style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 8 }}>
+                  <i className="ti ti-info-circle"></i> Based on a monthly budget of <strong>{currency(plan.monthly_budget)}</strong> (all minimums{extraPayment > 0 ? <> + your {currency(extraPayment)} extra</> : ""}). As each debt clears, its payment rolls onto the next.
+                  {priorityIds.length > 0 && " Your pinned debts are paid off first."}
+                </p>
+              </div>
+            );
+          })()}
 
           {debtCompare && debtCompare.allEqual && (
             <p style={{ fontSize: 12.5, color: "var(--tv-text-muted)", marginTop: 12, textAlign: "center" }}>

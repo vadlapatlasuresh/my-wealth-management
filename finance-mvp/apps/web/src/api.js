@@ -339,19 +339,29 @@ export const api = {
       body: JSON.stringify(payload)
     });
     if (!r || typeof r !== "object") return r;
-    const rawDate = r.debtFreeDate ?? r.debt_free_date;
-    let friendlyDate = rawDate;
-    if (rawDate) {
-      const d = new Date(rawDate);
-      if (!Number.isNaN(d.getTime())) {
-        friendlyDate = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-      }
-    }
+    const friendly = (raw) => {
+      if (!raw) return raw;
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? raw : d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+    };
+    // Per-debt payoff timeline (camelCase from the service → snake_case + a friendly date).
+    const perDebt = (r.perDebt ?? r.per_debt ?? []).map((d) => ({
+      ...d,
+      months_to_payoff: d.monthsToPayoff ?? d.months_to_payoff,
+      payoff_date: friendly(d.payoffDate ?? d.payoff_date),
+      total_interest: d.totalInterest ?? d.total_interest,
+      total_paid: d.totalPaid ?? d.total_paid,
+      starting_balance: d.startingBalance ?? d.starting_balance,
+    }));
     return {
       ...r,
       months_to_debt_free: r.monthsToDebtFree ?? r.months_to_debt_free,
       total_interest_paid: r.totalInterestPaid ?? r.total_interest_paid,
-      debt_free_date: friendlyDate,
+      debt_free_date: friendly(r.debtFreeDate ?? r.debt_free_date),
+      total_paid: r.totalPaid ?? r.total_paid,
+      monthly_budget: r.monthlyBudget ?? r.monthly_budget,
+      pays_off: r.paysOff ?? r.pays_off,
+      per_debt: perDebt,
       liquidity: r.liquidity,
     };
   }, // Updated to use new service

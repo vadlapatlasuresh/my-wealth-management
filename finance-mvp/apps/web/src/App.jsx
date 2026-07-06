@@ -312,17 +312,18 @@ export default function App() {
     }
   }
 
-  async function runAllDebtScenarios() {
+  async function runAllDebtScenarios(priorityDebtIds = []) {
     setDebtLoading(true);
     try {
       const extra = Number(extraPayment);
-      // Run all three strategies at the chosen extra payment, plus the current strategy at $0 extra
-      // (the minimums-only baseline) so the Debt Lab can quantify what the extra buys — one batch.
+      const priority = Array.isArray(priorityDebtIds) ? priorityDebtIds : [];
+      // Run all three strategies at the chosen extra payment (honoring any "pay off first" picks),
+      // plus the current strategy at $0 extra (the minimums-only baseline) — all in one batch.
       const [avalanche, snowball, hybrid, baseline] = await Promise.all([
-        api.runDebtScenario({ strategy: "AVALANCHE", extra_payment_monthly: extra }),
-        api.runDebtScenario({ strategy: "SNOWBALL", extra_payment_monthly: extra }),
-        api.runDebtScenario({ strategy: "HYBRID", extra_payment_monthly: extra }),
-        extra > 0 ? api.runDebtScenario({ strategy, extra_payment_monthly: 0 }) : Promise.resolve(null),
+        api.runDebtScenario({ strategy: "AVALANCHE", extra_payment_monthly: extra, priority_debt_ids: priority }),
+        api.runDebtScenario({ strategy: "SNOWBALL", extra_payment_monthly: extra, priority_debt_ids: priority }),
+        api.runDebtScenario({ strategy: "HYBRID", extra_payment_monthly: extra, priority_debt_ids: priority }),
+        extra > 0 ? api.runDebtScenario({ strategy, extra_payment_monthly: 0, priority_debt_ids: priority }) : Promise.resolve(null),
       ]);
       setDebtScenarios({ AVALANCHE: avalanche, SNOWBALL: snowball, HYBRID: hybrid });
       setDebtBaseline(baseline);
