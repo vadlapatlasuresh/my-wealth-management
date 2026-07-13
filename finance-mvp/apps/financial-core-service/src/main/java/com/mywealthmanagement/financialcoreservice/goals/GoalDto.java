@@ -46,6 +46,19 @@ public class GoalDto {
     // Accounts to link at create time (optional). Read back via linkedAccounts.
     private List<Long> accountIds;
 
+    // ---- DEBT_PAYOFF (mortgage) inputs ----
+    private Long propertyId;      // pay off this property's mortgage (from the Properties tab)
+    private Long loanAccountId;   // ...or this linked Plaid loan/mortgage account
+
+    @PositiveOrZero(message = "mortgageApr must be zero or positive")
+    private BigDecimal mortgageApr;      // APR %, auto-filled from a property or entered for an account
+
+    @PositiveOrZero(message = "monthlyPayment must be zero or positive")
+    private BigDecimal monthlyPayment;   // scheduled P&I payment
+
+    @PositiveOrZero(message = "extraPayment must be zero or positive")
+    private BigDecimal extraPayment;     // planned extra monthly payment (what-if)
+
     // ---- Derived (read-only) ----
     // Effective amount saved toward the goal = manual base + auto-tracked linked balances.
     private BigDecimal savedAmount;
@@ -57,4 +70,12 @@ public class GoalDto {
     private Boolean currencyMismatch;
     // The linked accounts and what each currently contributes.
     private List<GoalLinkDto> linkedAccounts;
+
+    // ---- Derived (read-only) for DEBT_PAYOFF goals ----
+    private String payoffSource;         // "PROPERTY" | "ACCOUNT" | null
+    private String payoffLabel;          // e.g. property address / loan account name
+    private BigDecimal startingBalance;  // balance owed when the goal started
+    private BigDecimal currentBalance;   // live balance owed now
+    private BigDecimal paidOff;          // startingBalance - currentBalance (>= 0)
+    private Boolean payoffStale;         // true if the live balance couldn't be fetched
 }

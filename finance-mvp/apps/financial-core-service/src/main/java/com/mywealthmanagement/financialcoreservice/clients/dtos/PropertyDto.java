@@ -12,7 +12,10 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class PropertyDto {
     private Long id;
+    private String address;
     private BigDecimal currentValue;
     private BigDecimal mortgageBalance;
     private BigDecimal equity; // currentValue - mortgageBalance
+    private BigDecimal apr;             // mortgage APR %
+    private BigDecimal monthlyPayment;  // scheduled P&I
 }

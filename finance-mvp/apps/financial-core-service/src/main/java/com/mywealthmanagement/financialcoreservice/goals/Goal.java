@@ -49,6 +49,26 @@ public class Goal {
     @Column(name = "monthly_contribution")
     private BigDecimal monthlyContribution;
 
+    // ---- DEBT_PAYOFF goals: pay down a real mortgage from a property or a linked loan account ----
+    @Column(name = "property_id")
+    private Long propertyId;
+
+    @Column(name = "loan_account_id")
+    private Long loanAccountId;
+
+    // Balance owed when the goal started — the baseline for "paid down since you started".
+    @Column(name = "starting_balance")
+    private BigDecimal startingBalance;
+
+    @Column(name = "mortgage_apr")
+    private BigDecimal mortgageApr;
+
+    @Column(name = "monthly_payment")
+    private BigDecimal monthlyPayment;
+
+    @Column(name = "extra_payment")
+    private BigDecimal extraPayment;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
