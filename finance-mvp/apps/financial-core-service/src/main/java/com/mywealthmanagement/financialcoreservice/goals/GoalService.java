@@ -1,7 +1,9 @@
 package com.mywealthmanagement.financialcoreservice.goals;
 
 import com.mywealthmanagement.financialcoreservice.clients.AccountAggregationClient;
+import com.mywealthmanagement.financialcoreservice.clients.RealEstateClient;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.AccountDto;
+import com.mywealthmanagement.financialcoreservice.clients.dtos.PropertyDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,12 +28,14 @@ public class GoalService {
     static final String MODE_MANUAL = "MANUAL";
     static final String MODE_BALANCE = "BALANCE";
     static final String MODE_CONTRIBUTIONS = "CONTRIBUTIONS";
+    static final String TYPE_DEBT_PAYOFF = "DEBT_PAYOFF";
     private static final Set<String> MODES = Set.of(MODE_MANUAL, MODE_BALANCE, MODE_CONTRIBUTIONS);
 
     private final GoalRepository goalRepository;
     private final GoalAccountLinkRepository linkRepository;
     private final GoalContributionRepository contributionRepository;
     private final AccountAggregationClient accountAggregationClient;
+    private final RealEstateClient realEstateClient;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -47,13 +51,20 @@ public class GoalService {
         return v == null ? BigDecimal.ZERO : v;
     }
 
+    private static boolean isPayoff(Goal g) {
+        return TYPE_DEBT_PAYOFF.equalsIgnoreCase(g.getGoalType())
+                && (g.getPropertyId() != null || g.getLoanAccountId() != null);
+    }
+
     // ---- CRUD ----
 
     public List<GoalDto> list() {
         Long uid = userId();
+        List<Goal> goals = goalRepository.findByUserIdOrderByCreatedAtAsc(uid);
         Map<Long, AccountDto> accounts = fetchAccounts();
-        return goalRepository.findByUserIdOrderByCreatedAtAsc(uid)
-                .stream().map(g -> toDto(g, accounts)).toList();
+        Map<Long, PropertyDto> properties = goals.stream().anyMatch(g -> g.getPropertyId() != null)
+                ? fetchProperties() : Map.of();
+        return goals.stream().map(g -> toDto(g, accounts, properties)).toList();
     }
 
     @Transactional
@@ -62,20 +73,25 @@ public class GoalService {
         g.setUserId(userId());
         apply(g, dto);
         g = goalRepository.save(g);
+        Map<Long, AccountDto> accounts = fetchAccounts();
+        Map<Long, PropertyDto> properties = g.getPropertyId() != null ? fetchProperties() : Map.of();
         if (dto.getAccountIds() != null) {
-            Map<Long, AccountDto> accounts = fetchAccounts();
             for (Long accountId : dto.getAccountIds()) {
                 if (accountId != null) linkInternal(g, accountId, accounts);
             }
         }
-        return toDto(g, fetchAccounts());
+        resolvePayoffBaseline(g, accounts, properties);
+        return toDto(g, accounts, properties);
     }
 
     @Transactional
     public GoalDto update(Long id, GoalDto dto) {
         Goal g = requireGoal(id);
         apply(g, dto);
-        return toDto(goalRepository.save(g), fetchAccounts());
+        Map<Long, AccountDto> accounts = fetchAccounts();
+        Map<Long, PropertyDto> properties = g.getPropertyId() != null ? fetchProperties() : Map.of();
+        resolvePayoffBaseline(g, accounts, properties);
+        return toDto(goalRepository.save(g), accounts, properties);
     }
 
     @Transactional
@@ -98,7 +114,7 @@ public class GoalService {
             g.setTrackingMode(MODE_BALANCE);
             goalRepository.save(g);
         }
-        return toDto(g, accounts);
+        return toDto(g, accounts, Map.of());
     }
 
     /**
@@ -122,7 +138,7 @@ public class GoalService {
             }
         }
         linkRepository.delete(link);
-        return toDto(g, fetchAccounts());
+        return toDto(g, fetchAccounts(), Map.of());
     }
 
     private void linkInternal(Goal g, Long accountId, Map<Long, AccountDto> accounts) {
@@ -154,7 +170,7 @@ public class GoalService {
         BigDecimal next = nz(g.getCurrentAmount()).add(amount);
         g.setCurrentAmount(next.signum() < 0 ? BigDecimal.ZERO : next);
         goalRepository.save(g);
-        return toDto(g, fetchAccounts());
+        return toDto(g, fetchAccounts(), Map.of());
     }
 
     public List<GoalContributionDto> contributions(Long goalId) {
@@ -195,7 +211,38 @@ public class GoalService {
         if (dto.getCurrentAmount() != null) g.setCurrentAmount(nz(dto.getCurrentAmount()));
         g.setTargetDate(dto.getTargetDate());
         g.setMonthlyContribution(dto.getMonthlyContribution());
+        // Debt-payoff (mortgage) fields.
+        g.setPropertyId(dto.getPropertyId());
+        g.setLoanAccountId(dto.getLoanAccountId());
+        if (dto.getMortgageApr() != null) g.setMortgageApr(dto.getMortgageApr());
+        if (dto.getMonthlyPayment() != null) g.setMonthlyPayment(dto.getMonthlyPayment());
+        if (dto.getExtraPayment() != null) g.setExtraPayment(dto.getExtraPayment());
         if (g.getName() == null || g.getName().isBlank()) g.setName("Untitled goal");
+    }
+
+    /**
+     * Capture the payoff baseline (balance owed at goal start) and auto-fill APR/payment from a
+     * property the first time a payoff goal is pointed at a source. Idempotent: once set, left alone.
+     */
+    private void resolvePayoffBaseline(Goal g, Map<Long, AccountDto> accounts, Map<Long, PropertyDto> properties) {
+        if (!TYPE_DEBT_PAYOFF.equalsIgnoreCase(g.getGoalType())) return;
+        boolean changed = false;
+        if (g.getPropertyId() != null) {
+            PropertyDto p = properties.get(g.getPropertyId());
+            if (p != null) {
+                if (g.getStartingBalance() == null) { g.setStartingBalance(nz(p.getMortgageBalance())); changed = true; }
+                if (g.getMortgageApr() == null && p.getApr() != null) { g.setMortgageApr(p.getApr()); changed = true; }
+                if (g.getMonthlyPayment() == null && p.getMonthlyPayment() != null) { g.setMonthlyPayment(p.getMonthlyPayment()); changed = true; }
+            }
+        } else if (g.getLoanAccountId() != null) {
+            AccountDto a = accounts.get(g.getLoanAccountId());
+            if (a != null && g.getStartingBalance() == null) { g.setStartingBalance(nz(a.getCurrentBalance())); changed = true; }
+        }
+        // The amount to pay off IS the starting balance — mirror it into the goal's target.
+        if (g.getStartingBalance() != null && nz(g.getTargetAmount()).signum() == 0) {
+            g.setTargetAmount(g.getStartingBalance()); changed = true;
+        }
+        if (changed) goalRepository.save(g);
     }
 
     /** Live account balances keyed by id; empty (not an error) when aggregation is unreachable. */
@@ -208,6 +255,20 @@ public class GoalService {
                     .collect(Collectors.toMap(AccountDto::getId, Function.identity(), (a, b) -> a));
         } catch (Exception e) {
             log.debug("Could not fetch accounts for goal tracking: {}", e.getMessage());
+            return Map.of();
+        }
+    }
+
+    /** Live properties keyed by id; empty (not an error) when real-estate is unreachable. */
+    private Map<Long, PropertyDto> fetchProperties() {
+        try {
+            List<PropertyDto> properties = realEstateClient.getProperties(authHeader());
+            if (properties == null) return Map.of();
+            return properties.stream()
+                    .filter(p -> p.getId() != null)
+                    .collect(Collectors.toMap(PropertyDto::getId, Function.identity(), (a, b) -> a));
+        } catch (Exception e) {
+            log.debug("Could not fetch properties for payoff goals: {}", e.getMessage());
             return Map.of();
         }
     }
@@ -237,7 +298,79 @@ public class GoalService {
         return balance.signum() < 0 ? BigDecimal.ZERO : balance;
     }
 
-    GoalDto toDto(Goal g, Map<Long, AccountDto> accounts) {
+    GoalDto toDto(Goal g, Map<Long, AccountDto> accounts, Map<Long, PropertyDto> properties) {
+        GoalDto dto = new GoalDto();
+        dto.setId(g.getId());
+        dto.setName(g.getName());
+        dto.setGoalType(g.getGoalType());
+        dto.setTrackingMode(g.getTrackingMode());
+        dto.setCurrency(g.getCurrency());
+        dto.setTargetAmount(g.getTargetAmount());
+        dto.setCurrentAmount(g.getCurrentAmount());
+        dto.setTargetDate(g.getTargetDate());
+        dto.setMonthlyContribution(g.getMonthlyContribution());
+        dto.setPropertyId(g.getPropertyId());
+        dto.setLoanAccountId(g.getLoanAccountId());
+        dto.setMortgageApr(g.getMortgageApr());
+        dto.setMonthlyPayment(g.getMonthlyPayment());
+        dto.setExtraPayment(g.getExtraPayment());
+
+        if (isPayoff(g)) {
+            fillPayoff(g, dto, accounts, properties);
+        } else {
+            fillSavings(g, dto, accounts);
+        }
+        return dto;
+    }
+
+    /** DEBT_PAYOFF: progress is how much of the mortgage has been paid down since the goal started. */
+    private void fillPayoff(Goal g, GoalDto dto, Map<Long, AccountDto> accounts, Map<Long, PropertyDto> properties) {
+        BigDecimal starting = nz(g.getStartingBalance());
+        BigDecimal current;
+        boolean stale;
+        if (g.getPropertyId() != null) {
+            PropertyDto p = properties.get(g.getPropertyId());
+            stale = p == null;
+            current = p != null && p.getMortgageBalance() != null ? p.getMortgageBalance() : starting;
+            dto.setPayoffSource("PROPERTY");
+            dto.setPayoffLabel(p != null && p.getAddress() != null ? p.getAddress() : "Property mortgage");
+            if (p != null) {
+                if (dto.getMortgageApr() == null && p.getApr() != null) dto.setMortgageApr(p.getApr());
+                if (dto.getMonthlyPayment() == null && p.getMonthlyPayment() != null) dto.setMonthlyPayment(p.getMonthlyPayment());
+            }
+        } else {
+            AccountDto a = accounts.get(g.getLoanAccountId());
+            stale = a == null;
+            current = a != null && a.getCurrentBalance() != null ? a.getCurrentBalance() : starting;
+            dto.setPayoffSource("ACCOUNT");
+            dto.setPayoffLabel(a != null ? (a.getOfficialName() != null ? a.getOfficialName() : a.getName()) : "Loan account");
+        }
+
+        BigDecimal paidOff = starting.subtract(nz(current));
+        if (paidOff.signum() < 0) paidOff = BigDecimal.ZERO;
+
+        double progress = 0d;
+        if (starting.signum() > 0) {
+            progress = paidOff.divide(starting, 4, RoundingMode.HALF_UP).doubleValue();
+            if (progress < 0) progress = 0;
+            if (progress > 1) progress = 1;
+        }
+
+        dto.setStartingBalance(starting);
+        dto.setCurrentBalance(current);
+        dto.setPaidOff(paidOff);
+        dto.setPayoffStale(stale);
+        dto.setSavedAmount(paidOff);
+        dto.setLinkedBalance(BigDecimal.ZERO);
+        dto.setProgress(progress);
+        dto.setCurrencyMismatch(false);
+        dto.setLinkedAccounts(List.of());
+        // The amount to pay off is the starting balance — surface it as the target for display.
+        if (nz(dto.getTargetAmount()).signum() == 0) dto.setTargetAmount(starting);
+    }
+
+    /** SAVINGS/NET_WORTH/etc.: saved = manual base + auto-tracked linked-account balances. */
+    private void fillSavings(Goal g, GoalDto dto, Map<Long, AccountDto> accounts) {
         List<GoalAccountLink> links = linkRepository.findByGoalIdAndUserId(g.getId(), g.getUserId());
 
         BigDecimal auto = BigDecimal.ZERO;
@@ -248,7 +381,6 @@ public class GoalService {
         for (GoalAccountLink link : links) {
             AccountDto live = accounts.get(link.getAccountId());
             boolean stale = live == null;
-            // Refresh the cached balance/currency whenever we have a live reading.
             if (live != null) {
                 if (!Objects.equals(link.getLastBalance(), live.getCurrentBalance())) {
                     link.setLastBalance(live.getCurrentBalance());
@@ -289,10 +421,10 @@ public class GoalService {
             if (progress > 1) progress = 1;
         }
 
-        GoalDto dto = new GoalDto(
-                g.getId(), g.getName(), g.getGoalType(), g.getTrackingMode(), g.getCurrency(),
-                g.getTargetAmount(), g.getCurrentAmount(), g.getTargetDate(), g.getMonthlyContribution(),
-                null, saved, auto, progress, anyMismatch, linkDtos);
-        return dto;
+        dto.setSavedAmount(saved);
+        dto.setLinkedBalance(auto);
+        dto.setProgress(progress);
+        dto.setCurrencyMismatch(anyMismatch);
+        dto.setLinkedAccounts(linkDtos);
     }
 }
