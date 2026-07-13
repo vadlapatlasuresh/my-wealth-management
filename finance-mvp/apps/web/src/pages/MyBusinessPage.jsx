@@ -292,10 +292,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const txSectionRef = useRef(null);
 
+  /* "All businesses" aggregate view — track every business in one place. */
+  const isAllView = selectedId === 'ALL' && businesses.length > 1;
   const selectedBusiness = useMemo(() => {
-    if (!businesses.length) return null;
+    if (isAllView || !businesses.length) return null;
     return businesses.find((b) => b.id === selectedId) || businesses[0];
-  }, [businesses, selectedId]);
+  }, [businesses, selectedId, isAllView]);
 
   /* ------------------------------------------------------------------ */
   /* Data loading                                                       */
@@ -350,7 +352,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   useEffect(() => {
     if (!businesses.length) return;
-    if (!businesses.some((b) => b.id === selectedId)) { setSelectedId(businesses[0].id); return; }
+    const keepAll = selectedId === 'ALL' && businesses.length > 1;
+    if (!keepAll && !businesses.some((b) => b.id === selectedId)) { setSelectedId(businesses[0].id); return; }
     writeLS(LS_SELECTED, selectedId);
   }, [selectedId, businesses]);
 
@@ -373,22 +376,51 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     ));
   }, []);
 
+  /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
+  const loadAllBusinessesDetail = useCallback(async (list) => {
+    const biz = Array.isArray(list) ? list : [];
+    if (!biz.length) {
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setAssignedLinkedIds(new Set());
+      return;
+    }
+    const results = await Promise.allSettled(biz.flatMap((b) => [
+      api.getBusinessAccounts(b.id),
+      api.getBusinessTransactions(b.id),
+      api.getManualInvoices(b.id),
+      api.getBusinessLinkedAccounts(b.id),
+    ]));
+    const accountsAll = [], txAll = [], invAll = [], linkedAll = [];
+    biz.forEach((b, i) => {
+      const [acc, tx, inv, linked] = results.slice(i * 4, i * 4 + 4);
+      if (acc.status === 'fulfilled' && Array.isArray(acc.value)) accountsAll.push(...acc.value);
+      if (tx.status === 'fulfilled' && Array.isArray(tx.value)) txAll.push(...tx.value);
+      if (inv.status === 'fulfilled' && Array.isArray(inv.value)) invAll.push(...inv.value);
+      if (linked.status === 'fulfilled' && Array.isArray(linked.value)) linkedAll.push(...linked.value.map(String));
+    });
+    setBizAccounts(accountsAll); setBizTransactions(txAll); setManualInvoices(invAll);
+    setAssignedLinkedIds(new Set(linkedAll));
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
-    (async () => { if (!cancelled) await loadBusinessDetail(selectedBusiness?.id); })();
+    (async () => {
+      if (cancelled) return;
+      if (isAllView) await loadAllBusinessesDetail(businesses);
+      else await loadBusinessDetail(selectedBusiness?.id);
+    })();
     return () => { cancelled = true; };
-  }, [selectedBusiness, loadBusinessDetail]);
+  }, [selectedBusiness, isAllView, businesses, loadBusinessDetail, loadAllBusinessesDetail]);
 
   /* Full refresh: linked accounts/transactions (App-level) + QuickBooks + business detail. */
   const refreshEverything = useCallback(async () => {
     await Promise.all([
       loadAll ? loadAll() : Promise.resolve(),
       loadBusinessQbo(),
-      loadBusinessDetail(selectedBusiness?.id),
+      isAllView ? loadAllBusinessesDetail(businesses) : loadBusinessDetail(selectedBusiness?.id),
       loadReconciliations(),
       loadOverrides(),
     ]);
-  }, [loadAll, loadBusinessQbo, loadBusinessDetail, loadReconciliations, loadOverrides, selectedBusiness]);
+  }, [loadAll, loadBusinessQbo, isAllView, businesses, loadBusinessDetail, loadAllBusinessesDetail, loadReconciliations, loadOverrides, selectedBusiness]);
 
   /* ------------------------------------------------------------------ */
   /* Normalized accounts (linked + manual)                              */
@@ -401,10 +433,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     () => new Set((accounts || []).filter(isBusinessLinked).map((a) => String(a.id))),
     [accounts]
   );
-  const effectiveLinkedIds = useMemo(
-    () => (assignedLinkedIds.size > 0 ? assignedLinkedIds : autoBusinessIds),
-    [assignedLinkedIds, autoBusinessIds]
-  );
+  const effectiveLinkedIds = useMemo(() => {
+    // All-businesses view: union of every business's assignments + all auto-detected.
+    if (isAllView) return new Set([...autoBusinessIds, ...assignedLinkedIds]);
+    return assignedLinkedIds.size > 0 ? assignedLinkedIds : autoBusinessIds;
+  }, [isAllView, assignedLinkedIds, autoBusinessIds]);
   const usingAutoDetect = assignedLinkedIds.size === 0;
 
   const allAccounts = useMemo(() => {
@@ -848,7 +881,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const changePct = Number(dashboard?.revenueChangePct ?? 0);
   const hasAnyLinked = (accounts || []).length > 0;        // any linked accounts exist to assign
   const hasLinked = allAccounts.some((a) => a.source === 'Linked'); // any assigned to this business
-  const hasContext = connected || !!selectedBusiness || hasAnyLinked;
+  const hasContext = connected || !!selectedBusiness || isAllView || hasAnyLinked;
   /* All linked accounts, normalized — the pool shown in the assignment picker. */
   const availableLinked = useMemo(() => (accounts || []).map(normLinkedAccount), [accounts]);
 
@@ -871,11 +904,33 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const pendingInvoices = useMemo(() => allInvoices.filter((i) => i.status !== 'PAID'), [allInvoices]);
   const pendingTotal = useMemo(() => pendingInvoices.reduce((s, i) => s + i.amount, 0), [pendingInvoices]);
 
-  const manualFigures = useMemo(() => ({
-    revenueMtd: Number(selectedBusiness?.revenueMtd) || 0,
-    expensesMtd: Number(selectedBusiness?.expensesMtd) || 0,
-    outstandingInvoices: Number(selectedBusiness?.outstandingInvoices) || 0,
-  }), [selectedBusiness]);
+  const manualFigures = useMemo(() => {
+    // All-businesses view: sum the per-business figures across every business.
+    if (isAllView) {
+      return businesses.reduce((acc, b) => ({
+        revenueMtd: acc.revenueMtd + (Number(b.revenueMtd) || 0),
+        expensesMtd: acc.expensesMtd + (Number(b.expensesMtd) || 0),
+        outstandingInvoices: acc.outstandingInvoices + (Number(b.outstandingInvoices) || 0),
+      }), { revenueMtd: 0, expensesMtd: 0, outstandingInvoices: 0 });
+    }
+    return {
+      revenueMtd: Number(selectedBusiness?.revenueMtd) || 0,
+      expensesMtd: Number(selectedBusiness?.expensesMtd) || 0,
+      outstandingInvoices: Number(selectedBusiness?.outstandingInvoices) || 0,
+    };
+  }, [isAllView, businesses, selectedBusiness]);
+
+  /* Deposits (money in) so far this calendar month — surfaced as a KPI. */
+  const depositsMtd = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear(), mo = now.getMonth();
+    return unifiedTx.reduce((s, t) => {
+      if (t.amount <= 0) return s;
+      const d = t.date ? new Date(t.date) : null;
+      if (!d || d.getFullYear() !== y || d.getMonth() !== mo) return s;
+      return s + t.amount;
+    }, 0);
+  }, [unifiedTx]);
 
   const kpi = connected
     ? {
@@ -915,9 +970,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         <div>
           <div className="page-title">My Business</div>
           <div className="page-subtitle">
-            {connected
-              ? companyName
-              : (selectedBusiness?.name || `Dashboard for ${user?.email ? user.email.split('@')[0] : 'Your'} Business`)}
+            {isAllView
+              ? `All businesses · ${businesses.length}`
+              : connected
+                ? companyName
+                : (selectedBusiness?.name || `Dashboard for ${user?.email ? user.email.split('@')[0] : 'Your'} Business`)}
             {connected && (
               <span className="badge badge-green" style={{ marginLeft: '8px' }}>
                 <i className="ti ti-plug-connected"></i> Connected
@@ -959,6 +1016,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
         {businesses.length > 0 && (
           <div className="seg-control" style={{ flexWrap: 'wrap', marginBottom: showAddBusiness ? 14 : 0 }}>
+            {businesses.length > 1 && (
+              <button className={`seg-btn ${isAllView ? 'active' : ''}`} onClick={() => setSelectedId('ALL')}
+                title="Track all businesses in one place">
+                <i className="ti ti-layout-grid" style={{ marginRight: 4 }}></i>All businesses
+              </button>
+            )}
             {businesses.map((b) => (
               <button key={b.id} className={`seg-btn ${selectedBusiness?.id === b.id ? 'active' : ''}`}
                 onClick={() => setSelectedId(b.id)} title={b.industry ? `${b.name} · ${b.industry}` : b.name}>
@@ -966,6 +1029,20 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               </button>
             ))}
           </div>
+        )}
+
+        {/* All-businesses summary chip. */}
+        {isAllView && !showAddBusiness && (
+          <>
+            <div className="divider" style={{ margin: '14px 0' }}></div>
+            <div className="list-item" style={{ padding: 0 }}>
+              <div className="item-icon icon-forest"><i className="ti ti-layout-grid"></i></div>
+              <div className="item-main">
+                <div className="item-name">All businesses</div>
+                <div className="item-sub">{businesses.length} businesses · combined accounts, transactions &amp; invoices</div>
+              </div>
+            </div>
+          </>
         )}
 
         {showAddBusiness && (
@@ -1096,6 +1173,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-cash" style={{ fontSize: '13px', color: 'var(--tv-gold)' }}></i> Cash Balance</div>
               <div className="kpi-value">{currency(kpi.cashBalance)}</div>
+            </div>
+            <div className="kpi-card">
+              <div className="kpi-label"><i className="ti ti-arrow-down-left" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Deposits (MTD)</div>
+              <div className="kpi-value">{currency(depositsMtd)}</div>
+              <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>Money in this month</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices</div>
@@ -1309,10 +1391,31 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       <i className="ti ti-download"></i> Export
                     </button>
                     <button className="btn btn-secondary btn-sm" onClick={() => (showAddTx ? setShowAddTx(false) : openAddTx(fAccount !== 'ALL' ? fAccount : null))}
-                      disabled={manualAccountCount === 0} title={manualAccountCount === 0 ? 'Add a manual account to log a transaction' : 'Add a manual transaction'}>
+                      disabled={manualAccountCount === 0 || isAllView}
+                      title={isAllView ? 'Switch to a specific business to add' : (manualAccountCount === 0 ? 'Add a manual account to log a transaction' : 'Add a manual transaction')}>
                       <i className={`ti ${showAddTx ? 'ti-x' : 'ti-plus'}`}></i>{showAddTx ? ' Cancel' : ' Add manual'}
                     </button>
                   </div>
+                </div>
+
+                {/* Quick filters — the common views at a glance. */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                  {[
+                    { label: 'All', icon: 'ti-list', active: fDirection === 'ALL' && fType === 'ALL', on: () => { setFDirection('ALL'); setFType('ALL'); } },
+                    { label: 'Deposits', icon: 'ti-arrow-down-left', active: fDirection === 'IN', on: () => { setFDirection('IN'); setFType('ALL'); } },
+                    { label: 'Payments', icon: 'ti-arrow-up-right', active: fDirection === 'OUT' && fType === 'ALL', on: () => { setFDirection('OUT'); setFType('ALL'); } },
+                    { label: 'Transfers', icon: 'ti-arrows-exchange', active: fType === 'Transfer', on: () => { setFType('Transfer'); setFDirection('ALL'); } },
+                    { label: 'Refunds', icon: 'ti-receipt-refund', active: fType === 'Refund', on: () => { setFType('Refund'); setFDirection('ALL'); } },
+                    { label: 'Tax', icon: 'ti-building-bank', active: fType === 'Tax', on: () => { setFType('Tax'); setFDirection('ALL'); } },
+                  ].map((c) => (
+                    <button key={c.label} onClick={c.on} className={`seg-btn ${c.active ? 'active' : ''}`}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999, padding: '7px 14px',
+                        border: `1px solid ${c.active ? 'var(--tv-forest)' : 'var(--tv-border)'}`,
+                        background: c.active ? 'var(--tv-forest)' : 'var(--tv-surface)',
+                        color: c.active ? '#fff' : 'var(--tv-text-primary)', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>
+                      <i className={`ti ${c.icon}`}></i> {c.label}
+                    </button>
+                  ))}
                 </div>
 
                 {/* Filter bar (row 1): search + account + category + type + status + direction */}
