@@ -490,6 +490,20 @@ export const api = {
   deleteManualInvoice: (id) =>
     request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
 
+  // Per-business document center (link-based). Pass invoiceId to scope to one invoice.
+  getBusinessDocuments: (businessId, invoiceId) =>
+    request(
+      `/api/v1/business/manual/businesses/${businessId}/documents` +
+        (invoiceId != null ? `?invoiceId=${encodeURIComponent(invoiceId)}` : "")
+    ),
+  createBusinessDocument: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/documents`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessDocument: (id) =>
+    request(`/api/v1/business/manual/documents/${id}`, { method: "DELETE" }),
+
   // Reconciliation flags (per-user) for linked or manual transactions, keyed by a
   // stable external id (e.g. "lin-<plaidTransactionId>" or "man-<id>").
   getReconciliations: () => request("/api/v1/business/manual/reconciliations"),
