@@ -1035,33 +1035,68 @@ svg{display:block;}
     <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
       <div class="m-card" style="display:flex; align-items:center; gap:12px; padding:14px;">
         <div class="inst" style="background:var(--tv-forest); border-radius:12px;"><i class="ti ti-building"></i></div>
-        <div class="grow" style="flex:1;"><div class="t1" style="font-size:16px;">Acme LLC</div><div class="t2">EIN •••• 7732</div></div><i class="ti ti-chevron-down" style="font-size:20px; color:var(--tv-forest);"></i>
+        <div class="grow" style="flex:1;"><div class="t1" style="font-size:16px;">Acme LLC</div><div class="t2">All businesses · 2 · EIN •••• 7732</div></div><i class="ti ti-chevron-down" style="font-size:20px; color:var(--tv-forest);"></i>
+      </div>
+      <!-- Hero cash -->
+      <div class="m-card" style="margin-top:16px; border-left:3px solid var(--tv-forest);">
+        <div class="t2">Total business cash</div>
+        <div style="font-size:30px; font-weight:800; line-height:1.1; margin-top:2px;">$31,200</div>
+        <div class="t2" style="margin-top:5px;">2 cash accounts · $4,180 owed on 1 card</div>
+        <div style="display:flex; gap:18px; margin-top:12px; flex-wrap:wrap;">
+          <div><div class="t2">Net position</div><div style="font-weight:700; color:var(--tv-positive);">$27,020</div></div>
+          <div><div class="t2">Deposits MTD</div><div style="font-weight:700;">$18,600</div></div>
+          <div><div class="t2">Cash flow 6mo</div><div style="font-weight:700; color:var(--tv-positive);">+$41,300</div></div>
+        </div>
       </div>
       <div class="kpi-grid" style="margin-top:16px; grid-template-columns:1fr 1fr 1fr;">
         <div class="kpi"><div class="k-lbl">Revenue</div><div class="k-val" style="font-size:17px;">$42k</div></div>
         <div class="kpi"><div class="k-lbl">Expenses</div><div class="k-val" style="font-size:17px;">$28k</div></div>
         <div class="kpi"><div class="k-lbl">Net</div><div class="k-val" style="font-size:17px; color:var(--tv-positive);">$14k</div></div>
       </div>
-      <div class="section-title">Cash flow · 6 mo</div>
+      <div class="section-title">Cash flow · money in vs out · 6 mo</div>
       <div class="m-card">
         <svg width="100%" height="130" viewBox="0 0 300 130">
           <g class="chart-grid"><line x1="0" y1="40" x2="300" y2="40"/><line x1="0" y1="80" x2="300" y2="80"/></g>
           <g>
-            <rect x="18" y="55" width="28" height="55" rx="5" fill="#3D8A68"/>
-            <rect x="66" y="40" width="28" height="70" rx="5" fill="#3D8A68"/>
-            <rect x="114" y="62" width="28" height="48" rx="5" fill="#3D8A68"/>
-            <rect x="162" y="30" width="28" height="80" rx="5" fill="#1A4D3B"/>
-            <rect x="210" y="48" width="28" height="62" rx="5" fill="#3D8A68"/>
-            <rect x="258" y="22" width="28" height="88" rx="5" fill="#C9973A"/>
+            <rect x="14" y="55" width="14" height="55" rx="3" fill="#3D8A68"/><rect x="30" y="78" width="14" height="32" rx="3" fill="#C0503E"/>
+            <rect x="62" y="42" width="14" height="68" rx="3" fill="#3D8A68"/><rect x="78" y="74" width="14" height="36" rx="3" fill="#C0503E"/>
+            <rect x="110" y="60" width="14" height="50" rx="3" fill="#3D8A68"/><rect x="126" y="82" width="14" height="28" rx="3" fill="#C0503E"/>
+            <rect x="158" y="34" width="14" height="76" rx="3" fill="#3D8A68"/><rect x="174" y="72" width="14" height="38" rx="3" fill="#C0503E"/>
+            <rect x="206" y="50" width="14" height="60" rx="3" fill="#3D8A68"/><rect x="222" y="78" width="14" height="32" rx="3" fill="#C0503E"/>
+            <rect x="254" y="28" width="14" height="82" rx="3" fill="#3D8A68"/><rect x="270" y="74" width="14" height="36" rx="3" fill="#C0503E"/>
           </g>
-          <g font-size="10" fill="#7A9086" text-anchor="middle"><text x="32" y="124">Jan</text><text x="80" y="124">Feb</text><text x="128" y="124">Mar</text><text x="176" y="124">Apr</text><text x="224" y="124">May</text><text x="272" y="124">Jun</text></g>
+          <g font-size="10" fill="#7A9086" text-anchor="middle"><text x="28" y="124">Jan</text><text x="76" y="124">Feb</text><text x="124" y="124">Mar</text><text x="172" y="124">Apr</text><text x="220" y="124">May</text><text x="268" y="124">Jun</text></g>
         </svg>
       </div>
-      <div class="section-title">Invoices</div>
+      <div class="section-title">Connected accounts · auto-detected</div>
       <div class="m-card" style="padding:6px 16px;">
-        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-file-alert"></i></div><div class="grow"><div class="t1">#1042 — Globex Co</div><div class="t2" style="color:var(--tv-negative);">Overdue 6 days</div></div><div style="font-weight:700;">$4,800</div></div>
-        <div class="lrow"><div class="cat-icon" style="background:var(--tv-warning-bg); color:var(--tv-warning);"><i class="ti ti-file-invoice"></i></div><div class="grow"><div class="t1">#1043 — Initech</div><div class="t2">Due Jun 20</div></div><div style="font-weight:700;">$2,100</div></div>
-        <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-file-check"></i></div><div class="grow"><div class="t1">#1041 — Soylent</div><div class="t2" style="color:var(--tv-positive);">Paid</div></div><div style="font-weight:700;">$3,300</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-forest); color:#fff;"><i class="ti ti-building-bank"></i></div><div class="grow"><div class="t1">Operating Checking · Linked</div><div class="t2">Chase · Checking</div></div><div style="font-weight:700;">$24,800</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive); color:#fff;"><i class="ti ti-pig-money"></i></div><div class="grow"><div class="t1">Business Savings · Linked</div><div class="t2">Chase · Savings</div></div><div style="font-weight:700;">$6,400</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold); color:#fff;"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Amex Biz Platinum · Linked</div><div class="t2">21% used · $15,820 left · Due Jul 18</div></div><div style="font-weight:700; color:var(--tv-negative);">$4,180</div></div>
+      </div>
+      <div class="section-title">Transactions</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+        <span class="chip" style="background:var(--tv-forest); color:#fff; padding:6px 12px; border-radius:999px; font-size:12px;">All</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">Deposits</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">Payments</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">Transfers</span>
+      </div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-arrow-down-left"></i></div><div class="grow"><div class="t1">Client payment — Northwind</div><div class="t2">Income · Cleared · #client-nw</div></div><div style="font-weight:700; color:var(--tv-positive);">+$6,200</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-shopping-bag"></i></div><div class="grow"><div class="t1">Adobe Creative Cloud</div><div class="t2">Software · Expense · Pending</div></div><div style="font-weight:700; color:var(--tv-negative);">−$599</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-forest); color:#fff;"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Card payment — Amex</div><div class="t2">Card Payment · Reconciled</div></div><div style="font-weight:700; color:var(--tv-positive);">+$2,000</div></div>
+      </div>
+      <div class="section-title">Insights · P&amp;L (6 mo)</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="grow"><div class="t1">Income</div></div><div style="font-weight:700; color:var(--tv-positive);">$112,400</div></div>
+        <div class="lrow"><div class="grow"><div class="t1">Expenses</div></div><div style="font-weight:700; color:var(--tv-negative);">$71,100</div></div>
+        <div class="lrow"><div class="grow"><div class="t1" style="font-weight:700;">Net profit</div></div><div style="font-weight:800; color:var(--tv-forest);">$41,300</div></div>
+      </div>
+      <div class="section-title">Invoices &amp; pending payments</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-file-alert"></i></div><div class="grow"><div class="t1">Pinecrest Studio</div><div class="t2" style="color:var(--tv-negative);">QuickBooks · Overdue</div></div><div style="font-weight:700;">$3,450</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-warning-bg); color:var(--tv-warning);"><i class="ti ti-file-invoice"></i></div><div class="grow"><div class="t1">Harbor Group</div><div class="t2">Manual · Due Jun 28</div></div><div style="font-weight:700;">$2,100</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-file-check"></i></div><div class="grow"><div class="t1">Northwind Co.</div><div class="t2" style="color:var(--tv-positive);">Manual · Paid</div></div><div style="font-weight:700;">$6,200</div></div>
       </div>
     </div></div>
     <div class="gesture-bar"></div>

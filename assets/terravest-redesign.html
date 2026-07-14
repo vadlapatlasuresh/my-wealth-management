@@ -1047,7 +1047,7 @@ a { text-decoration: none; color: inherit; }
       (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
     • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
     • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto).
-    • My Business: multi-business switcher, manual + QuickBooks linking, accounts, revenue trend, activity timeline.
+    • My Business: multi-business + "All businesses" switcher, hero cash header, auto-detected linked accounts (bank + credit) with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks.
     • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
 
     CHANGELOG — 2026-06-07 (auth + brokers + polish)
@@ -3503,18 +3503,19 @@ a { text-decoration: none; color: inherit; }
         <div class="page-header">
           <div>
             <div class="page-title">My Business</div>
-            <div class="page-subtitle">Acme Studio LLC <span class="badge badge-gray">Not connected</span> <span class="badge badge-forest">LLC</span></div>
+            <div class="page-subtitle">Acme Studio LLC <span class="badge badge-gray">QuickBooks not connected</span> <span class="badge badge-gold">LLC</span></div>
           </div>
           <div class="page-actions" style="align-items:center;">
             <span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span>
-            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add business</button>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-refresh"></i> Sync now</button>
           </div>
         </div>
 
         <!-- Businesses switcher -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title">Your businesses</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add business</button></div>
-          <div class="seg-control" style="margin-bottom:10px;">
+          <div class="seg-control" style="margin-bottom:10px;flex-wrap:wrap;">
+            <button class="seg-btn"><i class="ti ti-layout-grid" style="margin-right:4px;"></i>All businesses</button>
             <button class="seg-btn active">Acme Studio LLC</button>
             <button class="seg-btn">Cedar Holdings</button>
           </div>
@@ -3535,99 +3536,211 @@ a { text-decoration: none; color: inherit; }
           <button class="btn btn-secondary btn-sm">Connect</button>
         </div>
 
-        <div class="kpi-grid" style="grid-template-columns:repeat(5,1fr);">
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-cash" style="color:var(--tv-forest-light)"></i> Revenue (MTD)</div><div class="kpi-value">$42,000</div><div class="kpi-delta neg" style="color:var(--tv-text-muted);">Connect to track changes</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-receipt" style="color:var(--tv-negative)"></i> Expenses (MTD)</div><div class="kpi-value">$28,000</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Net Profit (MTD)</div><div class="kpi-value">$14,000</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-wallet" style="color:#1E5FAD"></i> Cash Balance</div><div class="kpi-value">$31,200</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-warning)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div></div>
+        <!-- Hero cash header -->
+        <div class="card" style="margin-bottom:16px;border-left:4px solid var(--tv-forest);">
+          <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;justify-content:space-between;">
+            <div style="min-width:220px;">
+              <div style="font-size:13px;color:var(--tv-text-muted);font-weight:500;">Total business cash</div>
+              <div style="font-family:var(--font-display),serif;font-size:36px;font-weight:700;color:var(--tv-text-primary);line-height:1.1;margin-top:2px;">$31,200</div>
+              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-top:6px;">2 cash accounts · $4,180 owed on 1 card</div>
+            </div>
+            <div style="display:flex;gap:28px;flex-wrap:wrap;">
+              <div style="min-width:110px;"><div style="font-size:12px;color:var(--tv-text-muted);font-weight:500;">Net position</div><div style="font-family:var(--font-display),serif;font-size:20px;font-weight:600;color:var(--tv-positive);margin-top:2px;">$27,020</div></div>
+              <div style="min-width:110px;"><div style="font-size:12px;color:var(--tv-text-muted);font-weight:500;">Deposits (MTD)</div><div style="font-family:var(--font-display),serif;font-size:20px;font-weight:600;color:var(--tv-text-primary);margin-top:2px;">$18,600</div></div>
+              <div style="min-width:110px;"><div style="font-size:12px;color:var(--tv-text-muted);font-weight:500;">Net cash flow · 6mo</div><div style="font-family:var(--font-display),serif;font-size:20px;font-weight:600;color:var(--tv-positive);margin-top:2px;">+$41,300</div></div>
+            </div>
+          </div>
         </div>
 
-        <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:16px;"><i class="ti ti-info-circle"></i> Showing manual figures — Connect QuickBooks for live numbers.</div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-up" style="color:var(--tv-positive)"></i> Revenue (MTD)</div><div class="kpi-value">$42,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">Connect to track changes</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down" style="color:var(--tv-negative)"></i> Expenses (MTD)</div><div class="kpi-value">$28,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-line" style="color:var(--tv-forest-light)"></i> Net Profit (MTD)</div><div class="kpi-value">$14,000</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-forest-light)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div></div>
+        </div>
+        <div style="height:16px;"></div>
 
+        <!-- Cash flow: money in vs money out (last 6 months) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Cash flow <span class="badge badge-green" style="margin-left:6px;">Net +$41,300</span></div>
+            <div style="display:flex;gap:14px;font-size:12px;color:var(--tv-text-muted);">
+              <span><i class="ti ti-square-rounded-filled" style="color:var(--tv-positive)"></i> In</span>
+              <span><i class="ti ti-square-rounded-filled" style="color:var(--tv-negative)"></i> Out</span>
+              <span class="badge badge-gray">Last 6 months</span>
+            </div>
+          </div>
+          <svg viewBox="0 0 620 170" width="100%" height="170">
+            <line x1="0" y1="140" x2="620" y2="140" stroke="var(--tv-border)" stroke-width="1"/>
+            <g>
+              <rect x="30"  y="70"  width="26" height="70"  rx="4" fill="var(--tv-positive)"/><rect x="62"  y="95"  width="26" height="45" rx="4" fill="var(--tv-negative)"/>
+              <rect x="133" y="55"  width="26" height="85"  rx="4" fill="var(--tv-positive)"/><rect x="165" y="88"  width="26" height="52" rx="4" fill="var(--tv-negative)"/>
+              <rect x="236" y="80"  width="26" height="60"  rx="4" fill="var(--tv-positive)"/><rect x="268" y="100" width="26" height="40" rx="4" fill="var(--tv-negative)"/>
+              <rect x="339" y="45"  width="26" height="95"  rx="4" fill="var(--tv-positive)"/><rect x="371" y="82"  width="26" height="58" rx="4" fill="var(--tv-negative)"/>
+              <rect x="442" y="60"  width="26" height="80"  rx="4" fill="var(--tv-positive)"/><rect x="474" y="92"  width="26" height="48" rx="4" fill="var(--tv-negative)"/>
+              <rect x="545" y="40"  width="26" height="100" rx="4" fill="var(--tv-positive)"/><rect x="577" y="86"  width="26" height="54" rx="4" fill="var(--tv-negative)"/>
+            </g>
+            <text x="59"  y="160" font-size="11" fill="#7A9086" text-anchor="middle">Jan</text>
+            <text x="162" y="160" font-size="11" fill="#7A9086" text-anchor="middle">Feb</text>
+            <text x="265" y="160" font-size="11" fill="#7A9086" text-anchor="middle">Mar</text>
+            <text x="368" y="160" font-size="11" fill="#7A9086" text-anchor="middle">Apr</text>
+            <text x="471" y="160" font-size="11" fill="#7A9086" text-anchor="middle">May</text>
+            <text x="574" y="160" font-size="11" fill="#7A9086" text-anchor="middle">Jun</text>
+          </svg>
+        </div>
+
+        <!-- Connected accounts (linked + manual, auto-detected) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Connected accounts <span class="badge badge-gray" style="margin-left:6px;">$31,200 cash · $4,180 owed</span></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm"><i class="ti ti-plug"></i> Link account</button>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-adjustments"></i> Edit accounts</button>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add manual account</button>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:12px;"><i class="ti ti-refresh" style="color:var(--tv-positive)"></i> Business accounts are auto-detected and sync automatically. Use "Sync now" to pull the latest.</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+            <div class="card" style="border-top:3px solid var(--tv-forest);">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div>
+                <div style="flex:1;"><div class="item-name">Operating Checking ••4021</div><div class="item-sub">Chase</div></div>
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;"><span class="badge badge-forest">Checking</span><span class="badge badge-green">Linked</span></div>
+              </div>
+              <div class="stat-tile-label">Current balance</div><div class="stat-tile-value">$24,800</div>
+            </div>
+            <div class="card" style="border-top:3px solid var(--tv-positive);">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div class="item-icon icon-green"><i class="ti ti-pig-money"></i></div>
+                <div style="flex:1;"><div class="item-name">Business Savings ••8890</div><div class="item-sub">Chase</div></div>
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;"><span class="badge badge-green">Savings</span><span class="badge badge-green">Linked</span></div>
+              </div>
+              <div class="stat-tile-label">Current balance</div><div class="stat-tile-value">$6,400</div>
+            </div>
+            <div class="card" style="border-top:3px solid var(--tv-warning);">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+                <div class="item-icon icon-amber"><i class="ti ti-credit-card"></i></div>
+                <div style="flex:1;"><div class="item-name">Amex Biz Platinum ••1007</div><div class="item-sub">American Express</div></div>
+                <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;"><span class="badge badge-amber">Credit Card</span><span class="badge badge-green">Linked</span></div>
+              </div>
+              <div class="stat-tile-label">Balance owed</div><div class="stat-tile-value" style="color:var(--tv-negative);">$4,180</div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tv-text-muted);margin-top:10px;"><span>21% used</span><span>$15,820 available</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:21%;background:var(--tv-positive);"></div></div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">Limit $20,000 · Min $75 · Due Jul 18</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Inner tabs -->
+        <div class="tabs">
+          <div class="tab active"><i class="ti ti-arrows-exchange" style="margin-right:6px;"></i>Transactions</div>
+          <div class="tab"><i class="ti ti-credit-card" style="margin-right:6px;"></i>Credit Card &amp; Expenses</div>
+          <div class="tab"><i class="ti ti-tools" style="margin-right:6px;"></i>Business Tools</div>
+        </div>
+
+        <!-- Transactions tab: totals -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px;">
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down-left" style="color:var(--tv-positive)"></i> Money In</div><div class="kpi-value">$18,600</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-up-right" style="color:var(--tv-negative)"></i> Money Out</div><div class="kpi-value">$9,241</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-equal" style="color:var(--tv-forest-light)"></i> Net</div><div class="kpi-value">$9,359</div><div class="kpi-delta pos"><i class="ti ti-list"></i> 42 transactions</div></div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title">Transactions</div>
+            <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add manual</button></div>
+          </div>
+          <!-- Quick filters -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="seg-btn active" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-forest);background:var(--tv-forest);color:#fff;"><i class="ti ti-list"></i> All</button>
+            <button class="seg-btn" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-border);"><i class="ti ti-arrow-down-left"></i> Deposits</button>
+            <button class="seg-btn" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-border);"><i class="ti ti-arrow-up-right"></i> Payments</button>
+            <button class="seg-btn" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-border);"><i class="ti ti-arrows-exchange"></i> Transfers</button>
+            <button class="seg-btn" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-border);"><i class="ti ti-receipt-refund"></i> Refunds</button>
+            <button class="seg-btn" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-border);"><i class="ti ti-building-bank"></i> Tax</button>
+          </div>
+          <!-- Filter bar -->
+          <div class="filter-bar">
+            <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search description, merchant, or category…"></div>
+            <select class="form-select filter-select"><option>All accounts</option><option>Amex Biz Platinum</option><option>Operating Checking</option></select>
+            <select class="form-select filter-select"><option>All categories</option></select>
+            <select class="form-select filter-select"><option>All types</option></select>
+            <select class="form-select filter-select"><option>All statuses</option><option>Pending</option><option>Cleared</option><option>Reconciled</option></select>
+          </div>
+          <div class="table-scroll" style="margin-top:12px;">
+            <table class="tv-table">
+              <thead><tr><th>Description</th><th>Account</th><th>Category</th><th>Type</th><th>Status</th><th>Date</th><th style="text-align:right;">Amount</th><th></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px;"><div class="item-icon icon-green" style="width:32px;height:32px;font-size:15px;"><i class="ti ti-arrow-down-left"></i></div><div><div style="font-weight:500;">Client payment — Northwind</div><div style="display:flex;gap:4px;margin-top:3px;"><span class="badge badge-gold">#client-nw</span></div></div></div></td>
+                  <td><span class="badge badge-gray"><i class="ti ti-building-bank"></i> Operating Checking</span></td>
+                  <td><span class="badge badge-gray">Income</span></td><td><span class="badge badge-gray">Income</span></td><td><span class="badge badge-gray">Cleared</span></td>
+                  <td style="color:var(--tv-text-muted);">Jun 12</td><td style="text-align:right;"><span class="item-amount amount-pos">+$6,200</span></td>
+                  <td style="text-align:right;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-tag"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-check"></i></button></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px;"><div class="item-icon icon-red" style="width:32px;height:32px;font-size:15px;"><i class="ti ti-shopping-bag"></i></div><div><div style="font-weight:500;">Adobe Creative Cloud</div><div class="item-sub">Adobe Inc.</div></div></div></td>
+                  <td><span class="badge badge-gray"><i class="ti ti-credit-card"></i> Amex Biz Platinum</span></td>
+                  <td><span class="badge badge-gray">Software</span></td><td><span class="badge badge-forest">Expense</span></td><td><span class="badge badge-amber">Pending</span></td>
+                  <td style="color:var(--tv-text-muted);">Jun 11</td><td style="text-align:right;"><span class="item-amount amount-neg">-$599</span></td>
+                  <td style="text-align:right;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-tag"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-check"></i></button></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px;"><div class="item-icon icon-forest" style="width:32px;height:32px;font-size:15px;"><i class="ti ti-credit-card"></i></div><div style="font-weight:500;">Card payment — Amex</div></div></td>
+                  <td><span class="badge badge-gray"><i class="ti ti-credit-card"></i> Amex Biz Platinum</span></td>
+                  <td><span class="badge badge-gray">Transfer</span></td><td><span class="badge badge-forest">Card Payment</span></td><td><span class="badge badge-green">Reconciled</span></td>
+                  <td style="color:var(--tv-text-muted);">Jun 9</td><td style="text-align:right;"><span class="item-amount amount-pos">+$2,000</span></td>
+                  <td style="text-align:right;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-tag"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-checks" style="color:var(--tv-positive);"></i></button></td>
+                </tr>
+                <tr>
+                  <td><div style="display:flex;align-items:center;gap:10px;"><div class="item-icon icon-amber" style="width:32px;height:32px;font-size:15px;"><i class="ti ti-truck-delivery"></i></div><div style="font-weight:500;">WeWork — office rent</div></div></td>
+                  <td><span class="badge badge-gray"><i class="ti ti-building-bank"></i> Operating Checking</span></td>
+                  <td><span class="badge badge-gray">Rent</span></td><td><span class="badge badge-forest">Vendor Payment</span></td><td><span class="badge badge-gray">Cleared</span></td>
+                  <td style="color:var(--tv-text-muted);">Jun 1</td><td style="text-align:right;"><span class="item-amount amount-neg">-$1,800</span></td>
+                  <td style="text-align:right;white-space:nowrap;"><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-tag"></i></button><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-check"></i></button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Insights (Credit Card & Expenses tab): P&L snapshot + Top vendors -->
         <div class="grid-2" style="margin-bottom:16px;">
-          <!-- Revenue trend -->
           <div class="card">
-            <div class="section-title">Revenue trend <span style="font-size:11.5px;font-weight:400;color:var(--tv-text-muted);">Last 6 months</span></div>
-            <svg viewBox="0 0 320 120" width="100%">
-              <rect x="10"  y="60" width="36" height="50" rx="3" fill="var(--tv-forest-light)"/>
-              <rect x="60"  y="45" width="36" height="65" rx="3" fill="var(--tv-forest-light)"/>
-              <rect x="110" y="55" width="36" height="55" rx="3" fill="var(--tv-forest-light)"/>
-              <rect x="160" y="35" width="36" height="75" rx="3" fill="var(--tv-forest-light)"/>
-              <rect x="210" y="40" width="36" height="70" rx="3" fill="var(--tv-forest-light)"/>
-              <rect x="260" y="25" width="36" height="85" rx="3" fill="var(--tv-forest)"/>
-              <text x="28"  y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jan</text>
-              <text x="78"  y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Feb</text>
-              <text x="128" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Mar</text>
-              <text x="178" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Apr</text>
-              <text x="228" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">May</text>
-              <text x="278" y="118" font-size="9" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
-            </svg>
+            <div class="section-header"><div class="section-title">P&amp;L snapshot</div><span class="badge badge-gray">Last 6 months</span></div>
+            <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-arrow-down-left"></i></div><div class="item-main"><div class="item-name">Income</div></div><div class="item-right"><div class="item-amount amount-pos">$112,400</div></div></div>
+            <div class="list-item"><div class="item-icon icon-red"><i class="ti ti-arrow-up-right"></i></div><div class="item-main"><div class="item-name">Expenses</div></div><div class="item-right"><div class="item-amount amount-neg">$71,100</div></div></div>
+            <div style="border-top:1px solid var(--tv-border);margin:10px 0;"></div>
+            <div class="list-item"><div class="item-icon icon-forest"><i class="ti ti-scale"></i></div><div class="item-main"><div class="item-name" style="font-weight:600;">Net profit</div></div><div class="item-right"><div class="item-amount amount-pos" style="font-size:16px;">$41,300</div></div></div>
           </div>
-          <!-- Accounts -->
           <div class="card">
-            <div class="section-header"><div class="section-title">Accounts</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add</button></div>
-            <div class="table-scroll">
-              <table class="tv-table">
-                <thead><tr><th>Account</th><th>Type</th><th style="text-align:right;">Balance</th><th></th></tr></thead>
-                <tbody>
-                  <tr><td>Operating Checking</td><td><span class="badge badge-forest">Checking</span></td><td style="text-align:right;">$24,800</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
-                  <tr><td>Business Savings</td><td><span class="badge badge-forest">Savings</span></td><td style="text-align:right;">$6,400</td><td><button class="btn btn-secondary btn-sm" style="padding:3px 8px;"><i class="ti ti-trash"></i></button></td></tr>
-                  <tr style="background:var(--tv-bg);font-weight:600;"><td>Total</td><td></td><td style="text-align:right;">$31,200</td><td></td></tr>
-                </tbody>
-              </table>
-            </div>
+            <div class="section-header"><div class="section-title">Top vendors</div><span class="badge badge-gray">By spend</span></div>
+            <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="font-weight:500;">WeWork</span><span class="item-amount">$10,800</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--tv-forest-light);"></div></div></div>
+            <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="font-weight:500;">Gusto Payroll</span><span class="item-amount">$8,400</span></div><div class="progress-bar"><div class="progress-fill" style="width:78%;background:var(--tv-forest-light);"></div></div></div>
+            <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="font-weight:500;">Adobe</span><span class="item-amount">$3,594</span></div><div class="progress-bar"><div class="progress-fill" style="width:33%;background:var(--tv-forest-light);"></div></div></div>
+            <div style="margin-bottom:12px;"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px;"><span style="font-weight:500;">Delta Airlines</span><span class="item-amount">$2,510</span></div><div class="progress-bar"><div class="progress-fill" style="width:23%;background:var(--tv-forest-light);"></div></div></div>
           </div>
         </div>
 
+        <!-- Business Tools: pending payments + invoices -->
         <div class="grid-2" style="margin-bottom:16px;">
-          <!-- Invoices -->
           <div class="card">
-            <div class="section-header"><div class="section-title">Invoices</div></div>
+            <div class="section-header"><div class="section-title">Pending payments <span class="badge badge-amber" style="margin-left:6px;">$5,550 due</span></div></div>
+            <div class="list-item"><div class="item-icon icon-red"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Pinecrest Studio</div><div class="item-sub"><span class="badge badge-red">Overdue</span> · Due May 20</div></div><div class="item-right" style="display:flex;align-items:center;gap:10px;"><div class="item-amount">$3,450</div><button class="btn btn-secondary btn-sm"><i class="ti ti-check"></i> Mark paid</button></div></div>
+            <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Harbor Group</div><div class="item-sub"><span class="badge badge-amber">Open</span> · Due Jun 28</div></div><div class="item-right" style="display:flex;align-items:center;gap:10px;"><div class="item-amount">$2,100</div><button class="btn btn-secondary btn-sm"><i class="ti ti-check"></i> Mark paid</button></div></div>
+          </div>
+          <div class="card">
+            <div class="section-header"><div class="section-title">Invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Create invoice</button></div>
             <div class="table-scroll">
               <table class="tv-table">
-                <thead><tr><th>Customer</th><th>Amount</th><th>Status</th><th>Due date</th></tr></thead>
+                <thead><tr><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Source</th></tr></thead>
                 <tbody>
-                  <tr><td>Northwind Co.</td><td>$6,200</td><td><span class="badge badge-green">Paid</span></td><td>Jun 15</td></tr>
-                  <tr><td>Pinecrest Studio</td><td>$3,450</td><td><span class="badge badge-red">Overdue</span></td><td>May 20</td></tr>
-                  <tr><td>Harbor Group</td><td>$2,100</td><td><span class="badge badge-gray">Open</span></td><td>Jun 28</td></tr>
+                  <tr><td>Northwind Co.</td><td style="text-align:right;">$6,200</td><td><span class="badge badge-green">Paid</span></td><td><span class="badge badge-forest">Manual</span></td></tr>
+                  <tr><td>Pinecrest Studio</td><td style="text-align:right;">$3,450</td><td><span class="badge badge-red">Overdue</span></td><td><span class="badge badge-green">QuickBooks</span></td></tr>
+                  <tr><td>Harbor Group</td><td style="text-align:right;">$2,100</td><td><span class="badge badge-amber">Open</span></td><td><span class="badge badge-forest">Manual</span></td></tr>
                 </tbody>
               </table>
             </div>
-          </div>
-          <!-- Expenses -->
-          <div class="card">
-            <div class="section-header"><div class="section-title">Expenses</div></div>
-            <div class="table-scroll">
-              <table class="tv-table">
-                <thead><tr><th>Vendor</th><th>Category</th><th>Date</th><th style="text-align:right;">Amount</th></tr></thead>
-                <tbody>
-                  <tr><td>Adobe</td><td><span class="badge badge-gray">Software</span></td><td>Jun 3</td><td style="text-align:right;" class="amount-neg">-$599</td></tr>
-                  <tr><td>WeWork</td><td><span class="badge badge-gray">Rent</span></td><td>Jun 1</td><td style="text-align:right;" class="amount-neg">-$1,800</td></tr>
-                  <tr><td>Delta Airlines</td><td><span class="badge badge-gray">Travel</span></td><td>May 28</td><td style="text-align:right;" class="amount-neg">-$842</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity -->
-        <div class="card">
-          <div class="section-title">Activity</div>
-          <div class="list-item">
-            <div class="item-icon icon-green"><i class="ti ti-file-invoice"></i></div>
-            <div class="item-main"><div class="item-name">Invoice paid — Northwind Co.</div><div class="item-sub">INV-1042</div></div>
-            <div class="item-right"><div class="item-amount amount-pos">+$6,200</div><div class="item-meta">Jun 5</div></div>
-          </div>
-          <div class="list-item">
-            <div class="item-icon icon-red"><i class="ti ti-receipt"></i></div>
-            <div class="item-main"><div class="item-name">Expense — WeWork</div><div class="item-sub">Rent</div></div>
-            <div class="item-right"><div class="item-amount amount-neg">-$1,800</div><div class="item-meta">Jun 1</div></div>
-          </div>
-          <div class="list-item">
-            <div class="item-icon icon-blue"><i class="ti ti-building-bank"></i></div>
-            <div class="item-main"><div class="item-name">Account added — Business Savings</div></div>
-            <div class="item-right"><div class="item-meta">May 30</div></div>
           </div>
         </div>
       </div>
