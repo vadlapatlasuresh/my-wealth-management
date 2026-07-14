@@ -29,6 +29,7 @@ public class ManualBusinessController {
     private final ReconciledTransactionRepository reconciledRepo;
     private final TransactionOverrideRepository overrideRepo;
     private final BusinessLinkedAccountRepository linkedRepo;
+    private final BusinessDocumentRepository documentRepo;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
 
     private Long userId() {
@@ -72,6 +73,7 @@ public class ManualBusinessController {
         transactionRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         invoiceRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         linkedRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        documentRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -281,10 +283,73 @@ public class ManualBusinessController {
     }
 
     @DeleteMapping("/invoices/{id}")
+    @Transactional
     public ResponseEntity<Void> deleteInvoice(@PathVariable Long id) {
         BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // Detach any documents pinned to this invoice; keep them in the doc center.
+        documentRepo.findByBusinessIdAndUserIdAndInvoiceIdOrderByCreatedAtDesc(
+                        inv.getBusinessId(), userId(), inv.getId())
+                .forEach(d -> { d.setInvoiceId(null); documentRepo.save(d); });
         invoiceRepo.delete(inv);
+        return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Document center ---------------- */
+
+    /**
+     * Documents attached to a business (link-based). Pass {@code invoiceId} to
+     * list only the documents pinned to a specific invoice.
+     */
+    @GetMapping("/businesses/{businessId}/documents")
+    public List<BusinessDocument> listDocuments(
+            @PathVariable Long businessId,
+            @RequestParam(value = "invoiceId", required = false) Long invoiceId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (invoiceId != null) {
+            return documentRepo.findByBusinessIdAndUserIdAndInvoiceIdOrderByCreatedAtDesc(
+                    businessId, userId(), invoiceId);
+        }
+        return documentRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+    }
+
+    @PostMapping("/businesses/{businessId}/documents")
+    public BusinessDocument createDocument(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessDocument d = new BusinessDocument();
+        d.setUserId(userId());
+        d.setBusinessId(businessId);
+        d.setLabel(str(body.get("label")));
+        d.setUrl(str(body.get("url")));
+        d.setDocType(str(body.getOrDefault("docType", "OTHER")));
+        d.setNote(str(body.get("note")));
+        Long invoiceId = longVal(body.get("invoiceId"));
+        if (invoiceId != null) {
+            // Ensure the invoice belongs to the caller and this business before pinning.
+            BusinessInvoice inv = invoiceRepo.findByIdAndUserId(invoiceId, userId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "invoice not found"));
+            if (!inv.getBusinessId().equals(businessId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invoice does not belong to this business");
+            }
+            d.setInvoiceId(invoiceId);
+        }
+        if (d.getLabel() == null || d.getLabel().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "label is required");
+        }
+        if (d.getUrl() == null || d.getUrl().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "url is required");
+        }
+        if (d.getDocType() == null) d.setDocType("OTHER");
+        return documentRepo.save(d);
+    }
+
+    @DeleteMapping("/documents/{id}")
+    public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
+        BusinessDocument d = documentRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        documentRepo.delete(d);
         return ResponseEntity.noContent().build();
     }
 

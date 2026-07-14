@@ -31,7 +31,24 @@ const TABS = [
   { id: 'tx', label: 'Transactions', icon: 'ti-arrows-exchange' },
   { id: 'cards', label: 'Credit Card & Expenses', icon: 'ti-credit-card' },
   { id: 'tools', label: 'Business Tools', icon: 'ti-tools' },
+  { id: 'docs', label: 'Documents', icon: 'ti-folder' },
 ];
+
+/* Document types available in the per-business document center. */
+const DOC_TYPES = ['INVOICE', 'RECEIPT', 'CONTRACT', 'TAX', 'STATEMENT', 'LICENSE', 'OTHER'];
+
+/* Icon + tone for a document type (mirrors the transaction-type visual style). */
+function docTypeVisual(type) {
+  switch ((type || 'OTHER').toUpperCase()) {
+    case 'INVOICE': return { icon: 'ti-file-invoice', tone: 'icon-blue', label: 'Invoice' };
+    case 'RECEIPT': return { icon: 'ti-receipt', tone: 'icon-green', label: 'Receipt' };
+    case 'CONTRACT': return { icon: 'ti-file-text', tone: 'icon-purple', label: 'Contract' };
+    case 'TAX': return { icon: 'ti-report-money', tone: 'icon-amber', label: 'Tax' };
+    case 'STATEMENT': return { icon: 'ti-file-dollar', tone: 'icon-blue', label: 'Statement' };
+    case 'LICENSE': return { icon: 'ti-certificate', tone: 'icon-purple', label: 'License' };
+    default: return { icon: 'ti-file', tone: 'icon-gray', label: 'Other' };
+  }
+}
 
 /* ------------------------------------------------------------------ */
 /* Small helpers                                                       */
@@ -245,6 +262,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [bizAccounts, setBizAccounts] = useState([]);         // manual accounts
   const [bizTransactions, setBizTransactions] = useState([]); // manual transactions
   const [manualInvoices, setManualInvoices] = useState([]);
+  const [bizDocuments, setBizDocuments] = useState([]);       // document center
   const [reconciledSet, setReconciledSet] = useState(() => new Set());
   /* Aggregation account ids assigned to the selected business (Set of strings). */
   const [assignedLinkedIds, setAssignedLinkedIds] = useState(() => new Set());
@@ -268,6 +286,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
   const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
+
+  const [showAddDoc, setShowAddDoc] = useState(false);
+  const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' });
+  const [fDocType, setFDocType] = useState('ALL'); // document-center type filter
 
   /* ---- Transaction filters ---- */
   const [search, setSearch] = useState('');
@@ -359,18 +381,20 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const loadBusinessDetail = useCallback(async (businessId) => {
     if (!businessId) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
     }
-    const [acc, tx, inv, linked] = await Promise.allSettled([
+    const [acc, tx, inv, linked, docs] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
       api.getBusinessLinkedAccounts(businessId),
+      api.getBusinessDocuments(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
+    setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
     setAssignedLinkedIds(new Set(
       linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : []
     ));
@@ -380,7 +404,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const loadAllBusinessesDetail = useCallback(async (list) => {
     const biz = Array.isArray(list) ? list : [];
     if (!biz.length) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
     }
     const results = await Promise.allSettled(biz.flatMap((b) => [
@@ -388,16 +412,19 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       api.getBusinessTransactions(b.id),
       api.getManualInvoices(b.id),
       api.getBusinessLinkedAccounts(b.id),
+      api.getBusinessDocuments(b.id),
     ]));
-    const accountsAll = [], txAll = [], invAll = [], linkedAll = [];
+    const accountsAll = [], txAll = [], invAll = [], linkedAll = [], docsAll = [];
+    const STRIDE = 5;
     biz.forEach((b, i) => {
-      const [acc, tx, inv, linked] = results.slice(i * 4, i * 4 + 4);
+      const [acc, tx, inv, linked, docs] = results.slice(i * STRIDE, i * STRIDE + STRIDE);
       if (acc.status === 'fulfilled' && Array.isArray(acc.value)) accountsAll.push(...acc.value);
       if (tx.status === 'fulfilled' && Array.isArray(tx.value)) txAll.push(...tx.value);
       if (inv.status === 'fulfilled' && Array.isArray(inv.value)) invAll.push(...inv.value);
       if (linked.status === 'fulfilled' && Array.isArray(linked.value)) linkedAll.push(...linked.value.map(String));
+      if (docs.status === 'fulfilled' && Array.isArray(docs.value)) docsAll.push(...docs.value);
     });
-    setBizAccounts(accountsAll); setBizTransactions(txAll); setManualInvoices(invAll);
+    setBizAccounts(accountsAll); setBizTransactions(txAll); setManualInvoices(invAll); setBizDocuments(docsAll);
     setAssignedLinkedIds(new Set(linkedAll));
   }, []);
 
@@ -852,7 +879,51 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     try {
       await api.deleteManualInvoice(id);
       setManualInvoices((prev) => prev.filter((i) => i.id !== id));
+      // Any documents pinned to it are detached server-side; reflect that locally.
+      setBizDocuments((prev) => prev.map((d) => (d.invoiceId === id ? { ...d, invoiceId: null } : d)));
     } catch (err) { setError(err?.message || 'Could not delete invoice.'); }
+  }
+
+  /* ---- Document center CRUD ---- */
+  /* Resolve which business a new document belongs to: when attaching to an
+     invoice we use that invoice's business, otherwise the selected business.
+     (In the All-businesses view direct adds are done via a specific invoice.) */
+  function docTargetBusinessId() {
+    if (docForm.invoiceId) {
+      const inv = manualInvoices.find((i) => String(i.id) === String(docForm.invoiceId));
+      if (inv) return inv.businessId;
+    }
+    return selectedBusiness?.id || null;
+  }
+  function openAttachDoc(invoice) {
+    setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: String(invoice.id) });
+    setActiveTab('docs');
+    setShowAddDoc(true);
+    requestAnimationFrame(() => document.getElementById('mb-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  }
+  async function handleAddDoc(e) {
+    e.preventDefault();
+    const businessId = docTargetBusinessId();
+    if (!businessId) { setError('Pick a business before adding a document.'); return; }
+    const label = docForm.label.trim();
+    let url = docForm.url.trim();
+    if (!label || !url) return;
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    try {
+      const created = await api.createBusinessDocument(businessId, {
+        label, url, docType: docForm.docType, note: docForm.note.trim() || null,
+        invoiceId: docForm.invoiceId ? Number(docForm.invoiceId) : null,
+      });
+      setBizDocuments((prev) => [created, ...prev]);
+      setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' });
+      setShowAddDoc(false);
+    } catch (err) { setError(err?.message || 'Could not add document.'); }
+  }
+  async function handleDeleteDoc(id) {
+    try {
+      await api.deleteBusinessDocument(id);
+      setBizDocuments((prev) => prev.filter((d) => d.id !== id));
+    } catch (err) { setError(err?.message || 'Could not delete document.'); }
   }
 
   /* CSV export of the current filtered transaction view. */
@@ -903,6 +974,29 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }, [manualInvoices, qboInvoices]);
   const pendingInvoices = useMemo(() => allInvoices.filter((i) => i.status !== 'PAID'), [allInvoices]);
   const pendingTotal = useMemo(() => pendingInvoices.reduce((s, i) => s + i.amount, 0), [pendingInvoices]);
+
+  /* ---- Document center ---- */
+  const businessNameById = useMemo(() => {
+    const m = new Map();
+    businesses.forEach((b) => m.set(b.id, b.name));
+    return m;
+  }, [businesses]);
+  /* How many documents are pinned to each invoice (id -> count). */
+  const docCountByInvoice = useMemo(() => {
+    const m = new Map();
+    bizDocuments.forEach((d) => {
+      if (d.invoiceId != null) m.set(d.invoiceId, (m.get(d.invoiceId) || 0) + 1);
+    });
+    return m;
+  }, [bizDocuments]);
+  const sortedDocs = useMemo(
+    () => [...bizDocuments].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))),
+    [bizDocuments]
+  );
+  const filteredDocs = useMemo(
+    () => (fDocType === 'ALL' ? sortedDocs : sortedDocs.filter((d) => (d.docType || 'OTHER').toUpperCase() === fDocType)),
+    [sortedDocs, fDocType]
+  );
 
   const manualFigures = useMemo(() => {
     // All-businesses view: sum the per-business figures across every business.
@@ -1988,22 +2082,32 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 ) : (
                   <div className="table-scroll">
                     <table className="tv-table">
-                      <thead><tr><th>Customer</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Due date</th><th>Source</th><th style={{ width: 40 }}></th></tr></thead>
+                      <thead><tr><th>Customer</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Due date</th><th>Source</th><th>Documents</th><th style={{ width: 40 }}></th></tr></thead>
                       <tbody>
-                        {allInvoices.map((inv) => (
+                        {allInvoices.map((inv) => {
+                          const docCount = inv.manual ? (docCountByInvoice.get(inv.id) || 0) : 0;
+                          return (
                           <tr key={inv.key}>
                             <td style={{ fontWeight: 500 }}>{inv.customer || '—'}</td>
                             <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(inv.amount)}</span></td>
                             <td><span className={`badge ${statusBadge(inv.status)}`}>{inv.status}</span></td>
                             <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(inv.dueDate)}</td>
                             <td><span className={`badge ${inv.manual ? 'badge-forest' : 'badge-green'}`}>{inv.manual ? 'Manual' : 'QuickBooks'}</span></td>
+                            <td style={{ whiteSpace: 'nowrap' }}>
+                              {inv.manual ? (
+                                <button className="btn btn-secondary btn-sm" onClick={() => openAttachDoc(inv)} title="Attach a document to this invoice">
+                                  <i className="ti ti-paperclip"></i>{docCount > 0 ? ` ${docCount}` : ' Attach'}
+                                </button>
+                              ) : <span style={{ color: 'var(--tv-text-muted)' }}>—</span>}
+                            </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {inv.manual && (
                                 <button className="icon-btn" title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}><i className="ti ti-trash"></i></button>
                               )}
                             </td>
                           </tr>
-                        ))}
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -2016,6 +2120,123 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   <span className="badge badge-gray">Last 6 months</span>
                 </div>
                 <RevenueBarChart series={revenueSeries} max={maxRevenue} />
+              </div>
+            </>
+          )}
+
+          {/* ============================================================ */}
+          {/* TAB — Documents (per-business document center)               */}
+          {/* ============================================================ */}
+          {activeTab === 'docs' && (
+            <>
+              <div className="card" id="mb-docs" style={{ marginBottom: 16 }}>
+                <div className="section-header">
+                  <div className="section-title">
+                    <i className="ti ti-folder" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
+                    Document center
+                    <span className="badge badge-gray" style={{ marginLeft: 8 }}>{bizDocuments.length}</span>
+                  </div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' }); }} disabled={isAllView}>
+                    <i className={`ti ${showAddDoc ? 'ti-x' : 'ti-plus'}`}></i>{showAddDoc ? ' Cancel' : ' Add document'}
+                  </button>
+                </div>
+
+                <p className="item-sub" style={{ marginTop: -4, marginBottom: 12 }}>
+                  Store links to invoices, receipts, contracts and tax records. Paste a share link from Drive, Dropbox,
+                  a data room or an e-invoice — documents stay organized under {isAllView ? 'their business' : 'this business'}.
+                </p>
+
+                {isAllView && (
+                  <div className="item-sub" style={{ marginBottom: 12 }}>
+                    <i className="ti ti-info-circle" style={{ marginRight: 4 }}></i>
+                    Viewing documents across all businesses. Switch to a single business to add one.
+                  </div>
+                )}
+
+                {showAddDoc && !isAllView && (
+                  <form onSubmit={handleAddDoc} style={{ marginBottom: 14 }}>
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Label *</label>
+                        <input className="form-input" value={docForm.label} onChange={(e) => setDocForm({ ...docForm, label: e.target.value })} placeholder="e.g. Invoice #1042 — Acme Corp" autoFocus />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Type</label>
+                        <select className="form-select" value={docForm.docType} onChange={(e) => setDocForm({ ...docForm, docType: e.target.value })}>
+                          {DOC_TYPES.map((t) => <option key={t} value={t}>{docTypeVisual(t).label}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Link (URL) *</label>
+                      <input className="form-input" value={docForm.url} onChange={(e) => setDocForm({ ...docForm, url: e.target.value })} placeholder="https://drive.google.com/… or a data-room link" />
+                    </div>
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Attach to invoice</label>
+                        <select className="form-select" value={docForm.invoiceId} onChange={(e) => setDocForm({ ...docForm, invoiceId: e.target.value })}>
+                          <option value="">— None —</option>
+                          {manualInvoices.map((i) => (
+                            <option key={i.id} value={i.id}>{i.customer} · {currency(Number(i.amount) || 0)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Note</label>
+                        <input className="form-input" value={docForm.note} onChange={(e) => setDocForm({ ...docForm, note: e.target.value })} placeholder="Optional" />
+                      </div>
+                    </div>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!docForm.label.trim() || !docForm.url.trim()}>
+                      <i className="ti ti-plus"></i> Add document
+                    </button>
+                  </form>
+                )}
+
+                {/* Type filter chips */}
+                {sortedDocs.length > 0 && (
+                  <div className="seg-control" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+                    {['ALL', ...DOC_TYPES.filter((t) => sortedDocs.some((d) => (d.docType || 'OTHER').toUpperCase() === t))].map((t) => (
+                      <button key={t} className={`seg-btn ${fDocType === t ? 'active' : ''}`} onClick={() => setFDocType(t)}>
+                        {t === 'ALL' ? 'All' : docTypeVisual(t).label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {filteredDocs.length === 0 ? (
+                  <div className="empty-state">
+                    <i className="ti ti-folder-open"></i>
+                    <p>{sortedDocs.length === 0 ? 'No documents yet. Add a link to an invoice, receipt or contract to keep this business organized.' : 'No documents of this type.'}</p>
+                  </div>
+                ) : (
+                  <div>
+                    {filteredDocs.map((d) => {
+                      const v = docTypeVisual(d.docType);
+                      const inv = d.invoiceId != null ? manualInvoices.find((i) => i.id === d.invoiceId) : null;
+                      return (
+                        <div key={d.id} className="list-item">
+                          <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
+                          <div className="item-main" style={{ minWidth: 0 }}>
+                            <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
+                            <div className="item-sub">
+                              <span className="badge badge-gray">{v.label}</span>
+                              {isAllView && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
+                              {inv ? ` · Invoice: ${inv.customer}` : ''}
+                              {d.createdAt ? ` · ${bizDate(d.createdAt)}` : ''}
+                              {d.note ? ` · ${d.note}` : ''}
+                            </div>
+                          </div>
+                          <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <a className="btn btn-secondary btn-sm" href={d.url} target="_blank" rel="noopener noreferrer" title="Open document">
+                              <i className="ti ti-external-link"></i> Open
+                            </a>
+                            <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </>
           )}

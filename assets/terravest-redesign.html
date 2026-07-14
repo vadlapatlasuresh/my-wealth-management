@@ -3632,6 +3632,7 @@ a { text-decoration: none; color: inherit; }
           <div class="tab active"><i class="ti ti-arrows-exchange" style="margin-right:6px;"></i>Transactions</div>
           <div class="tab"><i class="ti ti-credit-card" style="margin-right:6px;"></i>Credit Card &amp; Expenses</div>
           <div class="tab"><i class="ti ti-tools" style="margin-right:6px;"></i>Business Tools</div>
+          <div class="tab"><i class="ti ti-folder" style="margin-right:6px;"></i>Documents</div>
         </div>
 
         <!-- Transactions tab: totals -->
@@ -3729,15 +3730,31 @@ a { text-decoration: none; color: inherit; }
             <div class="section-header"><div class="section-title">Invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Create invoice</button></div>
             <div class="table-scroll">
               <table class="tv-table">
-                <thead><tr><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Source</th></tr></thead>
+                <thead><tr><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Source</th><th>Documents</th></tr></thead>
                 <tbody>
-                  <tr><td>Northwind Co.</td><td style="text-align:right;">$6,200</td><td><span class="badge badge-green">Paid</span></td><td><span class="badge badge-forest">Manual</span></td></tr>
-                  <tr><td>Pinecrest Studio</td><td style="text-align:right;">$3,450</td><td><span class="badge badge-red">Overdue</span></td><td><span class="badge badge-green">QuickBooks</span></td></tr>
-                  <tr><td>Harbor Group</td><td style="text-align:right;">$2,100</td><td><span class="badge badge-amber">Open</span></td><td><span class="badge badge-forest">Manual</span></td></tr>
+                  <tr><td>Northwind Co.</td><td style="text-align:right;">$6,200</td><td><span class="badge badge-green">Paid</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> 2</button></td></tr>
+                  <tr><td>Pinecrest Studio</td><td style="text-align:right;">$3,450</td><td><span class="badge badge-red">Overdue</span></td><td><span class="badge badge-green">QuickBooks</span></td><td><span style="color:var(--tv-text-muted);">—</span></td></tr>
+                  <tr><td>Harbor Group</td><td style="text-align:right;">$2,100</td><td><span class="badge badge-amber">Open</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> Attach</button></td></tr>
                 </tbody>
               </table>
             </div>
           </div>
+        </div>
+
+        <!-- Documents tab: per-business document center (link-based) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title"><i class="ti ti-folder" style="color:var(--tv-forest-light);margin-right:6px;"></i>Document center <span class="badge badge-gray" style="margin-left:6px;">4</span></div>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add document</button>
+          </div>
+          <p class="item-sub" style="margin:-4px 0 12px;">Store links to invoices, receipts, contracts and tax records — everything organized under this business.</p>
+          <div class="seg-control" style="margin-bottom:12px;flex-wrap:wrap;">
+            <button class="seg-btn active">All</button><button class="seg-btn">Invoice</button><button class="seg-btn">Receipt</button><button class="seg-btn">Contract</button><button class="seg-btn">Tax</button>
+          </div>
+          <div class="list-item"><div class="item-icon icon-blue"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Invoice #1042 — Northwind Co.</div><div class="item-sub"><span class="badge badge-gray">Invoice</span> · Invoice: Northwind Co. · Jun 12</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-receipt"></i></div><div class="item-main"><div class="item-name">AWS receipt — May</div><div class="item-sub"><span class="badge badge-gray">Receipt</span> · Jun 03</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <div class="list-item"><div class="item-icon icon-purple"><i class="ti ti-file-text"></i></div><div class="item-main"><div class="item-name">Master services agreement</div><div class="item-sub"><span class="badge badge-gray">Contract</span> · Harbor Group · May 28</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-report-money"></i></div><div class="item-main"><div class="item-name">2025 Form 1120-S</div><div class="item-sub"><span class="badge badge-gray">Tax</span> · Apr 15</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
         </div>
       </div>
 
