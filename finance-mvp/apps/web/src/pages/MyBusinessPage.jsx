@@ -1064,52 +1064,35 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         </div>
       </div>
 
-      {/* Business switcher */}
-      <div className="card" style={{ marginBottom: 16 }}>
-        <div className="section-header">
-          <div className="section-title">
-            <i className="ti ti-building-store" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
-            Businesses
-          </div>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowAddBusiness((v) => !v)}>
-            <i className={`ti ${showAddBusiness ? 'ti-x' : 'ti-plus'}`}></i>
-            {showAddBusiness ? ' Cancel' : ' Add business'}
-          </button>
-        </div>
-
-        {businesses.length > 0 && (
-          <div className="seg-control" style={{ flexWrap: 'wrap', marginBottom: showAddBusiness ? 14 : 0 }}>
-            {businesses.length > 1 && (
-              <button className={`seg-btn ${isAllView ? 'active' : ''}`} onClick={() => setSelectedId('ALL')}
-                title="Track all businesses in one place">
-                <i className="ti ti-layout-grid" style={{ marginRight: 4 }}></i>All businesses
-              </button>
-            )}
-            {businesses.map((b) => (
-              <button key={b.id} className={`seg-btn ${selectedBusiness?.id === b.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(b.id)} title={b.industry ? `${b.name} · ${b.industry}` : b.name}>
-                <i className="ti ti-switch-horizontal" style={{ marginRight: 4 }}></i>{b.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* All-businesses summary chip. */}
-        {isAllView && !showAddBusiness && (
-          <>
-            <div className="divider" style={{ margin: '14px 0' }}></div>
-            <div className="list-item" style={{ padding: 0 }}>
-              <div className="item-icon icon-forest"><i className="ti ti-layout-grid"></i></div>
-              <div className="item-main">
-                <div className="item-name">All businesses</div>
-                <div className="item-sub">{businesses.length} businesses · combined accounts, transactions &amp; invoices</div>
-              </div>
+      {/* Business tabs — each business is its own tab, plus an "All businesses" tab */}
+      {(
+        <div style={{ display: 'flex', gap: 2, borderBottom: '1.5px solid var(--tv-border)', overflowX: 'auto', marginBottom: 16 }}>
+          {businesses.length > 1 && (
+            <div className={`outer-tab ${isAllView ? 'active' : ''}`} onClick={() => { setSelectedId('ALL'); setShowAddBusiness(false); }}
+              title="Track all businesses in one place">
+              <i className="ti ti-layout-grid"></i> All businesses
             </div>
-          </>
-        )}
+          )}
+          {businesses.map((b) => (
+            <div key={b.id} className={`outer-tab ${!isAllView && selectedBusiness?.id === b.id ? 'active' : ''}`}
+              onClick={() => { setSelectedId(b.id); setShowAddBusiness(false); }}
+              title={b.industry ? `${b.name} · ${b.industry}` : b.name}>
+              <i className="ti ti-building-store"></i> {b.name}
+            </div>
+          ))}
+          <div className={`outer-tab ${showAddBusiness ? 'active' : ''}`} onClick={() => setShowAddBusiness((v) => !v)}>
+            <i className={`ti ${showAddBusiness ? 'ti-x' : 'ti-plus'}`}></i> {showAddBusiness ? 'Cancel' : 'Add business'}
+          </div>
+        </div>
+      )}
 
-        {showAddBusiness && (
-          <form onSubmit={handleAddBusiness} style={{ marginTop: 4 }}>
+      {/* Add-business form (opens from the Add business tab) */}
+      {showAddBusiness && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <div className="section-header">
+            <div className="section-title"><i className="ti ti-building-store" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>New business</div>
+          </div>
+          <form onSubmit={handleAddBusiness}>
             <div className="grid-2">
               <div className="form-group">
                 <label className="form-label">Business name *</label>
@@ -1136,32 +1119,32 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               <i className="ti ti-plus"></i> Add business
             </button>
           </form>
-        )}
+        </div>
+      )}
 
-        {selectedBusiness && !showAddBusiness && (
-          <>
-            <div className="divider" style={{ margin: '14px 0' }}></div>
-            <div className="list-item" style={{ padding: 0 }}>
-              <div className="item-icon icon-forest"><i className="ti ti-building-store"></i></div>
-              <div className="item-main">
-                <div className="item-name">{selectedBusiness.name}</div>
-                <div className="item-sub">
-                  {selectedBusiness.industry || 'No industry'} · {selectedBusiness.entityType}
-                  {selectedBusiness.ein ? ` · EIN ${selectedBusiness.ein}` : ''}
-                  {' · Added '}{bizDate(selectedBusiness.createdAt)}
-                </div>
-              </div>
-              <div className="item-right">
-                {businesses.length > 1 && (
-                  <button className="icon-btn" title="Delete this business" onClick={() => handleDeleteBusiness(selectedBusiness.id)}>
-                    <i className="ti ti-trash"></i>
-                  </button>
-                )}
+      {/* Selected-business meta (slim) */}
+      {selectedBusiness && !showAddBusiness && (
+        <div className="card" style={{ marginBottom: 16, padding: '12px 16px' }}>
+          <div className="list-item" style={{ padding: 0, cursor: 'default' }}>
+            <div className="item-icon icon-forest"><i className="ti ti-building-store"></i></div>
+            <div className="item-main">
+              <div className="item-name">{selectedBusiness.name}</div>
+              <div className="item-sub">
+                {selectedBusiness.industry || 'No industry'} · {selectedBusiness.entityType}
+                {selectedBusiness.ein ? ` · EIN ${selectedBusiness.ein}` : ''}
+                {' · Added '}{bizDate(selectedBusiness.createdAt)}
               </div>
             </div>
-          </>
-        )}
-      </div>
+            <div className="item-right">
+              {businesses.length > 1 && (
+                <button className="icon-btn" title="Delete this business" onClick={() => handleDeleteBusiness(selectedBusiness.id)}>
+                  <i className="ti ti-trash"></i>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Error card */}
       {error && (
