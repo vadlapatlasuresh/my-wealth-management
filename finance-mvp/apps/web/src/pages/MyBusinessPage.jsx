@@ -932,6 +932,36 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     }, 0);
   }, [unifiedTx]);
 
+  /* Money in vs money out across the last 6 calendar months, from real
+     transactions — powers the Cash Flow chart. */
+  const cashFlowSeries = useMemo(() => {
+    const now = new Date();
+    const buckets = [];
+    for (let k = 5; k >= 0; k--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - k, 1);
+      buckets.push({ y: d.getFullYear(), m: d.getMonth(), label: d.toLocaleDateString('en-US', { month: 'short' }), moneyIn: 0, moneyOut: 0 });
+    }
+    const idx = new Map(buckets.map((b, i) => [`${b.y}-${b.m}`, i]));
+    unifiedTx.forEach((t) => {
+      if (!t.date) return;
+      const d = new Date(t.date);
+      if (Number.isNaN(d.getTime())) return;
+      const i = idx.get(`${d.getFullYear()}-${d.getMonth()}`);
+      if (i == null) return;
+      if (t.amount >= 0) buckets[i].moneyIn += t.amount;
+      else buckets[i].moneyOut += Math.abs(t.amount);
+    });
+    return buckets;
+  }, [unifiedTx]);
+  const cashFlowNet = useMemo(
+    () => cashFlowSeries.reduce((s, b) => s + b.moneyIn - b.moneyOut, 0),
+    [cashFlowSeries]
+  );
+  const cashFlowHasData = useMemo(
+    () => cashFlowSeries.some((b) => b.moneyIn > 0 || b.moneyOut > 0),
+    [cashFlowSeries]
+  );
+
   const kpi = connected
     ? {
         revenueMtd: dashboard?.revenueMtd, expensesMtd: dashboard?.expensesMtd,
@@ -1183,6 +1213,32 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               <div className="kpi-label"><i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices</div>
               <div className="kpi-value">{currency(kpi.outstandingInvoices)}</div>
             </div>
+          </div>
+
+          {/* Cash flow — money in vs money out (last 6 months) */}
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div className="section-header">
+              <div className="section-title">
+                <i className="ti ti-chart-bar" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
+                Cash flow
+                <span className={`badge ${cashFlowNet >= 0 ? 'badge-green' : 'badge-red'}`} style={{ marginLeft: 8 }}>
+                  Net {cashFlowNet >= 0 ? '+' : ''}{currency(cashFlowNet)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', gap: 14, fontSize: 12, color: 'var(--tv-text-muted)' }}>
+                <span><i className="ti ti-square-rounded-filled" style={{ color: 'var(--tv-positive)' }}></i> In</span>
+                <span><i className="ti ti-square-rounded-filled" style={{ color: 'var(--tv-negative)' }}></i> Out</span>
+                <span className="badge badge-gray">Last 6 months</span>
+              </div>
+            </div>
+            {cashFlowHasData ? (
+              <CashFlowChart series={cashFlowSeries} />
+            ) : (
+              <div className="empty-state" style={{ padding: 24 }}>
+                <i className="ti ti-chart-bar"></i>
+                <p>No transaction activity yet. Link a business account or add transactions to see cash flow.</p>
+              </div>
+            )}
           </div>
 
           {/* Connected accounts overview */}
@@ -1977,6 +2033,41 @@ function QuickAction({ icon, tone, label, desc, onClick }) {
       <div className={`item-icon ${tone}`}><i className={`ti ${icon}`}></i></div>
       <div><div className="item-name">{label}</div><div className="item-sub">{desc}</div></div>
     </button>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Cash-flow grouped bar chart: money in vs money out per month.       */
+/* ------------------------------------------------------------------ */
+function CashFlowChart({ series }) {
+  const width = 620, height = 190, padBottom = 26, padTop = 10;
+  const usableH = height - padBottom - padTop;
+  const slot = width / series.length;
+  const groupW = Math.min(64, slot * 0.6);
+  const barW = groupW / 2 - 3;
+  const max = Math.max(1, ...series.map((b) => Math.max(b.moneyIn, b.moneyOut)));
+  return (
+    <div style={{ width: '100%', overflowX: 'auto' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="xMidYMid meet"
+        role="img" aria-label="Cash flow: money in versus money out over the last six months">
+        {/* baseline */}
+        <line x1="0" y1={padTop + usableH} x2={width} y2={padTop + usableH} stroke="var(--tv-border)" strokeWidth="1" />
+        {series.map((b, i) => {
+          const cx = i * slot + slot / 2;
+          const inH = Math.max(b.moneyIn > 0 ? 2 : 0, (b.moneyIn / max) * usableH);
+          const outH = Math.max(b.moneyOut > 0 ? 2 : 0, (b.moneyOut / max) * usableH);
+          const inX = cx - barW - 3;
+          const outX = cx + 3;
+          return (
+            <g key={`${b.y}-${b.m}`}>
+              <rect x={inX} y={padTop + (usableH - inH)} width={barW} height={inH} rx={4} fill="var(--tv-positive)" />
+              <rect x={outX} y={padTop + (usableH - outH)} width={barW} height={outH} rx={4} fill="var(--tv-negative)" />
+              <text x={cx} y={height - 8} textAnchor="middle" fontSize="11" fill="var(--tv-text-muted)">{b.label}</text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 
