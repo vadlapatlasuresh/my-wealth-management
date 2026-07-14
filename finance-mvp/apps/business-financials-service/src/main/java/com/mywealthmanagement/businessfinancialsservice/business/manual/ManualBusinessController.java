@@ -172,8 +172,28 @@ public class ManualBusinessController {
                 .toList();
     }
 
+    /**
+     * Global map of every linked-account assignment for the caller, as
+     * {@code [{ "accountId": "12", "businessId": 3 }, ...]}. One row per account
+     * (accounts are one-to-one with a business), so the UI can bind each linked
+     * account to exactly one business without N per-business calls.
+     */
+    @GetMapping("/linked-accounts")
+    public List<Map<String, Object>> listAllLinkedAccounts() {
+        return linkedRepo.findByUserId(userId()).stream()
+                .map(r -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("accountId", r.getLinkedAccountId());
+                    m.put("businessId", r.getBusinessId());
+                    return m;
+                })
+                .toList();
+    }
+
     /** Replace the set of linked accounts assigned to this business. Body:
-     *  {@code { "accountIds": ["12","34", ...] }}. Returns the saved set. */
+     *  {@code { "accountIds": ["12","34", ...] }}. Returns the saved set.
+     *  Enforces one-to-one: each account is first detached from any OTHER business
+     *  it was on, so assigning it here MOVES it rather than duplicating it. */
     @PutMapping("/businesses/{businessId}/linked-accounts")
     @Transactional
     public List<String> setLinkedAccounts(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
@@ -189,6 +209,9 @@ public class ManualBusinessController {
         }
         linkedRepo.deleteByBusinessIdAndUserId(businessId, userId());
         for (String aid : wanted) {
+            // One-to-one: an account lives on a single business. Remove it from any
+            // business (including a stale row on this one) before re-adding here.
+            linkedRepo.deleteByUserIdAndLinkedAccountId(userId(), aid);
             BusinessLinkedAccount r = new BusinessLinkedAccount();
             r.setUserId(userId());
             r.setBusinessId(businessId);
