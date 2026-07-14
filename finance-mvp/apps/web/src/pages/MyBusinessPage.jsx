@@ -991,6 +991,39 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const manualAccountCount = useMemo(() => allAccounts.filter((a) => a.source === 'Manual').length, [allAccounts]);
 
+  /* ---- Insights ---- */
+  /* Top vendors by spend (money out, grouped by merchant/name). */
+  const topVendors = useMemo(() => {
+    const totals = new Map();
+    unifiedTx.forEach((t) => {
+      if (t.amount >= 0) return;
+      const label = t.merchant || t.name || 'Unknown';
+      totals.set(label, (totals.get(label) || 0) + Math.abs(t.amount));
+    });
+    return [...totals.entries()].map(([label, value]) => ({ label, value }))
+      .sort((a, b) => b.value - a.value).slice(0, 6);
+  }, [unifiedTx]);
+
+  /* P&L snapshot for the last 6 months (income vs expenses from real transactions). */
+  const pnl = useMemo(() => {
+    let income = 0, expenses = 0;
+    const from = new Date();
+    from.setMonth(from.getMonth() - 6);
+    unifiedTx.forEach((t) => {
+      const d = t.date ? new Date(t.date) : null;
+      if (d && !Number.isNaN(d.getTime()) && d < from) return;
+      if (t.amount >= 0) income += t.amount; else expenses += Math.abs(t.amount);
+    });
+    return { income, expenses, net: income - expenses };
+  }, [unifiedTx]);
+
+  /* All-businesses breakdown: each business's manual revenue/expenses figures. */
+  const byBusiness = useMemo(() => businesses.map((b) => {
+    const revenue = Number(b.revenueMtd) || 0;
+    const exp = Number(b.expensesMtd) || 0;
+    return { id: b.id, name: b.name, industry: b.industry, revenue, expenses: exp, net: revenue - exp };
+  }), [businesses]);
+
   /* ------------------------------------------------------------------ */
   /* Render                                                              */
   /* ------------------------------------------------------------------ */
@@ -1180,6 +1213,29 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         </div>
       ) : (
         <>
+          {/* Hero — cash position at a glance */}
+          <div className="card" style={{ marginBottom: 16, borderLeft: '4px solid var(--tv-forest)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <div style={{ minWidth: 220 }}>
+                <div style={{ fontSize: 13, color: 'var(--tv-text-muted)', fontWeight: 500 }}>
+                  {isAllView ? 'Total cash · all businesses' : 'Total business cash'}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 36, fontWeight: 700, color: 'var(--tv-text-primary)', lineHeight: 1.1, marginTop: 2 }}>
+                  {currency(cashTotal)}
+                </div>
+                <div style={{ fontSize: 12.5, color: 'var(--tv-text-muted)', marginTop: 6 }}>
+                  {bankAccounts.length} cash account{bankAccounts.length === 1 ? '' : 's'}
+                  {creditCards.length > 0 ? ` · ${currency(creditOwed)} owed on ${creditCards.length} card${creditCards.length === 1 ? '' : 's'}` : ''}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+                <HeroStat label="Net position" value={currency(cashTotal - creditOwed)} tone={cashTotal - creditOwed >= 0 ? 'pos' : 'neg'} />
+                <HeroStat label="Deposits (MTD)" value={currency(depositsMtd)} />
+                <HeroStat label="Net cash flow · 6mo" value={`${cashFlowNet >= 0 ? '+' : ''}${currency(cashFlowNet)}`} tone={cashFlowNet >= 0 ? 'pos' : 'neg'} />
+              </div>
+            </div>
+          </div>
+
           {/* KPI Row */}
           <div className="kpi-grid">
             <div className="kpi-card">
@@ -1199,15 +1255,6 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Profit (MTD)</div>
               <div className="kpi-value">{currency(kpi.netProfitMtd)}</div>
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-cash" style={{ fontSize: '13px', color: 'var(--tv-gold)' }}></i> Cash Balance</div>
-              <div className="kpi-value">{currency(kpi.cashBalance)}</div>
-            </div>
-            <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-arrow-down-left" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Deposits (MTD)</div>
-              <div className="kpi-value">{currency(depositsMtd)}</div>
-              <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>Money in this month</div>
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices</div>
@@ -1240,6 +1287,46 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               </div>
             )}
           </div>
+
+          {/* All-businesses breakdown — each business at a glance */}
+          {isAllView && byBusiness.length > 0 && (
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="section-header">
+                <div className="section-title">
+                  <i className="ti ti-layout-grid" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
+                  By business
+                </div>
+                <span className="badge badge-gray">Revenue &amp; expenses (MTD)</span>
+              </div>
+              <div className="table-scroll">
+                <table className="tv-table">
+                  <thead>
+                    <tr>
+                      <th>Business</th>
+                      <th style={{ textAlign: 'right' }}>Revenue</th>
+                      <th style={{ textAlign: 'right' }}>Expenses</th>
+                      <th style={{ textAlign: 'right' }}>Net</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {byBusiness.map((b) => (
+                      <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => setSelectedId(b.id)} title={`View ${b.name}`}>
+                        <td style={{ fontWeight: 500 }}>
+                          {b.name}
+                          {b.industry && <div className="item-sub" style={{ fontWeight: 400 }}>{b.industry}</div>}
+                        </td>
+                        <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(b.revenue)}</span></td>
+                        <td style={{ textAlign: 'right' }}><span className="item-amount amount-neg">{currency(b.expenses)}</span></td>
+                        <td style={{ textAlign: 'right' }}>
+                          <span className={`item-amount ${b.net >= 0 ? 'amount-pos' : 'amount-neg'}`}>{currency(b.net)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Connected accounts overview */}
           <div className="card" style={{ marginBottom: 16 }}>
@@ -1750,6 +1837,47 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 </div>
               </div>
 
+              {/* Insights: P&L snapshot + top vendors */}
+              <div className="grid-2" style={{ marginBottom: 16 }}>
+                <div className="card">
+                  <div className="section-header">
+                    <div className="section-title"><i className="ti ti-report-money" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>P&amp;L snapshot</div>
+                    <span className="badge badge-gray">Last 6 months</span>
+                  </div>
+                  <div className="list-item" style={{ padding: '8px 0' }}>
+                    <div className="item-icon icon-green"><i className="ti ti-arrow-down-left"></i></div>
+                    <div className="item-main"><div className="item-name">Income</div></div>
+                    <div className="item-right"><div className="item-amount amount-pos">{currency(pnl.income)}</div></div>
+                  </div>
+                  <div className="list-item" style={{ padding: '8px 0' }}>
+                    <div className="item-icon icon-red"><i className="ti ti-arrow-up-right"></i></div>
+                    <div className="item-main"><div className="item-name">Expenses</div></div>
+                    <div className="item-right"><div className="item-amount amount-neg">{currency(pnl.expenses)}</div></div>
+                  </div>
+                  <div className="divider" style={{ margin: '10px 0' }}></div>
+                  <div className="list-item" style={{ padding: '4px 0' }}>
+                    <div className="item-icon icon-forest"><i className="ti ti-scale"></i></div>
+                    <div className="item-main"><div className="item-name" style={{ fontWeight: 600 }}>Net profit</div></div>
+                    <div className="item-right">
+                      <div className={`item-amount ${pnl.net >= 0 ? 'amount-pos' : 'amount-neg'}`} style={{ fontSize: 16 }}>{currency(pnl.net)}</div>
+                    </div>
+                  </div>
+                  {pnl.income === 0 && pnl.expenses === 0 && (
+                    <div className="item-sub" style={{ marginTop: 8 }}>No transaction activity in the last 6 months yet.</div>
+                  )}
+                </div>
+
+                <div className="card">
+                  <div className="section-header">
+                    <div className="section-title"><i className="ti ti-building-store" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Top vendors</div>
+                    <span className="badge badge-gray">By spend</span>
+                  </div>
+                  {topVendors.length === 0 ? (
+                    <div className="empty-state"><i className="ti ti-building-store"></i><p>No vendor spend recorded yet.</p></div>
+                  ) : (<CategoryBars rows={topVendors} />)}
+                </div>
+              </div>
+
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
                   <div className="section-title">
@@ -2027,6 +2155,16 @@ function CreditCardPanel({ card, onViewCharges }) {
 /* ------------------------------------------------------------------ */
 /* Quick-action tile (Business Tools tab).                             */
 /* ------------------------------------------------------------------ */
+function HeroStat({ label, value, tone }) {
+  const color = tone === 'pos' ? 'var(--tv-positive)' : tone === 'neg' ? 'var(--tv-negative)' : 'var(--tv-text-primary)';
+  return (
+    <div style={{ minWidth: 110 }}>
+      <div style={{ fontSize: 12, color: 'var(--tv-text-muted)', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600, color, marginTop: 2 }}>{value}</div>
+    </div>
+  );
+}
+
 function QuickAction({ icon, tone, label, desc, onClick }) {
   return (
     <button className="card" onClick={onClick} style={{ textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
