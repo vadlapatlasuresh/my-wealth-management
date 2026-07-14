@@ -1033,9 +1033,16 @@ svg{display:block;}
     <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
     <div class="app-bar tinted"><span class="ab-title">My Business</span><i class="ti ti-settings ab-icon"></i></div>
     <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <!-- Business tabs — each business is its own tab (scrollable) -->
+      <div style="display:flex; gap:8px; overflow-x:auto; margin-bottom:14px; padding-bottom:2px;">
+        <span style="padding:8px 16px; border-radius:999px; background:var(--tv-forest); color:#fff; font-size:13px; font-weight:600; white-space:nowrap;">Acme LLC</span>
+        <span style="padding:8px 16px; border-radius:999px; background:var(--tv-surface); border:1px solid var(--tv-border); font-size:13px; white-space:nowrap;">Cedar Holdings</span>
+        <span style="padding:8px 16px; border-radius:999px; background:var(--tv-surface); border:1px solid var(--tv-border); font-size:13px; white-space:nowrap;"><i class="ti ti-layout-grid"></i> All</span>
+        <span style="padding:8px 16px; border-radius:999px; border:1px dashed var(--tv-border); color:var(--tv-text-muted); font-size:13px; white-space:nowrap;"><i class="ti ti-plus"></i> Add</span>
+      </div>
       <div class="m-card" style="display:flex; align-items:center; gap:12px; padding:14px;">
         <div class="inst" style="background:var(--tv-forest); border-radius:12px;"><i class="ti ti-building"></i></div>
-        <div class="grow" style="flex:1;"><div class="t1" style="font-size:16px;">Acme LLC</div><div class="t2">All businesses · 2 · EIN •••• 7732</div></div><i class="ti ti-chevron-down" style="font-size:20px; color:var(--tv-forest);"></i>
+        <div class="grow" style="flex:1;"><div class="t1" style="font-size:16px;">Acme LLC</div><div class="t2">Creative services · LLC · EIN •••• 7732</div></div>
       </div>
       <!-- Hero cash -->
       <div class="m-card" style="margin-top:16px; border-left:3px solid var(--tv-forest);">
