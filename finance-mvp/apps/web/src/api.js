@@ -453,6 +453,9 @@ export const api = {
   // business page shows only business accounts, not the whole aggregation).
   getBusinessLinkedAccounts: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/linked-accounts`),
+  // Global one-to-one map: [{ accountId, businessId }] across all the user's businesses.
+  getAllLinkedAccounts: () =>
+    request(`/api/v1/business/manual/linked-accounts`),
   setBusinessLinkedAccounts: (businessId, accountIds) =>
     request(`/api/v1/business/manual/businesses/${businessId}/linked-accounts`, {
       method: "PUT",

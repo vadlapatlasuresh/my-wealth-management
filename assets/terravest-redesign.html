@@ -1047,7 +1047,7 @@ a { text-decoration: none; color: inherit; }
       (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
     • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
     • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto).
-    • My Business: multi-business + "All businesses" switcher, hero cash header, period selector (this month / year / trailing 12mo / custom) driving ledger-derived P&L KPIs, consolidated by-business breakdown (parts sum to totals), auto-detected linked accounts (bank + credit) with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks, per-business document center filed by tax/reporting year.
+    • My Business: multi-business + "All businesses" switcher, hero cash header, period selector (this month / year / trailing 12mo / custom) driving ledger-derived P&L KPIs, consolidated by-business breakdown (parts sum to totals), expandable per-business accordion (each business owns its bank/credit accounts one-to-one with its own dashboard + transactions), linked accounts (bank + credit) assigned one-to-one with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks, per-business document center filed by tax/reporting year.
     • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
 
     CHANGELOG — 2026-06-07 (auth + brokers + polish)
@@ -3613,6 +3613,50 @@ a { text-decoration: none; color: inherit; }
                 <tr style="border-top:2px solid var(--tv-border);font-weight:600;"><td>All businesses</td><td style="text-align:right;">$51,800</td><td style="text-align:right;">$32,120</td><td style="text-align:right;">$19,680</td><td style="text-align:right;">$49,600</td><td style="text-align:right;">$4,650</td></tr>
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <!-- Expandable per-business accordion: each business owns its accounts one-to-one -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title"><i class="ti ti-stack-2" style="margin-right:6px;color:var(--tv-forest-light)"></i>Businesses <span class="badge badge-gray" style="margin-left:8px;">2</span></div>
+            <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">Expand all</button><button class="btn btn-secondary btn-sm">Collapse all</button></div>
+          </div>
+          <p class="item-sub" style="margin-top:-4px;margin-bottom:12px;">Each business keeps its own accounts, cards and transactions. Expand one to see its detail, or open it for full tools.</p>
+
+          <!-- Expanded panel -->
+          <div class="card" style="margin-bottom:10px;padding:0;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+              <i class="ti ti-chevron-down" style="color:var(--tv-text-muted)"></i>
+              <div class="item-icon icon-forest"><i class="ti ti-briefcase"></i></div>
+              <div style="flex:1;min-width:0;"><div class="item-name">Summit Contracting</div><div class="item-sub">LLC · Construction · 3 accounts</div></div>
+              <div style="text-align:right;"><div class="item-amount">$31,200</div><div class="item-sub">Net <span style="color:var(--tv-positive)">$14,000</span> · This month</div></div>
+            </div>
+            <div style="border-top:1px solid var(--tv-border);padding:14px 16px;">
+              <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:14px;">
+                <div class="kpi-card"><div class="kpi-label">Revenue</div><div class="kpi-value" style="font-size:18px;">$42,000</div></div>
+                <div class="kpi-card"><div class="kpi-label">Expenses</div><div class="kpi-value" style="font-size:18px;">$28,000</div></div>
+                <div class="kpi-card"><div class="kpi-label">Cash</div><div class="kpi-value" style="font-size:18px;">$31,200</div></div>
+                <div class="kpi-card"><div class="kpi-label">Outstanding</div><div class="kpi-value" style="font-size:18px;">$3,450</div></div>
+              </div>
+              <div class="item-sub" style="font-weight:600;margin:4px 0 6px;"><i class="ti ti-building-bank" style="margin-right:4px;"></i>Bank accounts</div>
+              <div class="list-item"><div class="item-icon icon-forest"><i class="ti ti-building-bank"></i></div><div class="item-main"><div class="item-name">Operating Checking ••4021</div><div class="item-sub">Checking · Chase · <span class="badge badge-gray">Linked</span></div></div><div class="item-right"><span class="item-amount">$24,800</span></div></div>
+              <div class="item-sub" style="font-weight:600;margin:8px 0 6px;"><i class="ti ti-credit-card" style="margin-right:4px;"></i>Credit cards</div>
+              <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-credit-card"></i></div><div class="item-main"><div class="item-name">Amex Biz ••1007</div><div class="item-sub">American Express · <span class="badge badge-gray">Linked</span></div></div><div class="item-right"><span class="item-amount amount-neg">$4,180 owed</span></div></div>
+              <div class="item-sub" style="font-weight:600;margin:8px 0 6px;"><i class="ti ti-arrows-exchange" style="margin-right:4px;"></i>Recent transactions</div>
+              <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-arrow-down-left"></i></div><div class="item-main"><div class="item-name">Northwind Co. payment</div><div class="item-sub">Income · Jun 12</div></div><div class="item-right"><span class="item-amount amount-pos">$6,200</span></div></div>
+              <div style="margin-top:8px;"><button class="btn btn-primary btn-sm"><i class="ti ti-external-link"></i> Open Summit Contracting</button></div>
+            </div>
+          </div>
+
+          <!-- Collapsed panel -->
+          <div class="card" style="margin-bottom:0;padding:0;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;cursor:pointer;">
+              <i class="ti ti-chevron-right" style="color:var(--tv-text-muted)"></i>
+              <div class="item-icon icon-forest"><i class="ti ti-briefcase"></i></div>
+              <div style="flex:1;min-width:0;"><div class="item-name">Cedar Rentals LLC</div><div class="item-sub">LLC · Real Estate · 2 accounts</div></div>
+              <div style="text-align:right;"><div class="item-amount">$18,400</div><div class="item-sub">Net <span style="color:var(--tv-positive)">$5,680</span> · This month</div></div>
+            </div>
           </div>
         </div>
 

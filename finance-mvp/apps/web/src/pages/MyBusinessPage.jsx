@@ -296,9 +296,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [dashPeriod, setDashPeriod] = useState('THIS_MONTH'); // THIS_MONTH | THIS_YEAR | T12M | CUSTOM
   const [dashFrom, setDashFrom] = useState('');
   const [dashTo, setDashTo] = useState('');
-  /* accountId(String) -> businessId, so linked (Plaid) activity can be attributed
-     to a business in the consolidated comparison. Manual rows carry businessId already. */
-  const [linkedIdToBusiness, setLinkedIdToBusiness] = useState(() => new Map());
+  /* Authoritative one-to-one map: linked accountId(String) -> businessId. Loaded
+     globally so every linked account (and its transactions) binds to exactly one
+     business. Manual rows carry businessId already. */
+  const [linkedOwner, setLinkedOwner] = useState(() => new Map());
+  /* Which business panels are expanded in the accordion (Set of business ids). */
+  const [expandedBiz, setExpandedBiz] = useState(() => new Set());
 
   /* ---- Transaction filters ---- */
   const [search, setSearch] = useState('');
@@ -381,6 +384,22 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }, []);
   useEffect(() => { loadOverrides(); }, [loadOverrides]);
 
+  /* Authoritative one-to-one linked-account ownership map (accountId -> businessId),
+     loaded once globally. Every place that attributes a linked account or its
+     transactions to a business reads from here, so an account can only ever belong
+     to one business. */
+  const loadLinkedOwner = useCallback(async () => {
+    try {
+      const rows = await api.getAllLinkedAccounts();
+      const m = new Map();
+      (Array.isArray(rows) ? rows : []).forEach((r) => {
+        if (r && r.accountId != null && r.businessId != null) m.set(String(r.accountId), r.businessId);
+      });
+      setLinkedOwner(m);
+    } catch { /* non-fatal; no assignments */ }
+  }, []);
+  useEffect(() => { loadLinkedOwner(); }, [loadLinkedOwner]);
+
   useEffect(() => {
     if (!businesses.length) return;
     const keepAll = selectedId === 'ALL' && businesses.length > 1;
@@ -406,8 +425,6 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
     const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
     setAssignedLinkedIds(new Set(linkedIds));
-    // Single-business view: every assigned linked account belongs to this business.
-    setLinkedIdToBusiness(new Map(linkedIds.map((id) => [id, businessId])));
   }, []);
 
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
@@ -425,7 +442,6 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       api.getBusinessDocuments(b.id),
     ]));
     const accountsAll = [], txAll = [], invAll = [], linkedAll = [], docsAll = [];
-    const linkedMap = new Map();
     const STRIDE = 5;
     biz.forEach((b, i) => {
       const [acc, tx, inv, linked, docs] = results.slice(i * STRIDE, i * STRIDE + STRIDE);
@@ -433,13 +449,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       if (tx.status === 'fulfilled' && Array.isArray(tx.value)) txAll.push(...tx.value);
       if (inv.status === 'fulfilled' && Array.isArray(inv.value)) invAll.push(...inv.value);
       if (linked.status === 'fulfilled' && Array.isArray(linked.value)) {
-        linked.value.map(String).forEach((id) => { linkedAll.push(id); linkedMap.set(id, b.id); });
+        linked.value.map(String).forEach((id) => { linkedAll.push(id); });
       }
       if (docs.status === 'fulfilled' && Array.isArray(docs.value)) docsAll.push(...docs.value);
     });
     setBizAccounts(accountsAll); setBizTransactions(txAll); setManualInvoices(invAll); setBizDocuments(docsAll);
     setAssignedLinkedIds(new Set(linkedAll));
-    setLinkedIdToBusiness(linkedMap);
   }, []);
 
   useEffect(() => {
@@ -460,25 +475,34 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       isAllView ? loadAllBusinessesDetail(businesses) : loadBusinessDetail(selectedBusiness?.id),
       loadReconciliations(),
       loadOverrides(),
+      loadLinkedOwner(),
     ]);
-  }, [loadAll, loadBusinessQbo, isAllView, businesses, loadBusinessDetail, loadAllBusinessesDetail, loadReconciliations, loadOverrides, selectedBusiness]);
+  }, [loadAll, loadBusinessQbo, isAllView, businesses, loadBusinessDetail, loadAllBusinessesDetail, loadReconciliations, loadOverrides, loadLinkedOwner, selectedBusiness]);
 
   /* ------------------------------------------------------------------ */
   /* Normalized accounts (linked + manual)                              */
   /* ------------------------------------------------------------------ */
-  /* Which linked accounts count as business:
-     - if the user has explicitly assigned accounts to this business, honor that;
-     - otherwise auto-detect (Plaid holder_category / name heuristic).
-     Manual accounts are business by definition. */
+  /* Which linked accounts count as business — STRICT one-to-one:
+     an account shows under a business only if it's explicitly assigned to it
+     (linkedOwner). Auto-detect (Plaid holder_category / name) is only used to
+     *suggest* accounts in the assignment picker, never to display — so the same
+     account can never appear under two businesses. Manual accounts are business
+     by definition. */
   const autoBusinessIds = useMemo(
     () => new Set((accounts || []).filter(isBusinessLinked).map((a) => String(a.id))),
     [accounts]
   );
   const effectiveLinkedIds = useMemo(() => {
-    // All-businesses view: union of every business's assignments + all auto-detected.
-    if (isAllView) return new Set([...autoBusinessIds, ...assignedLinkedIds]);
-    return assignedLinkedIds.size > 0 ? assignedLinkedIds : autoBusinessIds;
-  }, [isAllView, assignedLinkedIds, autoBusinessIds]);
+    if (isAllView) {
+      // Every linked account owned by ANY business (each counted once).
+      return new Set([...linkedOwner.keys()]);
+    }
+    // Strictly this business's owned accounts.
+    const bid = selectedBusiness?.id;
+    const s = new Set();
+    if (bid != null) linkedOwner.forEach((owner, id) => { if (owner === bid) s.add(id); });
+    return s;
+  }, [isAllView, linkedOwner, selectedBusiness]);
   const usingAutoDetect = assignedLinkedIds.size === 0;
 
   const allAccounts = useMemo(() => {
@@ -550,7 +574,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       // the assigned-account -> business map (used by the consolidated breakdown).
       const businessId = t.source === 'Manual'
         ? (t.businessId ?? null)
-        : (linkedIdToBusiness.get(String(t.accountId)) ?? null);
+        : (linkedOwner.get(String(t.accountId)) ?? null);
       return {
         key: `${t.source}-${t.id}`,
         extId, source: t.source, rawId: t.id, businessId,
@@ -561,7 +585,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         canDelete: t.source === 'Manual',
       };
     });
-  }, [transactions, bizTransactions, effectiveLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap, linkedIdToBusiness]);
+  }, [transactions, bizTransactions, effectiveLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap, linkedOwner]);
 
   /* Dropdown option sets, derived from the data. */
   const categoryOptions = useMemo(() => {
@@ -783,8 +807,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   /* ---- Linked-account assignment ---- */
   function openAssign() {
-    // Seed with what's currently shown (explicit assignment, or the auto-detected set).
-    setAssignDraft(new Set(effectiveLinkedIds));
+    // Seed with this business's current accounts; if it has none yet, pre-tick the
+    // auto-detected business-looking accounts as a suggestion (the user confirms).
+    const seed = effectiveLinkedIds.size > 0 ? effectiveLinkedIds : autoBusinessIds;
+    setAssignDraft(new Set(seed));
     setShowAssign(true);
   }
   /* Revert to auto-detect: clear explicit assignment for this business. */
@@ -794,6 +820,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     try {
       await api.setBusinessLinkedAccounts(selectedBusiness.id, []);
       setAssignedLinkedIds(new Set());
+      await loadLinkedOwner();
       setShowAssign(false);
     } catch (err) {
       setError(err?.message || 'Could not reset assignment.');
@@ -829,6 +856,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     try {
       await api.setBusinessLinkedAccounts(selectedBusiness.id, ids);
       setAssignedLinkedIds(new Set(ids));
+      // Assignment is one-to-one and may have moved accounts off other businesses —
+      // reload the authoritative global map so every view reflects the new owner.
+      await loadLinkedOwner();
       setShowAssign(false);
     } catch (err) {
       setError(err?.message || 'Could not save account assignment.');
@@ -1095,9 +1125,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const acctKeyToBusiness = useMemo(() => {
     const m = new Map();
     (bizAccounts || []).forEach((a) => m.set(`man-${a.id}`, a.businessId));
-    linkedIdToBusiness.forEach((bid, id) => m.set(`lin-${id}`, bid));
+    linkedOwner.forEach((bid, id) => m.set(`lin-${id}`, bid));
     return m;
-  }, [bizAccounts, linkedIdToBusiness]);
+  }, [bizAccounts, linkedOwner]);
 
   const businessBreakdown = useMemo(() => {
     const rows = new Map();
@@ -1125,6 +1155,53 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     });
     return [...rows.values()].map((r) => ({ ...r, netProfit: r.revenue - r.expenses }));
   }, [businesses, unifiedTx, allAccounts, allInvoices, acctKeyToBusiness, inDashPeriod]);
+
+  /* Per-business accounts, split into bank / cards / manual — powers the
+     expandable accordion so each business shows exactly its own one-to-one
+     accounts and cards. */
+  const accountsByBusiness = useMemo(() => {
+    const m = new Map();
+    businesses.forEach((b) => m.set(b.id, { bank: [], cards: [], all: [] }));
+    allAccounts.forEach((a) => {
+      const bid = acctKeyToBusiness.get(a.key);
+      const g = bid != null ? m.get(bid) : null;
+      if (!g) return;
+      g.all.push(a);
+      if (isCardType(a.type)) g.cards.push(a);
+      else if (isBankType(a.type)) g.bank.push(a);
+    });
+    return m;
+  }, [businesses, allAccounts, acctKeyToBusiness]);
+
+  /* Per-business transactions (newest first) for the accordion. */
+  const txByBusiness = useMemo(() => {
+    const m = new Map();
+    businesses.forEach((b) => m.set(b.id, []));
+    unifiedTx.forEach((t) => {
+      const arr = t.businessId != null ? m.get(t.businessId) : null;
+      if (arr) arr.push(t);
+    });
+    m.forEach((arr) => arr.sort((a, b) => {
+      const da = a.date ? new Date(a.date).getTime() : 0;
+      const db = b.date ? new Date(b.date).getTime() : 0;
+      return db - da;
+    }));
+    return m;
+  }, [businesses, unifiedTx]);
+
+  const breakdownById = useMemo(() => {
+    const m = new Map();
+    businessBreakdown.forEach((r) => m.set(r.businessId, r));
+    return m;
+  }, [businessBreakdown]);
+
+  const toggleExpandBiz = useCallback((id) => {
+    setExpandedBiz((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
 
   /* Deposits (money in) so far this calendar month — surfaced as a KPI. */
   const depositsMtd = useMemo(() => {
@@ -1566,6 +1643,126 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             </div>
           )}
 
+          {/* Expandable per-business accordion — each business expands in place to
+              reveal its own (one-to-one) accounts, cards, KPIs and transactions. */}
+          {isAllView && businesses.length > 0 && (
+            <div className="card" style={{ marginBottom: 16 }}>
+              <div className="section-header">
+                <div className="section-title">
+                  <i className="ti ti-stack-2" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
+                  Businesses
+                  <span className="badge badge-gray" style={{ marginLeft: 8 }}>{businesses.length}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setExpandedBiz(new Set(businesses.map((b) => b.id)))}>Expand all</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setExpandedBiz(new Set())}>Collapse all</button>
+                </div>
+              </div>
+              <p className="item-sub" style={{ marginTop: -4, marginBottom: 12 }}>
+                Each business keeps its own accounts, cards and transactions. Expand one to see its detail, or open it for full tools.
+              </p>
+              {businesses.map((b) => {
+                const g = accountsByBusiness.get(b.id) || { bank: [], cards: [], all: [] };
+                const kb = breakdownById.get(b.id) || { revenue: 0, expenses: 0, netProfit: 0, cashOnHand: 0, creditOwed: 0, outstandingInvoices: 0 };
+                const tx = txByBusiness.get(b.id) || [];
+                const open = expandedBiz.has(b.id);
+                return (
+                  <div key={b.id} className="card" style={{ marginBottom: 10, padding: 0, overflow: 'hidden' }}>
+                    {/* Panel header (click to expand/collapse) */}
+                    <div onClick={() => toggleExpandBiz(b.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer' }}>
+                      <i className={`ti ${open ? 'ti-chevron-down' : 'ti-chevron-right'}`} style={{ color: 'var(--tv-text-muted)' }}></i>
+                      <div className="item-icon icon-forest"><i className="ti ti-briefcase"></i></div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.name}</div>
+                        <div className="item-sub">
+                          {b.entityType || 'Business'}{b.industry ? ` · ${b.industry}` : ''} · {g.all.length} account{g.all.length === 1 ? '' : 's'}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div className="item-amount">{currency(kb.cashOnHand)}</div>
+                        <div className="item-sub">Net <span style={{ color: kb.netProfit >= 0 ? 'var(--tv-positive)' : 'var(--tv-negative)' }}>{currency(kb.netProfit)}</span> · {dashRange.label}</div>
+                      </div>
+                    </div>
+
+                    {open && (
+                      <div style={{ borderTop: '1px solid var(--tv-border)', padding: '14px 16px' }}>
+                        {/* Compact period KPIs */}
+                        <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginBottom: 14 }}>
+                          <div className="kpi-card"><div className="kpi-label">Revenue</div><div className="kpi-value" style={{ fontSize: 18 }}>{currency(kb.revenue)}</div></div>
+                          <div className="kpi-card"><div className="kpi-label">Expenses</div><div className="kpi-value" style={{ fontSize: 18 }}>{currency(kb.expenses)}</div></div>
+                          <div className="kpi-card"><div className="kpi-label">Cash</div><div className="kpi-value" style={{ fontSize: 18 }}>{currency(kb.cashOnHand)}</div></div>
+                          <div className="kpi-card"><div className="kpi-label">Outstanding</div><div className="kpi-value" style={{ fontSize: 18 }}>{currency(kb.outstandingInvoices)}</div></div>
+                        </div>
+
+                        {/* Accounts — bank */}
+                        <div className="item-sub" style={{ fontWeight: 600, margin: '4px 0 6px' }}><i className="ti ti-building-bank" style={{ marginRight: 4 }}></i>Bank accounts</div>
+                        {g.bank.length === 0 ? (
+                          <div className="item-sub" style={{ marginBottom: 10 }}>No bank accounts linked to this business yet.</div>
+                        ) : (
+                          <div style={{ marginBottom: 10 }}>
+                            {g.bank.map((a) => (
+                              <div key={a.key} className="list-item">
+                                <div className={`item-icon ${accountVisual(a.type).tone}`}><i className={`ti ${accountVisual(a.type).icon}`}></i></div>
+                                <div className="item-main" style={{ minWidth: 0 }}>
+                                  <div className="item-name">{a.name}{a.mask ? ` ••${a.mask}` : ''}</div>
+                                  <div className="item-sub">{accountTypeLabel(a.type)}{a.institution ? ` · ${a.institution}` : ''} · <span className="badge badge-gray">{a.source}</span></div>
+                                </div>
+                                <div className="item-right"><span className="item-amount">{currency(a.balance)}</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Accounts — cards */}
+                        <div className="item-sub" style={{ fontWeight: 600, margin: '4px 0 6px' }}><i className="ti ti-credit-card" style={{ marginRight: 4 }}></i>Credit cards</div>
+                        {g.cards.length === 0 ? (
+                          <div className="item-sub" style={{ marginBottom: 10 }}>No credit cards linked to this business yet.</div>
+                        ) : (
+                          <div style={{ marginBottom: 10 }}>
+                            {g.cards.map((a) => (
+                              <div key={a.key} className="list-item">
+                                <div className={`item-icon ${accountVisual(a.type).tone}`}><i className={`ti ${accountVisual(a.type).icon}`}></i></div>
+                                <div className="item-main" style={{ minWidth: 0 }}>
+                                  <div className="item-name">{a.name}{a.mask ? ` ••${a.mask}` : ''}</div>
+                                  <div className="item-sub">{a.institution ? `${a.institution} · ` : ''}<span className="badge badge-gray">{a.source}</span></div>
+                                </div>
+                                <div className="item-right"><span className="item-amount amount-neg">{currency(a.balance)} owed</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Recent transactions */}
+                        <div className="item-sub" style={{ fontWeight: 600, margin: '4px 0 6px' }}><i className="ti ti-arrows-exchange" style={{ marginRight: 4 }}></i>Recent transactions</div>
+                        {tx.length === 0 ? (
+                          <div className="item-sub" style={{ marginBottom: 10 }}>No transactions yet.</div>
+                        ) : (
+                          <div style={{ marginBottom: 10 }}>
+                            {tx.slice(0, 5).map((t) => (
+                              <div key={t.key} className="list-item">
+                                <div className={`item-icon ${txTypeVisual(t.type).tone}`}><i className={`ti ${txTypeVisual(t.type).icon}`}></i></div>
+                                <div className="item-main" style={{ minWidth: 0 }}>
+                                  <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                                  <div className="item-sub">{t.category}{t.date ? ` · ${bizDate(t.date)}` : ''}</div>
+                                </div>
+                                <div className="item-right"><span className={`item-amount ${t.amount >= 0 ? 'amount-pos' : 'amount-neg'}`}>{currency(t.amount)}</span></div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <button className="btn btn-primary btn-sm" onClick={() => { setSelectedId(b.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                          <i className="ti ti-external-link"></i> Open {b.name}
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Connected accounts overview */}
           <div className="card" style={{ marginBottom: 16 }}>
             <div className="section-header">
@@ -1627,6 +1824,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       {availableLinked.map((a) => {
                         const checked = assignDraft.has(String(a.rawId));
                         const v = accountVisual(a.type);
+                        // One-to-one: if this account already belongs to a DIFFERENT
+                        // business, ticking it here moves it. Show the current owner.
+                        const owner = linkedOwner.get(String(a.rawId));
+                        const ownedElsewhere = owner != null && owner !== selectedBusiness?.id;
                         return (
                           <button key={a.key} type="button" onClick={() => toggleAssignDraft(a.rawId)}
                             className="card" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', textAlign: 'left',
@@ -1637,7 +1838,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                               <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                 {a.name}{a.mask ? ` ••${a.mask}` : ''}
                               </div>
-                              <div className="item-sub">{accountTypeLabel(a.type)}{a.institution ? ` · ${a.institution}` : ''} · {currency(a.balance)}</div>
+                              <div className="item-sub">
+                                {accountTypeLabel(a.type)}{a.institution ? ` · ${a.institution}` : ''} · {currency(a.balance)}
+                                {ownedElsewhere && (
+                                  <span className="badge badge-amber" style={{ marginLeft: 6 }}>
+                                    on {businessNameById.get(owner) || 'another business'} — moves here
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </button>
                         );
