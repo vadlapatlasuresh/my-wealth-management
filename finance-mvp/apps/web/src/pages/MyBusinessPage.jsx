@@ -479,6 +479,29 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     ]);
   }, [loadAll, loadBusinessQbo, isAllView, businesses, loadBusinessDetail, loadAllBusinessesDetail, loadReconciliations, loadOverrides, loadLinkedOwner, selectedBusiness]);
 
+  /* After linking via Plaid, bind any brand-new account(s) to the business the user
+     linked them under, so each account belongs to exactly one business without a
+     separate "assign" step. (No-op in the All view, where there's no single target.) */
+  const handleLinkSuccess = useCallback(async () => {
+    const targetId = selectedBusiness?.id;
+    const before = new Set((accounts || []).map((a) => String(a.id)));
+    try {
+      if (loadAll) await loadAll();
+      if (targetId != null) {
+        const fresh = await api.getAccounts();
+        const newIds = (Array.isArray(fresh) ? fresh : [])
+          .map((a) => String(a.id))
+          .filter((id) => !before.has(id));
+        if (newIds.length) {
+          const current = await api.getBusinessLinkedAccounts(targetId).catch(() => []);
+          const merged = Array.from(new Set([...(Array.isArray(current) ? current : []).map(String), ...newIds]));
+          await api.setBusinessLinkedAccounts(targetId, merged);
+        }
+      }
+    } catch { /* fall through to a normal refresh */ }
+    await refreshEverything();
+  }, [accounts, loadAll, selectedBusiness, refreshEverything]);
+
   /* ------------------------------------------------------------------ */
   /* Normalized accounts (linked + manual)                              */
   /* ------------------------------------------------------------------ */
@@ -1774,7 +1797,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 </span>
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                <PlaidLinkButton onLinkSuccess={refreshEverything}>
+                <PlaidLinkButton onLinkSuccess={handleLinkSuccess}>
                   <i className="ti ti-plug"></i> Link account
                 </PlaidLinkButton>
                 {hasAnyLinked && selectedBusiness && (
