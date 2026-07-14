@@ -288,8 +288,17 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
 
   const [showAddDoc, setShowAddDoc] = useState(false);
-  const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' });
+  const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
   const [fDocType, setFDocType] = useState('ALL'); // document-center type filter
+  const [fDocYear, setFDocYear] = useState('ALL'); // document-center year filter (year-wise)
+
+  /* ---- Dashboard period selector (ledger-derived, period-aware KPIs) ---- */
+  const [dashPeriod, setDashPeriod] = useState('THIS_MONTH'); // THIS_MONTH | THIS_YEAR | T12M | CUSTOM
+  const [dashFrom, setDashFrom] = useState('');
+  const [dashTo, setDashTo] = useState('');
+  /* accountId(String) -> businessId, so linked (Plaid) activity can be attributed
+     to a business in the consolidated comparison. Manual rows carry businessId already. */
+  const [linkedIdToBusiness, setLinkedIdToBusiness] = useState(() => new Map());
 
   /* ---- Transaction filters ---- */
   const [search, setSearch] = useState('');
@@ -395,9 +404,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
     setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
-    setAssignedLinkedIds(new Set(
-      linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : []
-    ));
+    const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
+    setAssignedLinkedIds(new Set(linkedIds));
+    // Single-business view: every assigned linked account belongs to this business.
+    setLinkedIdToBusiness(new Map(linkedIds.map((id) => [id, businessId])));
   }, []);
 
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
@@ -415,17 +425,21 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       api.getBusinessDocuments(b.id),
     ]));
     const accountsAll = [], txAll = [], invAll = [], linkedAll = [], docsAll = [];
+    const linkedMap = new Map();
     const STRIDE = 5;
     biz.forEach((b, i) => {
       const [acc, tx, inv, linked, docs] = results.slice(i * STRIDE, i * STRIDE + STRIDE);
       if (acc.status === 'fulfilled' && Array.isArray(acc.value)) accountsAll.push(...acc.value);
       if (tx.status === 'fulfilled' && Array.isArray(tx.value)) txAll.push(...tx.value);
       if (inv.status === 'fulfilled' && Array.isArray(inv.value)) invAll.push(...inv.value);
-      if (linked.status === 'fulfilled' && Array.isArray(linked.value)) linkedAll.push(...linked.value.map(String));
+      if (linked.status === 'fulfilled' && Array.isArray(linked.value)) {
+        linked.value.map(String).forEach((id) => { linkedAll.push(id); linkedMap.set(id, b.id); });
+      }
       if (docs.status === 'fulfilled' && Array.isArray(docs.value)) docsAll.push(...docs.value);
     });
     setBizAccounts(accountsAll); setBizTransactions(txAll); setManualInvoices(invAll); setBizDocuments(docsAll);
     setAssignedLinkedIds(new Set(linkedAll));
+    setLinkedIdToBusiness(linkedMap);
   }, []);
 
   useEffect(() => {
@@ -511,7 +525,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       .filter((t) => effectiveLinkedIds.has(String(t.accountId)))
       .map((t) => ({ ...t, source: 'Linked' }));
     const manual = (bizTransactions || []).map((t) => ({
-      source: 'Manual', id: t.id,
+      source: 'Manual', id: t.id, businessId: t.businessId,
       name: t.description, merchantName: t.merchant,
       amount: Number(t.amount) || 0,
       date: t.postedAt, category: t.category || 'Uncategorized',
@@ -532,9 +546,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       let status = 'Cleared';
       if (reconciledSet.has(extId)) status = 'Reconciled';
       else if (t.pending === true) status = 'Pending';
+      // Attribute to a business: manual tx carry businessId; linked tx resolve via
+      // the assigned-account -> business map (used by the consolidated breakdown).
+      const businessId = t.source === 'Manual'
+        ? (t.businessId ?? null)
+        : (linkedIdToBusiness.get(String(t.accountId)) ?? null);
       return {
         key: `${t.source}-${t.id}`,
-        extId, source: t.source, rawId: t.id,
+        extId, source: t.source, rawId: t.id, businessId,
         name, merchant: t.merchantName || null,
         amount, date: t.date, category,
         type, derivedType, typeOverridden: !!ov?.type, tags, status,
@@ -542,7 +561,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         canDelete: t.source === 'Manual',
       };
     });
-  }, [transactions, bizTransactions, effectiveLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap]);
+  }, [transactions, bizTransactions, effectiveLinkedIds, resolveAcctKey, accountByKey, reconciledSet, overridesMap, linkedIdToBusiness]);
 
   /* Dropdown option sets, derived from the data. */
   const categoryOptions = useMemo(() => {
@@ -896,7 +915,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     return selectedBusiness?.id || null;
   }
   function openAttachDoc(invoice) {
-    setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: String(invoice.id) });
+    setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: String(invoice.id), periodYear: String(new Date().getFullYear()), periodMonth: '' });
     setActiveTab('docs');
     setShowAddDoc(true);
     requestAnimationFrame(() => document.getElementById('mb-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -913,9 +932,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       const created = await api.createBusinessDocument(businessId, {
         label, url, docType: docForm.docType, note: docForm.note.trim() || null,
         invoiceId: docForm.invoiceId ? Number(docForm.invoiceId) : null,
+        periodYear: docForm.periodYear ? Number(docForm.periodYear) : null,
+        periodMonth: docForm.periodMonth ? Number(docForm.periodMonth) : null,
       });
       setBizDocuments((prev) => [created, ...prev]);
-      setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' });
+      setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
       setShowAddDoc(false);
     } catch (err) { setError(err?.message || 'Could not add document.'); }
   }
@@ -963,11 +984,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const allInvoices = useMemo(() => {
     const m = manualInvoices.map((i) => ({
-      key: `m-${i.id}`, id: i.id, manual: true, customer: i.customer,
+      key: `m-${i.id}`, id: i.id, manual: true, businessId: i.businessId ?? null, customer: i.customer,
       amount: Number(i.amount) || 0, status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
     }));
     const q = qboInvoices.map((i) => ({
-      key: `q-${i.id}`, id: i.id, manual: false, customer: i.customer,
+      key: `q-${i.id}`, id: i.id, manual: false, businessId: null, customer: i.customer,
       amount: Number(i.amount) || 0, status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
     }));
     return [...m, ...q];
@@ -994,25 +1015,116 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     [bizDocuments]
   );
   const filteredDocs = useMemo(
-    () => (fDocType === 'ALL' ? sortedDocs : sortedDocs.filter((d) => (d.docType || 'OTHER').toUpperCase() === fDocType)),
-    [sortedDocs, fDocType]
+    () => sortedDocs.filter((d) =>
+      (fDocType === 'ALL' || (d.docType || 'OTHER').toUpperCase() === fDocType) &&
+      (fDocYear === 'ALL'
+        ? true
+        : fDocYear === 'NONE'
+          ? d.periodYear == null
+          : String(d.periodYear) === String(fDocYear))),
+    [sortedDocs, fDocType, fDocYear]
   );
+  /* Distinct years present in the document center, newest first (for year-wise grouping). */
+  const docYears = useMemo(() => {
+    const s = new Set();
+    sortedDocs.forEach((d) => { if (d.periodYear != null) s.add(Number(d.periodYear)); });
+    return [...s].sort((a, b) => b - a);
+  }, [sortedDocs]);
+  const hasUndatedDocs = useMemo(() => sortedDocs.some((d) => d.periodYear == null), [sortedDocs]);
+  /* Group the filtered docs by year for a filed-by-year layout. */
+  const docsByYear = useMemo(() => {
+    const groups = new Map();
+    filteredDocs.forEach((d) => {
+      const y = d.periodYear != null ? Number(d.periodYear) : 'Undated';
+      if (!groups.has(y)) groups.set(y, []);
+      groups.get(y).push(d);
+    });
+    const order = [...groups.keys()].sort((a, b) => {
+      if (a === 'Undated') return 1;
+      if (b === 'Undated') return -1;
+      return b - a;
+    });
+    return order.map((y) => ({ year: y, docs: groups.get(y) }));
+  }, [filteredDocs]);
 
-  const manualFigures = useMemo(() => {
-    // All-businesses view: sum the per-business figures across every business.
-    if (isAllView) {
-      return businesses.reduce((acc, b) => ({
-        revenueMtd: acc.revenueMtd + (Number(b.revenueMtd) || 0),
-        expensesMtd: acc.expensesMtd + (Number(b.expensesMtd) || 0),
-        outstandingInvoices: acc.outstandingInvoices + (Number(b.outstandingInvoices) || 0),
-      }), { revenueMtd: 0, expensesMtd: 0, outstandingInvoices: 0 });
+  /* Resolve the dashboard period into a concrete [from, to] date window. Mirrors
+     the server PeriodResolver so all surfaces agree. `to` defaults to now. */
+  const dashRange = useMemo(() => {
+    const now = new Date();
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    if (dashPeriod === 'THIS_YEAR') {
+      return { from: new Date(now.getFullYear(), 0, 1), to: endOfToday, label: 'This year' };
     }
-    return {
-      revenueMtd: Number(selectedBusiness?.revenueMtd) || 0,
-      expensesMtd: Number(selectedBusiness?.expensesMtd) || 0,
-      outstandingInvoices: Number(selectedBusiness?.outstandingInvoices) || 0,
-    };
-  }, [isAllView, businesses, selectedBusiness]);
+    if (dashPeriod === 'T12M') {
+      const from = new Date(now.getFullYear(), now.getMonth() - 12, now.getDate() + 1);
+      return { from, to: endOfToday, label: 'Trailing 12 months' };
+    }
+    if (dashPeriod === 'CUSTOM') {
+      let from = dashFrom ? new Date(dashFrom + 'T00:00:00') : new Date(now.getFullYear(), now.getMonth(), 1);
+      let to = dashTo ? new Date(dashTo + 'T23:59:59') : endOfToday;
+      if (to < from) { const t = from; from = to; to = t; }
+      return { from, to, label: 'Custom range' };
+    }
+    return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfToday, label: 'This month' };
+  }, [dashPeriod, dashFrom, dashTo]);
+
+  const inDashPeriod = useCallback((iso) => {
+    if (!iso) return false;
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return false;
+    return (!dashRange.from || d >= dashRange.from) && (!dashRange.to || d <= dashRange.to);
+  }, [dashRange]);
+
+  /* Ledger-derived flow metrics for the selected period, over the currently
+     scoped merged ledger (one business, or all in the "All" view). Replaces the
+     old stale stored-column figures — a single source of truth so the headline
+     and the per-business breakdown can never disagree. */
+  const periodFlow = useMemo(() => {
+    let revenue = 0, expenses = 0;
+    unifiedTx.forEach((t) => {
+      if (!inDashPeriod(t.date)) return;
+      if (t.amount >= 0) revenue += t.amount;
+      else expenses += Math.abs(t.amount);
+    });
+    return { revenue, expenses, netProfit: revenue - expenses };
+  }, [unifiedTx, inDashPeriod]);
+
+  /* Consolidated per-business breakdown (All view): one row per business, each
+     computed from the same merged ledger filtered to that business. Parts sum to
+     the headline totals by construction. */
+  const acctKeyToBusiness = useMemo(() => {
+    const m = new Map();
+    (bizAccounts || []).forEach((a) => m.set(`man-${a.id}`, a.businessId));
+    linkedIdToBusiness.forEach((bid, id) => m.set(`lin-${id}`, bid));
+    return m;
+  }, [bizAccounts, linkedIdToBusiness]);
+
+  const businessBreakdown = useMemo(() => {
+    const rows = new Map();
+    businesses.forEach((b) => rows.set(b.id, {
+      businessId: b.id, name: b.name, industry: b.industry, revenue: 0, expenses: 0,
+      cashOnHand: 0, creditOwed: 0, outstandingInvoices: 0, outstandingCount: 0,
+    }));
+    unifiedTx.forEach((t) => {
+      const row = t.businessId != null ? rows.get(t.businessId) : null;
+      if (!row || !inDashPeriod(t.date)) return;
+      if (t.amount >= 0) row.revenue += t.amount; else row.expenses += Math.abs(t.amount);
+    });
+    allAccounts.forEach((a) => {
+      const bid = acctKeyToBusiness.get(a.key);
+      const row = bid != null ? rows.get(bid) : null;
+      if (!row) return;
+      if (isCardType(a.type)) row.creditOwed += a.balance;
+      else if (isBankType(a.type)) row.cashOnHand += a.balance;
+    });
+    allInvoices.forEach((i) => {
+      const row = i.businessId != null ? rows.get(i.businessId) : null;
+      if (!row || i.status === 'PAID') return;
+      row.outstandingInvoices += i.amount;
+      row.outstandingCount += 1;
+    });
+    return [...rows.values()].map((r) => ({ ...r, netProfit: r.revenue - r.expenses }));
+  }, [businesses, unifiedTx, allAccounts, allInvoices, acctKeyToBusiness, inDashPeriod]);
 
   /* Deposits (money in) so far this calendar month — surfaced as a KPI. */
   const depositsMtd = useMemo(() => {
@@ -1063,10 +1175,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         outstandingInvoices: dashboard?.outstandingInvoices,
       }
     : {
-        revenueMtd: manualFigures.revenueMtd, expensesMtd: manualFigures.expensesMtd,
-        netProfitMtd: manualFigures.revenueMtd - manualFigures.expensesMtd,
+        // Ledger-derived, period-aware. Flows sum over the selected period;
+        // balances/AR are point-in-time (today), independent of the period.
+        revenueMtd: periodFlow.revenue, expensesMtd: periodFlow.expenses,
+        netProfitMtd: periodFlow.netProfit,
         cashBalance: cashTotal,
-        outstandingInvoices: pendingTotal || manualFigures.outstandingInvoices,
+        outstandingInvoices: pendingTotal,
       };
 
   const revenueSeries = useMemo(() => buildRevenueSeries(connected ? dashboard : null), [connected, dashboard]);
@@ -1112,11 +1226,16 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }, [unifiedTx]);
 
   /* All-businesses breakdown: each business's manual revenue/expenses figures. */
-  const byBusiness = useMemo(() => businesses.map((b) => {
-    const revenue = Number(b.revenueMtd) || 0;
-    const exp = Number(b.expensesMtd) || 0;
-    return { id: b.id, name: b.name, industry: b.industry, revenue, expenses: exp, net: revenue - exp };
-  }), [businesses]);
+  // Ledger-derived per-business rows for the consolidated table (replaces the old
+  // stale stored-column figures). Same source as the headline totals, so parts sum.
+  const byBusiness = useMemo(
+    () => businessBreakdown.map((r) => ({
+      id: r.businessId, name: r.name, industry: r.industry,
+      revenue: r.revenue, expenses: r.expenses, net: r.netProfit,
+      cashOnHand: r.cashOnHand, outstanding: r.outstandingInvoices,
+    })),
+    [businessBreakdown]
+  );
 
   /* ------------------------------------------------------------------ */
   /* Render                                                              */
@@ -1313,29 +1432,59 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
             </div>
           </div>
 
+          {/* Period selector — drives the flow KPIs (revenue/expenses/profit).
+              Balances & outstanding AR stay point-in-time (today). */}
+          {!connected && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontSize: 12.5, color: 'var(--tv-text-muted)', fontWeight: 500 }}>
+                <i className="ti ti-calendar-stats" style={{ marginRight: 4 }}></i>Period
+              </span>
+              {[
+                { k: 'THIS_MONTH', label: 'This month' },
+                { k: 'THIS_YEAR', label: 'This year' },
+                { k: 'T12M', label: 'Trailing 12 mo' },
+                { k: 'CUSTOM', label: 'Custom' },
+              ].map((p) => (
+                <button key={p.k} className={`seg-btn ${dashPeriod === p.k ? 'active' : ''}`} onClick={() => setDashPeriod(p.k)}>
+                  {p.label}
+                </button>
+              ))}
+              {dashPeriod === 'CUSTOM' && (
+                <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+                  <input type="date" className="tv-input" style={{ height: 30, padding: '2px 8px' }} value={dashFrom} onChange={(e) => setDashFrom(e.target.value)} />
+                  <span style={{ color: 'var(--tv-text-muted)' }}>→</span>
+                  <input type="date" className="tv-input" style={{ height: 30, padding: '2px 8px' }} value={dashTo} onChange={(e) => setDashTo(e.target.value)} />
+                </span>
+              )}
+            </div>
+          )}
+
           {/* KPI Row */}
           <div className="kpi-grid">
             <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-arrow-up" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Revenue (MTD)</div>
+              <div className="kpi-label"><i className="ti ti-arrow-up" style={{ fontSize: '13px', color: 'var(--tv-positive)' }}></i> Revenue{connected ? ' (MTD)' : ''}</div>
               <div className="kpi-value">{currency(kpi.revenueMtd)}</div>
               {connected ? (
                 <div className={`kpi-delta ${changePct >= 0 ? 'pos' : 'neg'}`}>
                   <i className={changePct >= 0 ? 'ti ti-arrow-up-right' : 'ti ti-arrow-down-right'}></i>
                   {changePct >= 0 ? '+' : ''}{changePct.toFixed(1)}% vs last month
                 </div>
-              ) : (<div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>Connect to track changes</div>)}
+              ) : (<div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>{dashRange.label}</div>)}
             </div>
             <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-arrow-down" style={{ fontSize: '13px', color: 'var(--tv-negative)' }}></i> Expenses (MTD)</div>
+              <div className="kpi-label"><i className="ti ti-arrow-down" style={{ fontSize: '13px', color: 'var(--tv-negative)' }}></i> Expenses{connected ? ' (MTD)' : ''}</div>
               <div className="kpi-value">{currency(kpi.expensesMtd)}</div>
+              {!connected && <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>{dashRange.label}</div>}
             </div>
             <div className="kpi-card">
-              <div className="kpi-label"><i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Profit (MTD)</div>
+              <div className="kpi-label"><i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Profit{connected ? ' (MTD)' : ''}</div>
               <div className="kpi-value">{currency(kpi.netProfitMtd)}</div>
+              {!connected && <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>{dashRange.label}</div>}
             </div>
             <div className="kpi-card">
               <div className="kpi-label"><i className="ti ti-file-invoice" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Outstanding Invoices</div>
               <div className="kpi-value">{currency(kpi.outstandingInvoices)}</div>
+              {!connected && <div className="kpi-delta" style={{ color: 'var(--tv-text-muted)' }}>As of today</div>}
             </div>
           </div>
 
@@ -1373,7 +1522,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   <i className="ti ti-layout-grid" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
                   By business
                 </div>
-                <span className="badge badge-gray">Revenue &amp; expenses (MTD)</span>
+                <span className="badge badge-gray">{dashRange.label} · click a row to open</span>
               </div>
               <div className="table-scroll">
                 <table className="tv-table">
@@ -1383,6 +1532,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       <th style={{ textAlign: 'right' }}>Revenue</th>
                       <th style={{ textAlign: 'right' }}>Expenses</th>
                       <th style={{ textAlign: 'right' }}>Net</th>
+                      <th style={{ textAlign: 'right' }}>Cash</th>
+                      <th style={{ textAlign: 'right' }}>Outstanding</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1397,8 +1548,18 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         <td style={{ textAlign: 'right' }}>
                           <span className={`item-amount ${b.net >= 0 ? 'amount-pos' : 'amount-neg'}`}>{currency(b.net)}</span>
                         </td>
+                        <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(b.cashOnHand)}</span></td>
+                        <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(b.outstanding)}</span></td>
                       </tr>
                     ))}
+                    <tr style={{ borderTop: '2px solid var(--tv-border)', fontWeight: 600 }}>
+                      <td>All businesses</td>
+                      <td style={{ textAlign: 'right' }}>{currency(byBusiness.reduce((s, b) => s + b.revenue, 0))}</td>
+                      <td style={{ textAlign: 'right' }}>{currency(byBusiness.reduce((s, b) => s + b.expenses, 0))}</td>
+                      <td style={{ textAlign: 'right' }}>{currency(byBusiness.reduce((s, b) => s + b.net, 0))}</td>
+                      <td style={{ textAlign: 'right' }}>{currency(byBusiness.reduce((s, b) => s + b.cashOnHand, 0))}</td>
+                      <td style={{ textAlign: 'right' }}>{currency(byBusiness.reduce((s, b) => s + b.outstanding, 0))}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
@@ -2136,7 +2297,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     Document center
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{bizDocuments.length}</span>
                   </div>
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '' }); }} disabled={isAllView}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' }); }} disabled={isAllView}>
                     <i className={`ti ${showAddDoc ? 'ti-x' : 'ti-plus'}`}></i>{showAddDoc ? ' Cancel' : ' Add document'}
                   </button>
                 </div>
@@ -2186,6 +2347,22 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         <input className="form-input" value={docForm.note} onChange={(e) => setDocForm({ ...docForm, note: e.target.value })} placeholder="Optional" />
                       </div>
                     </div>
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Tax / filing year</label>
+                        <input className="form-input" type="number" min="1900" max="2200" value={docForm.periodYear}
+                          onChange={(e) => setDocForm({ ...docForm, periodYear: e.target.value })} placeholder="e.g. 2026" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Month (optional)</label>
+                        <select className="form-select" value={docForm.periodMonth} onChange={(e) => setDocForm({ ...docForm, periodMonth: e.target.value })}>
+                          <option value="">— Whole year —</option>
+                          {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                            <option key={m} value={i + 1}>{m}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                     <button type="submit" className="btn btn-primary btn-sm" disabled={!docForm.label.trim() || !docForm.url.trim()}>
                       <i className="ti ti-plus"></i> Add document
                     </button>
@@ -2194,7 +2371,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
                 {/* Type filter chips */}
                 {sortedDocs.length > 0 && (
-                  <div className="seg-control" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+                  <div className="seg-control" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
                     {['ALL', ...DOC_TYPES.filter((t) => sortedDocs.some((d) => (d.docType || 'OTHER').toUpperCase() === t))].map((t) => (
                       <button key={t} className={`seg-btn ${fDocType === t ? 'active' : ''}`} onClick={() => setFDocType(t)}>
                         {t === 'ALL' ? 'All' : docTypeVisual(t).label}
@@ -2203,38 +2380,64 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 )}
 
+                {/* Year filter chips — documents filed by tax/reporting year */}
+                {docYears.length > 0 && (
+                  <div className="seg-control" style={{ marginBottom: 12, flexWrap: 'wrap' }}>
+                    <button className={`seg-btn ${fDocYear === 'ALL' ? 'active' : ''}`} onClick={() => setFDocYear('ALL')}>All years</button>
+                    {docYears.map((y) => (
+                      <button key={y} className={`seg-btn ${String(fDocYear) === String(y) ? 'active' : ''}`} onClick={() => setFDocYear(String(y))}>{y}</button>
+                    ))}
+                    {hasUndatedDocs && (
+                      <button className={`seg-btn ${fDocYear === 'NONE' ? 'active' : ''}`} onClick={() => setFDocYear('NONE')}>Undated</button>
+                    )}
+                  </div>
+                )}
+
                 {filteredDocs.length === 0 ? (
                   <div className="empty-state">
                     <i className="ti ti-folder-open"></i>
-                    <p>{sortedDocs.length === 0 ? 'No documents yet. Add a link to an invoice, receipt or contract to keep this business organized.' : 'No documents of this type.'}</p>
+                    <p>{sortedDocs.length === 0 ? 'No documents yet. Add a link to an invoice, receipt or contract to keep this business organized.' : 'No documents match this filter.'}</p>
                   </div>
                 ) : (
                   <div>
-                    {filteredDocs.map((d) => {
-                      const v = docTypeVisual(d.docType);
-                      const inv = d.invoiceId != null ? manualInvoices.find((i) => i.id === d.invoiceId) : null;
-                      return (
-                        <div key={d.id} className="list-item">
-                          <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
-                          <div className="item-main" style={{ minWidth: 0 }}>
-                            <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
-                            <div className="item-sub">
-                              <span className="badge badge-gray">{v.label}</span>
-                              {isAllView && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
-                              {inv ? ` · Invoice: ${inv.customer}` : ''}
-                              {d.createdAt ? ` · ${bizDate(d.createdAt)}` : ''}
-                              {d.note ? ` · ${d.note}` : ''}
-                            </div>
-                          </div>
-                          <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <a className="btn btn-secondary btn-sm" href={d.url} target="_blank" rel="noopener noreferrer" title="Open document">
-                              <i className="ti ti-external-link"></i> Open
-                            </a>
-                            <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
-                          </div>
+                    {docsByYear.map((group) => (
+                      <div key={group.year} style={{ marginBottom: 14 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' }}>
+                          <i className="ti ti-calendar" style={{ color: 'var(--tv-text-muted)', fontSize: 14 }}></i>
+                          <span style={{ fontWeight: 600, fontSize: 13.5 }}>{group.year === 'Undated' ? 'Undated' : group.year}</span>
+                          <span className="badge badge-gray">{group.docs.length}</span>
                         </div>
-                      );
-                    })}
+                        {group.docs.map((d) => {
+                          const v = docTypeVisual(d.docType);
+                          const inv = d.invoiceId != null ? manualInvoices.find((i) => i.id === d.invoiceId) : null;
+                          const monthLbl = d.periodMonth != null
+                            ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.periodMonth - 1]
+                            : null;
+                          return (
+                            <div key={d.id} className="list-item">
+                              <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
+                              <div className="item-main" style={{ minWidth: 0 }}>
+                                <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
+                                <div className="item-sub">
+                                  <span className="badge badge-gray">{v.label}</span>
+                                  {monthLbl ? ` · ${monthLbl} ${d.periodYear}` : ''}
+                                  {isAllView && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
+                                  {inv ? ` · Invoice: ${inv.customer}` : ''}
+                                  {d.createdAt ? ` · added ${bizDate(d.createdAt)}` : ''}
+                                  {d.note ? ` · ${d.note}` : ''}
+                                </div>
+                              </div>
+                              <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <a className="btn btn-secondary btn-sm" href={d.url} target="_blank" rel="noopener noreferrer" title="Open document">
+                                  <i className="ti ti-external-link"></i> Open
+                                </a>
+                                <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

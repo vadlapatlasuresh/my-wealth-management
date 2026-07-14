@@ -45,6 +45,14 @@ public class BusinessDocument {
     @Column(name = "doc_type", nullable = false, length = 40)
     private String docType = "OTHER";
 
+    /** Tax/reporting year this document is filed under; drives year-wise grouping. */
+    @Column(name = "period_year")
+    private Integer periodYear;
+
+    /** Optional month (1-12) within {@link #periodYear}. */
+    @Column(name = "period_month")
+    private Integer periodMonth;
+
     @Column(length = 500)
     private String note;
 

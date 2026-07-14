@@ -12,6 +12,9 @@ public interface BusinessDocumentRepository extends JpaRepository<BusinessDocume
     List<BusinessDocument> findByBusinessIdAndUserIdAndInvoiceIdOrderByCreatedAtDesc(
             Long businessId, Long userId, Long invoiceId);
 
+    List<BusinessDocument> findByBusinessIdAndUserIdAndPeriodYearOrderByCreatedAtDesc(
+            Long businessId, Long userId, Integer periodYear);
+
     Optional<BusinessDocument> findByIdAndUserId(Long id, Long userId);
 
     void deleteByBusinessIdAndUserId(Long businessId, Long userId);

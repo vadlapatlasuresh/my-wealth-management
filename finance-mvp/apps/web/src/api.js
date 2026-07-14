@@ -491,10 +491,11 @@ export const api = {
     request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
 
   // Per-business document center (link-based). Pass invoiceId to scope to one invoice.
-  getBusinessDocuments: (businessId, invoiceId) =>
+  getBusinessDocuments: (businessId, invoiceId, year) =>
     request(
       `/api/v1/business/manual/businesses/${businessId}/documents` +
-        (invoiceId != null ? `?invoiceId=${encodeURIComponent(invoiceId)}` : "")
+        (invoiceId != null ? `?invoiceId=${encodeURIComponent(invoiceId)}` :
+          year != null ? `?year=${encodeURIComponent(year)}` : "")
     ),
   createBusinessDocument: (businessId, payload) =>
     request(`/api/v1/business/manual/businesses/${businessId}/documents`, {
@@ -503,6 +504,23 @@ export const api = {
     }),
   deleteBusinessDocument: (id) =>
     request(`/api/v1/business/manual/documents/${id}`, { method: "DELETE" }),
+
+  // Ledger-derived, period-aware KPIs. `period` is THIS_MONTH | THIS_YEAR | T12M | CUSTOM.
+  // For CUSTOM, pass from/to as ISO yyyy-MM-dd. Balances/AR are point-in-time (today);
+  // revenue/expenses/profit are summed over the resolved range.
+  getBusinessSummary: (businessId, period = "THIS_MONTH", from, to) =>
+    request(
+      `/api/v1/business/manual/businesses/${businessId}/summary?period=${encodeURIComponent(period)}` +
+        (from ? `&from=${encodeURIComponent(from)}` : "") +
+        (to ? `&to=${encodeURIComponent(to)}` : "")
+    ),
+  // Consolidated (all businesses) dashboard: per-business breakdown + rollup totals.
+  getConsolidatedSummary: (period = "THIS_MONTH", from, to) =>
+    request(
+      `/api/v1/business/manual/summary?period=${encodeURIComponent(period)}` +
+        (from ? `&from=${encodeURIComponent(from)}` : "") +
+        (to ? `&to=${encodeURIComponent(to)}` : "")
+    ),
 
   // Reconciliation flags (per-user) for linked or manual transactions, keyed by a
   // stable external id (e.g. "lin-<plaidTransactionId>" or "man-<id>").

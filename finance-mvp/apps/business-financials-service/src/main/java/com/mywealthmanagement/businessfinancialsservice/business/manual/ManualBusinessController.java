@@ -30,6 +30,7 @@ public class ManualBusinessController {
     private final TransactionOverrideRepository overrideRepo;
     private final BusinessLinkedAccountRepository linkedRepo;
     private final BusinessDocumentRepository documentRepo;
+    private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
 
     private Long userId() {
@@ -87,6 +88,38 @@ public class ManualBusinessController {
         if (body.containsKey("revenueMtd")) b.setRevenueMtd(money(body.get("revenueMtd")));
         if (body.containsKey("expensesMtd")) b.setExpensesMtd(money(body.get("expensesMtd")));
         if (body.containsKey("outstandingInvoices")) b.setOutstandingInvoices(money(body.get("outstandingInvoices")));
+    }
+
+    /* ---------------- Dashboards (ledger-derived, period-aware) ---------------- */
+
+    /**
+     * KPIs for one business over a period. {@code period} is one of
+     * THIS_MONTH | THIS_YEAR | T12M | CUSTOM; for CUSTOM pass {@code from}/{@code to}
+     * (ISO yyyy-MM-dd). Flow metrics sum over the range; balances/AR are today's.
+     */
+    @GetMapping("/businesses/{businessId}/summary")
+    public com.mywealthmanagement.businessfinancialsservice.business.dto.BusinessSummaryDto getSummary(
+            @PathVariable Long businessId,
+            @RequestParam(value = "period", defaultValue = "THIS_MONTH") String period,
+            @RequestParam(value = "from", required = false) String from,
+            @RequestParam(value = "to", required = false) String to) {
+        ManualBusiness biz = businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        PeriodResolver.Period p = PeriodResolver.resolve(period, from, to, LocalDate.now());
+        return summaryService.summarize(userId(), biz, p.from(), p.to());
+    }
+
+    /**
+     * The consolidated (all-businesses) dashboard for a period. Read-only.
+     * Returns the per-business breakdown plus a rollup; parts sum to the whole.
+     */
+    @GetMapping("/summary")
+    public com.mywealthmanagement.businessfinancialsservice.business.dto.ConsolidatedDashboardDto getConsolidated(
+            @RequestParam(value = "period", defaultValue = "THIS_MONTH") String period,
+            @RequestParam(value = "from", required = false) String from,
+            @RequestParam(value = "to", required = false) String to) {
+        PeriodResolver.Period p = PeriodResolver.resolve(period, from, to, LocalDate.now());
+        return summaryService.consolidate(userId(), p.key(), p.from(), p.to());
     }
 
     /* ---------------- Accounts ---------------- */
@@ -304,12 +337,17 @@ public class ManualBusinessController {
     @GetMapping("/businesses/{businessId}/documents")
     public List<BusinessDocument> listDocuments(
             @PathVariable Long businessId,
-            @RequestParam(value = "invoiceId", required = false) Long invoiceId) {
+            @RequestParam(value = "invoiceId", required = false) Long invoiceId,
+            @RequestParam(value = "year", required = false) Integer year) {
         businessRepo.findByIdAndUserId(businessId, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (invoiceId != null) {
             return documentRepo.findByBusinessIdAndUserIdAndInvoiceIdOrderByCreatedAtDesc(
                     businessId, userId(), invoiceId);
+        }
+        if (year != null) {
+            return documentRepo.findByBusinessIdAndUserIdAndPeriodYearOrderByCreatedAtDesc(
+                    businessId, userId(), year);
         }
         return documentRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
     }
@@ -325,6 +363,8 @@ public class ManualBusinessController {
         d.setUrl(str(body.get("url")));
         d.setDocType(str(body.getOrDefault("docType", "OTHER")));
         d.setNote(str(body.get("note")));
+        d.setPeriodYear(intVal(body.get("periodYear")));
+        d.setPeriodMonth(intVal(body.get("periodMonth")));
         Long invoiceId = longVal(body.get("invoiceId"));
         if (invoiceId != null) {
             // Ensure the invoice belongs to the caller and this business before pinning.
@@ -485,6 +525,18 @@ public class ManualBusinessController {
         if (o == null) return null;
         try {
             return Long.valueOf(o.toString().trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer intVal(Object o) {
+        if (o == null) return null;
+        String s = o.toString().trim();
+        if (s.isEmpty()) return null;
+        try {
+            // tolerate "2026.0" style numeric input from JSON
+            return (int) Double.parseDouble(s);
         } catch (NumberFormatException e) {
             return null;
         }

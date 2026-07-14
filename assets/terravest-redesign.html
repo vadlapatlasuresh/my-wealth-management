@@ -1047,7 +1047,7 @@ a { text-decoration: none; color: inherit; }
       (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
     • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
     • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto).
-    • My Business: multi-business + "All businesses" switcher, hero cash header, auto-detected linked accounts (bank + credit) with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks.
+    • My Business: multi-business + "All businesses" switcher, hero cash header, period selector (this month / year / trailing 12mo / custom) driving ledger-derived P&L KPIs, consolidated by-business breakdown (parts sum to totals), auto-detected linked accounts (bank + credit) with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks, per-business document center filed by tax/reporting year.
     • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
 
     CHANGELOG — 2026-06-07 (auth + brokers + polish)
@@ -3548,11 +3548,23 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Period selector: flow KPIs (revenue/expenses/profit) are computed from the ledger over
+             the selected range. Balances & outstanding AR stay point-in-time (today). -->
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px;">
+          <span style="font-size:12.5px;color:var(--tv-text-muted);font-weight:500;"><i class="ti ti-calendar-stats" style="margin-right:4px;"></i>Period</span>
+          <div class="seg-control">
+            <button class="seg-btn active">This month</button>
+            <button class="seg-btn">This year</button>
+            <button class="seg-btn">Trailing 12 mo</button>
+            <button class="seg-btn">Custom</button>
+          </div>
+        </div>
+
         <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-up" style="color:var(--tv-positive)"></i> Revenue (MTD)</div><div class="kpi-value">$42,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">Connect to track changes</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down" style="color:var(--tv-negative)"></i> Expenses (MTD)</div><div class="kpi-value">$28,000</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-line" style="color:var(--tv-forest-light)"></i> Net Profit (MTD)</div><div class="kpi-value">$14,000</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-forest-light)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-up" style="color:var(--tv-positive)"></i> Revenue</div><div class="kpi-value">$42,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">This month</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down" style="color:var(--tv-negative)"></i> Expenses</div><div class="kpi-value">$28,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">This month</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-line" style="color:var(--tv-forest-light)"></i> Net Profit</div><div class="kpi-value">$14,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">This month</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-forest-light)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div><div class="kpi-delta" style="color:var(--tv-text-muted);">As of today</div></div>
         </div>
         <div style="height:16px;"></div>
 
@@ -3583,6 +3595,25 @@ a { text-decoration: none; color: inherit; }
             <text x="471" y="160" font-size="11" fill="#7A9086" text-anchor="middle">May</text>
             <text x="574" y="160" font-size="11" fill="#7A9086" text-anchor="middle">Jun</text>
           </svg>
+        </div>
+
+        <!-- Consolidated "All businesses" breakdown — one row per business, ledger-derived for the
+             selected period. Parts sum to the totals row. Click a row to open that business. -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header">
+            <div class="section-title"><i class="ti ti-layout-grid" style="margin-right:6px;color:var(--tv-forest-light)"></i>By business</div>
+            <span class="badge badge-gray">This month · click a row to open</span>
+          </div>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Business</th><th style="text-align:right;">Revenue</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Net</th><th style="text-align:right;">Cash</th><th style="text-align:right;">Outstanding</th></tr></thead>
+              <tbody>
+                <tr style="cursor:pointer;"><td style="font-weight:500;">Summit Contracting<div class="item-sub" style="font-weight:400;">Construction</div></td><td style="text-align:right;">$42,000</td><td style="text-align:right;color:var(--tv-negative);">$28,000</td><td style="text-align:right;color:var(--tv-positive);">$14,000</td><td style="text-align:right;">$31,200</td><td style="text-align:right;">$3,450</td></tr>
+                <tr style="cursor:pointer;"><td style="font-weight:500;">Cedar Rentals LLC<div class="item-sub" style="font-weight:400;">Real Estate</div></td><td style="text-align:right;">$9,800</td><td style="text-align:right;color:var(--tv-negative);">$4,120</td><td style="text-align:right;color:var(--tv-positive);">$5,680</td><td style="text-align:right;">$18,400</td><td style="text-align:right;">$1,200</td></tr>
+                <tr style="border-top:2px solid var(--tv-border);font-weight:600;"><td>All businesses</td><td style="text-align:right;">$51,800</td><td style="text-align:right;">$32,120</td><td style="text-align:right;">$19,680</td><td style="text-align:right;">$49,600</td><td style="text-align:right;">$4,650</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
         <!-- Connected accounts (linked + manual, auto-detected) -->
@@ -3747,14 +3778,22 @@ a { text-decoration: none; color: inherit; }
             <div class="section-title"><i class="ti ti-folder" style="color:var(--tv-forest-light);margin-right:6px;"></i>Document center <span class="badge badge-gray" style="margin-left:6px;">4</span></div>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add document</button>
           </div>
-          <p class="item-sub" style="margin:-4px 0 12px;">Store links to invoices, receipts, contracts and tax records — everything organized under this business.</p>
-          <div class="seg-control" style="margin-bottom:12px;flex-wrap:wrap;">
+          <p class="item-sub" style="margin:-4px 0 12px;">Store links to invoices, receipts, contracts and tax records — filed by tax/reporting year under this business.</p>
+          <div class="seg-control" style="margin-bottom:8px;flex-wrap:wrap;">
             <button class="seg-btn active">All</button><button class="seg-btn">Invoice</button><button class="seg-btn">Receipt</button><button class="seg-btn">Contract</button><button class="seg-btn">Tax</button>
           </div>
-          <div class="list-item"><div class="item-icon icon-blue"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Invoice #1042 — Northwind Co.</div><div class="item-sub"><span class="badge badge-gray">Invoice</span> · Invoice: Northwind Co. · Jun 12</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
-          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-receipt"></i></div><div class="item-main"><div class="item-name">AWS receipt — May</div><div class="item-sub"><span class="badge badge-gray">Receipt</span> · Jun 03</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
-          <div class="list-item"><div class="item-icon icon-purple"><i class="ti ti-file-text"></i></div><div class="item-main"><div class="item-name">Master services agreement</div><div class="item-sub"><span class="badge badge-gray">Contract</span> · Harbor Group · May 28</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
-          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-report-money"></i></div><div class="item-main"><div class="item-name">2025 Form 1120-S</div><div class="item-sub"><span class="badge badge-gray">Tax</span> · Apr 15</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <!-- Year filter — documents filed by tax/reporting year -->
+          <div class="seg-control" style="margin-bottom:12px;flex-wrap:wrap;">
+            <button class="seg-btn active">All years</button><button class="seg-btn">2026</button><button class="seg-btn">2025</button>
+          </div>
+          <!-- 2026 group -->
+          <div style="display:flex;align-items:center;gap:8px;margin:4px 0 8px;"><i class="ti ti-calendar" style="color:var(--tv-text-muted);font-size:14px;"></i><span style="font-weight:600;font-size:13.5px;">2026</span><span class="badge badge-gray">3</span></div>
+          <div class="list-item"><div class="item-icon icon-blue"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Invoice #1042 — Northwind Co.</div><div class="item-sub"><span class="badge badge-gray">Invoice</span> · Jun 2026 · Invoice: Northwind Co. · added Jun 12</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-receipt"></i></div><div class="item-main"><div class="item-name">AWS receipt — May</div><div class="item-sub"><span class="badge badge-gray">Receipt</span> · May 2026 · added Jun 03</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <div class="list-item"><div class="item-icon icon-purple"><i class="ti ti-file-text"></i></div><div class="item-main"><div class="item-name">Master services agreement</div><div class="item-sub"><span class="badge badge-gray">Contract</span> · 2026 · Harbor Group · added May 28</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+          <!-- 2025 group -->
+          <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;"><i class="ti ti-calendar" style="color:var(--tv-text-muted);font-size:14px;"></i><span style="font-weight:600;font-size:13.5px;">2025</span><span class="badge badge-gray">1</span></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-report-money"></i></div><div class="item-main"><div class="item-name">2025 Form 1120-S</div><div class="item-sub"><span class="badge badge-gray">Tax</span> · 2025 · added Apr 15</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
         </div>
       </div>
 
