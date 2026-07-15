@@ -1,6 +1,7 @@
 package com.mywealthmanagement.realestateservice.property;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -12,19 +13,26 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class PropertyDataSeeder implements CommandLineRunner {
 
-    private static final Long SEED_USER_ID = 1L;
+    /** Only the configured demo/test user is seeded. Blank = seed nobody, so
+     *  regular accounts never get demo properties. */
+    @Value("${app.demo.user-id:}")
+    private String demoUserIdRaw;
 
     private final PropertyRepository propertyRepository;
     private final PropertyValuationProvider valuationProvider;
 
     @Override
     public void run(String... args) {
-        if (!propertyRepository.findByUserId(SEED_USER_ID).isEmpty()) {
+        Long seedUserId = parseDemoUserId();
+        if (seedUserId == null) {
+            return; // No demo user configured — do not seed any account.
+        }
+        if (!propertyRepository.findByUserId(seedUserId).isEmpty()) {
             return; // Already seeded
         }
 
         Property primary = new Property();
-        primary.setUserId(SEED_USER_ID);
+        primary.setUserId(seedUserId);
         primary.setAddress("1842 Elmwood Drive, Austin TX");
         primary.setPropertyType("PRIMARY_RESIDENCE");
         primary.setPurchasePrice(new BigDecimal("250000.0000"));
@@ -35,7 +43,7 @@ public class PropertyDataSeeder implements CommandLineRunner {
         applyDetails(primary);
 
         Property rental = new Property();
-        rental.setUserId(SEED_USER_ID);
+        rental.setUserId(seedUserId);
         rental.setAddress("456 Oak Ave, Round Rock TX");
         rental.setPropertyType("RENTAL_PROPERTY");
         rental.setPurchasePrice(new BigDecimal("180000.0000"));
@@ -47,6 +55,16 @@ public class PropertyDataSeeder implements CommandLineRunner {
 
         propertyRepository.save(primary);
         propertyRepository.save(rental);
+    }
+
+    /** The configured demo user id, or null when unset/invalid (seed nobody). */
+    private Long parseDemoUserId() {
+        if (demoUserIdRaw == null || demoUserIdRaw.isBlank()) return null;
+        try {
+            return Long.valueOf(demoUserIdRaw.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private void applyDetails(Property property) {
