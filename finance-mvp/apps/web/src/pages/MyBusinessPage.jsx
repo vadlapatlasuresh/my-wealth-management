@@ -295,6 +295,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
   const [docMode, setDocMode] = useState('file');       // 'file' (upload) | 'link'
   const [docFile, setDocFile] = useState(null);         // File to upload
+  const [docFileKey, setDocFileKey] = useState(0);      // bump to reset the native <input type=file>
   const [docBusinessId, setDocBusinessId] = useState(''); // target business (used in All view)
   const [uploadEnabled, setUploadEnabled] = useState(false); // GCS configured on backend
   const [savingDoc, setSavingDoc] = useState(false);
@@ -2705,10 +2706,24 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     {docMode === 'file' ? (
                       <div className="form-group">
                         <label className="form-label">File or image *</label>
-                        <input className="form-input" type="file"
-                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-                          onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
-                        {docFile && <div className="item-sub" style={{ marginTop: 4 }}>{docFile.name} · {(docFile.size / 1024).toFixed(0)} KB</div>}
+                        {!docFile ? (
+                          <input key={docFileKey} className="form-input" type="file"
+                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                            onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', border: '1px solid var(--tv-border)', borderRadius: 8 }}>
+                            <i className="ti ti-file-check" style={{ color: 'var(--tv-forest-light)', fontSize: 18 }}></i>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{docFile.name}</div>
+                              <div className="item-sub">{(docFile.size / 1024).toFixed(0)} KB</div>
+                            </div>
+                            <button type="button" className="btn btn-secondary btn-sm"
+                              onClick={() => { setDocFile(null); setDocFileKey((k) => k + 1); }}
+                              title="Remove this file and choose another">
+                              <i className="ti ti-x"></i> Remove
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="form-group">
