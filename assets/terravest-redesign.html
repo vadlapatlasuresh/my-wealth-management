@@ -3511,6 +3511,15 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Success confirmation banner (auto-dismisses) — shown after create/upload/mark-paid -->
+        <div class="card" style="border-color:var(--tv-positive);margin-bottom:12px;">
+          <div class="list-item" style="padding:0;">
+            <div class="item-icon icon-green"><i class="ti ti-circle-check"></i></div>
+            <div class="item-main"><div class="item-sub" style="color:var(--tv-text-primary);font-weight:500;">Invoice for $6,200 to Northwind Co. created.</div></div>
+            <div class="item-right"><button class="icon-btn" title="Dismiss"><i class="ti ti-x"></i></button></div>
+          </div>
+        </div>
+
         <!-- Business tabs — each business is its own tab, plus "All businesses" + Add -->
         <div style="display:flex;gap:2px;border-bottom:1.5px solid var(--tv-border);overflow-x:auto;margin-bottom:16px;">
           <div class="outer-tab"><i class="ti ti-layout-grid"></i> All businesses</div>
