@@ -413,8 +413,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       try {
         const cfg = await api.getBusinessDocumentConfig();
         setUploadEnabled(!!cfg?.uploadEnabled);
-        if (!cfg?.uploadEnabled) setDocMode('link');
-      } catch { setUploadEnabled(false); setDocMode('link'); }
+      } catch { setUploadEnabled(false); }
     })();
   }, []);
 
@@ -2581,7 +2580,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     Document center
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{bizDocuments.length}</span>
                   </div>
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) { setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' }); setDocFile(null); setDocMode(uploadEnabled ? 'file' : 'link'); setDocBusinessId(''); } }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) { setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' }); setDocFile(null); setDocMode('file'); setDocBusinessId(''); } }}>
                     <i className={`ti ${showAddDoc ? 'ti-x' : 'ti-plus'}`}></i>{showAddDoc ? ' Cancel' : ' Add document'}
                   </button>
                 </div>
@@ -2603,11 +2602,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       </div>
                     )}
 
-                    {/* Mode: upload a file vs. paste a link */}
-                    {uploadEnabled && (
-                      <div className="seg-control" style={{ marginBottom: 12 }}>
-                        <button type="button" className={`seg-btn ${docMode === 'file' ? 'active' : ''}`} onClick={() => setDocMode('file')}><i className="ti ti-upload"></i> Upload file</button>
-                        <button type="button" className={`seg-btn ${docMode === 'link' ? 'active' : ''}`} onClick={() => setDocMode('link')}><i className="ti ti-link"></i> Add link</button>
+                    {/* Mode: upload a file vs. paste a link — always available. */}
+                    <div className="seg-control" style={{ marginBottom: docMode === 'file' && !uploadEnabled ? 6 : 12 }}>
+                      <button type="button" className={`seg-btn ${docMode === 'file' ? 'active' : ''}`} onClick={() => setDocMode('file')}><i className="ti ti-upload"></i> Upload file</button>
+                      <button type="button" className={`seg-btn ${docMode === 'link' ? 'active' : ''}`} onClick={() => setDocMode('link')}><i className="ti ti-link"></i> Add link</button>
+                    </div>
+                    {docMode === 'file' && !uploadEnabled && (
+                      <div className="item-sub" style={{ marginBottom: 12, color: 'var(--tv-warning, #b7791f)' }}>
+                        <i className="ti ti-alert-triangle" style={{ marginRight: 4 }}></i>
+                        File storage isn't enabled on the server yet (set <code>STORAGE_PROVIDER=gcs</code> + <code>GCS_BUCKET</code> and redeploy). You can add a link for now.
                       </div>
                     )}
 
@@ -2673,7 +2676,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       </div>
                     </div>
                     <button type="submit" className="btn btn-primary btn-sm"
-                      disabled={savingDoc || (isAllView && !docBusinessId) || (docMode === 'file' ? !docFile : (!docForm.label.trim() || !docForm.url.trim()))}>
+                      disabled={savingDoc || (isAllView && !docBusinessId) || (docMode === 'file' ? (!docFile || !uploadEnabled) : (!docForm.label.trim() || !docForm.url.trim()))}>
                       <i className={`ti ${savingDoc ? 'ti-loader spin' : (docMode === 'file' ? 'ti-upload' : 'ti-plus')}`}></i>
                       {savingDoc ? ' Saving…' : (docMode === 'file' ? ' Upload document' : ' Add document')}
                     </button>
