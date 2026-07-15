@@ -1092,6 +1092,40 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch (err) { setError(err?.message || 'Could not delete document.'); }
   }
 
+  /* A single document row (shared by the per-business folder and the flat list). */
+  function docRow(d, showBusiness) {
+    const v = docTypeVisual(d.docType);
+    const inv = d.invoiceId != null ? manualInvoices.find((i) => i.id === d.invoiceId) : null;
+    const monthLbl = d.periodMonth != null
+      ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.periodMonth - 1]
+      : null;
+    const isFile = (d.storageType || 'LINK') === 'GCS';
+    const sizeKb = d.sizeBytes ? `${Math.max(1, Math.round(d.sizeBytes / 1024))} KB` : null;
+    return (
+      <div key={d.id} className="list-item">
+        <div className={`item-icon ${v.tone}`}><i className={`ti ${isFile ? 'ti-file-upload' : v.icon}`}></i></div>
+        <div className="item-main" style={{ minWidth: 0 }}>
+          <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
+          <div className="item-sub">
+            <span className="badge badge-gray">{v.label}</span>
+            {isFile ? <span className="badge badge-forest" style={{ marginLeft: 4 }}>File{sizeKb ? ` · ${sizeKb}` : ''}</span> : null}
+            {monthLbl ? ` · ${monthLbl} ${d.periodYear}` : (d.periodYear != null ? ` · ${d.periodYear}` : '')}
+            {showBusiness && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
+            {inv ? ` · Invoice: ${inv.customer}` : ''}
+            {d.createdAt ? ` · added ${bizDate(d.createdAt)}` : ''}
+            {d.note ? ` · ${d.note}` : ''}
+          </div>
+        </div>
+        <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => openDoc(d)} title={isFile ? 'Open file' : 'Open document'}>
+            <i className={`ti ${isFile ? 'ti-download' : 'ti-external-link'}`}></i> Open
+          </button>
+          <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
+        </div>
+      </div>
+    );
+  }
+
   /* CSV export of the current filtered transaction view. */
   function exportCsv() {
     const header = ['Date', 'Description', 'Merchant', 'Account', 'Category', 'Type', 'Tags', 'Status', 'Source', 'Amount'];
@@ -1177,21 +1211,23 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     return [...s].sort((a, b) => b - a);
   }, [sortedDocs]);
   const hasUndatedDocs = useMemo(() => sortedDocs.some((d) => d.periodYear == null), [sortedDocs]);
-  /* Group the filtered docs by year for a filed-by-year layout. */
-  const docsByYear = useMemo(() => {
+  /* All-businesses view: group the filtered docs into a folder per business, in the
+     businesses' own order, each folder's docs newest-first (filteredDocs is already
+     sorted by added-date desc). Docs whose business is unknown fall into "Other". */
+  const docsByBusiness = useMemo(() => {
     const groups = new Map();
     filteredDocs.forEach((d) => {
-      const y = d.periodYear != null ? Number(d.periodYear) : 'Undated';
-      if (!groups.has(y)) groups.set(y, []);
-      groups.get(y).push(d);
+      const key = d.businessId != null ? d.businessId : 'other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(d);
     });
-    const order = [...groups.keys()].sort((a, b) => {
-      if (a === 'Undated') return 1;
-      if (b === 'Undated') return -1;
-      return b - a;
+    const rows = [];
+    businesses.forEach((b) => {
+      if (groups.has(b.id)) rows.push({ id: b.id, name: b.name, docs: groups.get(b.id) });
     });
-    return order.map((y) => ({ year: y, docs: groups.get(y) }));
-  }, [filteredDocs]);
+    if (groups.has('other')) rows.push({ id: 'other', name: 'Other', docs: groups.get('other') });
+    return rows;
+  }, [filteredDocs, businesses]);
 
   /* Resolve the dashboard period into a concrete [from, to] date window. Mirrors
      the server PeriodResolver so all surfaces agree. `to` defaults to now. */
@@ -2814,49 +2850,24 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     <i className="ti ti-folder-open"></i>
                     <p>{sortedDocs.length === 0 ? 'No documents yet. Add a link to an invoice, receipt or contract to keep this business organized.' : 'No documents match this filter.'}</p>
                   </div>
-                ) : (
+                ) : isAllView ? (
+                  /* All businesses → a folder per business, newest documents first inside each. */
                   <div>
-                    {docsByYear.map((group) => (
-                      <div key={group.year} style={{ marginBottom: 14 }}>
+                    {docsByBusiness.map((folder) => (
+                      <div key={folder.id} style={{ marginBottom: 16 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' }}>
-                          <i className="ti ti-calendar" style={{ color: 'var(--tv-text-muted)', fontSize: 14 }}></i>
-                          <span style={{ fontWeight: 600, fontSize: 13.5 }}>{group.year === 'Undated' ? 'Undated' : group.year}</span>
-                          <span className="badge badge-gray">{group.docs.length}</span>
+                          <i className="ti ti-folder" style={{ color: 'var(--tv-forest-light)', fontSize: 16 }}></i>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{folder.name}</span>
+                          <span className="badge badge-gray">{folder.docs.length}</span>
                         </div>
-                        {group.docs.map((d) => {
-                          const v = docTypeVisual(d.docType);
-                          const inv = d.invoiceId != null ? manualInvoices.find((i) => i.id === d.invoiceId) : null;
-                          const monthLbl = d.periodMonth != null
-                            ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.periodMonth - 1]
-                            : null;
-                          const isFile = (d.storageType || 'LINK') === 'GCS';
-                          const sizeKb = d.sizeBytes ? `${Math.max(1, Math.round(d.sizeBytes / 1024))} KB` : null;
-                          return (
-                            <div key={d.id} className="list-item">
-                              <div className={`item-icon ${v.tone}`}><i className={`ti ${isFile ? 'ti-file-upload' : v.icon}`}></i></div>
-                              <div className="item-main" style={{ minWidth: 0 }}>
-                                <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
-                                <div className="item-sub">
-                                  <span className="badge badge-gray">{v.label}</span>
-                                  {isFile ? <span className="badge badge-forest" style={{ marginLeft: 4 }}>File{sizeKb ? ` · ${sizeKb}` : ''}</span> : null}
-                                  {monthLbl ? ` · ${monthLbl} ${d.periodYear}` : ''}
-                                  {isAllView && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
-                                  {inv ? ` · Invoice: ${inv.customer}` : ''}
-                                  {d.createdAt ? ` · added ${bizDate(d.createdAt)}` : ''}
-                                  {d.note ? ` · ${d.note}` : ''}
-                                </div>
-                              </div>
-                              <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <button className="btn btn-secondary btn-sm" onClick={() => openDoc(d)} title={isFile ? 'Open file' : 'Open document'}>
-                                  <i className={`ti ${isFile ? 'ti-download' : 'ti-external-link'}`}></i> Open
-                                </button>
-                                <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {folder.docs.map((d) => docRow(d, false))}
                       </div>
                     ))}
+                  </div>
+                ) : (
+                  /* Single business → its documents only, newest first. */
+                  <div>
+                    {filteredDocs.map((d) => docRow(d, false))}
                   </div>
                 )}
               </div>
