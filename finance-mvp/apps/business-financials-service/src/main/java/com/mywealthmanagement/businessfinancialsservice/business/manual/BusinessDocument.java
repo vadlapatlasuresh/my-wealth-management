@@ -39,8 +39,26 @@ public class BusinessDocument {
     @Column(nullable = false, length = 200)
     private String label;
 
-    @Column(nullable = false, length = 1000)
+    /** Link-based documents store the external URL here. Null for uploaded (GCS) files. */
+    @Column(length = 1000)
     private String url;
+
+    /** LINK (external url) or GCS (uploaded file streamed from Cloud Storage). */
+    @Column(name = "storage_type", nullable = false, length = 16)
+    private String storageType = "LINK";
+
+    /** GCS object path (only for storageType = GCS). */
+    @Column(name = "object_name", length = 1024)
+    private String objectName;
+
+    @Column(name = "content_type", length = 255)
+    private String contentType;
+
+    @Column(name = "size_bytes")
+    private Long sizeBytes;
+
+    @Column(name = "original_filename", length = 400)
+    private String originalFilename;
 
     @Column(name = "doc_type", nullable = false, length = 40)
     private String docType = "OTHER";

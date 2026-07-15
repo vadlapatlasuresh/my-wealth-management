@@ -31,6 +31,7 @@ public class ManualBusinessController {
     private final BusinessLinkedAccountRepository linkedRepo;
     private final BusinessDocumentRepository documentRepo;
     private final BusinessSummaryService summaryService;
+    private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
 
     private Long userId() {
@@ -408,10 +409,94 @@ public class ManualBusinessController {
         return documentRepo.save(d);
     }
 
+    /** Whether file uploads are available (GCS configured). The UI hides/enables the
+     *  upload control accordingly and falls back to link-only when false. */
+    @GetMapping("/documents/config")
+    public Map<String, Object> documentConfig() {
+        return Map.of("uploadEnabled", storageService.isEnabled());
+    }
+
+    /**
+     * Upload a file/image into a business's document center. Multipart:
+     * {@code file} (required) plus optional {@code label, docType, note,
+     * periodYear, periodMonth, invoiceId}. Stored in Google Cloud Storage and
+     * linked to the business. The same endpoint backs both the per-business and
+     * the "All businesses" upload (the client passes the chosen businessId).
+     */
+    @PostMapping(value = "/businesses/{businessId}/documents/upload", consumes = "multipart/form-data")
+    public BusinessDocument uploadDocument(
+            @PathVariable Long businessId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam(value = "docType", required = false) String docType,
+            @RequestParam(value = "note", required = false) String note,
+            @RequestParam(value = "periodYear", required = false) String periodYear,
+            @RequestParam(value = "periodMonth", required = false) String periodMonth,
+            @RequestParam(value = "invoiceId", required = false) String invoiceId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file is required");
+        }
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (java.io.IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "could not read the uploaded file");
+        }
+        var stored = storageService.upload(userId(), businessId, file.getOriginalFilename(),
+                file.getContentType(), bytes);
+
+        BusinessDocument d = new BusinessDocument();
+        d.setUserId(userId());
+        d.setBusinessId(businessId);
+        d.setStorageType("GCS");
+        d.setObjectName(stored.objectName());
+        d.setContentType(stored.contentType());
+        d.setSizeBytes(stored.size());
+        d.setOriginalFilename(file.getOriginalFilename());
+        String lbl = str(label);
+        d.setLabel(lbl != null ? lbl : (file.getOriginalFilename() == null ? "Uploaded file" : file.getOriginalFilename()));
+        d.setDocType(str(docType) != null ? str(docType) : "OTHER");
+        d.setNote(str(note));
+        d.setPeriodYear(intVal(periodYear));
+        d.setPeriodMonth(intVal(periodMonth));
+        Long invId = longVal(invoiceId);
+        if (invId != null) {
+            BusinessInvoice inv = invoiceRepo.findByIdAndUserId(invId, userId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "invoice not found"));
+            if (!inv.getBusinessId().equals(businessId)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "invoice does not belong to this business");
+            }
+            d.setInvoiceId(invId);
+        }
+        return documentRepo.save(d);
+    }
+
+    /** Stream an uploaded document's bytes back to the owner (authenticated). */
+    @GetMapping("/documents/{id}/download")
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id) {
+        BusinessDocument d = documentRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!"GCS".equalsIgnoreCase(d.getStorageType()) || d.getObjectName() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "this document is a link, not an uploaded file");
+        }
+        var dl = storageService.download(d.getObjectName());
+        String filename = d.getOriginalFilename() != null ? d.getOriginalFilename() : "document";
+        return ResponseEntity.ok()
+                .header("Content-Type", dl.contentType() != null ? dl.contentType() : "application/octet-stream")
+                .header("Content-Disposition", "inline; filename=\"" + filename.replace("\"", "") + "\"")
+                .body(dl.bytes());
+    }
+
     @DeleteMapping("/documents/{id}")
     public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
         BusinessDocument d = documentRepo.findByIdAndUserId(id, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        // Remove the stored object too (best-effort) so we don't orphan bytes in GCS.
+        if ("GCS".equalsIgnoreCase(d.getStorageType())) {
+            storageService.delete(d.getObjectName());
+        }
         documentRepo.delete(d);
         return ResponseEntity.noContent().build();
     }

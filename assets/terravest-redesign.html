@@ -3822,7 +3822,16 @@ a { text-decoration: none; color: inherit; }
             <div class="section-title"><i class="ti ti-folder" style="color:var(--tv-forest-light);margin-right:6px;"></i>Document center <span class="badge badge-gray" style="margin-left:6px;">4</span></div>
             <button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add document</button>
           </div>
-          <p class="item-sub" style="margin:-4px 0 12px;">Store links to invoices, receipts, contracts and tax records — filed by tax/reporting year under this business.</p>
+          <p class="item-sub" style="margin:-4px 0 12px;">Upload files &amp; images (stored in Google Cloud Storage) or paste a share link — invoices, receipts, contracts and tax records stay organized under their business, filed by year. In the All-businesses view, pick which business a file belongs to.</p>
+          <!-- Add: upload a file vs. paste a link (upload → GCS) -->
+          <div class="seg-control" style="margin-bottom:8px;">
+            <button class="seg-btn active"><i class="ti ti-upload"></i> Upload file</button>
+            <button class="seg-btn"><i class="ti ti-link"></i> Add link</button>
+          </div>
+          <!-- Business folders (All-businesses view) -->
+          <div class="seg-control" style="margin-bottom:8px;flex-wrap:wrap;">
+            <button class="seg-btn active"><i class="ti ti-folders"></i> All businesses</button><button class="seg-btn"><i class="ti ti-folder"></i> Summit Contracting</button><button class="seg-btn"><i class="ti ti-folder"></i> Cedar Rentals LLC</button>
+          </div>
           <div class="seg-control" style="margin-bottom:8px;flex-wrap:wrap;">
             <button class="seg-btn active">All</button><button class="seg-btn">Invoice</button><button class="seg-btn">Receipt</button><button class="seg-btn">Contract</button><button class="seg-btn">Tax</button>
           </div>
@@ -3832,6 +3841,7 @@ a { text-decoration: none; color: inherit; }
           </div>
           <!-- 2026 group -->
           <div style="display:flex;align-items:center;gap:8px;margin:4px 0 8px;"><i class="ti ti-calendar" style="color:var(--tv-text-muted);font-size:14px;"></i><span style="font-weight:600;font-size:13.5px;">2026</span><span class="badge badge-gray">3</span></div>
+          <div class="list-item"><div class="item-icon icon-forest"><i class="ti ti-file-upload"></i></div><div class="item-main"><div class="item-name">Signed lease — Unit 4B.pdf</div><div class="item-sub"><span class="badge badge-gray">Contract</span> <span class="badge badge-forest">File · 820 KB</span> · 2026 · Cedar Rentals LLC · added Jun 14</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
           <div class="list-item"><div class="item-icon icon-blue"><i class="ti ti-file-invoice"></i></div><div class="item-main"><div class="item-name">Invoice #1042 — Northwind Co.</div><div class="item-sub"><span class="badge badge-gray">Invoice</span> · Jun 2026 · Invoice: Northwind Co. · added Jun 12</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
           <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-receipt"></i></div><div class="item-main"><div class="item-name">AWS receipt — May</div><div class="item-sub"><span class="badge badge-gray">Receipt</span> · May 2026 · added Jun 03</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
           <div class="list-item"><div class="item-icon icon-purple"><i class="ti ti-file-text"></i></div><div class="item-main"><div class="item-name">Master services agreement</div><div class="item-sub"><span class="badge badge-gray">Contract</span> · 2026 · Harbor Group · added May 28</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>

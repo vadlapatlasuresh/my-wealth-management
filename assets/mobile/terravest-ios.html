@@ -1241,7 +1241,12 @@ body{
           <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">Northwind Co.</div><div class="s">Manual · Paid</div></div><div class="val"><div class="v">$6,200</div><div class="d pos">Paid</div></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-alert-circle"></i></div><div class="body"><div class="t">Pinecrest Studio</div><div class="s">QuickBooks · Due May 20</div></div><div class="val"><div class="v neg">$3,450</div><div class="d neg">Overdue</div></div></div>
         </div>
-        <div class="sec-label" style="display:flex;justify-content:space-between;align-items:center;">Document center <span style="font-size:13px;color:var(--tv-forest);font-weight:600;"><i class="ti ti-plus"></i> Add</span></div>
+        <div class="sec-label" style="display:flex;justify-content:space-between;align-items:center;">Document center <span style="font-size:13px;color:var(--tv-forest);font-weight:600;"><i class="ti ti-upload"></i> Upload</span></div>
+        <!-- Upload a file/image (→ GCS) or add a link -->
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <span style="padding:6px 13px;border-radius:999px;background:var(--tv-forest);color:#fff;font-size:12px;"><i class="ti ti-upload"></i> Upload file</span>
+          <span style="padding:6px 13px;border-radius:999px;background:var(--tv-surface);border:1px solid var(--tv-border);font-size:12px;"><i class="ti ti-link"></i> Add link</span>
+        </div>
         <div style="display:flex;gap:8px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px;">
           <span style="padding:6px 13px;border-radius:999px;background:var(--tv-forest);color:#fff;font-size:12px;white-space:nowrap;">All</span>
           <span style="padding:6px 13px;border-radius:999px;background:var(--tv-surface);border:1px solid var(--tv-border);font-size:12px;white-space:nowrap;">Invoice</span>
@@ -1256,6 +1261,7 @@ body{
         </div>
         <div class="muted" style="font-size:12px;font-weight:600;margin:2px 0 6px;"><i class="ti ti-calendar"></i> 2026</div>
         <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-file-upload"></i></div><div class="body"><div class="t">Signed lease — Unit 4B.pdf</div><div class="s">Contract · File · 820 KB · 2026</div></div><div class="val"><i class="ti ti-download" style="color:var(--tv-text-muted);"></i></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">Invoice #1042 — Northwind</div><div class="s">Invoice · Jun 2026 · linked to Northwind Co.</div></div><div class="val"><i class="ti ti-external-link" style="color:var(--tv-text-muted);"></i></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-receipt"></i></div><div class="body"><div class="t">AWS receipt — May</div><div class="s">Receipt · May 2026 · added Jun 03</div></div><div class="val"><i class="ti ti-external-link" style="color:var(--tv-text-muted);"></i></div></div>
         </div>
