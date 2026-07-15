@@ -969,6 +969,9 @@ a { text-decoration: none; color: inherit; }
       <li class="nav-item" data-page="business" onclick="navigate('business',this)">
         <i class="ti ti-briefcase"></i> My Business
       </li>
+      <li class="nav-item" data-page="business-firstrun" onclick="navigate('business-firstrun',this)" style="font-size:12.5px;color:var(--tv-text-muted);">
+        <i class="ti ti-sparkles"></i> My Business · First run
+      </li>
       <li class="nav-item" data-page="aiassistant" onclick="navigate('aiassistant',this)">
         <i class="ti ti-robot"></i> AI Assistant
       </li>
@@ -3858,6 +3861,41 @@ a { text-decoration: none; color: inherit; }
           <!-- 2025 group -->
           <div style="display:flex;align-items:center;gap:8px;margin:14px 0 8px;"><i class="ti ti-calendar" style="color:var(--tv-text-muted);font-size:14px;"></i><span style="font-weight:600;font-size:13.5px;">2025</span><span class="badge badge-gray">1</span></div>
           <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-report-money"></i></div><div class="item-main"><div class="item-name">2025 Form 1120-S</div><div class="item-sub"><span class="badge badge-gray">Tax</span> · 2025 · added Apr 15</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-external-link"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+        </div>
+      </div>
+
+      <!-- ============================= MY BUSINESS — FIRST RUN ============================= -->
+      <div id="page-business-firstrun" class="page">
+        <div class="page-header">
+          <div>
+            <div class="page-title">My Business</div>
+            <div class="page-subtitle">First-run — no business added yet</div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="text-align:center;padding:20px 16px 8px;">
+            <div style="width:64px;height:64px;border-radius:18px;background:var(--tv-forest);color:#fff;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;"><i class="ti ti-building-store" style="font-size:30px;"></i></div>
+            <div style="font-weight:700;font-size:18px;">Set up your first business</div>
+            <div class="item-sub" style="max-width:520px;margin:6px auto 0;">Track each business separately — its own accounts, cash flow, invoices and documents — with a consolidated view across all of them.</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:8px;">
+            <div class="card" style="border-top:3px solid var(--tv-forest);">
+              <div class="item-icon icon-forest" style="margin-bottom:8px;"><i class="ti ti-building-store"></i></div>
+              <div class="item-name">1 · Add a business</div>
+              <div class="item-sub" style="margin-bottom:12px;">Name it, pick the entity type — that's it. You can add more anytime.</div>
+              <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add a business</button>
+            </div>
+            <div class="card" style="border-top:3px solid var(--tv-positive);">
+              <div class="item-icon icon-green" style="margin-bottom:8px;"><i class="ti ti-plug-connected"></i></div>
+              <div class="item-name">2 · Link its accounts</div>
+              <div class="item-sub">Link a bank or credit card and assign it to the business — transactions sync automatically. Or add a manual account.</div>
+            </div>
+            <div class="card" style="border-top:3px solid var(--tv-forest-light);">
+              <div class="item-icon icon-blue" style="margin-bottom:8px;"><i class="ti ti-file-invoice"></i></div>
+              <div class="item-name">3 · Invoice &amp; file</div>
+              <div class="item-sub">Create invoices, track pending payments, and keep receipts &amp; contracts in the document center — filed by year.</div>
+            </div>
+          </div>
         </div>
       </div>
 
