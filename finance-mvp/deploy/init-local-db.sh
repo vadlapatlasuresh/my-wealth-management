@@ -23,7 +23,7 @@ SQL
 echo "role 'wealth' ready"
 
 for db in auth financial_core account_aggregation real_estate business_financials \
-          ai_insights payment notification platform_config audit; do
+          ai_insights payment notification platform_config audit documents; do
   createdb -h localhost -O wealth "${db}_db" 2>/dev/null && echo "created ${db}_db" || echo "${db}_db exists"
 done
 echo "Done. Each service owns its own database (separate Flyway history)."

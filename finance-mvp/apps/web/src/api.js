@@ -551,6 +551,48 @@ export const api = {
   openBusinessDocument: (id) =>
     fetchObjectUrl(`/api/v1/business/manual/documents/${id}/download`),
 
+  // ---------------- Personal Document Center (documents-service) ----------------
+  // Folders + documents are per-user; the center is the single source of truth for
+  // all of the user's files and the origin of every CPA share.
+  getDocCenterConfig: () => request(`/api/v1/documents/config`),
+  getDocCenterSummary: () => request(`/api/v1/documents/summary`),
+  getDocFolders: () => request(`/api/v1/documents/folders`),
+  createDocFolder: (name, parentId) =>
+    request(`/api/v1/documents/folders`, { method: "POST", body: JSON.stringify({ name, parentId }) }),
+  renameDocFolder: (id, name) =>
+    request(`/api/v1/documents/folders/${id}`, { method: "PUT", body: JSON.stringify({ name }) }),
+  deleteDocFolder: (id) => request(`/api/v1/documents/folders/${id}`, { method: "DELETE" }),
+  // List documents. Pass a folderId to scope to a folder, or root:true for unfiled docs.
+  getDocuments: ({ folderId, root } = {}) =>
+    request(`/api/v1/documents` +
+      (folderId != null ? `?folderId=${encodeURIComponent(folderId)}` : root ? `?root=true` : "")),
+  addDocumentLink: (payload) =>
+    request(`/api/v1/documents`, { method: "POST", body: JSON.stringify(payload) }),
+  updateDocument: (id, payload) =>
+    request(`/api/v1/documents/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteDocument: (id) => request(`/api/v1/documents/${id}`, { method: "DELETE" }),
+  uploadDocument: (file, fields = {}) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== "") fd.append(k, v); });
+    return uploadRequest(`/api/v1/documents/upload`, fd);
+  },
+  openDocument: (id) => fetchObjectUrl(`/api/v1/documents/${id}/download`),
+  // Sharing (owner side).
+  getDocShares: () => request(`/api/v1/documents/shares`),
+  createDocShare: (payload) =>
+    request(`/api/v1/documents/shares`, { method: "POST", body: JSON.stringify(payload) }),
+  getDocShareAccess: (id) => request(`/api/v1/documents/shares/${id}/access`),
+  revokeDocShare: (id) => request(`/api/v1/documents/shares/${id}/revoke`, { method: "POST" }),
+  deleteDocShare: (id) => request(`/api/v1/documents/shares/${id}`, { method: "DELETE" }),
+  // Public share access (recipient side, no auth — token in the path, optional passcode).
+  getSharedInfo: (token, passcode) =>
+    request(`/api/v1/documents/shared/${encodeURIComponent(token)}` +
+      (passcode ? `?passcode=${encodeURIComponent(passcode)}` : "")),
+  sharedFileUrl: (token, docId, passcode) =>
+    `${API_BASE}/api/v1/documents/shared/${encodeURIComponent(token)}/file?docId=${encodeURIComponent(docId)}` +
+      (passcode ? `&passcode=${encodeURIComponent(passcode)}` : ""),
+
   // Ledger-derived, period-aware KPIs. `period` is THIS_MONTH | THIS_YEAR | T12M | CUSTOM.
   // For CUSTOM, pass from/to as ISO yyyy-MM-dd. Balances/AR are point-in-time (today);
   // revenue/expenses/profit are summed over the resolved range.

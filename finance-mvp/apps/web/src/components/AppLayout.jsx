@@ -41,6 +41,7 @@ const FractionalLLCPage = MODULE_REGISTRY.fractional.component;
 const SecurityPage    = MODULE_REGISTRY.security.component;
 const MessagesPage    = MODULE_REGISTRY.messages.component;
 const SettingsPage    = MODULE_REGISTRY.settings.component;
+const DocumentCenterPage = MODULE_REGISTRY.documents.component;
 
 
 const navLabels = {
@@ -52,6 +53,7 @@ const navLabels = {
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
+  '/documents': 'Documents',
   '/ai-assistant': 'AI Assistant',
   '/calculators': 'Calculators',
   '/goals': 'Goals',
@@ -78,6 +80,7 @@ const PATH_TO_NAVID = {
   '/invest': 'invest', '/mybusiness': 'mybusiness', '/ai-assistant': 'ai-assistant',
   '/calculators': 'calculators', '/goals': 'goals', '/tax': 'tax', '/cpa': 'cpa',
   '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
+  '/documents': 'documents',
   '/security': 'security', '/messages': 'messages', '/settings': 'settings',
   '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/guide': 'guide',
   '/profile': 'profile', '/learn': 'learn',
@@ -492,6 +495,7 @@ export default function AppLayout(props) {
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
               <Route path="/dealroom" element={<DealRoomPage />} />
               <Route path="/fractional" element={<FractionalLLCPage />} />
+              <Route path="/documents" element={<DocumentCenterPage user={user} formatDate={formatDate} />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/settings" element={<SettingsPage />} />

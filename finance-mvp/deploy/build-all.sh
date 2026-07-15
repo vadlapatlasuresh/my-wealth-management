@@ -37,6 +37,7 @@ SERVICES=(
   notification-service
   platform-config-service
   audit-service
+  documents-service
 )
 
 echo "==> Building ${#SERVICES[@]} images  owner=$OWNER  tag=$TAG"
