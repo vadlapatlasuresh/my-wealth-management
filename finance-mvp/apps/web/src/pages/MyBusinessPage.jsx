@@ -289,8 +289,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const [showAddDoc, setShowAddDoc] = useState(false);
   const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
+  const [docMode, setDocMode] = useState('file');       // 'file' (upload) | 'link'
+  const [docFile, setDocFile] = useState(null);         // File to upload
+  const [docBusinessId, setDocBusinessId] = useState(''); // target business (used in All view)
+  const [uploadEnabled, setUploadEnabled] = useState(false); // GCS configured on backend
+  const [savingDoc, setSavingDoc] = useState(false);
   const [fDocType, setFDocType] = useState('ALL'); // document-center type filter
   const [fDocYear, setFDocYear] = useState('ALL'); // document-center year filter (year-wise)
+  const [fDocBusiness, setFDocBusiness] = useState('ALL'); // doc folder: filter to one business (All view)
 
   /* ---- Dashboard period selector (ledger-derived, period-aware KPIs) ---- */
   const [dashPeriod, setDashPeriod] = useState('THIS_MONTH'); // THIS_MONTH | THIS_YEAR | T12M | CUSTOM
@@ -399,6 +405,18 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch { /* non-fatal; no assignments */ }
   }, []);
   useEffect(() => { loadLinkedOwner(); }, [loadLinkedOwner]);
+
+  /* Whether the backend has file-upload storage (GCS) configured. When off, the
+     document center falls back to link-only. */
+  useEffect(() => {
+    (async () => {
+      try {
+        const cfg = await api.getBusinessDocumentConfig();
+        setUploadEnabled(!!cfg?.uploadEnabled);
+        if (!cfg?.uploadEnabled) setDocMode('link');
+      } catch { setUploadEnabled(false); setDocMode('link'); }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!businesses.length) return;
@@ -957,18 +975,19 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }
 
   /* ---- Document center CRUD ---- */
-  /* Resolve which business a new document belongs to: when attaching to an
-     invoice we use that invoice's business, otherwise the selected business.
-     (In the All-businesses view direct adds are done via a specific invoice.) */
+  /* Resolve which business a new document belongs to. Priority: the invoice it's
+     pinned to → the business explicitly chosen (All view) → the selected business. */
   function docTargetBusinessId() {
     if (docForm.invoiceId) {
       const inv = manualInvoices.find((i) => String(i.id) === String(docForm.invoiceId));
       if (inv) return inv.businessId;
     }
+    if (isAllView) return docBusinessId ? Number(docBusinessId) : null;
     return selectedBusiness?.id || null;
   }
   function openAttachDoc(invoice) {
     setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: String(invoice.id), periodYear: String(new Date().getFullYear()), periodMonth: '' });
+    setDocFile(null);
     setActiveTab('docs');
     setShowAddDoc(true);
     requestAnimationFrame(() => document.getElementById('mb-docs')?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -977,21 +996,52 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     e.preventDefault();
     const businessId = docTargetBusinessId();
     if (!businessId) { setError('Pick a business before adding a document.'); return; }
-    const label = docForm.label.trim();
-    let url = docForm.url.trim();
-    if (!label || !url) return;
-    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    setSavingDoc(true);
     try {
-      const created = await api.createBusinessDocument(businessId, {
-        label, url, docType: docForm.docType, note: docForm.note.trim() || null,
-        invoiceId: docForm.invoiceId ? Number(docForm.invoiceId) : null,
-        periodYear: docForm.periodYear ? Number(docForm.periodYear) : null,
-        periodMonth: docForm.periodMonth ? Number(docForm.periodMonth) : null,
-      });
+      let created;
+      if (docMode === 'file') {
+        if (!docFile) { setError('Choose a file to upload.'); setSavingDoc(false); return; }
+        created = await api.uploadBusinessDocument(businessId, docFile, {
+          label: docForm.label.trim() || undefined,
+          docType: docForm.docType,
+          note: docForm.note.trim() || undefined,
+          invoiceId: docForm.invoiceId || undefined,
+          periodYear: docForm.periodYear || undefined,
+          periodMonth: docForm.periodMonth || undefined,
+        });
+      } else {
+        const label = docForm.label.trim();
+        let url = docForm.url.trim();
+        if (!label || !url) { setSavingDoc(false); return; }
+        if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+        created = await api.createBusinessDocument(businessId, {
+          label, url, docType: docForm.docType, note: docForm.note.trim() || null,
+          invoiceId: docForm.invoiceId ? Number(docForm.invoiceId) : null,
+          periodYear: docForm.periodYear ? Number(docForm.periodYear) : null,
+          periodMonth: docForm.periodMonth ? Number(docForm.periodMonth) : null,
+        });
+      }
+      // Reflect it locally when the created doc is in the current view's scope.
       setBizDocuments((prev) => [created, ...prev]);
       setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
+      setDocFile(null);
       setShowAddDoc(false);
     } catch (err) { setError(err?.message || 'Could not add document.'); }
+    finally { setSavingDoc(false); }
+  }
+
+  /* Open an uploaded (GCS) document via an authenticated blob fetch; link docs
+     open directly. */
+  async function openDoc(d) {
+    if ((d.storageType || 'LINK') === 'GCS') {
+      try {
+        const objUrl = await api.openBusinessDocument(d.id);
+        window.open(objUrl, '_blank', 'noopener');
+        setTimeout(() => URL.revokeObjectURL(objUrl), 60000);
+      } catch (err) { setError(err?.message || 'Could not open the file.'); }
+    } else if (d.url) {
+      window.open(d.url, '_blank', 'noopener');
+    }
   }
   async function handleDeleteDoc(id) {
     try {
@@ -1070,12 +1120,13 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const filteredDocs = useMemo(
     () => sortedDocs.filter((d) =>
       (fDocType === 'ALL' || (d.docType || 'OTHER').toUpperCase() === fDocType) &&
+      (fDocBusiness === 'ALL' || String(d.businessId) === String(fDocBusiness)) &&
       (fDocYear === 'ALL'
         ? true
         : fDocYear === 'NONE'
           ? d.periodYear == null
           : String(d.periodYear) === String(fDocYear))),
-    [sortedDocs, fDocType, fDocYear]
+    [sortedDocs, fDocType, fDocYear, fDocBusiness]
   );
   /* Distinct years present in the document center, newest first (for year-wise grouping). */
   const docYears = useMemo(() => {
@@ -2415,6 +2466,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                           <div className="item-name">{i.customer}</div>
                           <div className="item-sub">
                             <span className={`badge ${statusBadge(i.status)}`}>{i.status}</span>
+                            {isAllView && businessNameById.get(i.businessId) ? <span className="badge badge-forest" style={{ marginLeft: 4 }}>{businessNameById.get(i.businessId)}</span> : null}
                             {i.dueDate ? ` · Due ${bizDate(i.dueDate)}` : ''}{!i.manual ? ' · QuickBooks' : ''}
                           </div>
                         </div>
@@ -2474,13 +2526,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 ) : (
                   <div className="table-scroll">
                     <table className="tv-table">
-                      <thead><tr><th>Customer</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Due date</th><th>Source</th><th>Documents</th><th style={{ width: 40 }}></th></tr></thead>
+                      <thead><tr><th>Customer</th>{isAllView && <th>Business</th>}<th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Due date</th><th>Source</th><th>Documents</th><th style={{ width: 40 }}></th></tr></thead>
                       <tbody>
                         {allInvoices.map((inv) => {
                           const docCount = inv.manual ? (docCountByInvoice.get(inv.id) || 0) : 0;
                           return (
                           <tr key={inv.key}>
                             <td style={{ fontWeight: 500 }}>{inv.customer || '—'}</td>
+                            {isAllView && <td>{businessNameById.get(inv.businessId) || <span style={{ color: 'var(--tv-text-muted)' }}>—</span>}</td>}
                             <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(inv.amount)}</span></td>
                             <td><span className={`badge ${statusBadge(inv.status)}`}>{inv.status}</span></td>
                             <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(inv.dueDate)}</td>
@@ -2528,29 +2581,40 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     Document center
                     <span className="badge badge-gray" style={{ marginLeft: 8 }}>{bizDocuments.length}</span>
                   </div>
-                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' }); }} disabled={isAllView}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => { setShowAddDoc((v) => !v); if (!showAddDoc) { setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' }); setDocFile(null); setDocMode(uploadEnabled ? 'file' : 'link'); setDocBusinessId(''); } }}>
                     <i className={`ti ${showAddDoc ? 'ti-x' : 'ti-plus'}`}></i>{showAddDoc ? ' Cancel' : ' Add document'}
                   </button>
                 </div>
 
                 <p className="item-sub" style={{ marginTop: -4, marginBottom: 12 }}>
-                  Store links to invoices, receipts, contracts and tax records. Paste a share link from Drive, Dropbox,
-                  a data room or an e-invoice — documents stay organized under {isAllView ? 'their business' : 'this business'}.
+                  {uploadEnabled ? 'Upload files and images, or paste a share link' : 'Paste a share link from Drive, Dropbox, a data room or an e-invoice'} — invoices, receipts, contracts and tax records stay organized under {isAllView ? 'their business' : 'this business'}, filed by year.
                 </p>
 
-                {isAllView && (
-                  <div className="item-sub" style={{ marginBottom: 12 }}>
-                    <i className="ti ti-info-circle" style={{ marginRight: 4 }}></i>
-                    Viewing documents across all businesses. Switch to a single business to add one.
-                  </div>
-                )}
-
-                {showAddDoc && !isAllView && (
+                {showAddDoc && (
                   <form onSubmit={handleAddDoc} style={{ marginBottom: 14 }}>
+                    {/* Business picker — required in the All-businesses view */}
+                    {isAllView && (
+                      <div className="form-group">
+                        <label className="form-label">Business *</label>
+                        <select className="form-select" value={docBusinessId} onChange={(e) => setDocBusinessId(e.target.value)}>
+                          <option value="">— Choose a business —</option>
+                          {businesses.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Mode: upload a file vs. paste a link */}
+                    {uploadEnabled && (
+                      <div className="seg-control" style={{ marginBottom: 12 }}>
+                        <button type="button" className={`seg-btn ${docMode === 'file' ? 'active' : ''}`} onClick={() => setDocMode('file')}><i className="ti ti-upload"></i> Upload file</button>
+                        <button type="button" className={`seg-btn ${docMode === 'link' ? 'active' : ''}`} onClick={() => setDocMode('link')}><i className="ti ti-link"></i> Add link</button>
+                      </div>
+                    )}
+
                     <div className="grid-2">
                       <div className="form-group">
-                        <label className="form-label">Label *</label>
-                        <input className="form-input" value={docForm.label} onChange={(e) => setDocForm({ ...docForm, label: e.target.value })} placeholder="e.g. Invoice #1042 — Acme Corp" autoFocus />
+                        <label className="form-label">Label {docMode === 'link' ? '*' : '(optional)'}</label>
+                        <input className="form-input" value={docForm.label} onChange={(e) => setDocForm({ ...docForm, label: e.target.value })} placeholder={docMode === 'file' ? 'Defaults to the file name' : 'e.g. Invoice #1042 — Acme Corp'} autoFocus />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Type</label>
@@ -2559,18 +2623,32 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </select>
                       </div>
                     </div>
-                    <div className="form-group">
-                      <label className="form-label">Link (URL) *</label>
-                      <input className="form-input" value={docForm.url} onChange={(e) => setDocForm({ ...docForm, url: e.target.value })} placeholder="https://drive.google.com/… or a data-room link" />
-                    </div>
+
+                    {docMode === 'file' ? (
+                      <div className="form-group">
+                        <label className="form-label">File or image *</label>
+                        <input className="form-input" type="file"
+                          accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                          onChange={(e) => setDocFile(e.target.files?.[0] || null)} />
+                        {docFile && <div className="item-sub" style={{ marginTop: 4 }}>{docFile.name} · {(docFile.size / 1024).toFixed(0)} KB</div>}
+                      </div>
+                    ) : (
+                      <div className="form-group">
+                        <label className="form-label">Link (URL) *</label>
+                        <input className="form-input" value={docForm.url} onChange={(e) => setDocForm({ ...docForm, url: e.target.value })} placeholder="https://drive.google.com/… or a data-room link" />
+                      </div>
+                    )}
+
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Attach to invoice</label>
                         <select className="form-select" value={docForm.invoiceId} onChange={(e) => setDocForm({ ...docForm, invoiceId: e.target.value })}>
                           <option value="">— None —</option>
-                          {manualInvoices.map((i) => (
-                            <option key={i.id} value={i.id}>{i.customer} · {currency(Number(i.amount) || 0)}</option>
-                          ))}
+                          {manualInvoices
+                            .filter((i) => !isAllView || !docBusinessId || String(i.businessId) === String(docBusinessId))
+                            .map((i) => (
+                              <option key={i.id} value={i.id}>{i.customer} · {currency(Number(i.amount) || 0)}</option>
+                            ))}
                         </select>
                       </div>
                       <div className="form-group">
@@ -2594,10 +2672,24 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </select>
                       </div>
                     </div>
-                    <button type="submit" className="btn btn-primary btn-sm" disabled={!docForm.label.trim() || !docForm.url.trim()}>
-                      <i className="ti ti-plus"></i> Add document
+                    <button type="submit" className="btn btn-primary btn-sm"
+                      disabled={savingDoc || (isAllView && !docBusinessId) || (docMode === 'file' ? !docFile : (!docForm.label.trim() || !docForm.url.trim()))}>
+                      <i className={`ti ${savingDoc ? 'ti-loader spin' : (docMode === 'file' ? 'ti-upload' : 'ti-plus')}`}></i>
+                      {savingDoc ? ' Saving…' : (docMode === 'file' ? ' Upload document' : ' Add document')}
                     </button>
                   </form>
+                )}
+
+                {/* Business folder chips (All view) — one "folder" per business */}
+                {isAllView && businesses.length > 0 && sortedDocs.length > 0 && (
+                  <div className="seg-control" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
+                    <button className={`seg-btn ${fDocBusiness === 'ALL' ? 'active' : ''}`} onClick={() => setFDocBusiness('ALL')}><i className="ti ti-folders"></i> All businesses</button>
+                    {businesses.map((b) => (
+                      <button key={b.id} className={`seg-btn ${String(fDocBusiness) === String(b.id) ? 'active' : ''}`} onClick={() => setFDocBusiness(String(b.id))}>
+                        <i className="ti ti-folder"></i> {b.name}
+                      </button>
+                    ))}
+                  </div>
                 )}
 
                 {/* Type filter chips */}
@@ -2644,13 +2736,16 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                           const monthLbl = d.periodMonth != null
                             ? ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.periodMonth - 1]
                             : null;
+                          const isFile = (d.storageType || 'LINK') === 'GCS';
+                          const sizeKb = d.sizeBytes ? `${Math.max(1, Math.round(d.sizeBytes / 1024))} KB` : null;
                           return (
                             <div key={d.id} className="list-item">
-                              <div className={`item-icon ${v.tone}`}><i className={`ti ${v.icon}`}></i></div>
+                              <div className={`item-icon ${v.tone}`}><i className={`ti ${isFile ? 'ti-file-upload' : v.icon}`}></i></div>
                               <div className="item-main" style={{ minWidth: 0 }}>
                                 <div className="item-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</div>
                                 <div className="item-sub">
                                   <span className="badge badge-gray">{v.label}</span>
+                                  {isFile ? <span className="badge badge-forest" style={{ marginLeft: 4 }}>File{sizeKb ? ` · ${sizeKb}` : ''}</span> : null}
                                   {monthLbl ? ` · ${monthLbl} ${d.periodYear}` : ''}
                                   {isAllView && businessNameById.get(d.businessId) ? ` · ${businessNameById.get(d.businessId)}` : ''}
                                   {inv ? ` · Invoice: ${inv.customer}` : ''}
@@ -2659,9 +2754,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                                 </div>
                               </div>
                               <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <a className="btn btn-secondary btn-sm" href={d.url} target="_blank" rel="noopener noreferrer" title="Open document">
-                                  <i className="ti ti-external-link"></i> Open
-                                </a>
+                                <button className="btn btn-secondary btn-sm" onClick={() => openDoc(d)} title={isFile ? 'Open file' : 'Open document'}>
+                                  <i className={`ti ${isFile ? 'ti-download' : 'ti-external-link'}`}></i> Open
+                                </button>
                                 <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
                               </div>
                             </div>

@@ -18,6 +18,19 @@
         <java.version>17</java.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Google Cloud client libraries (Cloud Storage for the document center). -->
+            <dependency>
+                <groupId>com.google.cloud</groupId>
+                <artifactId>libraries-bom</artifactId>
+                <version>26.44.0</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <!-- Structured JSON logging (prod profile only; see logback-spring.xml) -->
         <dependency>
@@ -97,6 +110,13 @@
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- Google Cloud Storage: stores uploaded business documents/images.
+             Optional at runtime — only used when storage.provider=gcs. -->
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-storage</artifactId>
         </dependency>
     </dependencies>
 

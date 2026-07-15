@@ -101,6 +101,36 @@ async function request(path, options = {}) {
   return text ? JSON.parse(text) : null;
 }
 
+// Multipart upload — do NOT set Content-Type so the browser adds the boundary.
+async function uploadRequest(path, formData) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) },
+    body: formData
+  });
+  if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      setAuthToken(null);
+      if (typeof window !== "undefined") window.dispatchEvent(new Event("auth:unauthorized"));
+    }
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || error.error || `Upload failed (${response.status})`);
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// Authenticated binary fetch → object URL (the download endpoint needs the Bearer
+// token, so a plain <a href> can't be used). Caller should revokeObjectURL when done.
+async function fetchObjectUrl(path) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) }
+  });
+  if (!response.ok) throw new Error(`Download failed (${response.status})`);
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
 export const api = {
   getToken: () => authToken,
   register: (payload) =>
@@ -507,6 +537,19 @@ export const api = {
     }),
   deleteBusinessDocument: (id) =>
     request(`/api/v1/business/manual/documents/${id}`, { method: "DELETE" }),
+  // Whether file uploads are available (GCS configured on the backend).
+  getBusinessDocumentConfig: () => request(`/api/v1/business/manual/documents/config`),
+  // Upload a file/image to a business's document center. `fields` may include
+  // label, docType, note, periodYear, periodMonth, invoiceId.
+  uploadBusinessDocument: (businessId, file, fields = {}) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    Object.entries(fields).forEach(([k, v]) => { if (v != null && v !== "") fd.append(k, v); });
+    return uploadRequest(`/api/v1/business/manual/businesses/${businessId}/documents/upload`, fd);
+  },
+  // Fetch an uploaded document as an object URL (authenticated); open/preview it.
+  openBusinessDocument: (id) =>
+    fetchObjectUrl(`/api/v1/business/manual/documents/${id}/download`),
 
   // Ledger-derived, period-aware KPIs. `period` is THIS_MONTH | THIS_YEAR | T12M | CUSTOM.
   // For CUSTOM, pass from/to as ISO yyyy-MM-dd. Balances/AR are point-in-time (today);
