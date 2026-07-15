@@ -248,8 +248,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* ---- QuickBooks-backed state ---- */
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');   // transient success confirmation
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const noticeTimer = useRef(null);
 
   const [connection, setConnection] = useState(null);
   const [dashboard, setDashboard] = useState(null);
@@ -331,6 +333,18 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [editForm, setEditForm] = useState({ type: '', tags: '' });
 
   const txSectionRef = useRef(null);
+
+  /* Show a transient success confirmation (auto-dismisses). Clears any error too. */
+  const flash = useCallback((msg) => {
+    setError('');
+    setNotice(msg);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(''), 3500);
+  }, []);
+  useEffect(() => () => { if (noticeTimer.current) clearTimeout(noticeTimer.current); }, []);
+  /* Don't let a stale error linger when the user navigates away. (The success
+     notice clears itself on a timer, so it survives a same-tick business switch.) */
+  useEffect(() => { setError(''); }, [selectedId, activeTab]);
 
   /* "All businesses" aggregate view — track every business in one place. */
   const isAllView = selectedId === 'ALL' && businesses.length > 1;
@@ -811,6 +825,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setSelectedId(created.id);
       setBizForm({ name: '', industry: '', entityType: 'LLC', ein: '' });
       setShowAddBusiness(false);
+      flash(`"${name}" added — track its P&L, accounts and invoices.`);
     } catch (err) { setError(err?.message || 'Could not add business.'); }
   }
   async function handleDeleteBusiness(id) {
@@ -835,6 +850,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setBizAccounts((prev) => [...prev, created]);
       setAcctForm({ name: '', institution: '', type: 'CHECKING', balance: '', creditLimit: '' });
       setShowAddAccount(false);
+      flash(`Account "${name}" added.`);
     } catch (err) { setError(err?.message || 'Could not add account.'); }
   }
   async function handleDeleteAccount(rawId) {
@@ -900,6 +916,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       // reload the authoritative global map so every view reflects the new owner.
       await loadLinkedOwner();
       setShowAssign(false);
+      flash(`${ids.length} account${ids.length === 1 ? '' : 's'} assigned to ${selectedBusiness.name}.`);
     } catch (err) {
       setError(err?.message || 'Could not save account assignment.');
     } finally {
@@ -932,6 +949,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setBizTransactions((prev) => [created, ...prev]);
       setTxForm({ accountKey: txForm.accountKey, date: todayISO(), description: '', merchant: '', category: 'Software & SaaS', amount: '', direction: 'out' });
       setShowAddTx(false);
+      flash(`${txForm.direction === 'in' ? 'Deposit' : 'Expense'} of ${currency(magnitude)} added.`);
     } catch (err) { setError(err?.message || 'Could not add transaction.'); }
   }
   async function handleDeleteTx(t) {
@@ -956,12 +974,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setManualInvoices((prev) => [created, ...prev]);
       setInvForm({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
       setShowAddInvoice(false);
+      flash(`Invoice for ${currency(amount)} to ${customer} created.`);
     } catch (err) { setError(err?.message || 'Could not create invoice.'); }
   }
   async function handleMarkInvoicePaid(id) {
     try {
       const updated = await api.updateManualInvoice(id, { status: 'PAID' });
       setManualInvoices((prev) => prev.map((i) => (i.id === id ? updated : i)));
+      flash('Invoice marked paid — nice, money in the door.');
     } catch (err) { setError(err?.message || 'Could not update invoice.'); }
   }
   async function handleDeleteInvoice(id) {
@@ -1025,6 +1045,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setDocForm({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
       setDocFile(null);
       setShowAddDoc(false);
+      flash(docMode === 'file' ? 'File uploaded to the document center.' : 'Document link added.');
     } catch (err) { setError(err?.message || 'Could not add document.'); }
     finally { setSavingDoc(false); }
   }
@@ -1509,19 +1530,33 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         </div>
       )}
 
-      {/* Error card */}
+      {/* Success confirmation (auto-dismisses) */}
+      {notice && (
+        <div className="card" style={{ borderColor: 'var(--tv-positive)', marginBottom: 12 }}>
+          <div className="list-item" style={{ padding: 0 }}>
+            <div className="item-icon icon-green"><i className="ti ti-circle-check"></i></div>
+            <div className="item-main"><div className="item-sub" style={{ color: 'var(--tv-text-primary)', fontWeight: 500 }}>{notice}</div></div>
+            <div className="item-right">
+              <button className="icon-btn" title="Dismiss" onClick={() => setNotice('')}><i className="ti ti-x"></i></button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error card (dismissible; Retry only reloads for genuine load failures) */}
       {error && (
-        <div className="card" style={{ borderColor: 'var(--tv-negative)' }}>
-          <div className="list-item">
+        <div className="card" style={{ borderColor: 'var(--tv-negative)', marginBottom: 12 }}>
+          <div className="list-item" style={{ padding: 0 }}>
             <div className="item-icon icon-red"><i className="ti ti-alert-triangle"></i></div>
             <div className="item-main">
               <div className="item-name">Something went wrong</div>
               <div className="item-sub">{error}</div>
             </div>
-            <div className="item-right">
-              <button className="btn btn-secondary btn-sm" onClick={refreshEverything}>
+            <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => { setError(''); refreshEverything(); }}>
                 <i className="ti ti-refresh"></i> Retry
               </button>
+              <button className="icon-btn" title="Dismiss" onClick={() => setError('')}><i className="ti ti-x"></i></button>
             </div>
           </div>
         </div>
