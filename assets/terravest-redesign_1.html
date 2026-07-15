@@ -414,6 +414,9 @@ a { text-decoration: none; color: inherit; }
   box-shadow: var(--shadow-sm);
   transition: box-shadow .2s;
   cursor: default;
+  min-width: 0; /* allow the card to shrink inside the grid instead of overflowing */
+  overflow: hidden;
+  container-type: inline-size; /* let the value font scale to the card width */
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
 .kpi-label {
@@ -428,9 +431,11 @@ a { text-decoration: none; color: inherit; }
 }
 .kpi-value {
   font-family: var(--font-display);
-  font-size: 22px;
+  font-size: clamp(15px, 10.5cqi, 22px);
   color: var(--tv-text-primary);
-  line-height: 1.1;
+  line-height: 1.15;
+  min-width: 0;
+  white-space: nowrap;
 }
 .kpi-delta {
   font-size: 11.5px;
@@ -438,8 +443,11 @@ a { text-decoration: none; color: inherit; }
   font-weight: 500;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 3px;
+  min-width: 0;
 }
+.kpi-delta i { flex-shrink: 0; }
 .kpi-delta.pos { color: var(--tv-positive); }
 .kpi-delta.neg { color: var(--tv-negative); }
 
