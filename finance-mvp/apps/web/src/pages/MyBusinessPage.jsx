@@ -8,6 +8,7 @@ import PlaidLinkButton from '../components/PlaidLinkButton';
 /* Local UI preference key (selection only; data is server-persisted)  */
 /* ------------------------------------------------------------------ */
 const LS_SELECTED = 'tv_business_selected';
+const LS_QBO_DISMISSED = 'tv_business_qbo_prompt_dismissed';
 
 /* Entity types offered when adding a business. */
 const ENTITY_TYPES = ['LLC', 'S-Corp', 'C-Corp', 'Sole Prop', 'Partnership'];
@@ -251,6 +252,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [notice, setNotice] = useState('');   // transient success confirmation
   const [syncing, setSyncing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [qboDismissed, setQboDismissed] = useState(() => readLS(LS_QBO_DISMISSED, false));
   const noticeTimer = useRef(null);
 
   const [connection, setConnection] = useState(null);
@@ -829,9 +831,13 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch (err) { setError(err?.message || 'Could not add business.'); }
   }
   async function handleDeleteBusiness(id) {
+    const b = businesses.find((x) => x.id === id);
+    const name = b?.name || 'this business';
+    if (!window.confirm(`Delete "${name}"?\n\nThis permanently removes its accounts, transactions, invoices and documents. This cannot be undone.`)) return;
     try {
       await api.deleteManualBusiness(id);
       setBusinesses((prev) => prev.filter((b) => b.id !== id));
+      flash(`"${name}" deleted.`);
     } catch (err) { setError(err?.message || 'Could not delete business.'); }
   }
 
@@ -854,10 +860,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch (err) { setError(err?.message || 'Could not add account.'); }
   }
   async function handleDeleteAccount(rawId) {
+    const acct = (bizAccounts || []).find((a) => a.id === rawId);
+    const name = acct?.name || 'this account';
+    if (!window.confirm(`Delete "${name}"?\n\nIts transactions on this business will be removed too.`)) return;
     try {
       await api.deleteBusinessAccount(rawId);
       setBizAccounts((prev) => prev.filter((a) => a.id !== rawId));
       setBizTransactions((prev) => prev.filter((t) => String(t.accountId) !== String(rawId)));
+      flash(`"${name}" removed.`);
     } catch (err) { setError(err?.message || 'Could not delete account.'); }
   }
 
@@ -954,9 +964,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   }
   async function handleDeleteTx(t) {
     if (t.source !== 'Manual') return;
+    if (!window.confirm(`Delete transaction "${t.name}" (${currency(t.amount)})?`)) return;
     try {
       await api.deleteBusinessTransaction(t.rawId);
       setBizTransactions((prev) => prev.filter((x) => x.id !== t.rawId));
+      flash('Transaction deleted.');
     } catch (err) { setError(err?.message || 'Could not delete transaction.'); }
   }
 
@@ -985,11 +997,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     } catch (err) { setError(err?.message || 'Could not update invoice.'); }
   }
   async function handleDeleteInvoice(id) {
+    const inv = (manualInvoices || []).find((i) => i.id === id);
+    if (!window.confirm(`Delete this invoice${inv ? ` to ${inv.customer} for ${currency(Number(inv.amount) || 0)}` : ''}?`)) return;
     try {
       await api.deleteManualInvoice(id);
       setManualInvoices((prev) => prev.filter((i) => i.id !== id));
       // Any documents pinned to it are detached server-side; reflect that locally.
       setBizDocuments((prev) => prev.map((d) => (d.invoiceId === id ? { ...d, invoiceId: null } : d)));
+      flash('Invoice deleted.');
     } catch (err) { setError(err?.message || 'Could not delete invoice.'); }
   }
 
@@ -1064,9 +1079,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     }
   }
   async function handleDeleteDoc(id) {
+    const d = (bizDocuments || []).find((x) => x.id === id);
+    const isFile = d && (d.storageType || 'LINK') === 'GCS';
+    if (!window.confirm(isFile
+      ? `Remove "${d?.label || 'this file'}"?\n\nThe uploaded file will be deleted from storage.`
+      : 'Remove this document link?')) return;
     try {
       await api.deleteBusinessDocument(id);
       setBizDocuments((prev) => prev.filter((d) => d.id !== id));
+      flash(isFile ? 'File removed.' : 'Document removed.');
     } catch (err) { setError(err?.message || 'Could not delete document.'); }
   }
 
@@ -1562,20 +1583,21 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         </div>
       )}
 
-      {/* QuickBooks connect prompt */}
-      {!loading && !connected && (
+      {/* QuickBooks connect prompt — optional; dismissible for manual/linked users */}
+      {!loading && !connected && !qboDismissed && hasContext && (
         <div className="card" style={{ marginBottom: 16 }}>
           <div className="list-item" style={{ padding: 0 }}>
             <div className="item-icon icon-blue"><i className="ti ti-plug"></i></div>
             <div className="item-main">
-              <div className="item-name">Connect QuickBooks</div>
-              <div className="item-sub">Link QuickBooks to auto-sync revenue, expenses, invoices, and your cash position.</div>
+              <div className="item-name">Connect QuickBooks <span className="badge badge-gray" style={{ marginLeft: 4 }}>optional</span></div>
+              <div className="item-sub">Prefer to track manually or via linked accounts? You're all set. Connect QuickBooks only if you want to auto-sync revenue, expenses and invoices.</div>
             </div>
-            <div className="item-right">
+            <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <button className="btn btn-primary btn-sm" onClick={handleConnect} disabled={connecting}>
                 <i className={`ti ${connecting ? 'ti-loader spin' : 'ti-plug'}`}></i>
                 {connecting ? ' Connecting…' : ' Connect'}
               </button>
+              <button className="icon-btn" title="Dismiss" onClick={() => { setQboDismissed(true); writeLS(LS_QBO_DISMISSED, true); }}><i className="ti ti-x"></i></button>
             </div>
           </div>
         </div>
@@ -1585,11 +1607,29 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         <div className="card"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading business data…</p></div></div>
       ) : !hasContext ? (
         <div className="card">
-          <div className="empty-state">
+          <div className="empty-state" style={{ paddingBottom: 8 }}>
             <i className="ti ti-building-store"></i>
-            <p style={{ fontWeight: 600, color: 'var(--tv-text-primary)', marginBottom: 4 }}>No business yet</p>
-            <p style={{ marginBottom: 12 }}>Add a business, link a bank account, or connect QuickBooks to get started.</p>
-            <button className="btn btn-primary" onClick={() => setShowAddBusiness(true)}><i className="ti ti-plus"></i> Add a business</button>
+            <p style={{ fontWeight: 600, color: 'var(--tv-text-primary)', marginBottom: 4 }}>Set up your first business</p>
+            <p style={{ marginBottom: 4 }}>Track each business separately — its own accounts, cash flow, invoices and documents — with a consolidated view across all of them.</p>
+          </div>
+          {/* Guided 3-step first run */}
+          <div className="card-grid" style={{ marginTop: 4 }}>
+            <div className="card" style={{ borderTop: '3px solid var(--tv-forest)' }}>
+              <div className="item-icon icon-forest" style={{ marginBottom: 8 }}><i className="ti ti-building-store"></i></div>
+              <div className="item-name">1 · Add a business</div>
+              <div className="item-sub" style={{ marginBottom: 10 }}>Name it, pick the entity type — that's it. You can add more anytime.</div>
+              <button className="btn btn-primary btn-sm" onClick={() => setShowAddBusiness(true)}><i className="ti ti-plus"></i> Add a business</button>
+            </div>
+            <div className="card" style={{ borderTop: '3px solid var(--tv-positive)' }}>
+              <div className="item-icon icon-green" style={{ marginBottom: 8 }}><i className="ti ti-plug-connected"></i></div>
+              <div className="item-name">2 · Link its accounts</div>
+              <div className="item-sub">Link a bank or credit card and assign it to the business — transactions sync automatically. Or add a manual account.</div>
+            </div>
+            <div className="card" style={{ borderTop: '3px solid var(--tv-forest-light)' }}>
+              <div className="item-icon icon-blue" style={{ marginBottom: 8 }}><i className="ti ti-file-invoice"></i></div>
+              <div className="item-name">3 · Invoice &amp; file</div>
+              <div className="item-sub">Create invoices, track pending payments, and keep receipts &amp; contracts in the document center — filed by year.</div>
+            </div>
           </div>
         </div>
       ) : (
