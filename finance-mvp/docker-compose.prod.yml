@@ -254,6 +254,13 @@ services:
       QBO_API_BASE_URL: ${QBO_API_BASE_URL:-https://quickbooks.api.intuit.com}
       QBO_REDIRECT_URI: ${QBO_REDIRECT_URI:-}
       APP_WEB_URL: ${APP_WEB_URL:-}
+      # Document uploads → Google Cloud Storage. Set STORAGE_PROVIDER=gcs + GCS_BUCKET
+      # in .env.prod to enable. Auth uses the VM service account (Application Default
+      # Credentials via the metadata server) — no key file needed.
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-none}
+      GCS_BUCKET: ${GCS_BUCKET:-}
+      UPLOAD_MAX_FILE_SIZE: ${UPLOAD_MAX_FILE_SIZE:-25MB}
+      UPLOAD_MAX_REQUEST_SIZE: ${UPLOAD_MAX_REQUEST_SIZE:-30MB}
 
   ai-insights-service:
     <<: *java-defaults
