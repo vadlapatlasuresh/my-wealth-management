@@ -1,6 +1,7 @@
 package com.mywealthmanagement.notificationservice.notification;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -8,11 +9,19 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class NotificationSeeder implements CommandLineRunner {
 
+    /** Only the configured demo/test user is seeded. Blank = seed nobody, so
+     *  regular accounts never get demo notifications. */
+    @Value("${app.demo.user-id:}")
+    private String demoUserIdRaw;
+
     private final NotificationRepository notificationRepository;
 
     @Override
     public void run(String... args) {
-        Long userId = 1L;
+        Long userId = parseDemoUserId();
+        if (userId == null) {
+            return; // No demo user configured — do not seed any account.
+        }
         if (!notificationRepository.findByUserIdOrderByCreatedAtDesc(userId).isEmpty()) {
             return; // already seeded
         }
@@ -25,5 +34,15 @@ public class NotificationSeeder implements CommandLineRunner {
         notificationRepository.save(new Notification(userId, "SYSTEM",
                 "Your weekly summary is ready",
                 "Net worth up 2.1% this week. Tap to see the full breakdown.", "INAPP"));
+    }
+
+    /** The configured demo user id, or null when unset/invalid (seed nobody). */
+    private Long parseDemoUserId() {
+        if (demoUserIdRaw == null || demoUserIdRaw.isBlank()) return null;
+        try {
+            return Long.valueOf(demoUserIdRaw.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 }
