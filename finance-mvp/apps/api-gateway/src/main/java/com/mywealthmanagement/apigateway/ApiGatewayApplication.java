@@ -46,6 +46,8 @@ public class ApiGatewayApplication {
                         .uri(authUri)) // Route to auth-service
                 .route("support_service_route", r -> r.path("/api/v1/support/**")
                         .uri(authUri)) // Route to auth-service (customer-care / role management)
+                .route("ops_service_route", r -> r.path("/api/v1/ops/**")
+                        .uri(authUri)) // Route to auth-service (ops-staff login + ops identity)
                 .route("account_aggregation_service_route", r -> r.path("/api/v1/aggregation/**")
                         .uri(aggregationUri)) // Route to account-aggregation-service
                 .route("financial_core_service_me_route", r -> r.path("/api/v1/me/**")

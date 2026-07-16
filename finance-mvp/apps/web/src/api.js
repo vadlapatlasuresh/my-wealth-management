@@ -2,6 +2,12 @@ import { API_BASE } from "./config/apiBase"; // configurable gateway base (web/i
 let authToken =
   localStorage.getItem("terravet_token") || localStorage.getItem("finance_token") || "";
 
+// Ops-staff token, kept in a SEPARATE slot from the member token. Ops identity is a different
+// account with a different login, and the backend mints it with a `typ=ops` claim that member
+// routes refuse (and vice-versa). Holding one never implies the other: an agent can be signed
+// into the ops portal while signed out of the member app, or both at once as different people.
+let opsToken = localStorage.getItem("terravest_ops_token") || "";
+
 // NOTE: the frontend always talks to the real backend. (The old USE_MOCK/MOCK
 // fixtures were removed so mock data can never leak into the app.)
 
@@ -20,6 +26,86 @@ export function setAuthToken(token, email, name) {
   }
 }
 
+// --- Ops-staff session -------------------------------------------------------------------
+// Mirrors OpsTokens.OPS_PATH_PREFIXES on the backend. The client picks which token to send by
+// the same rule the server uses to decide which it will accept, so the two can't drift into
+// "the UI sent the wrong identity and got a confusing 403".
+const OPS_PATH_PREFIXES = [
+  "/api/v1/ops/",
+  "/api/v1/support/",
+  "/api/v1/aggregation/support/",
+  "/api/v1/payments/support/",
+  "/api/v1/deals/support/",
+  "/api/v1/cpa/admin/",
+  "/api/v1/audit/stats",
+  "/api/v1/audit/health/"
+];
+
+function isOpsPath(path) {
+  return OPS_PATH_PREFIXES.some((p) => path.startsWith(p));
+}
+
+/** The token to send for a given path: ops routes get the ops token, everything else the member one. */
+function tokenFor(path) {
+  return isOpsPath(path) ? opsToken : authToken;
+}
+
+export function setOpsToken(token, email, name) {
+  opsToken = token || "";
+  if (token) {
+    localStorage.setItem("terravest_ops_token", token);
+    if (email) localStorage.setItem("terravest_ops_email", email);
+    if (name) localStorage.setItem("terravest_ops_name", name);
+  } else {
+    localStorage.removeItem("terravest_ops_token");
+    localStorage.removeItem("terravest_ops_email");
+    localStorage.removeItem("terravest_ops_name");
+  }
+}
+
+export function getOpsEmail() {
+  return localStorage.getItem("terravest_ops_email") || "";
+}
+
+export function getOpsName() {
+  return localStorage.getItem("terravest_ops_name") || "";
+}
+
+/** Decode the ops JWT payload. Client-side display/gating only — the backend re-checks everything. */
+function opsClaims() {
+  try {
+    const payload = (opsToken || "").split(".")[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
+/** Ops roles (e.g. ["OPS_AGENT"]) from the ops token; empty when signed out. */
+export function getOpsRoles() {
+  const claims = opsClaims();
+  const roles = claims?.roles || [];
+  return Array.isArray(roles) ? roles.map((r) => String(r).toUpperCase()) : [];
+}
+
+/** True while a non-expired ops session exists. Expiry is checked because ops tokens are short-lived
+ *  (~60 min), so a stale one would otherwise render the portal shell and then 401 on every call. */
+export function isOpsSignedIn() {
+  const claims = opsClaims();
+  if (!claims || claims.typ !== "ops") return false;
+  return !claims.exp || claims.exp * 1000 > Date.now();
+}
+
+export function isOpsAdmin() {
+  return getOpsRoles().includes("OPS_ADMIN");
+}
+
+/** The signed-in ops user's id (their ops_users id — NOT a customer id). */
+export function getOpsUserId() {
+  return opsClaims()?.sub || null;
+}
+
 export function getStoredEmail() {
   return localStorage.getItem("terravet_email") || "";
 }
@@ -28,51 +114,17 @@ export function getStoredName() {
   return localStorage.getItem("terravet_name") || "";
 }
 
-// Decode the (already-trusted) JWT payload to read the user's roles. Client-side gating only —
-// the backend still enforces role checks on every support endpoint.
-export function getUserRoles() {
-  try {
-    const token = authToken || localStorage.getItem("terravet_token") || "";
-    const payload = token.split(".")[1];
-    if (!payload) return [];
-    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    const roles = json.roles || [];
-    return Array.isArray(roles) ? roles.map((r) => String(r).toUpperCase()) : [];
-  } catch {
-    return [];
-  }
-}
-
-// True if the signed-in user is a customer-care agent or admin.
-export function isCareAgent() {
-  const roles = getUserRoles();
-  return roles.includes("CARE") || roles.includes("ADMIN");
-}
-
-// True if the signed-in user is an admin (can grant/revoke roles).
-export function isAdmin() {
-  return getUserRoles().includes("ADMIN");
-}
-
-// The signed-in user's id (JWT subject), or null. Used by the Ops portal to show
-// the agent their own audited session activity.
-export function getCurrentUserId() {
-  try {
-    const token = authToken || localStorage.getItem("terravet_token") || "";
-    const payload = token.split(".")[1];
-    if (!payload) return null;
-    const json = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
-    return json.sub || null;
-  } catch {
-    return null;
-  }
-}
+// NOTE: getUserRoles()/getCurrentUserId()/isCareAgent()/isAdmin() are gone. They read roles and
+// the subject off the *member* token to gate staff tooling — CARE/ADMIN no longer exist, and the
+// ops portal reads its own session instead (isOpsSignedIn / getOpsRoles / getOpsUserId). Nothing
+// about a member token can confer ops access any more.
 
 async function request(path, options = {}) {
+  const token = tokenFor(path);
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
-      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
     ...options
   });
@@ -80,10 +132,15 @@ async function request(path, options = {}) {
   if (!response.ok) {
     // A 401/403 means the stored token is missing, expired, or invalid. Clear it and
     // signal the app so it falls back to the login screen instead of every page erroring.
+    // Ops and member sessions fail independently: an expired ops session must not sign the
+    // member out of their own app, and vice-versa.
     if (response.status === 401 || response.status === 403) {
-      setAuthToken(null);
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("auth:unauthorized"));
+      if (isOpsPath(path)) {
+        setOpsToken(null);
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("ops:unauthorized"));
+      } else {
+        setAuthToken(null);
+        if (typeof window !== "undefined") window.dispatchEvent(new Event("auth:unauthorized"));
       }
     }
     const error = await response.json().catch(() => ({}));
@@ -721,7 +778,19 @@ export const api = {
   unregisterDevice: (token) =>
     request("/api/v1/notifications/devices", { method: "DELETE", body: JSON.stringify({ token }) }),
 
-  // Customer Care / Support (role-gated: CARE or ADMIN)
+  // --- Ops-staff auth (separate accounts, separate login, typ=ops token) -------------------
+  // Two-step like the member flow: login sends an MFA code, mfa/verify exchanges it for a token.
+  // MFA is not skippable here, so opsLogin never returns a token.
+  opsLogin: (email, password) =>
+    request("/api/v1/ops/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }),
+  opsMfaVerify: (email, code) =>
+    request("/api/v1/ops/auth/mfa/verify", { method: "POST", body: JSON.stringify({ email, code }) }),
+  opsMe: () => request("/api/v1/ops/auth/me"),
+  // The agent's own audited trail. NOT supportGetUserActivity — that resolves a customer id,
+  // and an ops user is not a customer.
+  opsMyActivity: (limit = 50) => request(`/api/v1/ops/auth/me/activity?limit=${limit}`),
+
+  // Customer Care / Support (ops-token only; backend enforces the ops roles)
   // Accepts either a string (free-text query) or an object with any of
   // {query, first, last, email, phone, page, size} for the multi-field help-desk search.
   supportSearchUsers: (params = "", page = 0, size = 25) => {
@@ -737,11 +806,9 @@ export const api = {
   supportGetUser: (id) => request(`/api/v1/support/users/${id}`),
   supportGetUserActivity: (id, onlyIssues = false, limit = 100) =>
     request(`/api/v1/support/users/${id}/activity?onlyIssues=${onlyIssues}&limit=${limit}`),
-  supportChangeUserRole: (id, role, action) =>
-    request(`/api/v1/support/users/${id}/roles`, {
-      method: "POST",
-      body: JSON.stringify({ role, action })
-    }),
+  // supportChangeUserRole is gone: it granted CARE/ADMIN onto a customer row, which is exactly
+  // what made an ops agent a member with a platform-wide token. Ops accounts are managed as ops
+  // accounts (Phase 2), never from a customer's record.
   // Customer-care READ-ONLY views of a member's data (CARE/ADMIN, audited).
   supportGetAccounts: (id) => request(`/api/v1/aggregation/support/${id}/accounts`),
   supportGetTransactions: (id) => request(`/api/v1/aggregation/support/${id}/transactions`),

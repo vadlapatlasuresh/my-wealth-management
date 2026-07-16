@@ -40,8 +40,12 @@ public class PaymentController {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
         }
+        // Ops staff hold OPS_* roles on a typ=ops token. The old CARE/ADMIN member roles are gone:
+        // they lived on customer rows, which made an agent's token a valid member token everywhere.
+        // JwtAuthFilter already guarantees only ops tokens authenticate here; this is defence in depth.
+        // Phase 2 replaces this with a per-permission check (finance.ledger.view).
         List<String> roles = jwtService.extractRoles(authHeader.substring(7));
-        if (!roles.contains("CARE") && !roles.contains("ADMIN")) {
+        if (roles.stream().noneMatch(r -> r.startsWith("OPS_"))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Customer-care access required");
         }
     }

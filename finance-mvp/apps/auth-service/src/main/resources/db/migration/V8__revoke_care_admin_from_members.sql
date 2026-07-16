@@ -1,0 +1,11 @@
+-- Close the gap that made ops identity cosmetic: CARE/ADMIN used to be granted onto ordinary
+-- customer rows (see the old SupportBootstrap). That meant an agent's token was a fully valid
+-- MEMBER token on every service, because the JWT secret is shared platform-wide.
+--
+-- Ops access now lives exclusively in `ops_users` (V7). These grants are therefore revoked.
+-- This is intentionally destructive: leaving them is the whole vulnerability.
+--
+-- OPERATOR NOTE: after this migration, nobody has ops access until an ops account exists.
+-- Set OPS_BOOTSTRAP_EMAIL + OPS_BOOTSTRAP_PASSWORD and restart auth-service — OpsBootstrap
+-- provisions the first ops_admin. Thereafter ops admins create each other.
+DELETE FROM user_roles WHERE roles IN ('CARE', 'ADMIN');

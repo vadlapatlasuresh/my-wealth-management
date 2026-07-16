@@ -1,9 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, getStoredName, getStoredEmail, getCurrentUserId, getUserRoles } from '../api';
+import { api, getOpsName, getOpsEmail, getOpsUserId, getOpsRoles, isOpsAdmin } from '../api';
 import CustomerCarePage from '../pages/CustomerCarePage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
 import CpaModeration from './CpaModeration';
+
+/* OPS_SUPERVISOR → "Supervisor". The OPS_ prefix is meaningful in the token, not to a human. */
+function roleLabels(roles) {
+  return roles
+    .map((r) => r.replace(/^OPS_/, ''))
+    .map((r) => r.charAt(0) + r.slice(1).toLowerCase())
+    .join(' · ');
+}
 
 /* Short timestamp for the session log. */
 function ts(v) {
@@ -20,12 +28,12 @@ function ts(v) {
 function SessionLog() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
-  const agentId = getCurrentUserId();
+  const agentId = getOpsUserId();
 
   async function load() {
     setError('');
     try {
-      const res = await api.supportGetUserActivity(agentId, false, 50);
+      const res = await api.opsMyActivity(50);
       setRows(Array.isArray(res) ? res : []);
     } catch (e) {
       setError(e.message || 'Could not load activity');
@@ -84,9 +92,9 @@ function SessionLog() {
 export default function OpsPortal({ handleLogout }) {
   const navigate = useNavigate();
   const [view, setView] = useState('customers'); // customers | analytics | session
-  const roles = getUserRoles();
-  const isAdmin = roles.includes('ADMIN');
-  const agentInitial = (getStoredName() || getStoredEmail() || 'A')[0].toUpperCase();
+  const roles = getOpsRoles();
+  const isAdmin = isOpsAdmin();
+  const agentInitial = (getOpsName() || getOpsEmail() || 'A')[0].toUpperCase();
 
   const NAV = [
     { key: 'customers', label: 'Customers', icon: 'ti ti-users', show: true },
@@ -103,14 +111,15 @@ export default function OpsPortal({ handleLogout }) {
           <div className="ops-mark"><i className="ti ti-headset"></i></div>
           <div><span className="ops-brand-name">TerraVest</span> <span className="ops-brand-tag">Ops Portal</span></div>
         </div>
-        <span className="ops-audit-pill"><i className="ti ti-shield-check"></i> Auditing on · CARE / ADMIN</span>
+        <span className="ops-audit-pill"><i className="ti ti-shield-check"></i> Auditing on · {roleLabels(roles) || 'Staff'}</span>
         <div className="ops-spacer" />
-        <button className="btn btn-secondary btn-sm" onClick={() => navigate('/')}><i className="ti ti-arrow-left"></i> Back to app</button>
+        {/* No "Back to app" link: an ops session is not a member session, so there is nothing
+            to go back to. Signing in as a customer is a separate login at /. */}
         <div className="ops-agent">
           <span className="ops-agent-av">{agentInitial}</span>
           <div>
-            <div className="ops-agent-name">{getStoredName() || getStoredEmail()}</div>
-            <div className="ops-agent-role">{roles.filter((r) => r !== 'USER').join(' · ') || 'AGENT'}</div>
+            <div className="ops-agent-name">{getOpsName() || getOpsEmail()}</div>
+            <div className="ops-agent-role">{roleLabels(roles) || 'STAFF'}</div>
           </div>
         </div>
         <button className="btn btn-secondary btn-sm" onClick={handleLogout} title="Sign out"><i className="ti ti-logout"></i></button>
@@ -127,8 +136,8 @@ export default function OpsPortal({ handleLogout }) {
           <div className="ops-nav-foot">
             <div className="setting-help" style={{ padding: '0 14px' }}>
               {isAdmin
-                ? 'You can grant CARE / ADMIN roles from a customer’s profile.'
-                : 'CARE access: view-only. Ask an admin to change roles.'}
+                ? 'You can manage ops accounts and their roles.'
+                : 'View-only access. Ask an ops admin if you need more.'}
             </div>
           </div>
         </nav>

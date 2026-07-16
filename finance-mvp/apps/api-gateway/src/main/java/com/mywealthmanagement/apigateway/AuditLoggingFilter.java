@@ -1,5 +1,6 @@
 package com.mywealthmanagement.apigateway;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.slf4j.Logger;
@@ -82,13 +83,19 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
             return;
         }
 
-        String userId = extractUserId(req);
+        Claims claims = parseClaims(req);
+        String userId = claims != null ? claims.getSubject() : null;
+        boolean ops = claims != null && "ops".equals(claims.get("typ"));
         Integer status = exchange.getResponse().getStatusCode() != null
                 ? exchange.getResponse().getStatusCode().value() : null;
 
         Map<String, Object> body = new HashMap<>();
         body.put("userId", userId);
-        body.put("actorType", userId != null ? "USER" : "ANONYMOUS");
+        // OPS distinguishes an internal staff action from a customer's own action. Without it every
+        // ops request reads as if the customer did it themselves. Note userId here is the ops_users
+        // id, NOT the customer being acted upon — recording that target is Phase 3 (audit upgrade),
+        // and until then "who viewed customer X" is still only answerable from the path.
+        body.put("actorType", userId == null ? "ANONYMOUS" : (ops ? "OPS" : "USER"));
         body.put("action", method + " " + path);
         body.put("service", serviceFor(path));
         body.put("method", method);
@@ -109,8 +116,12 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
                 .subscribe(v -> {}, err -> log.debug("audit post failed: {}", err.getMessage()));
     }
 
-    /** Decode (and validate) the bearer token to read the userId (subject). Null if absent/invalid. */
-    private String extractUserId(ServerHttpRequest req) {
+    /**
+     * Decode (and validate) the bearer token. Null if absent/invalid — such a request is audited
+     * as ANONYMOUS. Returns the whole claim set rather than just the subject, because the audit
+     * row also needs the `typ` claim to tell an ops action from a customer's own action.
+     */
+    private Claims parseClaims(ServerHttpRequest req) {
         String auth = req.getHeaders().getFirst("Authorization");
         if (auth == null || !auth.startsWith("Bearer ") || jwtSecret == null || jwtSecret.isEmpty()) {
             return null;
@@ -118,7 +129,7 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         try {
             Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
             return Jwts.parserBuilder().setSigningKey(key).build()
-                    .parseClaimsJws(auth.substring(7)).getBody().getSubject();
+                    .parseClaimsJws(auth.substring(7)).getBody();
         } catch (Exception e) {
             return null; // invalid/expired token → treat as anonymous
         }
@@ -133,6 +144,7 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
     /** Coarse service name from the path prefix (for filtering in the audit UI). */
     private String serviceFor(String path) {
         if (path.startsWith("/api/v1/auth")) return "auth";
+        if (path.startsWith("/api/v1/ops") || path.startsWith("/api/v1/support")) return "ops";
         if (path.startsWith("/api/v1/aggregation")) return "account-aggregation";
         if (path.startsWith("/api/v1/me") || path.startsWith("/api/v1/planning") || path.startsWith("/api/v1/invest")) return "financial-core";
         if (path.startsWith("/api/v1/real-estate")) return "real-estate";

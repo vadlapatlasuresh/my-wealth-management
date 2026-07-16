@@ -12,7 +12,8 @@
 /* ============================================================
    TerraVest — Customer Care / Help Desk flow (design mockup)
    Standalone, on-brand. Mirrors the live CustomerCarePage:
-   search members → open an ISSUE-FIRST profile → manage roles.
+   search members → open an ISSUE-FIRST profile. Reached only from the
+   Ops Portal, which has its own staff login (see terravest-ops-portal.html).
    ============================================================ */
 :root{
   --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68;
@@ -135,7 +136,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
       <div class="search" style="max-width:340px;flex:1">
         <i class="ti ti-search muted"></i><input value="alex" oninput="filterUsers(this.value)" placeholder="Search members…">
       </div>
-      <span class="pill"><i class="ti ti-shield-lock"></i> Role-gated: CARE / ADMIN</span>
+      <span class="pill"><i class="ti ti-shield-lock"></i> Ops-only · separate staff login</span>
     </div>
 
     <div class="content">
@@ -148,7 +149,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
         <span class="step"><i class="ti ti-search"></i> Search member</span><i class="ti ti-arrow-right sep"></i>
         <span class="step"><i class="ti ti-id-badge-2"></i> Open profile</span><i class="ti ti-arrow-right sep"></i>
         <span class="step"><i class="ti ti-alert-triangle"></i> See the issue</span><i class="ti ti-arrow-right sep"></i>
-        <span class="step"><i class="ti ti-shield-check"></i> Help / grant access</span>
+        <span class="step"><i class="ti ti-shield-check"></i> Help — every step audited</span>
       </div>
 
       <div class="grid-2" style="margin-top:14px">
@@ -188,7 +189,7 @@ const USERS = {
   1043: {
     id:1043, name:'Alexa Romero', email:'alexa.r@example.com', accountType:'BUSINESS', business:'Romero Holdings LLC',
     phone:'+1 (415) 555-0046', phoneVerified:true, idLabel:'EIN ••8830', identityVerified:true,
-    since:'Jan 2026', roles:['USER','CARE'],
+    since:'Jan 2026', roles:['USER'],
     activity:[
       {t:'Jun 7, 08:40', action:'Login success', service:'auth', status:'SUCCESS', fail:false, ip:'Chrome · macOS'},
       {t:'Jun 6, 17:21', action:'Deal interest expressed', service:'real-estate', status:'SUCCESS', fail:false},
@@ -227,13 +228,6 @@ function renderList(filter=''){
 function filterUsers(v){renderList(v)}
 function select(id){selectedId=id;tab='issues';renderList(document.querySelector('.search input').value);renderDetail()}
 function setTab(t){tab=t;renderDetail()}
-function grant(role,action){
-  const u=USERS[selectedId];
-  if(action==='GRANT'&&!u.roles.includes(role))u.roles.push(role);
-  if(action==='REVOKE')u.roles=u.roles.filter(r=>r!==role);
-  renderList(document.querySelector('.search input').value);renderDetail();
-}
-
 function badge(ok,yes,no){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?yes:no}</span>`}
 
 function renderDetail(){
@@ -255,16 +249,9 @@ function renderDetail(){
         <div class="kpi"><div class="kpi-label">Member since</div><div class="kpi-val">${u.since}</div><div class="kpi-delta" style="color:${iss.length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${iss.length} issue${iss.length===1?'':'s'}</div></div>
       </div>
 
-      <!-- Roles & access (ADMIN only) -->
-      <div style="margin-top:16px;border-top:1px solid var(--tv-border-light);padding-top:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><i class="ti ti-shield-lock" style="color:var(--tv-forest)"></i><span style="font-weight:600">Roles &amp; access</span></div>
-        ${[['CARE','Customer Care','Look up members and view their activity & issues'],['ADMIN','Administrator','Full access, including granting roles']].map(([k,label,help])=>{
-          const has=u.roles.includes(k);
-          return `<div class="row"><div><div style="font-weight:600">${label} ${has?'<span class="badge badge-forest" style="margin-left:4px">Active</span>':''}</div><div class="help">${help}</div></div>
-            ${has?`<button class="btn btn-secondary btn-sm" onclick="grant('${k}','REVOKE')"><i class="ti ti-user-minus"></i> Revoke</button>`
-                 :`<button class="btn ${k==='ADMIN'?'btn-danger':'btn-primary'} btn-sm" onclick="grant('${k}','GRANT')"><i class="ti ti-user-plus"></i> Grant</button>`}</div>`;
-        }).join('')}
-      </div>
+      <!-- The "Roles & access" panel is gone: granting CARE/ADMIN onto a customer's own row is
+           what made an ops agent a member holding a token every service trusts. Ops accounts are
+           separate (ops_users, own login) and are managed from an ops-admin screen. -->
     </div>
 
     <!-- ISSUE SPOTLIGHT -->

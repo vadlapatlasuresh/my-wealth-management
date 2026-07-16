@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api, isCareAgent } from '../api';
+import { api } from '../api';
 import ProfileWizard from '../components/ProfileWizard';
 
 /* Which core profile fields are still missing (drives the completion nudge). */
@@ -645,21 +645,8 @@ export default function ProfilePage({ user, accounts, onLogout }) {
         </div>
       </div>
 
-      {/* Staff-only: the dedicated Ops Portal (customer care + admin analytics + role management). */}
-      {isCareAgent() && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="card-title">Staff tools</div>
-          <div className="setting-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div className="setting-label">Ops Portal</div>
-              <div className="item-sub">Customer search &amp; 360, operator analytics, and role management — all audited.</div>
-            </div>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => navigate('/ops')}>
-              <i className="ti ti-headset"></i> Open Ops Portal
-            </button>
-          </div>
-        </div>
-      )}
+      {/* No staff-tools card: ops staff sign in separately at /ops with their own account, so a
+          member profile never links to (or hints at) internal tooling. */}
 
       {/* Sign out */}
       <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>

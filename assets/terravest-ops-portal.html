@@ -12,9 +12,9 @@
 /* ============================================================
    TerraVest OPS PORTAL — dedicated support / help-desk console
    Design mockup (separate from the member app, separate URL).
-   Flow: agent login → search customer (name/email/phone) →
-   full read-only customer 360 (everything the customer sees) →
-   help / grant access — every step logged in the agent audit trail.
+   Flow: ops login (own account, not a member login) → search customer
+   (name/email/phone) → full read-only customer 360 (everything the
+   customer sees) → help — every step logged in the agent audit trail.
    IVR + chatbot panels are integration-ready (later).
    ============================================================ */
 :root{
@@ -149,12 +149,12 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
       <div class="mark"><i class="ti ti-mountain"></i></div>
       <div><div class="t">TerraVest</div><div class="s">Ops Portal</div></div>
     </div>
-    <p class="help" style="margin-top:6px">Support / help-desk console. Sign in with your agent account.</p>
+    <p class="help" style="margin-top:6px">Staff sign-in. This is a separate account from your TerraVest member login.</p>
     <div class="field"><label>Work email</label><input id="lg-email" value="agent.dana@terravest.ops" autocomplete="username"></div>
     <div class="field"><label>Password</label><input id="lg-pass" type="password" value="••••••••••" autocomplete="current-password"></div>
     <div class="field"><label>2-step code</label><input id="lg-otp" value="318 204" inputmode="numeric"></div>
     <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:18px" onclick="signIn()"><i class="ti ti-login"></i> Sign in to Ops</button>
-    <div class="gate"><i class="ti ti-shield-lock" style="margin-top:1px"></i><span>Access is restricted to <b>CARE / ADMIN</b> roles and is fully audited. Sessions require 2-step verification.</span></div>
+    <div class="gate"><i class="ti ti-shield-lock" style="margin-top:1px"></i><span>Ops accounts are separate from member accounts and every action is recorded against yours. 2-step verification is always required.</span></div>
   </div>
 </div>
 
@@ -189,7 +189,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
           <span class="s"><i class="ti ti-id-badge-2"></i> 360 profile</span>
           <span class="s"><i class="ti ti-eye"></i> See their data</span>
           <span class="s"><i class="ti ti-alert-triangle"></i> Spot the issue</span>
-          <span class="s"><i class="ti ti-shield-check"></i> Help / grant access</span>
+          <span class="s"><i class="ti ti-shield-check"></i> Help — every step audited</span>
         </div>
 
         <!-- Multi-field search -->
@@ -249,7 +249,7 @@ const USERS = {
       {t:'Jun 7, 09:10',action:'Login success',svc:'auth',status:'SUCCESS',fail:false,ip:'73.12.x.x'},
     ]},
   1043:{id:1043,first:'Alexa',last:'Romero',name:'Alexa Romero',email:'alexa.r@example.com',phone:'+1 (415) 555-0046',
-    accountType:'BUSINESS',business:'Romero Holdings LLC',phoneVerified:true,idLabel:'EIN ••8830',identityVerified:true,since:'Jan 2026',roles:['USER','CARE'],
+    accountType:'BUSINESS',business:'Romero Holdings LLC',phoneVerified:true,idLabel:'EIN ••8830',identityVerified:true,since:'Jan 2026',roles:['USER'],
     netWorth:'$642,300',cash:'$58,400',invest:'$402,100',realEstate:'$1,200,000',cards:'-$8,900',
     accounts:[['BoA Business','Depository','$58,400','••2210']],tx:[['Jun 7','Stripe payout','Income','+$12,400']],
     budget:[['Payroll','$40,000','$38,200']],deals:[['Romero Fund I','OPEN','Sponsor','12 leads']],payments:[['Payroll run','$38,200','COMPLETED','Jun 1']],
@@ -302,17 +302,14 @@ function open360(id){selectedId=id;tab='overview';const u=USERS[id];
   renderDetail();document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function setTab(t){tab=t;const u=USERS[selectedId];log('Viewed '+t,`${u.name} · #${u.id}`);renderDetail()}
-function grant(role,action){const u=USERS[selectedId];
-  if(action==='GRANT'&&!u.roles.includes(role))u.roles.push(role);
-  if(action==='REVOKE')u.roles=u.roles.filter(r=>r!==role);
-  log((action==='GRANT'?'Granted ':'Revoked ')+role,`${u.name} · #${u.id}`, role==='ADMIN');
-  renderDetail();
-}
 function badge(ok,y,n){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?y:n}</span>`}
 
 const TABS=[['overview','Overview','ti-id-badge-2'],['accounts','Accounts','ti-building-bank'],['tx','Transactions','ti-arrows-exchange'],
   ['budget','Budget & Goals','ti-chart-pie'],['deals','Deal Room','ti-briefcase'],['payments','Payments','ti-receipt'],
-  ['activity','Activity & Issues','ti-history'],['roles','Roles & Access','ti-shield-lock']];
+  ['activity','Activity & Issues','ti-history']];
+// NOTE: the 'Roles & Access' tab is gone. It granted CARE/ADMIN onto the customer's own row,
+// which is what made an ops agent a member holding a platform-wide token. Ops accounts are
+// separate (ops_users) and are managed from an ops-admin screen, never a customer's record.
 
 function tabBody(u){
   const T=(rows,head)=>rows.length?`<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`:'<div class="help" style="padding:14px 4px">No data.</div>';
@@ -335,10 +332,6 @@ function tabBody(u){
   if(tab==='deals')return T(u.deals.map(a=>`<tr><td><b>${a[0]}</b></td><td><span class="badge badge-forest">${a[1]}</span></td><td>${a[2]}</td><td class="muted">${a[3]}</td></tr>`).join(''),['Deal','Status','Role','Detail']);
   if(tab==='payments')return T(u.payments.map(a=>`<tr><td><b>${a[0]}</b></td><td>${a[1]}</td><td><span class="badge ${a[2]==='FAILED'?'badge-red':'badge-forest'}">${a[2]}</span></td><td class="muted">${a[3]}</td></tr>`).join(''),['Payee','Amount','Status','Date']);
   if(tab==='activity')return T(u.activity.map(e=>`<tr><td class="muted" style="white-space:nowrap">${e.t}</td><td><b>${esc(e.action)}</b>${e.note?`<div class="help">${esc(e.note)}</div>`:''}</td><td><span class="badge badge-gray">${e.svc}</span></td><td><span class="badge ${e.fail?'badge-red':'badge-forest'}">${e.status}</span></td><td class="muted" style="font-size:12px">${e.ip||''}</td></tr>`).join(''),['When','Action','Service','Status','IP']);
-  if(tab==='roles')return `${[['CARE','Customer Care','Look up members & view activity'],['ADMIN','Administrator','Full access, incl. granting roles']].map(([k,label,h])=>{const has=u.roles.includes(k);
-    return `<div class="row"><div><div style="font-weight:600">${label} ${has?'<span class="badge badge-forest">Active</span>':''}</div><div class="help">${h}</div></div>
-    ${has?`<button class="btn btn-secondary btn-sm" onclick="grant('${k}','REVOKE')"><i class="ti ti-user-minus"></i> Revoke</button>`:`<button class="btn ${k==='ADMIN'?'btn-danger':'btn-primary'} btn-sm" onclick="grant('${k}','GRANT')"><i class="ti ti-user-plus"></i> Grant</button>`}</div>`;}).join('')}
-    <div class="help" style="margin-top:10px"><i class="ti ti-info-circle"></i> Granting is ADMIN-only and audited as <code>support.role.grant</code>.</div>`;
   return '';
 }
 

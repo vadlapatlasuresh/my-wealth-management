@@ -39,7 +39,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        // The ops/member boundary, enforced both ways: an ops token authenticates ONLY on this
+        // service's ops surface, a member token ONLY off it. A mismatch stays unauthenticated
+        // (401/403) rather than succeeding as the wrong kind of identity. See OpsTokens.
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
+                && jwtService.isOpsToken(token) == OpsTokens.isOpsPath(request.getRequestURI())) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             if (jwtService.validateToken(token, userDetails)) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

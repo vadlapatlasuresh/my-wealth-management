@@ -1,11 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api, getUserRoles } from '../api';
-
-// Roles a support admin can grant/revoke from this console.
-const MANAGED_ROLES = [
-  { key: 'CARE', label: 'Customer Care', help: 'Look up members and view their activity & issues' },
-  { key: 'ADMIN', label: 'Administrator', help: 'Full access, including granting roles' },
-];
+import { api } from '../api';
 
 // Light money formatter (no external dep) for the read-only data tabs.
 function money(v) {
@@ -115,11 +109,6 @@ export default function CustomerCarePage() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [tab, setTab] = useState('issues'); // issues | activity
   const [error, setError] = useState('');
-  // Role management (ADMIN only — the backend gates /roles to ROLE_ADMIN).
-  const isAdmin = getUserRoles().includes('ADMIN');
-  const [roleBusy, setRoleBusy] = useState('');   // the role key currently being changed
-  const [roleNotice, setRoleNotice] = useState('');
-  const [confirmAdmin, setConfirmAdmin] = useState(false); // guard granting ADMIN
   // Read-only data tabs (accounts/transactions/payments/deals) — fetched on demand.
   const [dataRows, setDataRows] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
@@ -175,25 +164,6 @@ export default function CustomerCarePage() {
     }
   }
 
-  // Grant or revoke a role for the selected member. ADMIN-only on the backend.
-  async function changeRole(roleKey, action) {
-    if (!detail) return;
-    setRoleBusy(roleKey);
-    setRoleNotice('');
-    try {
-      const updated = await api.supportChangeUserRole(detail.id, roleKey, action);
-      const newRoles = updated?.roles ?? [];
-      // Reflect the change in the open profile and the list row.
-      setDetail((d) => (d ? { ...d, roles: newRoles } : d));
-      setUsers((list) => list.map((x) => (x.id === detail.id ? { ...x, roles: newRoles } : x)));
-      setRoleNotice(`${action === 'REVOKE' ? 'Revoked' : 'Granted'} ${roleKey} for ${detail.name || detail.email}.`);
-      setConfirmAdmin(false);
-    } catch (e) {
-      setRoleNotice(e.message || 'Could not change the role.');
-    } finally {
-      setRoleBusy('');
-    }
-  }
 
   return (
     <div id="page-customer-care" className="page active">
@@ -325,59 +295,11 @@ export default function CustomerCarePage() {
                   </div>
                 </div>
 
-                {/* Roles & access — only an ADMIN can grant/revoke (backend enforces this too). */}
-                {isAdmin && (
-                  <div style={{ marginTop: 16, borderTop: '1px solid var(--tv-border-light)', paddingTop: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                      <i className="ti ti-shield-lock" style={{ color: 'var(--tv-forest)' }}></i>
-                      <span style={{ fontWeight: 600 }}>Roles &amp; access</span>
-                    </div>
-                    {roleNotice && (
-                      <div className="setting-help" style={{ marginBottom: 10, color: 'var(--tv-text-secondary)' }}>
-                        <i className="ti ti-info-circle"></i> {roleNotice}
-                      </div>
-                    )}
-                    {MANAGED_ROLES.map((r) => {
-                      const has = (detail.roles || []).includes(r.key);
-                      const busy = roleBusy === r.key;
-                      const armingAdmin = r.key === 'ADMIN' && !has && confirmAdmin;
-                      return (
-                        <div key={r.key} className="setting-row" style={{ alignItems: 'center' }}>
-                          <div>
-                            <div className="setting-label">
-                              {r.label} {has && <span className="badge badge-forest" style={{ marginLeft: 6 }}>Active</span>}
-                            </div>
-                            <div className="setting-help">{r.help}</div>
-                          </div>
-                          {has ? (
-                            <button
-                              className="btn btn-secondary btn-sm"
-                              disabled={busy}
-                              onClick={() => changeRole(r.key, 'REVOKE')}
-                            >
-                              <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-user-minus'}`}></i> {busy ? 'Working…' : 'Revoke'}
-                            </button>
-                          ) : armingAdmin ? (
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                              <button className="btn btn-danger btn-sm" disabled={busy} onClick={() => changeRole(r.key, 'GRANT')}>
-                                <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-shield-check'}`}></i> {busy ? 'Working…' : 'Confirm admin'}
-                              </button>
-                              <button className="btn btn-secondary btn-sm" disabled={busy} onClick={() => setConfirmAdmin(false)}>Cancel</button>
-                            </div>
-                          ) : (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              disabled={busy}
-                              onClick={() => (r.key === 'ADMIN' ? setConfirmAdmin(true) : changeRole(r.key, 'GRANT'))}
-                            >
-                              <i className={`ti ${busy ? 'ti-loader-2 spin' : 'ti-user-plus'}`}></i> {busy ? 'Working…' : 'Grant'}
-                            </button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {/* The "Roles & access" panel that granted CARE/ADMIN to this customer is gone.
+                    That was the promotion path that made ops staff into members holding a token
+                    every service trusted. Ops accounts now live in their own table with their own
+                    login; managing them is an ops-admin screen (Phase 2), not something you do
+                    from a customer's record. */}
               </div>
 
               {/* Issue spotlight — the help-desk agent's first read: what did the caller hit? */}

@@ -22,6 +22,18 @@ public class JwtService {
         return extractClaim(token, Claims::getSubject);
     }
 
+    /**
+     * True if this token was minted for an internal ops user rather than a customer.
+     * See {@link OpsTokens} for why this check exists on every service.
+     */
+    public boolean isOpsToken(String token) {
+        try {
+            return OpsTokens.TYPE_OPS.equals(extractClaim(token, c -> c.get(OpsTokens.TYPE_CLAIM)));
+        } catch (Exception e) {
+            return false; // unparseable → not an ops token; validity is checked separately
+        }
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }

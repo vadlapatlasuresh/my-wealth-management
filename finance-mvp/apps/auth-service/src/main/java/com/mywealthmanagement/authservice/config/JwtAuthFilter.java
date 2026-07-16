@@ -1,6 +1,7 @@
 package com.mywealthmanagement.authservice.config;
 
 import com.mywealthmanagement.authservice.auth.JwtService;
+import com.mywealthmanagement.authservice.ops.OpsTokens;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,9 +42,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null
-                && jwtService.isTokenValid(token)) {
-            // Authorities come from the JWT roles claim (ROLE_USER, ROLE_CARE, ROLE_ADMIN) —
-            // not a DB lookup. The subject here is the userId, not the email.
+                && jwtService.isTokenValid(token)
+                && tokenTypeMatchesSurface(token, request.getRequestURI())) {
+            // Authorities come from the JWT roles claim — member tokens carry customer roles
+            // (USER), ops tokens carry OpsRole values (OPS_AGENT, …). Not a DB lookup.
+            // The subject is the userId for member tokens, the ops_users id for ops tokens.
             List<SimpleGrantedAuthority> authorities = jwtService.extractRoles(token).stream()
                     .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
                     .toList();
@@ -53,5 +56,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(authToken);
         }
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * The ops/member boundary, enforced in BOTH directions:
+     *   - an ops token authenticates ONLY on the ops surface (/api/v1/ops/**, /api/v1/support/**)
+     *   - a member token authenticates ONLY off it
+     *
+     * A mismatch leaves the request unauthenticated, so it fails as 401/403 rather than
+     * succeeding with the wrong kind of identity. Both directions matter: without the first,
+     * an agent's ops token would read and write member data as if it were the customer's own;
+     * without the second, any customer holding a valid member token could reach the ops surface
+     * and only a role check would stand between them and every customer record.
+     */
+    private boolean tokenTypeMatchesSurface(String token, String path) {
+        return jwtService.isOpsToken(token) == OpsTokens.isOpsPath(path);
     }
 }
