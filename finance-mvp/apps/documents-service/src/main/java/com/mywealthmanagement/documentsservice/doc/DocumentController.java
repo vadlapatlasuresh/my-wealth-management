@@ -108,6 +108,10 @@ public class DocumentController {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "This folder isn't empty. Move or delete its contents first.");
         }
+        if (hasActiveFolderShare(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This folder is currently shared. Revoke the share before deleting it.");
+        }
         folderRepo.delete(f);
         return ResponseEntity.noContent().build();
     }
@@ -222,7 +226,9 @@ public class DocumentController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         boolean activeShare = shareRepo.findByDocumentIdAndRevokedAtIsNull(id).stream()
                 .anyMatch(DocumentShare::isActive);
-        if (activeShare) {
+        // Also block if the document is exposed through an active share on its folder,
+        // so a file can never vanish out from under a folder-level share either.
+        if (activeShare || (d.getFolderId() != null && hasActiveFolderShare(d.getFolderId()))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "This document is currently shared. Revoke the share before deleting it.");
         }
@@ -239,6 +245,12 @@ public class DocumentController {
     }
 
     /* ---------------- helpers ---------------- */
+
+    /** True when the folder has at least one live (non-revoked, non-expired) share. */
+    private boolean hasActiveFolderShare(Long folderId) {
+        return shareRepo.findByFolderIdAndRevokedAtIsNull(folderId).stream()
+                .anyMatch(DocumentShare::isActive);
+    }
 
     /** Validates that the folder (if given) belongs to the caller; returns it or null. */
     private Long resolveFolder(Long folderId) {

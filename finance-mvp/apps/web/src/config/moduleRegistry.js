@@ -157,12 +157,12 @@ export const MODULE_REGISTRY = {
   },
   messages: {
     id: 'messages', title: 'Messages', icon: 'ti ti-message-2',
-    route: '/messages', section: SECTION_SETTINGS, defaultOrder: 2,
+    route: '/messages', section: SECTION_SETTINGS, defaultOrder: 3,
     component: MessagesPage, inNavByDefault: true, badge: 2,
   },
   settings: {
     id: 'settings', title: 'Settings', icon: 'ti ti-settings',
-    route: '/settings', section: SECTION_SETTINGS, defaultOrder: 3,
+    route: '/settings', section: SECTION_SETTINGS, defaultOrder: 4,
     component: SettingsPage, inNavByDefault: true,
   },
 

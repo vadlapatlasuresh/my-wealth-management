@@ -32,10 +32,14 @@ public class PublicShareController {
     private final DocumentStorageService storageService;
     private final PasswordEncoder passwordEncoder;
 
-    /** Metadata for a shared link. Files are included only when the passcode (if any) checks out. */
+    /**
+     * Metadata for a shared link. Files are included only when the passcode (if any)
+     * checks out. The passcode is read from the {@code X-Share-Passcode} header (never
+     * a query parameter) so it is not written to proxy/access logs or browser history.
+     */
     @GetMapping("/{token}")
     public Map<String, Object> info(@PathVariable String token,
-                                    @RequestParam(value = "passcode", required = false) String passcode,
+                                    @RequestHeader(value = "X-Share-Passcode", required = false) String passcode,
                                     HttpServletRequest req) {
         DocumentShare s = shareRepo.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "This link is not valid."));
@@ -70,7 +74,7 @@ public class PublicShareController {
     @GetMapping("/{token}/file")
     public ResponseEntity<byte[]> file(@PathVariable String token,
                                        @RequestParam("docId") Long docId,
-                                       @RequestParam(value = "passcode", required = false) String passcode,
+                                       @RequestHeader(value = "X-Share-Passcode", required = false) String passcode,
                                        HttpServletRequest req) {
         DocumentShare s = shareRepo.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "This link is not valid."));

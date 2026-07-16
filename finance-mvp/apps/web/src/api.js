@@ -131,6 +131,27 @@ async function fetchObjectUrl(path) {
   return URL.createObjectURL(blob);
 }
 
+// Public document-share fetch (recipient has no account). Sends the optional passcode
+// as a header, never a query param, and does NOT attach the Authorization token or
+// clear it on 401 — a wrong passcode must not log a signed-in viewer out.
+async function sharedRequest(path, passcode) {
+  const headers = passcode ? { "X-Share-Passcode": passcode } : {};
+  const response = await fetch(`${API_BASE}${path}`, { headers });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.message || error.error || `Request failed (${response.status})`);
+  }
+  const text = await response.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function sharedFileObjectUrl(path, passcode) {
+  const headers = passcode ? { "X-Share-Passcode": passcode } : {};
+  const response = await fetch(`${API_BASE}${path}`, { headers });
+  if (!response.ok) throw new Error(`Download failed (${response.status})`);
+  return URL.createObjectURL(await response.blob());
+}
+
 export const api = {
   getToken: () => authToken,
   register: (payload) =>
@@ -585,13 +606,16 @@ export const api = {
   getDocShareAccess: (id) => request(`/api/v1/documents/shares/${id}/access`),
   revokeDocShare: (id) => request(`/api/v1/documents/shares/${id}/revoke`, { method: "POST" }),
   deleteDocShare: (id) => request(`/api/v1/documents/shares/${id}`, { method: "DELETE" }),
-  // Public share access (recipient side, no auth — token in the path, optional passcode).
+  // Public share access (recipient side, no auth). The token is in the path; the
+  // passcode goes in the X-Share-Passcode header (never the URL) so it isn't written
+  // to proxy/access logs or browser history.
   getSharedInfo: (token, passcode) =>
-    request(`/api/v1/documents/shared/${encodeURIComponent(token)}` +
-      (passcode ? `?passcode=${encodeURIComponent(passcode)}` : "")),
-  sharedFileUrl: (token, docId, passcode) =>
-    `${API_BASE}/api/v1/documents/shared/${encodeURIComponent(token)}/file?docId=${encodeURIComponent(docId)}` +
-      (passcode ? `&passcode=${encodeURIComponent(passcode)}` : ""),
+    sharedRequest(`/api/v1/documents/shared/${encodeURIComponent(token)}`, passcode),
+  // Fetch a shared file's bytes → object URL (caller revokes when done).
+  openSharedFile: (token, docId, passcode) =>
+    sharedFileObjectUrl(
+      `/api/v1/documents/shared/${encodeURIComponent(token)}/file?docId=${encodeURIComponent(docId)}`,
+      passcode),
 
   // Ledger-derived, period-aware KPIs. `period` is THIS_MONTH | THIS_YEAR | T12M | CUSTOM.
   // For CUSTOM, pass from/to as ISO yyyy-MM-dd. Balances/AR are point-in-time (today);

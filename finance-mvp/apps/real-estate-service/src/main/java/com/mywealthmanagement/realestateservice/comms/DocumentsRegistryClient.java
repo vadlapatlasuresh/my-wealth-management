@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -31,7 +32,12 @@ public class DocumentsRegistryClient {
             @Value("${service.documents.url:http://localhost:8091}") String documentsUrl,
             @Value("${documents.internal.key:${AUDIT_INGEST_KEY:dev-internal-audit-key}}") String internalKey,
             @Value("${documents.registry.enabled:true}") boolean enabled) {
-        this.restClient = RestClient.builder().baseUrl(documentsUrl).build();
+        // Short timeouts: registration is a best-effort side-effect on the request thread,
+        // so a slow/hung documents-service must never stall attaching a deal document.
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(2000);
+        factory.setReadTimeout(3000);
+        this.restClient = RestClient.builder().baseUrl(documentsUrl).requestFactory(factory).build();
         this.internalKey = internalKey;
         this.enabled = enabled;
     }

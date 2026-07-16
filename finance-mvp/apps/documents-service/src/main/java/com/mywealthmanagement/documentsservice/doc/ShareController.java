@@ -149,7 +149,12 @@ public class ShareController {
         m.put("active", s.isActive());
         m.put("status", s.getRevokedAt() != null ? "revoked"
                 : (s.getExpiresAt() != null && s.getExpiresAt().isBefore(LocalDateTime.now()) ? "expired" : "active"));
-        m.put("accessCount", accessLogRepo.findByShareIdOrderByAccessedAtDesc(s.getId()).size());
+        // Count real file accesses only — exclude INFO (metadata opens) and DENIED
+        // (failed passcode attempts) so the owner's "views" figure isn't inflated.
+        long views = accessLogRepo.findByShareIdOrderByAccessedAtDesc(s.getId()).stream()
+                .filter(a -> "VIEW".equals(a.getAccessAction()) || "DOWNLOAD".equals(a.getAccessAction()))
+                .count();
+        m.put("accessCount", views);
         m.put("link", shareService.shareLink(s.getToken()));
         m.put("token", s.getToken());
         return m;

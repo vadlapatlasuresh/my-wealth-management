@@ -43,9 +43,18 @@ export default function PublicSharePage() {
 
   useEffect(() => { if (token) fetchInfo(""); else { setError("This link is not valid."); setLoading(false); } /* eslint-disable-next-line */ }, []);
 
-  const openFile = (f) => {
-    const url = f.isFile ? api.sharedFileUrl(token, f.docId, submittedPass) : f.url;
-    if (url) window.open(url, "_blank", "noopener");
+  const openFile = async (f) => {
+    if (!f.isFile) {
+      if (f.url) window.open(f.url, "_blank", "noopener");
+      return;
+    }
+    try {
+      const objUrl = await api.openSharedFile(token, f.docId, submittedPass);
+      window.open(objUrl, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(objUrl), 60000);
+    } catch {
+      setError("Could not open that file. The link may have expired or the passcode is required.");
+    }
   };
 
   const wrap = {
