@@ -128,6 +128,7 @@ services:
       SERVICE_NOTIFICATION_URI: http://notification-service:8080
       SERVICE_PLATFORM_CONFIG_URI: http://platform-config-service:8080
       SERVICE_AUDIT_URI: http://audit-service:8080
+      SERVICE_DOCUMENTS_URI: http://documents-service:8080
       # Legacy Node API is NOT deployed in prod; point at a dead address so /v1/** 503s cleanly
       SERVICE_LEGACY_NODE_URI: http://127.0.0.1:4000
       # CORS: only the real web origin(s), comma-separated. NO wildcard in prod.
@@ -165,7 +166,7 @@ services:
       # Delete-cascade (GDPR): the data services auth-service purges on account
       # deletion (DELETE /internal/users/{id}). Without this it defaults to
       # localhost ports and silently purges nothing in prod, leaving orphaned data.
-      PURGE_TARGETS: http://account-aggregation-service:8080,http://financial-core-service:8080,http://real-estate-service:8080,http://business-financials-service:8080,http://ai-insights-service:8080,http://payment-service:8080,http://notification-service:8080
+      PURGE_TARGETS: http://account-aggregation-service:8080,http://financial-core-service:8080,http://real-estate-service:8080,http://business-financials-service:8080,http://ai-insights-service:8080,http://payment-service:8080,http://notification-service:8080,http://documents-service:8080
       # SECURITY: returns OTP codes in API responses so signup/MFA work WITHOUT a
       # real email/SMS provider. Defaults true to preserve the current key-less
       # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
@@ -232,6 +233,9 @@ services:
       # Deal Room lead notifications -> notification-service (best-effort, shared key)
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
       NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
+      # Mirror deal document links into the owner's personal Document Center.
+      DOCUMENTS_URI: http://documents-service:8080
+      DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
 
   business-financials-service:
     <<: *java-defaults
@@ -261,6 +265,9 @@ services:
       GCS_BUCKET: ${GCS_BUCKET:-}
       UPLOAD_MAX_FILE_SIZE: ${UPLOAD_MAX_FILE_SIZE:-25MB}
       UPLOAD_MAX_REQUEST_SIZE: ${UPLOAD_MAX_REQUEST_SIZE:-30MB}
+      # Mirror uploaded business docs into the personal Document Center (single source of truth).
+      DOCUMENTS_URI: http://documents-service:8080
+      DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
 
   ai-insights-service:
     <<: *java-defaults
@@ -374,6 +381,37 @@ services:
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
       NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
       MONITOR_ALERT_ADMIN_USER_ID: ${MONITOR_ALERT_ADMIN_USER_ID:-}   # set to your admin user id to get alert emails
+
+  # Personal Document Center: folders, uploads, the cross-app document registry and
+  # secure CPA sharing. Uploads → Google Cloud Storage (same STORAGE_PROVIDER/GCS_BUCKET
+  # as business-financials; auth via the VM service account). Public share access is
+  # served under /api/v1/documents/shared/** (token-guarded, no JWT).
+  documents-service:
+    <<: *java-defaults
+    image: ghcr.io/${GHCR_OWNER:-OWNER}/wealth-documents-service:${TAG:-latest}
+    container_name: wealth-documents-service
+    depends_on:
+      <<: *needs-secrets
+    environment:
+      <<: *java-env
+      SECRETS_SCOPES: jwt
+      DATABASE_URL: jdbc:postgresql://postgres:5432/documentsdb
+      DATABASE_USER: ${POSTGRES_USER:-wealth}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      API_GATEWAY_URL: http://api-gateway:8080
+      # Recipient-facing share links point at the real web origin (first of WEB_ORIGINS).
+      APP_WEB_URL: ${DOCUMENTS_WEB_URL:-${APP_WEB_URL:-}}
+      # Internal key guarding /internal/** (cross-service register + purge). Defaults to
+      # AUDIT_INGEST_KEY so callers (business-financials) and this service agree by default.
+      DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
+      # Share-access notifications to the owner (best-effort).
+      NOTIFICATION_URI: http://notification-service:8080
+      NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
+      # Document uploads → Google Cloud Storage (shared bucket with business-financials).
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-none}
+      GCS_BUCKET: ${GCS_BUCKET:-}
+      UPLOAD_MAX_FILE_SIZE: ${UPLOAD_MAX_FILE_SIZE:-25MB}
+      UPLOAD_MAX_REQUEST_SIZE: ${UPLOAD_MAX_REQUEST_SIZE:-30MB}
 
   # ---------------- Centralized secret store ----------------
   secrets-service:

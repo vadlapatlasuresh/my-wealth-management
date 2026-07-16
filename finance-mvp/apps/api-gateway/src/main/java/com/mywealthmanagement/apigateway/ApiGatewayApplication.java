@@ -32,6 +32,8 @@ public class ApiGatewayApplication {
     private String platformConfigUri;
     @Value("${service.audit.uri:http://localhost:8090}")
     private String auditUri;
+    @Value("${service.documents.uri:http://localhost:8091}")
+    private String documentsUri;
 
     public static void main(String[] args) {
         SpringApplication.run(ApiGatewayApplication.class, args);
@@ -74,6 +76,8 @@ public class ApiGatewayApplication {
                         .uri(platformConfigUri)) // Route to platform-config-service (disclaimer content)
                 .route("audit_service_route", r -> r.path("/api/v1/audit/**")
                         .uri(auditUri)) // Route to audit-service (activity log query APIs)
+                .route("documents_service_route", r -> r.path("/api/v1/documents/**")
+                        .uri(documentsUri)) // Route to documents-service (personal Document Center + public share access)
                 .build();
     }
 }

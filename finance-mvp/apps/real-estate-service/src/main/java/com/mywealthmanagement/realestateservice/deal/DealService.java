@@ -39,6 +39,7 @@ public class DealService {
     private final DealWatchRepository watchRepository;
     private final LeadNotifier leadNotifier;
     private final com.mywealthmanagement.realestateservice.comms.NotificationClient notificationClient;
+    private final com.mywealthmanagement.realestateservice.comms.DocumentsRegistryClient documentsRegistryClient;
     private final DealBroadcaster dealBroadcaster;
     private final com.mywealthmanagement.realestateservice.audit.AuditClient auditClient;
 
@@ -137,7 +138,12 @@ public class DealService {
         doc.setLabel(label);
         doc.setUrl(url);
         doc.setDocType(trimUpperOrNull(dto.getDocType()));
-        DealDocumentDto saved = toDocumentDto(documentRepository.save(doc));
+        DealDocument savedDoc = documentRepository.save(doc);
+        DealDocumentDto saved = toDocumentDto(savedDoc);
+        // Also register it in the owner's personal Document Center (best-effort) so that
+        // center remains the single source of truth for all of their documents.
+        documentsRegistryClient.register(savedDoc.getOwnerUserId(), savedDoc.getId(),
+                savedDoc.getLabel(), savedDoc.getDocType(), savedDoc.getUrl());
         // Best-effort: let everyone watching this deal know a new document landed.
         notifyWatchers(deal, watcher -> leadNotifier.notifyWatcherNewDocument(watcher, deal.getTitle(), label));
         return saved;
@@ -163,6 +169,8 @@ public class DealService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
         }
         documentRepository.delete(doc);
+        // Keep the owner's Document Center in sync (best-effort).
+        documentsRegistryClient.unregister(doc.getOwnerUserId(), doc.getId());
     }
 
     private DealDocumentDto toDocumentDto(DealDocument d) {

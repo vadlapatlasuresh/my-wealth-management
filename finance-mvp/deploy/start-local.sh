@@ -51,14 +51,15 @@ if [ "${REBUILD:-0}" = "1" ]; then
   # build them one by one from apps/<svc>/pom.xml.
   for svc in api-gateway auth-service account-aggregation-service financial-core-service \
              real-estate-service business-financials-service ai-insights-service \
-             payment-service notification-service platform-config-service audit-service; do
+             payment-service notification-service platform-config-service audit-service \
+             documents-service; do
     echo "  building $svc…"
     mvn -q -f "apps/$svc/pom.xml" clean package -DskipTests || { echo "build failed: $svc"; exit 1; }
   done
 fi
 
 echo "Stopping any running services…"
-for p in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090; do
+for p in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091; do
   pid="$(lsof -tiTCP:"$p" -sTCP:LISTEN 2>/dev/null | head -1)"; [ -n "$pid" ] && kill "$pid" 2>/dev/null
 done
 sleep 3
@@ -75,9 +76,10 @@ start payment-service              8087 payment_db
 start notification-service         8088 notification_db
 start platform-config-service      8089 platform_config_db
 start audit-service                8090 audit_db
+start documents-service            8091 documents_db
 
 echo "Waiting for boot…"; sleep 45
-up=0; for p in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090; do
+up=0; for p in 8080 8081 8082 8083 8084 8085 8086 8087 8088 8089 8090 8091; do
   [ -n "$(lsof -tiTCP:"$p" -sTCP:LISTEN 2>/dev/null)" ] && up=$((up+1))
 done
-echo "$up/11 services up. Logs in /tmp/svc-*.log"
+echo "$up/12 services up. Logs in /tmp/svc-*.log"

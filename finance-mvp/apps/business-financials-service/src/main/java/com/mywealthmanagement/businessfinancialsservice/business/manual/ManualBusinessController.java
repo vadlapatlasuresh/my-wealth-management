@@ -33,6 +33,7 @@ public class ManualBusinessController {
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
+    private final com.mywealthmanagement.businessfinancialsservice.comms.DocumentsRegistryClient documentsRegistryClient;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -470,7 +471,12 @@ public class ManualBusinessController {
             }
             d.setInvoiceId(invId);
         }
-        return documentRepo.save(d);
+        BusinessDocument saved = documentRepo.save(d);
+        // Also register it in the user's personal Document Center (best-effort) so that
+        // center remains the single source of truth for all of their documents.
+        documentsRegistryClient.register(userId(), saved.getId(), saved.getLabel(), saved.getDocType(),
+                saved.getContentType(), saved.getSizeBytes(), saved.getOriginalFilename());
+        return saved;
     }
 
     /** Stream an uploaded document's bytes back to the owner (authenticated). */

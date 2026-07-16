@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
+import PublicSharePage from "./pages/PublicSharePage";
 import AppLayout from "./components/AppLayout";
 import ProfileGate from "./components/ProfileGate";
 import useIdleLogout from "./hooks/useIdleLogout";
@@ -379,6 +380,12 @@ export default function App() {
     }));
     setLastBillPayIntent(null);
     setBillPayStep(0);
+  }
+
+  // Public, unauthenticated document-share recipient page. Rendered ahead of the
+  // auth gate so a CPA/trusted party can open a shared link without an account.
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/shared/")) {
+    return <PublicSharePage />;
   }
 
   if (!api.getToken()) {

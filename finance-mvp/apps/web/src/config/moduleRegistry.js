@@ -35,6 +35,7 @@ const GuidePage       = React.lazy(() => import('../pages/GuidePage'));
 const StyleGuidePage  = React.lazy(() => import('../pages/StyleGuidePage'));
 const UIFlowMapPage   = React.lazy(() => import('../pages/UIFlowMapPage'));
 const ProfilePage     = React.lazy(() => import('../pages/ProfilePage'));
+const DocumentCenterPage = React.lazy(() => import('../pages/DocumentCenterPage'));
 
 /* Section ids used to group modules in the sidebar. */
 export const SECTION_FINANCE = 'finance';
@@ -144,19 +145,24 @@ export const MODULE_REGISTRY = {
     component: FractionalLLCPage, inNavByDefault: true,
   },
 
+  documents: {
+    id: 'documents', title: 'Documents', icon: 'ti ti-folders',
+    route: '/documents', section: SECTION_SETTINGS, defaultOrder: 1,
+    component: DocumentCenterPage, inNavByDefault: true,
+  },
   security: {
     id: 'security', title: 'Security', icon: 'ti ti-shield-lock',
-    route: '/security', section: SECTION_SETTINGS, defaultOrder: 1,
+    route: '/security', section: SECTION_SETTINGS, defaultOrder: 2,
     component: SecurityPage, inNavByDefault: true,
   },
   messages: {
     id: 'messages', title: 'Messages', icon: 'ti ti-message-2',
-    route: '/messages', section: SECTION_SETTINGS, defaultOrder: 2,
+    route: '/messages', section: SECTION_SETTINGS, defaultOrder: 3,
     component: MessagesPage, inNavByDefault: true, badge: 2,
   },
   settings: {
     id: 'settings', title: 'Settings', icon: 'ti ti-settings',
-    route: '/settings', section: SECTION_SETTINGS, defaultOrder: 3,
+    route: '/settings', section: SECTION_SETTINGS, defaultOrder: 4,
     component: SettingsPage, inNavByDefault: true,
   },
 
@@ -202,7 +208,7 @@ export const MODULE_REGISTRY = {
 export const DEFAULT_MODULES = {
   [SECTION_FINANCE]:    ['home', 'accounts', 'transactions', 'budget', 'billpay', 'debt', 'invest', 'mybusiness', 'ai-assistant', 'calculators', 'goals', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
-  [SECTION_SETTINGS]:   ['security', 'messages', 'settings'],
+  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'settings'],
 };
 
 /* Flat ordered list of every default-nav module id, in sidebar order. */
