@@ -686,6 +686,22 @@ export const api = {
   cancelBillPayIntent: (id) =>
     request(`/api/v1/payments/bill-pay-intents/${id}/cancel`, { method: "POST" }),
 
+  // Subscriptions (payment-service). Plan catalog + entitlements come straight from the
+  // DB config layer, so a price/trial/feature-flag change reflects on the next fetch.
+  getSubscriptionPlans: () => request("/api/v1/subscriptions/plans"),
+  getSubscriptionPlan: (planKey) => request(`/api/v1/subscriptions/plans/${encodeURIComponent(planKey)}`),
+  getMySubscription: () => request("/api/v1/subscriptions/me"),
+  getEntitlements: () => request("/api/v1/subscriptions/entitlements"),
+  startTrial: (planKey) =>
+    request("/api/v1/subscriptions/trial", { method: "POST", body: JSON.stringify({ planKey }) }),
+  // Checkout: collect payment + activate. billingCycle = MONTHLY | ANNUAL.
+  // paymentToken starting with "fail" simulates a declined card (payment-failure handling).
+  activateSubscription: (payload) =>
+    request("/api/v1/subscriptions/activate", { method: "POST", body: JSON.stringify(payload) }),
+  changeSubscription: (payload) =>
+    request("/api/v1/subscriptions/change", { method: "POST", body: JSON.stringify(payload) }),
+  cancelSubscription: () => request("/api/v1/subscriptions/cancel", { method: "POST" }),
+
   // Notification Service (Phase 7)
   // Signed-in user's real account activity (logins, registrations, etc.) from audit-service.
   getMyActivity: (size = 20) => request(`/api/v1/audit/me?size=${size}`),

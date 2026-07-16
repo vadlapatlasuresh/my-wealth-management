@@ -68,6 +68,8 @@ public class ApiGatewayApplication {
                         .uri(aiUri)) // Route to ai-insights-service
                 .route("payment_service_route", r -> r.path("/api/v1/payments/**")
                         .uri(paymentUri)) // Route to payment-service
+                .route("subscription_service_route", r -> r.path("/api/v1/subscriptions/**")
+                        .uri(paymentUri)) // Route to payment-service (subscription plans + billing lifecycle)
                 .route("notification_service_route", r -> r.path("/api/v1/notifications/**")
                         .uri(notificationUri)) // Route to notification-service
                 .route("platform_config_route", r -> r.path("/api/v1/config/**")

@@ -36,6 +36,8 @@ const StyleGuidePage  = React.lazy(() => import('../pages/StyleGuidePage'));
 const UIFlowMapPage   = React.lazy(() => import('../pages/UIFlowMapPage'));
 const ProfilePage     = React.lazy(() => import('../pages/ProfilePage'));
 const DocumentCenterPage = React.lazy(() => import('../pages/DocumentCenterPage'));
+const SubscriptionPage = React.lazy(() => import('../pages/SubscriptionPage'));
+const PlanTierPage    = React.lazy(() => import('../pages/PlanTierPage'));
 
 /* Section ids used to group modules in the sidebar. */
 export const SECTION_FINANCE = 'finance';
@@ -165,6 +167,17 @@ export const MODULE_REGISTRY = {
     route: '/settings', section: SECTION_SETTINGS, defaultOrder: 4,
     component: SettingsPage, inNavByDefault: true,
   },
+  subscription: {
+    id: 'subscription', title: 'Subscription', icon: 'ti ti-crown',
+    route: '/subscription', section: SECTION_SETTINGS, defaultOrder: 5,
+    component: SubscriptionPage, inNavByDefault: true,
+  },
+  // Per-tier feature page (route-only, parameterized): /plans/:planKey.
+  plantier: {
+    id: 'plantier', title: 'Plan details', icon: 'ti ti-crown',
+    route: '/plans/:planKey', section: null, defaultOrder: 0,
+    component: PlanTierPage, inNavByDefault: false,
+  },
 
   // Routes that exist but are NOT in the sidebar by default. They stay as
   // always-available routes regardless of remote config (section: null).
@@ -208,7 +221,7 @@ export const MODULE_REGISTRY = {
 export const DEFAULT_MODULES = {
   [SECTION_FINANCE]:    ['home', 'accounts', 'transactions', 'budget', 'billpay', 'debt', 'invest', 'mybusiness', 'ai-assistant', 'calculators', 'goals', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
-  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'settings'],
+  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'settings', 'subscription'],
 };
 
 /* Flat ordered list of every default-nav module id, in sidebar order. */
