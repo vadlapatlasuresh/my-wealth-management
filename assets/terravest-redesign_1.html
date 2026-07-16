@@ -407,30 +407,72 @@ a { text-decoration: none; color: inherit; }
   margin-bottom: 24px;
 }
 .kpi-card {
+  --kpi-accent: var(--tv-forest-light); /* per-card accent, set inline */
   background: var(--tv-card);
   border: 1px solid var(--tv-border);
   border-radius: var(--radius-lg);
-  padding: 16px 18px;
+  padding: 15px 17px;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow .2s;
+  transition: box-shadow .2s, border-color .2s, transform .2s;
   cursor: default;
   min-width: 0; /* allow the card to shrink inside the grid instead of overflowing */
   overflow: hidden;
   container-type: inline-size; /* let the value font scale to the card width */
 }
 .kpi-card:hover { box-shadow: var(--shadow-md); }
+.kpi-clickable { cursor: pointer; }
+.kpi-clickable:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--kpi-accent);
+  transform: translateY(-1px);
+}
 .kpi-label {
   font-size: 11.5px;
   color: var(--tv-text-muted);
   font-weight: 500;
   letter-spacing: 0.02em;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  min-width: 0;
+}
+/* Accent-tinted icon chip — gives each card an instant visual identity */
+.kpi-icon {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--kpi-accent);
+  background: color-mix(in srgb, var(--kpi-accent) 14%, transparent);
+}
+.kpi-label-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.kpi-chevron {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 14px;
+  color: var(--tv-text-muted);
+  opacity: .55;
+  transition: opacity .2s, transform .2s, color .2s;
+}
+.kpi-clickable:hover .kpi-chevron {
+  opacity: 1;
+  color: var(--kpi-accent);
+  transform: translateX(2px);
 }
 .kpi-value {
   font-family: var(--font-display);
+  /* Scale to the card's own width (container query) so millions stay on one
+     line inside the box; caps at 22px on roomy cards. */
   font-size: clamp(15px, 10.5cqi, 22px);
   color: var(--tv-text-primary);
   line-height: 1.15;
@@ -438,16 +480,47 @@ a { text-decoration: none; color: inherit; }
   white-space: nowrap;
 }
 .kpi-delta {
-  font-size: 11.5px;
-  margin-top: 4px;
+  font-size: 11px;
+  margin-top: 9px;
   font-weight: 500;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 3px;
+  flex-wrap: wrap; /* keep amount + "30d" inside the card on tight widths */
+  gap: 6px;
   min-width: 0;
 }
-.kpi-delta i { flex-shrink: 0; }
+/* Delta pill — carries the up/down/flat color signal */
+.kpi-delta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.kpi-delta-badge i { font-size: 12px; flex-shrink: 0; }
+/* Amount + period, grouped so they wrap together as one muted unit */
+.kpi-delta-sub {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  color: var(--tv-text-muted);
+}
+.kpi-delta-amt { white-space: nowrap; font-weight: 500; }
+.kpi-delta-period {
+  opacity: .75;
+  font-size: 10px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.kpi-delta.pos .kpi-delta-badge { color: var(--tv-positive); background: var(--tv-positive-bg); }
+.kpi-delta.neg .kpi-delta-badge { color: var(--tv-negative); background: var(--tv-negative-bg); }
+.kpi-delta.flat .kpi-delta-badge { color: var(--tv-text-muted); background: var(--tv-border-light); }
+/* Legacy delta markup (older mockup screens) keeps its color */
 .kpi-delta.pos { color: var(--tv-positive); }
 .kpi-delta.neg { color: var(--tv-negative); }
 
@@ -1011,35 +1084,35 @@ a { text-decoration: none; color: inherit; }
 
         <!-- KPI Row -->
         <div class="kpi-grid">
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-trending-up" style="font-size:13px;color:var(--tv-forest-light)"></i> Net Worth</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-forest-light)" title="Net Worth">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-trending-up"></i></span><span class="kpi-label-text">Net Worth</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$263,820</div>
-            <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$15,732 (6.3%) 30d</div>
+            <div class="kpi-delta pos"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>+6.3%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$15,732</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-wallet" style="font-size:13px;color:#1E5FAD"></i> Cash</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:#1E5FAD" title="Cash">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-wallet"></i></span><span class="kpi-label-text">Cash</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$38,420</div>
-            <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$2,320 (6.4%) 30d</div>
+            <div class="kpi-delta pos"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>+6.4%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$2,320</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-chart-line" style="font-size:13px;color:#6B46C1"></i> Investments</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:#6B46C1" title="Investments">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-chart-line"></i></span><span class="kpi-label-text">Investments</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$181,029</div>
-            <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$10,450 (6.1%) 30d</div>
+            <div class="kpi-delta pos"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>+6.1%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$10,450</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-building-estate" style="font-size:13px;color:var(--tv-gold)"></i> Real Estate</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-gold)" title="Real Estate">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-building-estate"></i></span><span class="kpi-label-text">Real Estate</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$312,000</div>
-            <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$8,500 (2.8%) 30d</div>
+            <div class="kpi-delta pos"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>+2.8%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$8,500</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-home-dollar" style="font-size:13px;color:var(--tv-forest-light)"></i> RE Equity</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-forest-light)" title="RE Equity">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-home-dollar"></i></span><span class="kpi-label-text">RE Equity</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$112,000</div>
-            <div class="kpi-delta pos"><i class="ti ti-arrow-up-right"></i> +$1,800 (1.6%) 30d</div>
+            <div class="kpi-delta pos"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>+1.6%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$1,800</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
-          <div class="kpi-card">
-            <div class="kpi-label"><i class="ti ti-credit-card" style="font-size:13px;color:var(--tv-negative)"></i> Total Debt</div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-negative)" title="Total Debt">
+            <div class="kpi-label"><span class="kpi-icon"><i class="ti ti-credit-card"></i></span><span class="kpi-label-text">Total Debt</span><i class="ti ti-chevron-right kpi-chevron"></i></div>
             <div class="kpi-value">$45,629</div>
-            <div class="kpi-delta neg"><i class="ti ti-arrow-up-right"></i> +$1,038 (2.2%) 30d</div>
+            <div class="kpi-delta neg"><span class="kpi-delta-badge"><i class="ti ti-arrow-up-right"></i>2.2%</span><span class="kpi-delta-sub"><span class="kpi-delta-amt">+$1,038</span><span class="kpi-delta-period">30d</span></span></div>
           </div>
         </div>
 

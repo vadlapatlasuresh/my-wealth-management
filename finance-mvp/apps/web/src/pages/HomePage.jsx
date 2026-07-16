@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import NetWorthChart from "../components/NetWorthChart";
 // import RealEstateWidget from "../components/RealEstateWidget"; // Removed
-import { currency, greeting, formatDateTime } from "../utils/format"; // formatDate is now passed as a prop
+import { currency, currency0, greeting, formatDateTime } from "../utils/format"; // formatDate is now passed as a prop
 import { computeDownfall, computeContributors, deriveUpcomingBills } from "../utils/netWorth";
 import LastRefreshed from "../components/LastRefreshed";
 import { api } from "../api";
@@ -46,6 +46,49 @@ const CHART_TYPES = [
   { id: "line", icon: "ti ti-chart-line", label: "Line" },
   { id: "bar", icon: "ti ti-chart-bar", label: "Bars" },
 ];
+
+/* One KPI tile: an accent-colored icon chip, the amount, and a delta badge.
+   The badge has three honest states — up, down, and flat (no green "+$0.00"
+   when nothing moved). `invert` flips sentiment for debt, where a rise is bad.
+   Percent is the change relative to the prior value (guarded against /0). */
+function KpiCard({ icon, accent, label, value, change = 0, invert = false, onClick, title }) {
+  const prior = value - change;
+  const pct = prior !== 0 ? (change / Math.abs(prior)) * 100 : 0;
+  const flat = Math.abs(change) < 0.005;
+  const favorable = invert ? change < 0 : change > 0;
+  const state = flat ? "flat" : favorable ? "pos" : "neg";
+  const arrow = flat
+    ? "ti ti-minus"
+    : change > 0 ? "ti ti-arrow-up-right" : "ti ti-arrow-down-right";
+  // Compact whole-dollar amount for the delta (cents add width without meaning).
+  const amtStr = `${change > 0 ? "+" : ""}${currency0(change)}`;
+
+  return (
+    <div
+      className="kpi-card kpi-clickable"
+      style={{ "--kpi-accent": accent }}
+      title={title}
+      onClick={onClick}
+    >
+      <div className="kpi-label">
+        <span className="kpi-icon"><i className={icon}></i></span>
+        <span className="kpi-label-text">{label}</span>
+        <i className="ti ti-chevron-right kpi-chevron"></i>
+      </div>
+      <div className="kpi-value">{currency(value)}</div>
+      <div className={`kpi-delta ${state}`}>
+        <span className="kpi-delta-badge">
+          <i className={arrow}></i>
+          {flat ? "No change" : `${change > 0 ? "+" : ""}${pct.toFixed(1)}%`}
+        </span>
+        <span className="kpi-delta-sub">
+          {!flat && <span className="kpi-delta-amt">{amtStr}</span>}
+          <span className="kpi-delta-period">30d</span>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage({
   snapshot,
@@ -161,10 +204,6 @@ export default function HomePage({
   const totalRealEstateValue = properties.reduce((sum, p) => sum + (p.currentValue || 0), 0);
   // const totalAssets = (snapshot?.components?.cash || 0) + (snapshot?.components?.investments || 0) + totalRealEstateValue; // Not directly used in new KPI grid
 
-  const getDeltaClass = (value) => (value >= 0 ? "pos" : "neg");
-  const getDeltaIcon = (value) =>
-    value >= 0 ? "ti ti-arrow-up-right" : "ti ti-arrow-down-right";
-
   // Real upcoming bills from scheduled/pending intents (pure helper, tested).
   const upcomingBills = deriveUpcomingBills(paymentIntents, formatDate);
   const totalBillsDue = upcomingBills.reduce((sum, bill) => sum + bill.amount, 0);
@@ -214,66 +253,42 @@ export default function HomePage({
 
       {/* KPI Row — each card navigates to its detail screen */}
       <div className="kpi-grid">
-        <div className="kpi-card kpi-clickable" style={{ cursor: 'pointer' }} title="View accounts" onClick={() => navigate('/accounts')}>
-          <div className="kpi-label">
-            <i className="ti ti-trending-up" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> Net Worth
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(netTotal)}</div>
-          <div className={`kpi-delta ${getDeltaClass(change30)}`}>
-            <i className={getDeltaIcon(change30)}></i> {currency(change30)} ({(change30 / (netTotal - change30) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
-        <div className="kpi-card kpi-clickable" title="View accounts" onClick={() => navigate('/accounts')}>
-          <div className="kpi-label">
-            <i className="ti ti-wallet" style={{ fontSize: '13px', color: '#1E5FAD' }}></i> Cash
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(snapshot?.components?.cash ?? 0)}</div>
-          <div className={`kpi-delta ${getDeltaClass(snapshot?.components?.cash_change_30d ?? 0)}`}>
-            <i className={getDeltaIcon(snapshot?.components?.cash_change_30d ?? 0)}></i> {currency(snapshot?.components?.cash_change_30d ?? 0)} ({(snapshot?.components?.cash_change_30d / ((snapshot?.components?.cash ?? 0) - (snapshot?.components?.cash_change_30d ?? 0)) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
-        <div className="kpi-card kpi-clickable" title="View investments" onClick={() => navigate('/invest')}>
-          <div className="kpi-label">
-            <i className="ti ti-chart-line" style={{ fontSize: '13px', color: '#6B46C1' }}></i> Investments
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(snapshot?.components?.investments ?? 0)}</div>
-          <div className={`kpi-delta ${getDeltaClass(snapshot?.components?.investments_change_30d ?? 0)}`}>
-            <i className={getDeltaIcon(snapshot?.components?.investments_change_30d ?? 0)}></i> {currency(snapshot?.components?.investments_change_30d ?? 0)} ({(snapshot?.components?.investments_change_30d / ((snapshot?.components?.investments ?? 0) - (snapshot?.components?.investments_change_30d ?? 0)) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
-        <div className="kpi-card kpi-clickable" title="View properties" onClick={() => navigate('/realestate')}>
-          <div className="kpi-label">
-            <i className="ti ti-building-estate" style={{ fontSize: '13px', color: 'var(--tv-gold)' }}></i> Real Estate
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(totalRealEstateValue)}</div>
-          <div className={`kpi-delta ${getDeltaClass(snapshot?.components?.real_estate_value_change_30d ?? 0)}`}>
-            <i className={getDeltaIcon(snapshot?.components?.real_estate_value_change_30d ?? 0)}></i> {currency(snapshot?.components?.real_estate_value_change_30d ?? 0)} ({(snapshot?.components?.real_estate_value_change_30d / (totalRealEstateValue - (snapshot?.components?.real_estate_value_change_30d ?? 0)) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
-        <div className="kpi-card kpi-clickable" title="View properties" onClick={() => navigate('/realestate')}>
-          <div className="kpi-label">
-            <i className="ti ti-home-dollar" style={{ fontSize: '13px', color: 'var(--tv-forest-light)' }}></i> RE Equity
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(realEstateEquity)}</div>
-          <div className={`kpi-delta ${getDeltaClass(snapshot?.components?.real_estate_equity_change_30d ?? 0)}`}>
-            <i className={getDeltaIcon(snapshot?.components?.real_estate_equity_change_30d ?? 0)}></i> {currency(snapshot?.components?.real_estate_equity_change_30d ?? 0)} ({(snapshot?.components?.real_estate_equity_change_30d / (realEstateEquity - (snapshot?.components?.real_estate_equity_change_30d ?? 0)) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
-        <div className="kpi-card kpi-clickable" title="Go to Debt Lab" onClick={() => navigate('/debt')}>
-          <div className="kpi-label">
-            <i className="ti ti-credit-card" style={{ fontSize: '13px', color: 'var(--tv-negative)' }}></i> Total Debt
-            <i className="ti ti-chevron-right" style={{ marginLeft: 'auto', fontSize: '13px', color: 'var(--tv-text-muted)' }}></i>
-          </div>
-          <div className="kpi-value">{currency(snapshot?.components?.credit_cards ?? 0)}</div>
-          <div className={`kpi-delta ${getDeltaClass(snapshot?.components?.credit_cards_change_30d ?? 0)}`}>
-            <i className={getDeltaIcon(snapshot?.components?.credit_cards_change_30d ?? 0)}></i> {currency(snapshot?.components?.credit_cards_change_30d ?? 0)} ({(snapshot?.components?.credit_cards_change_30d / ((snapshot?.components?.credit_cards ?? 0) - (snapshot?.components?.credit_cards_change_30d ?? 0)) * 100).toFixed(1)}%) 30d
-          </div>
-        </div>
+        <KpiCard
+          icon="ti ti-trending-up" accent="var(--tv-forest-light)"
+          label="Net Worth" value={netTotal} change={change30}
+          title="View accounts" onClick={() => navigate('/accounts')}
+        />
+        <KpiCard
+          icon="ti ti-wallet" accent="#1E5FAD"
+          label="Cash" value={snapshot?.components?.cash ?? 0}
+          change={snapshot?.components?.cash_change_30d ?? 0}
+          title="View accounts" onClick={() => navigate('/accounts')}
+        />
+        <KpiCard
+          icon="ti ti-chart-line" accent="#6B46C1"
+          label="Investments" value={snapshot?.components?.investments ?? 0}
+          change={snapshot?.components?.investments_change_30d ?? 0}
+          title="View investments" onClick={() => navigate('/invest')}
+        />
+        <KpiCard
+          icon="ti ti-building-estate" accent="var(--tv-gold)"
+          label="Real Estate" value={totalRealEstateValue}
+          change={snapshot?.components?.real_estate_value_change_30d ?? 0}
+          title="View properties" onClick={() => navigate('/realestate')}
+        />
+        <KpiCard
+          icon="ti ti-home-dollar" accent="var(--tv-forest-light)"
+          label="RE Equity" value={realEstateEquity}
+          change={snapshot?.components?.real_estate_equity_change_30d ?? 0}
+          title="View properties" onClick={() => navigate('/realestate')}
+        />
+        <KpiCard
+          icon="ti ti-credit-card" accent="var(--tv-negative)"
+          label="Total Debt" value={snapshot?.components?.credit_cards ?? 0}
+          change={snapshot?.components?.credit_cards_change_30d ?? 0}
+          invert
+          title="Go to Debt Lab" onClick={() => navigate('/debt')}
+        />
       </div>
 
       {/* Main grid */}
