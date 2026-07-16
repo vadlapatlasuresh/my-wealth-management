@@ -5,6 +5,15 @@ export function currency(value) {
   }).format(value ?? 0);
 }
 
+// Whole-dollar currency (no cents) — used for compact deltas/badges.
+export function currency0(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(value ?? 0);
+}
+
 export function formatDate(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-US", {
