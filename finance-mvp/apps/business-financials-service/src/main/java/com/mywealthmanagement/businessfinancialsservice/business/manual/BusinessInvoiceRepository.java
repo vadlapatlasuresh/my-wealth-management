@@ -14,6 +14,9 @@ public interface BusinessInvoiceRepository extends JpaRepository<BusinessInvoice
 
     Optional<BusinessInvoice> findByIdAndUserId(Long id, Long userId);
 
+    /** Public invoice lookup by its opaque token (unauthenticated customer view). */
+    Optional<BusinessInvoice> findByShareToken(String shareToken);
+
     void deleteByBusinessIdAndUserId(Long businessId, Long userId);
 
     /* ---------- Outstanding-AR aggregation (point-in-time, not period-bound) ---------- */

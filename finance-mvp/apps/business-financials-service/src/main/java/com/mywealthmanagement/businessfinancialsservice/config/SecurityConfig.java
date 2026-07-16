@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .requestMatchers("/internal/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll() // metrics/health scraping
                 .requestMatchers("/api/v1/business/oauth/callback").permitAll() // Intuit redirect carries userId in state
+                .requestMatchers("/api/v1/business/manual/invoices/public/**").permitAll() // customer-facing invoice view (token-scoped)
                 .anyRequest().authenticated() // All requests require authentication
                 .and()
                 .sessionManagement()

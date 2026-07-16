@@ -46,10 +46,10 @@ public class DocumentsRegistryClient {
      * Register (or update) a business document in the personal Document Center.
      * {@code sourceRef} is this service's document id, so re-registering is idempotent.
      */
-    public void register(Long userId, Long businessDocId, String label, String docType,
+    public Long register(Long userId, Long businessDocId, String label, String docType,
                          String contentType, Long sizeBytes, String originalFilename) {
         if (!enabled || userId == null || businessDocId == null) {
-            return;
+            return null;
         }
         try {
             Map<String, Object> payload = new HashMap<>();
@@ -62,16 +62,21 @@ public class DocumentsRegistryClient {
             payload.put("contentType", contentType);
             payload.put("sizeBytes", sizeBytes);
             payload.put("originalFilename", originalFilename);
-            restClient.post()
+            Map<?, ?> res = restClient.post()
                     .uri("/internal/documents/register")
                     .header("X-Internal-Key", internalKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()
-                    .toBodilessEntity();
+                    .body(Map.class);
+            // The central document id lets the business doc reuse the Document Center's
+            // secure-share (link + passcode + access log).
+            Object id = res == null ? null : res.get("documentId");
+            return id == null ? null : Long.valueOf(String.valueOf(id));
         } catch (Exception e) {
             log.warn("registering business doc {} for user {} in document center failed: {}",
                     businessDocId, userId, e.getMessage());
+            return null;
         }
     }
 }

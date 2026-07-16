@@ -74,6 +74,10 @@ public class BusinessDocument {
     @Column(length = 500)
     private String note;
 
+    /** Id of this document's mirror in the personal Document Center (for secure sharing). */
+    @Column(name = "central_document_id")
+    private Long centralDocumentId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

@@ -490,6 +490,8 @@ function ShareModal({ target, onClose, onCreated }) {
   const [expiresInDays, setExpiresInDays] = useState("14");
   const [passcode, setPasscode] = useState("");
   const [message, setMessage] = useState("");
+  const [sendEmail, setSendEmail] = useState(false);
+  const [includePasscode, setIncludePasscode] = useState(true);
   const [created, setCreated] = useState(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -503,6 +505,8 @@ function ShareModal({ target, onClose, onCreated }) {
         scope, granteeKind, granteeRef, message,
         passcode: passcode.trim(),
         expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
+        sendEmail: sendEmail && !!granteeRef.trim(),
+        includePasscode,
         ...(isSet ? { documentIds: target.documentIds }
           : isFolder ? { folderId: target.id }
           : { documentId: target.id }),
@@ -533,7 +537,11 @@ function ShareModal({ target, onClose, onCreated }) {
         <ul style={{ fontSize: 13, color: "var(--tv-text-muted)", marginTop: 14, paddingLeft: 18, lineHeight: 1.7 }}>
           <li>Access: <strong>{created.scope === "DOWNLOAD" ? "View + download" : "View-only"}</strong></li>
           {created.expiresAt && <li>Expires: <strong>{fmtDate(created.expiresAt)}</strong></li>}
-          {created.hasPasscode && <li>Passcode required — share it separately from the link</li>}
+          {created.hasPasscode && <li>Passcode required{created.emailStatus ? "" : " — share it separately from the link"}</li>}
+          {created.emailStatus === "SENT" && <li style={{ color: "var(--tv-forest)" }}><i className="ti ti-mail-check"></i> Emailed to <strong>{created.emailedTo}</strong></li>}
+          {created.emailStatus && created.emailStatus !== "SENT" && (
+            <li style={{ color: "var(--tv-gold, #b8860b)" }}>Email not sent ({String(created.emailStatus).toLowerCase()}) — copy the link and send it yourself.</li>
+          )}
           <li>Every open is logged, and you can revoke anytime from <strong>Shared</strong>.</li>
         </ul>
         <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
@@ -582,6 +590,26 @@ function ShareModal({ target, onClose, onCreated }) {
 
       <label style={labelStyle}>Message (optional)</label>
       <input style={inputStyle} value={message} onChange={(e) => setMessage(e.target.value)} placeholder="e.g. For my 2023 filing" />
+
+      <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "var(--tv-forest-tint, rgba(45,90,61,.06))" }}>
+        <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 14 }}>
+          <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)}
+                 style={{ width: 16, height: 16, accentColor: "var(--tv-forest)" }} />
+          <span><i className="ti ti-mail"></i> Email this link to the recipient</span>
+        </label>
+        {sendEmail && (
+          <>
+            {!granteeRef.trim() && (
+              <div style={{ fontSize: 12, color: "var(--tv-negative)", marginTop: 6 }}>Enter the recipient email above to send it.</div>
+            )}
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, marginTop: 8, paddingLeft: 24 }}>
+              <input type="checkbox" checked={includePasscode} onChange={(e) => setIncludePasscode(e.target.checked)}
+                     style={{ width: 15, height: 15, accentColor: "var(--tv-forest)" }} />
+              <span>Include the passcode in the email <span style={{ color: "var(--tv-text-muted)" }}>(convenient, less secure)</span></span>
+            </label>
+          </>
+        )}
+      </div>
 
       {err && <div style={{ color: "var(--tv-negative)", fontSize: 13, marginTop: 8 }}>{err}</div>}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>

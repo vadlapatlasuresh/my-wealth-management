@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
 import PublicSharePage from "./pages/PublicSharePage";
+import PublicInvoicePage from "./pages/PublicInvoicePage";
 import AppLayout from "./components/AppLayout";
 import ProfileGate from "./components/ProfileGate";
 import useIdleLogout from "./hooks/useIdleLogout";
@@ -386,6 +387,10 @@ export default function App() {
   // auth gate so a CPA/trusted party can open a shared link without an account.
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/shared/")) {
     return <PublicSharePage />;
+  }
+  // Public, unauthenticated invoice page a customer opens to view and pay.
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/invoice/")) {
+    return <PublicInvoicePage />;
   }
 
   if (!api.getToken()) {

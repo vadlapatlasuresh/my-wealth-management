@@ -543,6 +543,16 @@ export const api = {
     }),
   deleteManualInvoice: (id) =>
     request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
+  // Send an invoice to the customer by email/SMS. Returns { invoice, deliveryStatus,
+  // channel, recipient, publicUrl, message } — message is a copy-to-send fallback.
+  sendManualInvoice: (id, payload) =>
+    request(`/api/v1/business/manual/invoices/${id}/send`, { method: "POST", body: JSON.stringify(payload) }),
+  // Record a received payment + reconcile (optionally link a business transaction).
+  recordInvoicePayment: (id, payload) =>
+    request(`/api/v1/business/manual/invoices/${id}/payment`, { method: "POST", body: JSON.stringify(payload) }),
+  // Public (unauthenticated) invoice view for the customer.
+  getPublicInvoice: (token) =>
+    request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}`),
 
   // Per-business document center (link-based). Pass invoiceId to scope to one invoice.
   getBusinessDocuments: (businessId, invoiceId, year) =>

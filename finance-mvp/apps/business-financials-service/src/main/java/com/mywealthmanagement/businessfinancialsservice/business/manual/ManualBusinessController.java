@@ -34,6 +34,10 @@ public class ManualBusinessController {
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
     private final com.mywealthmanagement.businessfinancialsservice.comms.DocumentsRegistryClient documentsRegistryClient;
+    private final com.mywealthmanagement.businessfinancialsservice.comms.CommsClient commsClient;
+
+    @org.springframework.beans.factory.annotation.Value("${app.web-url:http://localhost:5173}")
+    private String webUrl;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -306,6 +310,7 @@ public class ManualBusinessController {
         inv.setStatus(str(body.getOrDefault("status", "OPEN")));
         inv.setIssuedAt(date(body.getOrDefault("issuedAt", null)));
         inv.setDueDate(date(body.get("dueDate")));
+        applyInvoiceContact(inv, body);
         if (inv.getCustomer() == null || inv.getCustomer().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
         }
@@ -331,6 +336,7 @@ public class ManualBusinessController {
         if (body.containsKey("amount")) inv.setAmount(money(body.get("amount")));
         if (body.containsKey("status")) inv.setStatus(str(body.get("status")));
         if (body.containsKey("dueDate")) inv.setDueDate(date(body.get("dueDate")));
+        applyInvoiceContact(inv, body);
         BusinessInvoice saved = invoiceRepo.save(inv);
         // Notify when an invoice is newly marked paid — a positive, cash-in-the-door moment.
         if (!"PAID".equalsIgnoreCase(priorStatus) && "PAID".equalsIgnoreCase(saved.getStatus())) {
@@ -338,6 +344,113 @@ public class ManualBusinessController {
                     saved.getCustomer() + " paid " + usd(saved.getAmount()) + ". Nice — that's money in the door.");
         }
         return saved;
+    }
+
+    /** Applies the optional contact / billing fields shared by create + update. */
+    private void applyInvoiceContact(BusinessInvoice inv, Map<String, Object> body) {
+        if (body.containsKey("invoiceNumber")) inv.setInvoiceNumber(str(body.get("invoiceNumber")));
+        if (body.containsKey("customerEmail")) inv.setCustomerEmail(str(body.get("customerEmail")));
+        if (body.containsKey("customerPhone")) inv.setCustomerPhone(str(body.get("customerPhone")));
+        if (body.containsKey("notes")) inv.setNotes(str(body.get("notes")));
+        if (body.containsKey("payInstructions")) inv.setPayInstructions(str(body.get("payInstructions")));
+    }
+
+    /* ---------------- Invoice send + payment reconciliation ---------------- */
+
+    /**
+     * Send an invoice to the customer by email or SMS. Body: { channel: EMAIL|SMS,
+     * recipient? }. Mints a public token on first send and delivers a link to the
+     * public invoice page. Returns the invoice, the delivery status, the public URL and
+     * a ready-to-copy message (used as a fallback when SMS has no live provider).
+     */
+    @PostMapping("/invoices/{id}/send")
+    public Map<String, Object> sendInvoice(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        ManualBusiness biz = businessRepo.findByIdAndUserId(inv.getBusinessId(), userId()).orElse(null);
+        String channel = "SMS".equalsIgnoreCase(str(body.get("channel"))) ? "SMS" : "EMAIL";
+        String recipient = str(body.get("recipient"));
+        if (recipient == null) recipient = "SMS".equals(channel) ? inv.getCustomerPhone() : inv.getCustomerEmail();
+        if (recipient == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Add the customer's " + ("SMS".equals(channel) ? "phone number" : "email") + " first.");
+        }
+        if (inv.getShareToken() == null) {
+            inv.setShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
+        }
+        String bizName = biz != null ? biz.getName() : "our business";
+        String base = webUrl == null || webUrl.isBlank() ? "" : webUrl.replaceAll("/+$", "");
+        String publicUrl = base + "/invoice/" + inv.getShareToken();
+        String subject = "Invoice from " + bizName + " — " + usd(inv.getAmount());
+        String due = inv.getDueDate() != null ? " (due " + inv.getDueDate() + ")" : "";
+        String message = "Hi " + inv.getCustomer() + ", here is your invoice from " + bizName
+                + " for " + usd(inv.getAmount()) + due + ".\nView and pay: " + publicUrl;
+
+        String status = commsClient.send(channel, recipient, subject, message);
+        inv.setSentAt(java.time.LocalDateTime.now());
+        inv.setSentChannel(channel);
+        BusinessInvoice saved = invoiceRepo.save(inv);
+
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("invoice", saved);
+        out.put("deliveryStatus", status); // SENT | NO_PROVIDER | FAILED | DISABLED
+        out.put("channel", channel);
+        out.put("recipient", recipient);
+        out.put("publicUrl", publicUrl);
+        out.put("message", message); // copy-to-send fallback when NO_PROVIDER
+        return out;
+    }
+
+    /**
+     * Record a received payment and reconcile the invoice. Body: { paidAmount?,
+     * paidAt?, paymentMethod?, paymentReference?, linkedTransactionId? }. Marks the
+     * invoice PAID and, when given, links the business transaction that recorded the deposit.
+     */
+    @PostMapping("/invoices/{id}/payment")
+    public BusinessInvoice recordPayment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        java.math.BigDecimal paid = money(body.get("paidAmount"));
+        inv.setPaidAmount(paid != null ? paid : inv.getAmount());
+        inv.setPaidAt(date(body.get("paidAt")) != null ? date(body.get("paidAt")) : LocalDate.now());
+        inv.setPaymentMethod(str(body.get("paymentMethod")));
+        inv.setPaymentReference(str(body.get("paymentReference")));
+        Long txId = longVal(body.get("linkedTransactionId"));
+        if (txId != null) {
+            // Ensure the transaction belongs to the caller before linking.
+            transactionRepo.findByIdAndUserId(txId, userId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "linked transaction not found"));
+            inv.setLinkedTransactionId(txId);
+        }
+        boolean wasPaid = "PAID".equalsIgnoreCase(inv.getStatus());
+        inv.setStatus("PAID");
+        BusinessInvoice saved = invoiceRepo.save(inv);
+        if (!wasPaid) {
+            notificationClient.notify(userId(), "BUSINESS", "Payment received",
+                    saved.getCustomer() + " paid " + usd(saved.getPaidAmount()) + ". Invoice marked paid.");
+        }
+        return saved;
+    }
+
+    /** Public (unauthenticated) invoice view for the customer. Token-scoped; no user data. */
+    @GetMapping("/invoices/public/{token}")
+    public Map<String, Object> publicInvoice(@PathVariable String token) {
+        BusinessInvoice inv = invoiceRepo.findByShareToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
+        ManualBusiness biz = businessRepo.findById(inv.getBusinessId()).orElse(null);
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("businessName", biz != null ? biz.getName() : "");
+        m.put("invoiceNumber", inv.getInvoiceNumber());
+        m.put("customer", inv.getCustomer());
+        m.put("amount", inv.getAmount());
+        m.put("status", inv.getStatus());
+        m.put("issuedAt", inv.getIssuedAt());
+        m.put("dueDate", inv.getDueDate());
+        m.put("notes", inv.getNotes());
+        m.put("payInstructions", inv.getPayInstructions());
+        m.put("paidAt", inv.getPaidAt());
+        m.put("paidAmount", inv.getPaidAmount());
+        return m;
     }
 
     @DeleteMapping("/invoices/{id}")
@@ -473,9 +586,14 @@ public class ManualBusinessController {
         }
         BusinessDocument saved = documentRepo.save(d);
         // Also register it in the user's personal Document Center (best-effort) so that
-        // center remains the single source of truth for all of their documents.
-        documentsRegistryClient.register(userId(), saved.getId(), saved.getLabel(), saved.getDocType(),
+        // center remains the single source of truth — and keep the returned central id
+        // so this document can reuse the center's secure-share.
+        Long centralId = documentsRegistryClient.register(userId(), saved.getId(), saved.getLabel(), saved.getDocType(),
                 saved.getContentType(), saved.getSizeBytes(), saved.getOriginalFilename());
+        if (centralId != null) {
+            saved.setCentralDocumentId(centralId);
+            saved = documentRepo.save(saved);
+        }
         return saved;
     }
 

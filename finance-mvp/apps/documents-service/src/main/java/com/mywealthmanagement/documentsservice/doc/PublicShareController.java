@@ -32,6 +32,7 @@ public class PublicShareController {
     private final ShareService shareService;
     private final DocumentStorageService storageService;
     private final PasswordEncoder passwordEncoder;
+    private final com.mywealthmanagement.documentsservice.comms.BusinessDocsClient businessDocsClient;
 
     /**
      * Metadata for a shared link. Files are included only when the passcode (if any)
@@ -92,19 +93,30 @@ public class PublicShareController {
         if (!belongsToShare(s, d)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "That file is not part of this share.");
         }
-        if (!"GCS".equalsIgnoreCase(d.getStorageType()) || d.getObjectName() == null) {
+        boolean download = "DOWNLOAD".equalsIgnoreCase(s.getScope());
+        byte[] bytes;
+        String contentType;
+        if ("GCS".equalsIgnoreCase(d.getStorageType()) && d.getObjectName() != null) {
+            var dl = storageService.download(d.getObjectName());
+            bytes = dl.bytes();
+            contentType = dl.contentType();
+        } else if ("EXTERNAL_REF".equalsIgnoreCase(d.getStorageType()) && "business".equals(d.getSourceService())
+                && d.getSourceRef() != null) {
+            // File lives in business-financials' storage; proxy the bytes from there.
+            var fetched = businessDocsClient.fetch(d.getSourceRef());
+            bytes = fetched.bytes();
+            contentType = fetched.contentType();
+        } else {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "this shared item is a link, not a stored file");
         }
-        var dl = storageService.download(d.getObjectName());
-        boolean download = "DOWNLOAD".equalsIgnoreCase(s.getScope());
         shareService.logAccess(s, req, download ? "DOWNLOAD" : "VIEW");
         touch(s);
         String filename = d.getOriginalFilename() != null ? d.getOriginalFilename() : "document";
         String disposition = (download ? "attachment" : "inline") + "; filename=\"" + filename.replace("\"", "") + "\"";
         return ResponseEntity.ok()
-                .header("Content-Type", dl.contentType() != null ? dl.contentType() : "application/octet-stream")
+                .header("Content-Type", contentType != null ? contentType : "application/octet-stream")
                 .header("Content-Disposition", disposition)
-                .body(dl.bytes());
+                .body(bytes);
     }
 
     /* ---------------- helpers ---------------- */
@@ -131,9 +143,13 @@ public class PublicShareController {
             m.put("filename", d.getOriginalFilename());
             m.put("contentType", d.getContentType());
             m.put("sizeBytes", d.getSizeBytes());
-            m.put("isFile", "GCS".equalsIgnoreCase(d.getStorageType()));
-            // For LINK / EXTERNAL_REF documents the recipient opens the url directly.
-            m.put("url", "GCS".equalsIgnoreCase(d.getStorageType()) ? null : d.getUrl());
+            // A file the recipient fetches via /file: our own GCS object, or a business
+            // upload we can proxy from business-financials. Plain links open by url.
+            boolean servable = "GCS".equalsIgnoreCase(d.getStorageType())
+                    || ("EXTERNAL_REF".equalsIgnoreCase(d.getStorageType())
+                        && "business".equals(d.getSourceService()) && d.getSourceRef() != null);
+            m.put("isFile", servable);
+            m.put("url", servable ? null : d.getUrl());
             out.add(m);
         }
         return out;

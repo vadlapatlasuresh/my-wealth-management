@@ -289,7 +289,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   });
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
+  const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+  const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
+  const [payInv, setPayInv] = useState(null);     // invoice being reconciled (record payment)
+  const [shareBizDoc, setShareBizDoc] = useState(null); // business document being securely shared
 
   const [showAddDoc, setShowAddDoc] = useState(false);
   const [docForm, setDocForm] = useState({ label: '', url: '', docType: 'INVOICE', note: '', invoiceId: '', periodYear: String(new Date().getFullYear()), periodMonth: '' });
@@ -983,9 +986,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     try {
       const created = await api.createManualInvoice(selectedBusiness.id, {
         customer, amount, status: invForm.status, dueDate: invForm.dueDate || null,
+        customerEmail: invForm.customerEmail || null, customerPhone: invForm.customerPhone || null,
+        payInstructions: invForm.payInstructions || null, notes: invForm.notes || null,
       });
       setManualInvoices((prev) => [created, ...prev]);
-      setInvForm({ customer: '', amount: '', dueDate: '', status: 'OPEN' });
+      setInvForm({ customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
       setShowAddInvoice(false);
       flash(`Invoice for ${currency(amount)} to ${customer} created.`);
     } catch (err) { setError(err?.message || 'Could not create invoice.'); }
@@ -1120,6 +1125,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
           <button className="btn btn-secondary btn-sm" onClick={() => openDoc(d)} title={isFile ? 'Open file' : 'Open document'}>
             <i className={`ti ${isFile ? 'ti-download' : 'ti-external-link'}`}></i> Open
           </button>
+          {d.centralDocumentId && (
+            <button className="btn btn-secondary btn-sm" title="Securely share with a CPA or client" onClick={() => setShareBizDoc(d)}>
+              <i className="ti ti-share"></i> Share
+            </button>
+          )}
           <button className="icon-btn" title="Remove document" onClick={() => handleDeleteDoc(d.id)}><i className="ti ti-trash"></i></button>
         </div>
       </div>
@@ -2583,9 +2593,13 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </div>
                         <div className="item-right" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div className="item-amount">{currency(i.amount)}</div>
-                          {i.manual && (
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleMarkInvoicePaid(i.id)}><i className="ti ti-check"></i> Mark paid</button>
-                          )}
+                          {i.manual && (() => {
+                            const raw = manualInvoices.find((x) => x.id === i.id) || i;
+                            return (<>
+                              <button className="btn btn-secondary btn-sm" title="Send to customer" onClick={() => setSendInv(raw)}><i className="ti ti-send"></i> Send</button>
+                              <button className="btn btn-secondary btn-sm" onClick={() => setPayInv(raw)}><i className="ti ti-cash"></i> Record payment</button>
+                            </>);
+                          })()}
                         </div>
                       </div>
                     ))}
@@ -2625,8 +2639,22 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </select>
                       </div>
                     </div>
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Customer email</label>
+                        <input className="form-input" type="email" value={invForm.customerEmail} onChange={(e) => setInvForm({ ...invForm, customerEmail: e.target.value })} placeholder="billing@acme.com" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Customer phone (for SMS)</label>
+                        <input className="form-input" value={invForm.customerPhone} onChange={(e) => setInvForm({ ...invForm, customerPhone: e.target.value })} placeholder="+1 555 123 4567" />
+                      </div>
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">How to pay (shown to the customer)</label>
+                      <input className="form-input" value={invForm.payInstructions} onChange={(e) => setInvForm({ ...invForm, payInstructions: e.target.value })} placeholder="e.g. Zelle to pay@acme.com, or check to Acme LLC" />
+                    </div>
                     <button type="submit" className="btn btn-primary btn-sm" disabled={!invForm.customer.trim() || !(Number(invForm.amount) > 0) || !selectedBusiness}>
-                      <i className="ti ti-send"></i> Create &amp; send
+                      <i className="ti ti-plus"></i> Create invoice
                     </button>
                     {!selectedBusiness && <div className="item-sub" style={{ marginTop: 6 }}>Add a business first to create invoices.</div>}
                   </form>
@@ -2657,9 +2685,16 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                               ) : <span style={{ color: 'var(--tv-text-muted)' }}>—</span>}
                             </td>
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                              {inv.manual && (
-                                <button className="icon-btn" title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}><i className="ti ti-trash"></i></button>
-                              )}
+                              {inv.manual && (() => {
+                                const raw = manualInvoices.find((x) => x.id === inv.id) || inv;
+                                return (<>
+                                  <button className="btn btn-secondary btn-sm" title="Send to customer" onClick={() => setSendInv(raw)}><i className="ti ti-send"></i></button>
+                                  {inv.status !== 'PAID' && (
+                                    <button className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Record payment" onClick={() => setPayInv(raw)}><i className="ti ti-cash"></i></button>
+                                  )}
+                                  <button className="icon-btn" style={{ marginLeft: 4 }} title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}><i className="ti ti-trash"></i></button>
+                                </>);
+                              })()}
                             </td>
                           </tr>
                           );
@@ -2875,7 +2910,255 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
           )}
         </>
       )}
+
+      {sendInv && (
+        <SendInvoiceModal invoice={sendInv} currency={currency}
+          onClose={() => setSendInv(null)}
+          onSent={(updated) => { if (updated) setManualInvoices((prev) => prev.map((i) => (i.id === updated.id ? updated : i))); }} />
+      )}
+      {payInv && (
+        <RecordPaymentModal invoice={payInv} currency={currency} transactions={bizTransactions}
+          onClose={() => setPayInv(null)}
+          onSaved={(updated) => { setManualInvoices((prev) => prev.map((i) => (i.id === updated.id ? updated : i))); setPayInv(null); flash('Payment recorded — invoice marked paid.'); }} />
+      )}
+      {shareBizDoc && (
+        <BizDocShareModal doc={shareBizDoc}
+          onClose={() => setShareBizDoc(null)}
+          onFlash={flash} />
+      )}
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Invoice + business-doc modals (send / record payment / secure share) */
+/* ------------------------------------------------------------------ */
+function MbOverlay({ title, subtitle, onClose, children }) {
+  return (
+    <div onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div className="card" style={{ width: '100%', maxWidth: 480, maxHeight: '88vh', overflowY: 'auto', padding: 22 }} role="dialog" aria-modal="true">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>{title}</h3>
+            {subtitle && <div className="item-sub">{subtitle}</div>}
+          </div>
+          <button className="icon-btn" onClick={onClose}><i className="ti ti-x"></i></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function SendInvoiceModal({ invoice, currency, onClose, onSent }) {
+  const [channel, setChannel] = useState(invoice.customerEmail ? 'EMAIL' : (invoice.customerPhone ? 'SMS' : 'EMAIL'));
+  const [recipient, setRecipient] = useState(invoice.customerEmail || '');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => { setRecipient(channel === 'SMS' ? (invoice.customerPhone || '') : (invoice.customerEmail || '')); }, [channel, invoice]);
+
+  const submit = async () => {
+    if (!recipient.trim()) { setErr(`Enter the customer's ${channel === 'SMS' ? 'phone number' : 'email'}.`); return; }
+    setBusy(true); setErr('');
+    try {
+      const r = await api.sendManualInvoice(invoice.id, { channel, recipient: recipient.trim() });
+      setResult(r);
+      onSent?.(r.invoice);
+    } catch (e) { setErr(e?.message || 'Could not send the invoice.'); }
+    finally { setBusy(false); }
+  };
+
+  const copy = async (text) => { try { await navigator.clipboard.writeText(text); } catch { /* ignore */ } };
+
+  if (result) {
+    const ok = result.deliveryStatus === 'SENT';
+    return (
+      <MbOverlay title={ok ? 'Invoice sent' : 'Ready to send'} onClose={onClose}>
+        {ok ? (
+          <p style={{ color: 'var(--tv-forest)' }}><i className="ti ti-circle-check"></i> Sent to <strong>{result.recipient}</strong> by {result.channel === 'SMS' ? 'text' : 'email'}.</p>
+        ) : (
+          <>
+            <p className="item-sub">{result.channel === 'SMS' ? 'SMS' : 'Email'} delivery isn’t configured here — copy this and send it yourself:</p>
+            <textarea className="form-input" readOnly rows={4} value={result.message} style={{ width: '100%', fontSize: 13 }} />
+            <button className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} onClick={() => copy(result.message)}><i className="ti ti-copy"></i> Copy message</button>
+          </>
+        )}
+        <div className="card" style={{ padding: 10, marginTop: 12, wordBreak: 'break-all', fontSize: 13, background: 'var(--tv-forest-tint, rgba(45,90,61,.06))' }}>{result.publicUrl}</div>
+        <button className="btn btn-secondary btn-sm" style={{ marginTop: 8 }} onClick={() => copy(result.publicUrl)}><i className="ti ti-link"></i> Copy invoice link</button>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}><button className="btn btn-primary" onClick={onClose}>Done</button></div>
+      </MbOverlay>
+    );
+  }
+
+  return (
+    <MbOverlay title={`Send invoice — ${currency(Number(invoice.amount) || 0)}`} subtitle={`To ${invoice.customer}`} onClose={onClose}>
+      <div className="seg-control" style={{ marginBottom: 12 }}>
+        <button type="button" className={`seg-btn ${channel === 'EMAIL' ? 'active' : ''}`} onClick={() => setChannel('EMAIL')}><i className="ti ti-mail"></i> Email</button>
+        <button type="button" className={`seg-btn ${channel === 'SMS' ? 'active' : ''}`} onClick={() => setChannel('SMS')}><i className="ti ti-message"></i> SMS</button>
+      </div>
+      <div className="form-group">
+        <label className="form-label">{channel === 'SMS' ? 'Customer phone' : 'Customer email'}</label>
+        <input className="form-input" value={recipient} onChange={(e) => setRecipient(e.target.value)} placeholder={channel === 'SMS' ? '+1 555 123 4567' : 'billing@acme.com'} autoFocus />
+      </div>
+      <p className="item-sub"><i className="ti ti-info-circle"></i> They’ll get a link to a page showing the amount, due date and how to pay.</p>
+      {err && <div style={{ color: 'var(--tv-negative)', fontSize: 13, marginTop: 6 }}>{err}</div>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? 'Sending…' : (<><i className="ti ti-send"></i> Send</>)}</button>
+      </div>
+    </MbOverlay>
+  );
+}
+
+function RecordPaymentModal({ invoice, currency, transactions = [], onClose, onSaved }) {
+  const [paidAmount, setPaidAmount] = useState(String(invoice.amount ?? ''));
+  const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
+  const [method, setMethod] = useState('BANK_TRANSFER');
+  const [reference, setReference] = useState('');
+  const [linkedTransactionId, setLinkedTransactionId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  // Only deposits (positive amounts) for this invoice's business are worth linking.
+  const linkable = (transactions || [])
+    .filter((t) => (invoice.businessId == null || t.businessId === invoice.businessId) && Number(t.amount) > 0)
+    .slice(0, 100);
+
+  const submit = async () => {
+    setBusy(true); setErr('');
+    try {
+      const updated = await api.recordInvoicePayment(invoice.id, {
+        paidAmount: Number(paidAmount) || invoice.amount, paidAt,
+        paymentMethod: method, paymentReference: reference || null,
+        linkedTransactionId: linkedTransactionId || null,
+      });
+      onSaved?.(updated);
+    } catch (e) { setErr(e?.message || 'Could not record the payment.'); setBusy(false); }
+  };
+
+  return (
+    <MbOverlay title="Record payment" subtitle={`${invoice.customer} · ${currency(Number(invoice.amount) || 0)}`} onClose={onClose}>
+      <div className="grid-2">
+        <div className="form-group">
+          <label className="form-label">Amount received</label>
+          <input className="form-input" type="number" step="0.01" min="0" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label className="form-label">Date received</label>
+          <input className="form-input" type="date" value={paidAt} onChange={(e) => setPaidAt(e.target.value)} />
+        </div>
+      </div>
+      <div className="grid-2">
+        <div className="form-group">
+          <label className="form-label">Method</label>
+          <select className="form-select" value={method} onChange={(e) => setMethod(e.target.value)}>
+            <option value="BANK_TRANSFER">Bank transfer</option>
+            <option value="ZELLE">Zelle</option>
+            <option value="CHECK">Check</option>
+            <option value="CASH">Cash</option>
+            <option value="CARD">Card</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Reference (optional)</label>
+          <input className="form-input" value={reference} onChange={(e) => setReference(e.target.value)} placeholder="e.g. check #1042" />
+        </div>
+      </div>
+      <div className="form-group">
+        <label className="form-label">Link to a bank transaction (optional)</label>
+        <select className="form-select" value={linkedTransactionId} onChange={(e) => setLinkedTransactionId(e.target.value)}>
+          <option value="">— None —</option>
+          {linkable.map((t) => (
+            <option key={t.id} value={t.id}>{(t.postedAt || '').slice(0, 10)} · {currency(Number(t.amount) || 0)} · {t.description || t.merchant || 'Deposit'}</option>
+          ))}
+        </select>
+      </div>
+      {err && <div style={{ color: 'var(--tv-negative)', fontSize: 13, marginTop: 6 }}>{err}</div>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? 'Saving…' : (<><i className="ti ti-check"></i> Mark paid</>)}</button>
+      </div>
+    </MbOverlay>
+  );
+}
+
+function BizDocShareModal({ doc, onClose, onFlash }) {
+  const [granteeRef, setGranteeRef] = useState('');
+  const [scope, setScope] = useState('VIEW');
+  const [passcode, setPasscode] = useState('');
+  const [expiresInDays, setExpiresInDays] = useState('14');
+  const [sendEmail, setSendEmail] = useState(false);
+  const [created, setCreated] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async () => {
+    if (!passcode.trim()) { setErr('A passcode is required to share.'); return; }
+    setBusy(true); setErr('');
+    try {
+      const s = await api.createDocShare({
+        documentId: doc.centralDocumentId, scope, passcode: passcode.trim(),
+        expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
+        granteeKind: 'CPA', granteeRef, sendEmail: sendEmail && !!granteeRef.trim(), includePasscode: true,
+      });
+      setCreated(s);
+      onFlash?.('Secure share link created.');
+    } catch (e) { setErr(e?.message || 'Could not create the share.'); }
+    finally { setBusy(false); }
+  };
+  const copy = async (t) => { try { await navigator.clipboard.writeText(t); } catch { /* ignore */ } };
+
+  if (created) {
+    return (
+      <MbOverlay title="Share link ready" subtitle="Send this to your CPA or client" onClose={onClose}>
+        <div className="card" style={{ padding: 10, wordBreak: 'break-all', fontSize: 13, background: 'var(--tv-forest-tint, rgba(45,90,61,.06))' }}>{created.link}</div>
+        <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={() => copy(created.link)}><i className="ti ti-copy"></i> Copy link</button>
+        <ul className="item-sub" style={{ marginTop: 12, paddingLeft: 18, lineHeight: 1.7 }}>
+          <li>Passcode required — {created.emailStatus === 'SENT' ? 'included in the email' : 'share it separately'}.</li>
+          {created.emailStatus === 'SENT' && <li style={{ color: 'var(--tv-forest)' }}>Emailed to {created.emailedTo}</li>}
+          <li>View-only, expiring, revocable — every open is logged.</li>
+        </ul>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}><button className="btn btn-primary" onClick={onClose}>Done</button></div>
+      </MbOverlay>
+    );
+  }
+
+  return (
+    <MbOverlay title="Securely share document" subtitle={doc.label} onClose={onClose}>
+      <div className="form-group">
+        <label className="form-label">CPA / recipient email</label>
+        <input className="form-input" value={granteeRef} onChange={(e) => setGranteeRef(e.target.value)} placeholder="cpa@firm.com" />
+      </div>
+      <div className="seg-control" style={{ marginBottom: 12 }}>
+        <button type="button" className={`seg-btn ${scope === 'VIEW' ? 'active' : ''}`} onClick={() => setScope('VIEW')}>View only</button>
+        <button type="button" className={`seg-btn ${scope === 'DOWNLOAD' ? 'active' : ''}`} onClick={() => setScope('DOWNLOAD')}>Allow download</button>
+      </div>
+      <div className="grid-2">
+        <div className="form-group">
+          <label className="form-label">Expires in</label>
+          <select className="form-select" value={expiresInDays} onChange={(e) => setExpiresInDays(e.target.value)}>
+            <option value="1">1 day</option><option value="7">7 days</option><option value="14">14 days</option><option value="30">30 days</option><option value="">No expiry</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Passcode *</label>
+          <input className="form-input" value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="required" />
+        </div>
+      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, cursor: 'pointer' }}>
+        <input type="checkbox" checked={sendEmail} onChange={(e) => setSendEmail(e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--tv-forest)' }} />
+        <span><i className="ti ti-mail"></i> Email the link + passcode to the recipient</span>
+      </label>
+      {err && <div style={{ color: 'var(--tv-negative)', fontSize: 13, marginTop: 6 }}>{err}</div>}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+        <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy || !passcode.trim()}>{busy ? 'Creating…' : (<><i className="ti ti-share"></i> Create link</>)}</button>
+      </div>
+    </MbOverlay>
   );
 }
 
