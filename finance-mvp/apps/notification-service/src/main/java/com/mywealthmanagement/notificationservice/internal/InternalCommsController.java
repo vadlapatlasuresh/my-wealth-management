@@ -71,6 +71,48 @@ public class InternalCommsController {
         }
     }
 
+    /**
+     * Generic server-to-server transactional send to an EXPLICIT recipient — used to
+     * email/text people who aren't app users (a CPA on a document share, a customer on
+     * an invoice). Body: { channel: EMAIL|SMS, recipient, subject?, body }. Bypasses
+     * templates/preferences like the OTP path. Returns the provider + delivery status;
+     * when SMS has no live provider it returns NO_PROVIDER so the caller can fall back
+     * to a copyable message instead of failing.
+     */
+    @PostMapping("/message")
+    public ResponseEntity<Map<String, String>> sendMessage(@RequestBody Map<String, String> body,
+                                                           @RequestHeader(value = "X-Internal-Key", required = false) String key) {
+        if (StringUtils.hasText(internalKey) && !internalKey.equals(key)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
+        }
+        Channel channel = "SMS".equalsIgnoreCase(body.get("channel")) ? Channel.SMS : Channel.EMAIL;
+        String recipient = body.get("recipient");
+        String message = body.get("body");
+        String subject = body.getOrDefault("subject", "A message from TerraVest");
+        if (!StringUtils.hasText(recipient) || !StringUtils.hasText(message)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "recipient and body are required");
+        }
+        ChannelProvider provider = router.providerFor(channel);
+        if (provider == null || provider.name() == null || provider.name().toLowerCase().contains("mock")) {
+            // No live provider (esp. SMS without Twilio): tell the caller so it can fall
+            // back to showing the owner a copyable message.
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(Map.of(
+                    "channel", channel.name(),
+                    "status", "NO_PROVIDER"));
+        }
+        try {
+            DeliveryResult r = provider.send(recipient, subject, message, Map.of("type", "transactional"));
+            return ResponseEntity.ok(Map.of(
+                    "channel", channel.name(),
+                    "provider", provider.name(),
+                    "status", r != null && r.getStatus() != null ? r.getStatus().name() : "SENT"));
+        } catch (Exception e) {
+            log.warn("transactional {} delivery to {} failed: {}", channel, recipient, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of(
+                    "channel", channel.name(), "status", "FAILED"));
+        }
+    }
+
     private static String label(String purpose) {
         return switch (purpose) {
             case "login" -> "login";

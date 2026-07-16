@@ -268,6 +268,8 @@ services:
       # Mirror uploaded business docs into the personal Document Center (single source of truth).
       DOCUMENTS_URI: http://documents-service:8080
       DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
+      # Send invoices to customers by email/SMS + fire in-app alerts (best-effort).
+      NOTIFICATION_URI: http://notification-service:8080
 
   ai-insights-service:
     <<: *java-defaults
@@ -404,9 +406,11 @@ services:
       # Internal key guarding /internal/** (cross-service register + purge). Defaults to
       # AUDIT_INGEST_KEY so callers (business-financials) and this service agree by default.
       DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
-      # Share-access notifications to the owner (best-effort).
+      # Share-access notifications to the owner (best-effort) + emailing share links.
       NOTIFICATION_URI: http://notification-service:8080
       NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
+      # Proxy the bytes of a shared business document from business-financials.
+      BUSINESS_URI: http://business-financials-service:8080
       # Document uploads → Google Cloud Storage (shared bucket with business-financials).
       STORAGE_PROVIDER: ${STORAGE_PROVIDER:-none}
       GCS_BUCKET: ${GCS_BUCKET:-}

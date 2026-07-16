@@ -32,6 +32,7 @@ public class ShareController {
     private final ShareDocumentRepository shareDocumentRepo;
     private final ShareService shareService;
     private final PasswordEncoder passwordEncoder;
+    private final com.mywealthmanagement.documentsservice.comms.CommsClient commsClient;
 
     private Long userId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -104,7 +105,60 @@ public class ShareController {
             new java.util.LinkedHashSet<>(documentIds)
                     .forEach(id -> shareDocumentRepo.save(new ShareDocument(saved.getId(), id)));
         }
-        return toView(saved);
+
+        Map<String, Object> view = toView(saved);
+        // Optionally email the link (and, if asked, the passcode) to the recipient now,
+        // while we still hold the raw passcode (only the hash is persisted).
+        if (boolVal(body.get("sendEmail")) && str(saved.getGranteeRef()) != null) {
+            boolean includePasscode = !body.containsKey("includePasscode") || boolVal(body.get("includePasscode"));
+            String status = emailShare(saved, saved.getGranteeRef(), includePasscode ? passcode : null);
+            view.put("emailStatus", status);
+            view.put("emailedTo", saved.getGranteeRef());
+        }
+        return view;
+    }
+
+    /**
+     * (Re)send the share link by email. Body: { recipient?, includePasscode?, passcode? }.
+     * The raw passcode isn't stored, so to include it on a resend the owner passes it back;
+     * otherwise the email carries the link only and notes the passcode is sent separately.
+     */
+    @PostMapping("/{id}/email")
+    public Map<String, Object> emailShare(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        Map<String, Object> b = body == null ? Map.of() : body;
+        DocumentShare s = shareRepo.findByIdAndOwnerUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        String recipient = str(b.get("recipient")) != null ? str(b.get("recipient")) : s.getGranteeRef();
+        if (recipient == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A recipient email is required.");
+        }
+        boolean includePasscode = boolVal(b.get("includePasscode"));
+        String passcode = includePasscode ? str(b.get("passcode")) : null;
+        String status = emailShare(s, recipient, passcode);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("emailStatus", status);
+        out.put("emailedTo", recipient);
+        return out;
+    }
+
+    /** Composes and sends the share email. {@code rawPasscode} non-null → include it in the body. */
+    private String emailShare(DocumentShare s, String recipient, String rawPasscode) {
+        String label = targetLabel(s);
+        String link = shareService.shareLink(s.getToken());
+        StringBuilder body = new StringBuilder();
+        body.append("Someone has securely shared \"").append(label).append("\" with you via TerraVest.\n\n");
+        body.append("Open it here:\n").append(link).append("\n\n");
+        if (rawPasscode != null && !rawPasscode.isBlank()) {
+            body.append("Passcode: ").append(rawPasscode).append("\n\n");
+        } else {
+            body.append("This link is passcode-protected — the sender will share the passcode with you separately.\n\n");
+        }
+        body.append("Access is ").append("DOWNLOAD".equals(s.getScope()) ? "view + download" : "view-only").append(".\n");
+        if (s.getExpiresAt() != null) {
+            body.append("The link expires on ").append(s.getExpiresAt().toLocalDate()).append(".\n");
+        }
+        String subject = "A document was securely shared with you on TerraVest";
+        return commsClient.send("EMAIL", recipient, subject, body.toString());
     }
 
     /** All of the caller's shares, newest first, with target label + live status. */
@@ -202,6 +256,11 @@ public class ShareController {
             return n + (n == 1 ? " document" : " documents");
         }
         return "";
+    }
+
+    private boolean boolVal(Object o) {
+        if (o instanceof Boolean b) return b;
+        return o != null && "true".equalsIgnoreCase(o.toString().trim());
     }
 
     /** Parses a JSON array of ids into a list of Longs (ignoring blanks/non-numeric). */
