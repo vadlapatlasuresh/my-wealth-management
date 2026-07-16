@@ -61,6 +61,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                         authorities.add(new SimpleGrantedAuthority(r.startsWith("ROLE_") ? r : "ROLE_" + r));
                     }
                 }
+                // Ops permission keys, granted un-prefixed so hasAuthority('cpa.moderate') works
+                // and can never be satisfied by a role name (hasRole prepends ROLE_).
+                for (String perm : jwtService.extractPermissions(token)) {
+                    if (perm != null && !perm.isBlank()) {
+                        authorities.add(new SimpleGrantedAuthority(perm.trim()));
+                    }
+                }
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
                         userDetails, token, authorities);
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

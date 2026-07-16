@@ -1,9 +1,13 @@
 # Proposal: Ops Portal
 
-**Status:** Decisions 1, 7 and phasing accepted · **Phase 1 built (2026-07-16)** · Phases 2–6 open
-**Phase 1 shipped:** separate `ops_users` identity, ops login + mandatory MFA, `typ=ops` tokens
-enforced in both directions across all 12 services, CARE/ADMIN revoked from customer rows, the
-customer→staff promotion path removed. See §10 for what remains.
+**Status:** **Phases 1–4 built (2026-07-16)** · Phases 5–6 open
+**Built:** separate `ops_users` identity + mandatory MFA + `typ=ops` enforced across all 12 services
+(P1); permission-based RBAC with a DB-editable access matrix (P2); actor/target/reason/diff audit on
+a keyed HMAC chain with signed checkpoints (P3); the ops-admin + access-matrix screens (part of P4).
+**Open:** the financial ops layer (P5) and the `ops.terravest.app` origin split (P6).
+
+> **Access-control and audit reference:** [`ops-access-and-audit.md`](ops-access-and-audit.md) —
+> the access matrix, what ops staff can and cannot reach, and what gets recorded.
 **Area:** New `ops-service` + extensions to `auth-service`, `audit-service`, `payment-service`, `apps/web` (`/ops`)
 **Related shipped work:** A first-cut ops portal already exists — `components/OpsPortal.jsx`, `pages/CustomerCarePage.jsx`, `pages/AdminDashboardPage.jsx`, `/api/v1/support/**` in auth-service, and the hash-chained `audit-service`. This proposal is about closing the gap between that and a real ops tool.
 
@@ -83,9 +87,46 @@ ops token → `/auth/me` **403**; member token → `/support/users` **403**; mem
 > And per the standing rule, this is a frontend change: it needs `deploy.sh` (a plain `up -d`
 > leaves the SPA stale).
 
-**Known gap, by design:** the audit row for an ops action still records only the *actor*. "Who
-viewed customer 42" remains answerable only from the request path until Phase 3 adds
-`target_user_id`. The gateway now at least tags these rows `actorType=OPS`.
+**Closed by Phase 3 (below):** ops audit rows now carry `target_user_id`, so "who viewed customer 42"
+is a direct query rather than a guess from the request path.
+
+---
+
+## 2c. Phases 2 & 3 — as built (2026-07-16)
+
+Full reference: [`ops-access-and-audit.md`](ops-access-and-audit.md).
+
+| Piece | Where |
+|---|---|
+| Permission catalog (8 keys, all enforced) | `OpsPermission` enum; seeded to `ops_permissions` by **V9** |
+| DB-editable roles + access matrix | `ops_roles` + `ops_role_permissions` (V9), `OpsRoleEntity`, `OpsPermissionService` |
+| Enforcement | `@PreAuthorize` per endpoint (needs `@EnableMethodSecurity`); `perms` claim in the ops JWT |
+| Cross-service | `customer.data.view` on aggregation/payments/deals support routes; `cpa.moderate` on CPA admin; `ops.analytics.view` on audit stats/health |
+| Ops administration | `OpsAdminController` (`ops.user.manage`), `pages/OpsAccountsPage.jsx` (accounts + live access matrix) |
+| PII behind a reason | `GET /support/users/{id}/pii` (`customer.pii.reveal`, reason ≥8 chars); 360 view no longer carries SSN/EIN at all |
+| Actor/target/reason/diff | audit-service **V5** + `AuditEvent`; gateway populates actor/target on every request |
+| Keyed chain + checkpoints | `AuditChainService` v2 HMAC (`hash_version` keeps v1 rows verifiable), `AuditCheckpointService` + **V6** |
+| Queryable trail | `/api/v1/ops/audit/target/{id}` and `/actor/{id}` (`audit.query`); **Staff access** tab on the customer record |
+
+**Verified by driving the running services**, not just tests: an agent and an admin — both fully
+authenticated — differ exactly as designed (agent opens a record 200 / reveals PII **403**; admin
+reveals **200**; agent → ops-admin **403**, → audit **403**). "Who touched customer 1" returns the
+named actor and their stated reason. `/verify` reports chain + checkpoints valid; a forced checkpoint
+pins the head and emits an `AUDIT-ANCHOR` log line. Granting agents `customer.pii.reveal` from the
+admin API takes effect on the next login with no deploy; unknown keys 400, stripping the last
+`ops.user.manage` 409, a junk reason 400.
+
+Tests: 9 RBAC (allow **and** deny per permission), 10 chain/checkpoint (each one performs the attack
+it claims to defend against), 4 gateway target-extraction. Full suite green across all 13 services.
+
+> ⚠️ **New deploy requirement.** `AUDIT_CHAIN_KEY` is now **required** — audit-service refuses to
+> start without it outside dev/test. It is *not* `AUDIT_INGEST_KEY` (that authenticates callers;
+> this signs history). Generate with `openssl rand -hex 32`. **Changing it later invalidates every
+> existing row's verification**, so treat it as append-only.
+
+**Fixed along the way:** `@PreAuthorize` denials were surfacing as **500 "Access Denied"** because
+the catch-all `@ExceptionHandler(Exception.class)` swallowed Spring Security's exception. Every
+permission denial would have read as a broken server. Now a proper 403.
 
 ---
 
@@ -455,9 +496,9 @@ power over money before the controls that constrain that power exist**.
 | Phase | Contents | Why here |
 |---|---|---|
 | ~~**1. Foundations**~~ ✅ **BUILT** | `ops_users` + separate login + MFA + `typ=ops` enforced both ways on all 12 services; V8 revokes CARE/ADMIN from customer rows; promotion path removed | Closes the live vulnerability. Nothing else should ship first. |
-| **2. RBAC** | permissions/roles tables, `@PreAuthorize`, `PermGate` UI, ops-user admin screen | Everything downstream is gated on this. |
-| **3. Audit upgrade** | actor/target/reason/diff columns, semantic events, HMAC + checkpoints, per-customer audit tab | Must precede money powers, so the first refund is fully attributable. |
-| **4. Customer 360 rework** | attention panel, action rail, tab restructure, notes, escalation queue | Pure support value; no money surface. |
+| ~~**2. RBAC**~~ ✅ **BUILT** | `OpsPermission` catalog + DB-editable roles (V9), `@PreAuthorize` per endpoint, permission checks across services, ops-admin + access-matrix screens | Everything downstream is gated on this. |
+| ~~**3. Audit upgrade**~~ ✅ **BUILT** | actor/target/reason/diff columns (V5), semantic events, keyed HMAC chain + signed checkpoints (V6), "who touched customer X" query + Staff access tab | Must precede money powers, so the first refund is fully attributable. |
+| **4. Customer 360 rework** — *partly built* | ✅ PII reveal w/ reason, Staff access tab, ops-admin screens · ⬜ attention panel, action rail, tab restructure, notes, escalation queue | Pure support value; no money surface. |
 | **5. Financial layer** | ledger, adjustments + maker-checker, refunds/credits, approval queue, disputes | The controls from 1–3 are now in place. |
 | **6. Anomalies + split** | anomaly rules + supervisor queue; split to `ops.terravest.app` (decision #7) | Ops now has money powers → the origin split stops being optional. |
 

@@ -89,6 +89,24 @@ export function getOpsRoles() {
   return Array.isArray(roles) ? roles.map((r) => String(r).toUpperCase()) : [];
 }
 
+/** The signed-in agent's permission keys (e.g. ["customer.view"]) from the ops token. */
+export function getOpsPermissions() {
+  const claims = opsClaims();
+  const perms = claims?.perms || [];
+  return Array.isArray(perms) ? perms.map(String) : [];
+}
+
+/**
+ * Does the signed-in agent hold this permission?
+ *
+ * Display gating only — every endpoint re-checks with @PreAuthorize, so a tampered token buys
+ * nothing but a UI that offers actions the server refuses. Hiding what someone cannot do is a
+ * usability decision, not the security boundary.
+ */
+export function hasOpsPermission(permission) {
+  return getOpsPermissions().includes(permission);
+}
+
 /** True while a non-expired ops session exists. Expiry is checked because ops tokens are short-lived
  *  (~60 min), so a stale one would otherwise render the portal shell and then 401 on every call. */
 export function isOpsSignedIn() {
@@ -789,6 +807,36 @@ export const api = {
   // The agent's own audited trail. NOT supportGetUserActivity — that resolves a customer id,
   // and an ops user is not a customer.
   opsMyActivity: (limit = 50) => request(`/api/v1/ops/auth/me/activity?limit=${limit}`),
+
+  // --- Ops audit trail (needs audit.query) -------------------------------------------------
+  // Who accessed this CUSTOMER, by anyone. The counterpart to supportGetUserActivity, which
+  // returns what the customer themselves did.
+  opsAuditTarget: (userId, limit = 100) =>
+    request(`/api/v1/ops/audit/target/${userId}?limit=${limit}`),
+  // What a given ops user did, across all customers (+ how many distinct ones they touched).
+  opsAuditActor: (opsUserId, days = 30, limit = 100) =>
+    request(`/api/v1/ops/audit/actor/${opsUserId}?days=${days}&limit=${limit}`),
+
+  // --- Ops administration (needs ops.user.manage) ------------------------------------------
+  opsListPermissions: () => request("/api/v1/ops/admin/permissions"),
+  opsListRoles: () => request("/api/v1/ops/admin/roles"),
+  opsSetRolePermissions: (roleKey, permissions) =>
+    request(`/api/v1/ops/admin/roles/${roleKey}/permissions`, {
+      method: "PUT",
+      body: JSON.stringify({ permissions })
+    }),
+  opsListUsers: () => request("/api/v1/ops/admin/users"),
+  opsCreateUser: (payload) =>
+    request("/api/v1/ops/admin/users", { method: "POST", body: JSON.stringify(payload) }),
+  opsSetUserRoles: (id, roles) =>
+    request(`/api/v1/ops/admin/users/${id}/roles`, { method: "PUT", body: JSON.stringify({ roles }) }),
+  opsSetUserActive: (id, active) =>
+    request(`/api/v1/ops/admin/users/${id}/active`, { method: "POST", body: JSON.stringify({ active }) }),
+
+  // Unmask a customer's SSN/EIN last-4. Requires customer.pii.reveal AND a written reason,
+  // which is recorded against the agent. Not part of the 360 view on purpose.
+  supportRevealPii: (id, reason) =>
+    request(`/api/v1/support/users/${id}/pii?reason=${encodeURIComponent(reason)}`),
 
   // Customer Care / Support (ops-token only; backend enforces the ops roles)
   // Accepts either a string (free-text query) or an object with any of

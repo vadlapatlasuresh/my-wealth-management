@@ -1,6 +1,5 @@
 package com.mywealthmanagement.authservice.config;
 
-import com.mywealthmanagement.authservice.ops.OpsRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
@@ -10,6 +9,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -19,6 +19,9 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity
+// Turns on @PreAuthorize. Without this the annotations on the ops endpoints are inert decoration
+// and every authenticated ops token would pass every permission check.
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -42,11 +45,13 @@ public class SecurityConfig {
                 .requestMatchers("/internal/**").permitAll() // server-to-server; guarded by X-Internal-Key
                 // --- Ops surface: reachable ONLY with a typ=ops token (enforced in JwtAuthFilter,
                 // which refuses to authenticate a member token here and an ops token anywhere else).
+                //
+                // Authorisation beyond "is authenticated" is deliberately NOT expressed here.
+                // Each ops endpoint declares its own @PreAuthorize("hasAuthority('...')") next to
+                // the code it protects, because a path matcher in a config file drifts from the
+                // handlers it guards the moment someone adds a route.
                 .requestMatchers("/api/v1/ops/auth/login", "/api/v1/ops/auth/mfa/verify").permitAll()
-                .requestMatchers("/api/v1/support/**").hasAnyRole(
-                        OpsRole.OPS_AGENT.name(), OpsRole.OPS_SUPERVISOR.name(),
-                        OpsRole.OPS_FINANCE.name(), OpsRole.OPS_COMPLIANCE.name(),
-                        OpsRole.OPS_ADMIN.name())
+                .requestMatchers("/api/v1/support/**").authenticated()
                 .requestMatchers("/api/v1/ops/**").authenticated()
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()

@@ -92,10 +92,15 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         Map<String, Object> body = new HashMap<>();
         body.put("userId", userId);
         // OPS distinguishes an internal staff action from a customer's own action. Without it every
-        // ops request reads as if the customer did it themselves. Note userId here is the ops_users
-        // id, NOT the customer being acted upon — recording that target is Phase 3 (audit upgrade),
-        // and until then "who viewed customer X" is still only answerable from the path.
+        // ops request reads as if the customer did it themselves.
         body.put("actorType", userId == null ? "ANONYMOUS" : (ops ? "OPS" : "USER"));
+        body.put("actorKind", userId == null ? "ANONYMOUS" : (ops ? "OPS" : "MEMBER"));
+        body.put("actorId", userId);
+        // Who was acted UPON. For ops routes the customer id is in the path, and this blanket
+        // capture is the only thing that sees EVERY ops request — including any handler that
+        // forgets to write its own semantic event. The handlers still emit richer events with a
+        // reason and a before/after; this is the floor, not the ceiling.
+        body.put("targetUserId", ops ? targetUserIdFrom(path) : null);
         body.put("action", method + " " + path);
         body.put("service", serviceFor(path));
         body.put("method", method);
@@ -133,6 +138,53 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         } catch (Exception e) {
             return null; // invalid/expired token → treat as anonymous
         }
+    }
+
+    /**
+     * The customer id an ops request targets, pulled from the path. Null when there isn't one
+     * (a search, the ops-admin screens) or when the shape isn't recognised.
+     *
+     * Matches the ops route shapes that carry a customer id:
+     *   /api/v1/support/users/{id}...
+     *   /api/v1/aggregation/support/{id}/...
+     *   /api/v1/payments/support/{id}/...
+     *   /api/v1/deals/support/{id}
+     *
+     * Deliberately conservative — it only accepts a numeric segment in a known position. Guessing
+     * wrong here is worse than returning null: a fabricated target id would read as a factual
+     * access record in an audit. Null just means "this row doesn't name a target", and the
+     * handler's own semantic event is the authoritative one anyway.
+     */
+    /**
+     * The service prefixes that actually expose a per-customer support surface. Enumerated rather
+     * than matching any ".../support/{id}" because a bare shape match would happily invent a
+     * target for a route that has nothing to do with ops. Mirrors each service's OpsTokens list;
+     * a new ops surface must be added here too, or its rows will name no target.
+     */
+    private static final java.util.Set<String> SUPPORT_SERVICE_PREFIXES =
+            java.util.Set.of("aggregation", "payments", "deals");
+
+    static String targetUserIdFrom(String path) {
+        if (path == null) return null;
+        String[] p = path.split("/");
+        if (p.length < 6) return null;
+        // /api/v1/support/users/{id}  →  ["", "api", "v1", "support", "users", "{id}", ...]
+        if ("support".equals(p[3]) && "users".equals(p[4]) && isNumeric(p[5])) {
+            return p[5];
+        }
+        // /api/v1/{service}/support/{id}  →  ["", "api", "v1", "{service}", "support", "{id}", ...]
+        if (SUPPORT_SERVICE_PREFIXES.contains(p[3]) && "support".equals(p[4]) && isNumeric(p[5])) {
+            return p[5];
+        }
+        return null;
+    }
+
+    private static boolean isNumeric(String s) {
+        if (s == null || s.isEmpty()) return false;
+        for (int i = 0; i < s.length(); i++) {
+            if (!Character.isDigit(s.charAt(i))) return false;
+        }
+        return true;
     }
 
     private String clientIp(ServerHttpRequest req) {

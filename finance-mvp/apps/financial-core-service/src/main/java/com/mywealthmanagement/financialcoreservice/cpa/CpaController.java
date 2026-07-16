@@ -161,23 +161,22 @@ public class CpaController {
     }
 
     /**
-     * Require an ops-staff role (from the JWT) for moderation actions; else 403.
+     * Require the cpa.moderate permission for moderation actions; else 403.
      *
-     * Ops staff hold OPS_* roles on a typ=ops token. The old CARE/ADMIN member roles are gone:
-     * they lived on customer rows, which made an agent's token a valid member token everywhere.
-     * JwtAuthFilter already restricts /api/v1/cpa/admin/** to ops tokens; this is defence in depth.
-     * Phase 2 replaces this with a per-permission check.
+     * Authorised by PERMISSION, not by role: "which roles may moderate" is a policy decision that
+     * lives in the DB (ops_role_permissions) and is retuned without a deploy. JwtAuthFilter
+     * already restricts /api/v1/cpa/admin/** to typ=ops tokens; this is the authorisation half.
      */
     private static void requireStaff() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
         }
-        boolean staff = auth.getAuthorities().stream()
-                .map(a -> a.getAuthority() == null ? "" : a.getAuthority().toUpperCase())
-                .anyMatch(a -> a.startsWith("ROLE_OPS_"));
-        if (!staff) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff access required");
+        boolean permitted = auth.getAuthorities().stream()
+                .map(a -> a.getAuthority() == null ? "" : a.getAuthority())
+                .anyMatch("cpa.moderate"::equals);
+        if (!permitted) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Missing permission: cpa.moderate");
         }
     }
 

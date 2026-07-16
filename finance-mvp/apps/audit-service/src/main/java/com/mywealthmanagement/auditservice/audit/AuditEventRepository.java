@@ -21,6 +21,22 @@ public interface AuditEventRepository extends JpaRepository<AuditEvent, Long> {
     // Events within an analytics window (newest first), for the admin dashboard.
     java.util.List<AuditEvent> findByCreatedAtGreaterThanEqualOrderByCreatedAtDesc(LocalDateTime from);
 
+    /**
+     * Everything ever done TO this customer, by anyone. The question the old schema could not
+     * answer without a LIKE scan over URL paths — now a single index hit (idx_audit_target_time).
+     */
+    Page<AuditEvent> findByTargetUserIdOrderByCreatedAtDesc(String targetUserId, Pageable pageable);
+
+    /** Everything a given ops user did, across all customers — the per-agent review. */
+    Page<AuditEvent> findByActorIdOrderByCreatedAtDesc(String actorId, Pageable pageable);
+
+    /** Access review: how many distinct customers an actor touched since a given time. */
+    @Query("""
+        SELECT COUNT(DISTINCT a.targetUserId) FROM AuditEvent a
+        WHERE a.actorId = :actorId AND a.targetUserId IS NOT NULL AND a.createdAt >= :from
+        """)
+    long countDistinctTargetsByActorSince(@Param("actorId") String actorId, @Param("from") LocalDateTime from);
+
     // Flexible filter for the admin query endpoint. Null params are ignored.
     @Query("""
         SELECT a FROM AuditEvent a

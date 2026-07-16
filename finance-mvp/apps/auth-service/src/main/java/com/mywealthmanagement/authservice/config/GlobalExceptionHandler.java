@@ -67,6 +67,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+    /**
+     * A denied @PreAuthorize check is a 403, not a 500.
+     *
+     * Without this, the catch-all below swallows Spring Security's AuthorizationDeniedException
+     * and every permission denial surfaces as "500 Internal Server Error: Access Denied" — which
+     * reads as a broken server, hides a working control, and would have clients retrying a
+     * decision that will never change. The method-security exceptions bypass the filter chain's
+     * normal 403 handling precisely because they're thrown from inside the controller layer,
+     * which is where this advice lives.
+     */
+    // AuthorizationDeniedException (what @PreAuthorize throws) extends AccessDeniedException, so
+    // the parent covers both.
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(Exception ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(body(HttpStatus.FORBIDDEN, "You do not have permission to perform this action"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

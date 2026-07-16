@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Credential handling for internal ops accounts. Separate from AuthService on purpose — these
@@ -23,6 +24,7 @@ public class OpsAuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuditClient auditClient;
+    private final OpsPermissionService permissionService;
 
     /** Failed attempts before lockout. Lower than the member policy — these accounts see everyone's data. */
     @Value("${ops.lockout.max-attempts:5}")
@@ -92,13 +94,23 @@ public class OpsAuthService {
         opsUserRepository.save(user);
     }
 
-    /** Final step of ops login: mint the typ=ops token once password AND MFA have passed. */
+    /**
+     * Final step of ops login: mint the typ=ops token once password AND MFA have passed.
+     * Permissions are resolved from the user's roles here and ride in the token — so a role
+     * retune only reaches this user on their next login (bounded by the 60-min ops TTL).
+     */
     public String issueToken(OpsUser user) {
         user.setLastLoginAt(LocalDateTime.now());
         opsUserRepository.save(user);
+        Set<String> perms = permissionService.permissionsFor(user);
         auditClient.record(String.valueOf(user.getId()), "ops.login.success", "SUCCESS",
-                "roles=" + String.join(",", user.roleNames()));
-        return jwtService.generateOpsToken(String.valueOf(user.getId()), user.roleNames());
+                "roles=" + String.join(",", user.roleNames()) + " perms=" + perms.size());
+        return jwtService.generateOpsToken(String.valueOf(user.getId()), user.roleNames(), perms);
+    }
+
+    /** The effective permissions of an ops user, for display on the ops-admin screens. */
+    public Set<String> permissionsOf(OpsUser user) {
+        return permissionService.permissionsFor(user);
     }
 
     public Optional<OpsUser> findById(Long id) {

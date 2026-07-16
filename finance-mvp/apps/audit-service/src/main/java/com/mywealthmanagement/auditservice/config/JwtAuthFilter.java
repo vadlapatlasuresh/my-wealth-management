@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -58,16 +59,28 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
-    /** Build Spring authorities from the JWT "roles" claim so hasRole(...) works. */
+    /**
+     * Build Spring authorities from the JWT: "roles" → ROLE_* (so hasRole works) and "perms" →
+     * bare authorities (so hasAuthority('ops.analytics.view') works).
+     *
+     * Permissions are granted un-prefixed on purpose: hasRole() prepends ROLE_, so keeping them
+     * prefix-free makes it impossible to satisfy a permission check with a role name.
+     */
     private Collection<SimpleGrantedAuthority> rolesFromToken(String token) {
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
         try {
             Object roles = jwtService.extractClaim(token, c -> c.get("roles"));
             if (roles instanceof List<?> list) {
-                return list.stream()
-                        .map(r -> new SimpleGrantedAuthority("ROLE_" + String.valueOf(r).toUpperCase()))
-                        .toList();
+                list.forEach(r -> authorities.add(
+                        new SimpleGrantedAuthority("ROLE_" + String.valueOf(r).toUpperCase())));
             }
-        } catch (Exception ignored) { /* no roles → no authorities */ }
-        return List.of();
+        } catch (Exception ignored) { /* no roles → no role authorities */ }
+        try {
+            Object perms = jwtService.extractClaim(token, c -> c.get("perms"));
+            if (perms instanceof List<?> list) {
+                list.forEach(p -> authorities.add(new SimpleGrantedAuthority(String.valueOf(p))));
+            }
+        } catch (Exception ignored) { /* no perms → no permission authorities */ }
+        return authorities;
     }
 }

@@ -236,7 +236,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
 /* ---- sample data (mirrors SupportUserDetailDto + the member app's data) ---- */
 const USERS = {
   1042:{id:1042,first:'Alex',last:'Kumar',name:'Alex Kumar',email:'alex.kumar@example.com',phone:'+1 (512) 555-0192',
-    accountType:'INDIVIDUAL',business:null,phoneVerified:true,idLabel:'SSN ••4417',identityVerified:false,since:'Mar 2026',roles:['USER'],
+    accountType:'INDIVIDUAL',business:null,phoneVerified:true,idKind:'SSN',idLast4:'4417',identityVerified:false,since:'Mar 2026',roles:['USER'],
     netWorth:'$128,440',cash:'$14,210',invest:'$86,900',realEstate:'$310,000',cards:'-$4,120',
     accounts:[['Chase Checking','Depository','$8,940','••4417'],['Amex Platinum','Credit card','-$4,120','••1009'],['Fidelity Brokerage','Investment','$86,900','••7741']],
     tx:[['Jun 7','Whole Foods','Groceries','-$84.20'],['Jun 6','Payroll — Acme','Income','+$3,250.00'],['Jun 5','ConEd','Utilities','-$120.50']],
@@ -249,13 +249,13 @@ const USERS = {
       {t:'Jun 7, 09:10',action:'Login success',svc:'auth',status:'SUCCESS',fail:false,ip:'73.12.x.x'},
     ]},
   1043:{id:1043,first:'Alexa',last:'Romero',name:'Alexa Romero',email:'alexa.r@example.com',phone:'+1 (415) 555-0046',
-    accountType:'BUSINESS',business:'Romero Holdings LLC',phoneVerified:true,idLabel:'EIN ••8830',identityVerified:true,since:'Jan 2026',roles:['USER'],
+    accountType:'BUSINESS',business:'Romero Holdings LLC',phoneVerified:true,idKind:'EIN',idLast4:'8830',identityVerified:true,since:'Jan 2026',roles:['USER'],
     netWorth:'$642,300',cash:'$58,400',invest:'$402,100',realEstate:'$1,200,000',cards:'-$8,900',
     accounts:[['BoA Business','Depository','$58,400','••2210']],tx:[['Jun 7','Stripe payout','Income','+$12,400']],
     budget:[['Payroll','$40,000','$38,200']],deals:[['Romero Fund I','OPEN','Sponsor','12 leads']],payments:[['Payroll run','$38,200','COMPLETED','Jun 1']],
     activity:[{t:'Jun 7, 08:40',action:'Login success',svc:'auth',status:'SUCCESS',fail:false,ip:'Chrome·macOS'}]},
   1044:{id:1044,first:'Alexander',last:'Pike',name:'Alexander Pike',email:'a.pike@example.com',phone:'+1 (212) 555-7781',
-    accountType:'INDIVIDUAL',business:null,phoneVerified:false,idLabel:'—',identityVerified:false,since:'Jun 2026',roles:['USER'],
+    accountType:'INDIVIDUAL',business:null,phoneVerified:false,idKind:null,identityVerified:false,since:'Jun 2026',roles:['USER'],
     netWorth:'$2,100',cash:'$2,100',invest:'$0',realEstate:'$0',cards:'$0',accounts:[],tx:[],budget:[],deals:[],payments:[],
     activity:[{t:'Jun 7, 07:58',action:'SMS code verify',svc:'auth',status:401,fail:true,ip:'98.4.x.x',note:'Code expired — 3 attempts'}]},
 };
@@ -302,6 +302,17 @@ function open360(id){selectedId=id;tab='overview';const u=USERS[id];
   renderDetail();document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function setTab(t){tab=t;const u=USERS[selectedId];log('Viewed '+t,`${u.name} · #${u.id}`);renderDetail()}
+
+/* PII reveal: a deliberate, reason-carrying, audited action — never an ambient field on the record.
+   Front-line agents don't hold customer.pii.reveal at all; for them the Reveal button isn't there. */
+function revealPii(){
+  const u=USERS[selectedId];
+  const reason=prompt('Why do you need to see this? (recorded against your account)');
+  if(!reason||reason.trim().length<8){ if(reason!==null) alert('A real reason is required — at least 8 characters.'); return; }
+  u.piiRevealed=true;
+  log('Revealed PII','⚠ '+u.name+' · #'+u.id+' — '+reason.trim(), true);
+  renderDetail();
+}
 function badge(ok,y,n){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?y:n}</span>`}
 
 const TABS=[['overview','Overview','ti-id-badge-2'],['accounts','Accounts','ti-building-bank'],['tx','Transactions','ti-arrows-exchange'],
@@ -348,7 +359,19 @@ function renderDetail(){
     <div class="kpi-grid" style="margin-top:14px">
       <div class="kpi"><div class="kpi-l">Account</div><div class="kpi-v">${u.accountType}</div>${u.business?`<div class="kpi-d muted">${esc(u.business)}</div>`:''}</div>
       <div class="kpi"><div class="kpi-l">Phone</div><div class="kpi-v" style="font-size:15px">${esc(u.phone)}</div><div class="kpi-d">${badge(u.phoneVerified,'Verified','Unverified')}</div></div>
-      <div class="kpi"><div class="kpi-l">Identity</div><div class="kpi-v" style="font-size:15px">${esc(u.idLabel)}</div><div class="kpi-d">${badge(u.identityVerified,'Verified','Unverified')}</div></div>
+      <!-- Identity is MASKED by default. SSN/EIN are not on the customer record at all: they come
+           from a separate endpoint that needs the customer.pii.reveal permission AND a written
+           reason, which is recorded against the agent. Front-line agents don't hold that
+           permission — the common call never needs an SSN. -->
+      <div class="kpi"><div class="kpi-l">Identity</div>
+        <div class="kpi-v" style="font-size:15px">${
+          !u.idKind ? '—'
+            : u.piiRevealed ? esc(u.idKind)+' ••'+esc(u.idLast4)
+            : esc(u.idKind)+' ••••'
+        }
+          ${u.idKind && !u.piiRevealed ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px" onclick="revealPii()"><i class="ti ti-eye"></i> Reveal</button>` : ''}
+        </div>
+        <div class="kpi-d">${u.piiRevealed ? '<span class="help"><i class="ti ti-eye"></i> Revealed — recorded against you</span>' : badge(u.identityVerified,'Verified','Unverified')}</div></div>
       <div class="kpi"><div class="kpi-l">Member since</div><div class="kpi-v" style="font-size:15px">${u.since}</div><div class="kpi-d" style="color:${issues(u).length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${issues(u).length} issue${issues(u).length===1?'':'s'}</div></div>
     </div>
   </div>

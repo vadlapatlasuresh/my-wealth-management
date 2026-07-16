@@ -59,10 +59,15 @@ public class OpsUser {
     @Column(name = "created_by", length = 64)
     private String createdBy;
 
-    @ElementCollection(targetClass = OpsRole.class, fetch = FetchType.EAGER)
+    /**
+     * Role keys held by this user, FK-constrained to `ops_roles`. Stored as strings rather than
+     * the {@link OpsRole} enum because roles are DB-editable: an ops admin can define a role
+     * beyond the five built-ins, and an enum mapping would fail to read those rows at all.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "ops_user_roles", joinColumns = @JoinColumn(name = "ops_user_id"))
-    @Enumerated(EnumType.STRING)
-    private Set<OpsRole> roles;
+    @Column(name = "role_key", length = 64)
+    private Set<String> roles;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -77,8 +82,8 @@ public class OpsUser {
         return lockedUntil != null && lockedUntil.isAfter(LocalDateTime.now());
     }
 
-    /** Role names for the JWT roles claim, e.g. ["OPS_AGENT"]. */
+    /** Role keys for the JWT roles claim, e.g. ["OPS_AGENT"]. */
     public java.util.List<String> roleNames() {
-        return roles == null ? java.util.List.of() : roles.stream().map(Enum::name).toList();
+        return roles == null ? java.util.List.of() : java.util.List.copyOf(roles);
     }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api';
+import { api, hasOpsPermission } from '../api';
 
 // Light money formatter (no external dep) for the read-only data tabs.
 function money(v) {
@@ -66,6 +66,169 @@ const DATA_TABS = {
     ),
   },
 };
+
+/**
+ * Every recorded staff action taken against THIS customer — who opened their record, who revealed
+ * their PII, and on what stated grounds.
+ *
+ * The mirror image of the Activity tab (what the customer did themselves). This is the question
+ * the audit log could not answer before target_user_id existed: the actor was recorded, but not
+ * who was acted upon, so it could only be reconstructed by pattern-matching URL paths.
+ *
+ * An unreachable audit service renders as an error, never as "no access" — those two must never
+ * look the same to someone doing a review.
+ */
+function StaffAccessTab({ userId, name }) {
+  const [rows, setRows] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let live = true;
+    setRows(null); setError('');
+    api.opsAuditTarget(userId, 100)
+      .then((r) => { if (live) setRows(Array.isArray(r) ? r : []); })
+      .catch((e) => { if (live) { setError(e.message || 'Could not load the access record'); setRows([]); } });
+    return () => { live = false; };
+  }, [userId]);
+
+  if (error) {
+    return (
+      <div className="empty-state">
+        <i className="ti ti-alert-triangle" style={{ color: 'var(--tv-negative)' }}></i>
+        <p>{error}</p>
+        <p className="setting-help">This is not a statement that no one accessed this member.</p>
+      </div>
+    );
+  }
+  if (rows === null) return <div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div>;
+  if (rows.length === 0) {
+    return (
+      <div className="empty-state">
+        <i className="ti ti-shield-check"></i>
+        <p>No staff has accessed {name || 'this member'}'s record.</p>
+        <p className="setting-help">Records here start from when access logging began.</p>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="setting-help" style={{ marginBottom: 8 }}>
+        <i className="ti ti-shield-search"></i> Every staff action taken on {name || 'this member'} — including yours.
+      </div>
+      <div className="table-scroll">
+        <table className="tv-table">
+          <thead>
+            <tr><th>When</th><th>Staff member</th><th>Action</th><th>Reason given</th></tr>
+          </thead>
+          <tbody>
+            {rows.map((e, i) => (
+              <tr key={e.id ?? i}>
+                <td style={{ color: 'var(--tv-text-muted)', whiteSpace: 'nowrap' }}>{ts(e.createdAt)}</td>
+                <td><span className="badge badge-gray">Ops #{e.actorId ?? e.userId ?? '—'}</span></td>
+                <td style={{ fontWeight: 500 }}>
+                  {e.action || '—'}
+                  {e.action === 'ops.pii.reveal' && (
+                    <span className="badge badge-amber" style={{ marginLeft: 6 }}>PII</span>
+                  )}
+                </td>
+                <td style={{ color: e.reason ? 'inherit' : 'var(--tv-text-muted)' }}>{e.reason || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/**
+ * The identity cell: masked by default, revealed only on a deliberate, reason-carrying action.
+ *
+ * The 360 view no longer carries SSN/EIN at all — the server only serves them from the reveal
+ * endpoint, to a caller holding customer.pii.reveal, and records who asked and why. So this shows
+ * whether something is on file (enough to answer "do you have my tax ID?") without an access, and
+ * makes looking a decision the agent has to justify.
+ */
+function PiiCell({ detail }) {
+  const [revealed, setRevealed] = useState(null);
+  const [asking, setAsking] = useState(false);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const onFile = detail.hasSsn || detail.hasEin;
+  const canReveal = hasOpsPermission('customer.pii.reveal');
+
+  // A new customer must never inherit the last one's revealed PII.
+  useEffect(() => { setRevealed(null); setAsking(false); setReason(''); setError(''); }, [detail.id]);
+
+  async function submit(e) {
+    e.preventDefault();
+    setBusy(true); setError('');
+    try {
+      const pii = await api.supportRevealPii(detail.id, reason.trim());
+      setRevealed(pii);
+      setAsking(false);
+    } catch (err) {
+      setError(err.message || 'Could not reveal');
+    } finally { setBusy(false); }
+  }
+
+  if (revealed) {
+    return (
+      <div className="kpi-value" style={{ fontSize: 18 }}>
+        {revealed.ssnLast4 ? `SSN ••${revealed.ssnLast4}` : revealed.einLast4 ? `EIN ••${revealed.einLast4}` : '—'}
+        <div className="setting-help" style={{ marginTop: 2 }}>
+          <i className="ti ti-eye"></i> Revealed — recorded against you
+        </div>
+      </div>
+    );
+  }
+
+  if (asking) {
+    return (
+      <form onSubmit={submit} style={{ marginTop: 4 }}>
+        <input
+          className="form-input"
+          style={{ fontSize: 13, padding: '6px 8px' }}
+          placeholder="Why do you need this?"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          autoFocus
+          required
+        />
+        {error && <div className="setting-help" style={{ color: 'var(--tv-negative)' }}>{error}</div>}
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <button className="btn btn-primary btn-sm" type="submit" disabled={busy || reason.trim().length < 8}>
+            {busy ? 'Revealing…' : 'Reveal'}
+          </button>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={() => { setAsking(false); setError(''); }}>
+            Cancel
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  return (
+    <div className="kpi-value" style={{ fontSize: 18 }}>
+      {onFile ? `${detail.hasSsn ? 'SSN' : 'EIN'} ••••` : '—'}
+      {onFile && canReveal && (
+        <button
+          className="btn btn-secondary btn-sm"
+          style={{ marginLeft: 8, verticalAlign: 'middle' }}
+          onClick={() => setAsking(true)}
+        >
+          <i className="ti ti-eye"></i> Reveal
+        </button>
+      )}
+      {onFile && !canReveal && (
+        <div className="setting-help" style={{ marginTop: 2 }}>On file — you don't have access to view it</div>
+      )}
+    </div>
+  );
+}
 
 /* Format an ISO/LocalDateTime string to a short, readable timestamp. */
 function ts(v) {
@@ -281,9 +444,7 @@ export default function CustomerCarePage() {
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-label">Identity</div>
-                    <div className="kpi-value" style={{ fontSize: 18 }}>
-                      {detail.ssnLast4 ? `SSN ••${detail.ssnLast4}` : detail.einLast4 ? `EIN ••${detail.einLast4}` : '—'}
-                    </div>
+                    <PiiCell detail={detail} />
                     <div className="kpi-delta"><Badge ok={detail.identityVerified} yes="Verified" no="Unverified" /></div>
                   </div>
                   <div className="kpi-card">
@@ -361,9 +522,17 @@ export default function CustomerCarePage() {
                       <i className={`ti ${cfg.icon}`} style={{ marginRight: 4 }}></i>{cfg.label}
                     </button>
                   ))}
+                  {/* Who accessed THIS customer — the mirror image of the Activity tab, which
+                      shows what the customer did themselves. Needs audit.query. */}
+                  {hasOpsPermission('audit.query') && (
+                    <button className={`seg-btn ${tab === 'access' ? 'active' : ''}`} onClick={() => setTab('access')}>
+                      <i className="ti ti-shield-search" style={{ marginRight: 4 }}></i>Staff access
+                    </button>
+                  )}
                 </div>
 
-                {DATA_TABS[tab] ? (
+                {tab === 'access' ? <StaffAccessTab userId={detail.id} name={detail.name} />
+                 : DATA_TABS[tab] ? (
                   <>
                     <div className="setting-help" style={{ marginBottom: 8 }}>
                       <i className="ti ti-eye"></i> Read-only — what {detail.name || 'this member'} sees. You can view but not change it.
