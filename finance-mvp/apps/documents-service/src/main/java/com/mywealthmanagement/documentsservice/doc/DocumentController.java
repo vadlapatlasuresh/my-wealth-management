@@ -28,6 +28,7 @@ public class DocumentController {
     private final DocFolderRepository folderRepo;
     private final DocumentRepository documentRepo;
     private final DocumentShareRepository shareRepo;
+    private final ShareDocumentRepository shareDocumentRepo;
     private final ShareAccessLogRepository accessLogRepo;
     private final DocumentStorageService storageService;
 
@@ -226,17 +227,22 @@ public class DocumentController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         boolean activeShare = shareRepo.findByDocumentIdAndRevokedAtIsNull(id).stream()
                 .anyMatch(DocumentShare::isActive);
-        // Also block if the document is exposed through an active share on its folder,
-        // so a file can never vanish out from under a folder-level share either.
-        if (activeShare || (d.getFolderId() != null && hasActiveFolderShare(d.getFolderId()))) {
+        // Also block if the document is exposed through an active FOLDER share or an
+        // active multi-file SET share, so a file can never vanish out from under any
+        // share that currently includes it.
+        if (activeShare
+                || (d.getFolderId() != null && hasActiveFolderShare(d.getFolderId()))
+                || hasActiveSetShare(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "This document is currently shared. Revoke the share before deleting it.");
         }
-        // Clean up any revoked/expired shares (+ their access logs) referencing this doc.
+        // Clean up any revoked/expired shares (+ their access logs) referencing this doc,
+        // and drop it from any (revoked/expired) set memberships.
         for (DocumentShare s : shareRepo.findByDocumentId(id)) {
             accessLogRepo.deleteByShareId(s.getId());
             shareRepo.delete(s);
         }
+        shareDocumentRepo.deleteByDocumentId(id);
         if ("GCS".equalsIgnoreCase(d.getStorageType())) {
             storageService.delete(d.getObjectName());
         }
@@ -252,6 +258,14 @@ public class DocumentController {
                 .anyMatch(DocumentShare::isActive);
     }
 
+    /** True when the document is a member of at least one live multi-file (SET) share. */
+    private boolean hasActiveSetShare(Long documentId) {
+        return shareDocumentRepo.findByDocumentId(documentId).stream()
+                .map(sd -> shareRepo.findById(sd.getShareId()).orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(DocumentShare::isActive);
+    }
+
     /** Validates that the folder (if given) belongs to the caller; returns it or null. */
     private Long resolveFolder(Long folderId) {
         if (folderId == null) return null;
@@ -263,7 +277,9 @@ public class DocumentController {
     /** A client-facing view of a document, including whether it is currently shared. */
     private Map<String, Object> toView(Document d) {
         boolean shared = shareRepo.findByDocumentIdAndRevokedAtIsNull(d.getId()).stream()
-                .anyMatch(DocumentShare::isActive);
+                        .anyMatch(DocumentShare::isActive)
+                || (d.getFolderId() != null && hasActiveFolderShare(d.getFolderId()))
+                || hasActiveSetShare(d.getId());
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("id", d.getId());
         m.put("folderId", d.getFolderId());
