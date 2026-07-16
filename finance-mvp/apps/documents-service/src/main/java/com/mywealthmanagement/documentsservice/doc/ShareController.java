@@ -29,6 +29,7 @@ public class ShareController {
     private final DocumentRepository documentRepo;
     private final DocFolderRepository folderRepo;
     private final ShareAccessLogRepository accessLogRepo;
+    private final ShareDocumentRepository shareDocumentRepo;
     private final ShareService shareService;
     private final PasswordEncoder passwordEncoder;
 
@@ -37,30 +38,49 @@ public class ShareController {
     }
 
     /**
-     * Create a share. Body: { documentId | folderId (one required), scope[VIEW|DOWNLOAD],
-     * expiresInDays?, passcode?, granteeKind[LINK|CPA], granteeRef?, message? }.
+     * Create a share. Provide exactly one target:
+     *   - {@code documentIds:[...]} → a multi-file share set (SET),
+     *   - {@code documentId} → a single document (DOCUMENT),
+     *   - {@code folderId} → a whole folder (FOLDER).
+     * Body also: scope[VIEW|DOWNLOAD], expiresInDays?, passcode (REQUIRED),
+     * granteeKind[LINK|CPA], granteeRef?, message?.
      */
     @PostMapping
+    @Transactional
     public Map<String, Object> createShare(@RequestBody Map<String, Object> body) {
         Long uid = userId();
+        List<Long> documentIds = longList(body.get("documentIds"));
         Long documentId = longVal(body.get("documentId"));
         Long folderId = longVal(body.get("folderId"));
-        if (documentId == null && folderId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentId or folderId is required");
+
+        // Passcode is mandatory on every share.
+        String passcode = str(body.get("passcode"));
+        if (passcode == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A passcode is required to share a document.");
         }
 
         DocumentShare s = new DocumentShare();
         s.setOwnerUserId(uid);
-        if (documentId != null) {
+
+        if (documentIds != null && !documentIds.isEmpty()) {
+            // Validate every document belongs to the caller before creating the set.
+            for (Long id : documentIds) {
+                documentRepo.findByIdAndUserId(id, uid)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found: " + id));
+            }
+            s.setTargetKind("SET");
+        } else if (documentId != null) {
             documentRepo.findByIdAndUserId(documentId, uid)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "document not found"));
             s.setTargetKind("DOCUMENT");
             s.setDocumentId(documentId);
-        } else {
+        } else if (folderId != null) {
             folderRepo.findByIdAndUserId(folderId, uid)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "folder not found"));
             s.setTargetKind("FOLDER");
             s.setFolderId(folderId);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentIds, documentId or folderId is required");
         }
 
         String scope = strOr(body.get("scope"), "VIEW").toUpperCase();
@@ -75,12 +95,16 @@ public class ShareController {
         if (days != null && days > 0) {
             s.setExpiresAt(LocalDateTime.now().plusDays(days));
         }
-        String passcode = str(body.get("passcode"));
-        if (passcode != null) {
-            s.setPasscodeHash(passwordEncoder.encode(passcode));
-        }
+        s.setPasscodeHash(passwordEncoder.encode(passcode));
         s.setToken(shareService.newToken());
-        return toView(shareRepo.save(s));
+        DocumentShare saved = shareRepo.save(s);
+
+        if ("SET".equals(saved.getTargetKind())) {
+            // De-dupe member ids, then persist the set membership.
+            new java.util.LinkedHashSet<>(documentIds)
+                    .forEach(id -> shareDocumentRepo.save(new ShareDocument(saved.getId(), id)));
+        }
+        return toView(saved);
     }
 
     /** All of the caller's shares, newest first, with target label + live status. */
@@ -124,6 +148,7 @@ public class ShareController {
         DocumentShare s = shareRepo.findByIdAndOwnerUserId(id, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         accessLogRepo.deleteByShareId(s.getId());
+        shareDocumentRepo.deleteByShareId(s.getId());
         shareRepo.delete(s);
         return ResponseEntity.noContent().build();
     }
@@ -136,6 +161,9 @@ public class ShareController {
         m.put("targetKind", s.getTargetKind());
         m.put("documentId", s.getDocumentId());
         m.put("folderId", s.getFolderId());
+        if ("SET".equals(s.getTargetKind())) {
+            m.put("documentCount", shareDocumentRepo.findByShareId(s.getId()).size());
+        }
         m.put("targetLabel", targetLabel(s));
         m.put("scope", s.getScope());
         m.put("granteeKind", s.getGranteeKind());
@@ -169,7 +197,22 @@ public class ShareController {
             return folderRepo.findByIdAndUserId(s.getFolderId(), s.getOwnerUserId())
                     .map(DocFolder::getName).orElse("(deleted folder)");
         }
+        if ("SET".equals(s.getTargetKind())) {
+            int n = shareDocumentRepo.findByShareId(s.getId()).size();
+            return n + (n == 1 ? " document" : " documents");
+        }
         return "";
+    }
+
+    /** Parses a JSON array of ids into a list of Longs (ignoring blanks/non-numeric). */
+    private List<Long> longList(Object raw) {
+        if (!(raw instanceof List<?> list)) return null;
+        List<Long> out = new java.util.ArrayList<>();
+        for (Object o : list) {
+            Long v = longVal(o);
+            if (v != null) out.add(v);
+        }
+        return out;
     }
 
     private String str(Object o) {

@@ -28,6 +28,7 @@ public class PublicShareController {
 
     private final DocumentShareRepository shareRepo;
     private final DocumentRepository documentRepo;
+    private final ShareDocumentRepository shareDocumentRepo;
     private final ShareService shareService;
     private final DocumentStorageService storageService;
     private final PasswordEncoder passwordEncoder;
@@ -114,6 +115,12 @@ public class PublicShareController {
             documentRepo.findById(s.getDocumentId()).ifPresent(docs::add);
         } else if ("FOLDER".equals(s.getTargetKind()) && s.getFolderId() != null) {
             docs.addAll(documentRepo.findByUserIdAndFolderIdOrderByCreatedAtDesc(s.getOwnerUserId(), s.getFolderId()));
+        } else if ("SET".equals(s.getTargetKind())) {
+            for (ShareDocument sd : shareDocumentRepo.findByShareId(s.getId())) {
+                documentRepo.findById(sd.getDocumentId())
+                        .filter(d -> d.getUserId().equals(s.getOwnerUserId()))
+                        .ifPresent(docs::add);
+            }
         }
         List<Map<String, Object>> out = new ArrayList<>();
         for (Document d : docs) {
@@ -136,6 +143,10 @@ public class PublicShareController {
         if (!d.getUserId().equals(s.getOwnerUserId())) return false;
         if ("DOCUMENT".equals(s.getTargetKind())) return d.getId().equals(s.getDocumentId());
         if ("FOLDER".equals(s.getTargetKind())) return s.getFolderId() != null && s.getFolderId().equals(d.getFolderId());
+        if ("SET".equals(s.getTargetKind())) {
+            return shareDocumentRepo.findByShareId(s.getId()).stream()
+                    .anyMatch(sd -> sd.getDocumentId().equals(d.getId()));
+        }
         return false;
     }
 

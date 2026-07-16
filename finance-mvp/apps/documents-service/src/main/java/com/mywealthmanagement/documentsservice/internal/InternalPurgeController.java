@@ -20,6 +20,7 @@ public class InternalPurgeController {
     private final DocFolderRepository folderRepo;
     private final DocumentRepository documentRepo;
     private final DocumentShareRepository shareRepo;
+    private final ShareDocumentRepository shareDocumentRepo;
     private final ShareAccessLogRepository accessLogRepo;
     private final DocumentStorageService storageService;
 
@@ -33,9 +34,10 @@ public class InternalPurgeController {
         if (StringUtils.hasText(internalKey) && !internalKey.equals(key)) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
         }
-        // Shares + their access logs.
+        // Shares + their access logs + set memberships.
         for (DocumentShare s : shareRepo.findByOwnerUserIdOrderByCreatedAtDesc(userId)) {
             accessLogRepo.deleteByShareId(s.getId());
+            shareDocumentRepo.deleteByShareId(s.getId());
         }
         shareRepo.deleteByOwnerUserId(userId);
         // Documents (best-effort GCS cleanup) + folders.

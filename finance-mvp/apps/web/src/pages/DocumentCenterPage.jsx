@@ -52,8 +52,17 @@ export default function DocumentCenterPage() {
   const [showUpload, setShowUpload] = useState(false);
   const [showLink, setShowLink] = useState(false);
   const [editDoc, setEditDoc] = useState(null);
-  const [shareDoc, setShareDoc] = useState(null);   // document OR { folder:true, id, name }
+  const [shareDoc, setShareDoc] = useState(null);   // document OR { folder:true, id, name } OR { set:true, documentIds, count }
   const [showShares, setShowShares] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState(() => new Set()); // ids of documents picked for a multi-file share
+
+  const toggleSelected = (id) => setSelected((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const exitSelect = () => { setSelectMode(false); setSelected(new Set()); };
 
   const flash = (m) => { setMsg(m); setTimeout(() => setMsg(""), 3500); };
 
@@ -151,6 +160,10 @@ export default function DocumentCenterPage() {
           <button className="btn btn-secondary btn-sm" onClick={() => setShowShares(true)}>
             <i className="ti ti-users"></i> Shared ({summary.activeShares})
           </button>
+          <button className={`btn btn-sm ${selectMode ? "btn-primary" : "btn-secondary"}`}
+                  onClick={() => (selectMode ? exitSelect() : setSelectMode(true))}>
+            <i className="ti ti-checkbox"></i> {selectMode ? "Cancel" : "Select"}
+          </button>
           <button className="btn btn-secondary btn-sm" onClick={() => setShowLink(true)}>
             <i className="ti ti-link"></i> Add link
           </button>
@@ -181,6 +194,7 @@ export default function DocumentCenterPage() {
             <FolderRow key={f.id} icon="ti-folder" label={f.name} count={f.documentCount}
                        active={String(activeFolder) === String(f.id)}
                        onClick={() => selectFolder(f.id)}
+                       onShare={() => setShareDoc({ folder: true, id: f.id, name: f.name })}
                        onRename={() => onRenameFolder(f)} onDelete={() => onDeleteFolder(f)} />
           ))}
         </div>
@@ -203,6 +217,8 @@ export default function DocumentCenterPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {documents.map((d) => (
                 <DocRow key={d.id} d={d} folders={folders}
+                        selectMode={selectMode} checked={selected.has(d.id)}
+                        onToggleSelect={() => toggleSelected(d.id)}
                         onOpen={() => onOpen(d)} onShare={() => setShareDoc(d)}
                         onEdit={() => setEditDoc(d)} onDelete={() => onDelete(d)} />
               ))}
@@ -210,6 +226,19 @@ export default function DocumentCenterPage() {
           )}
         </div>
       </div>
+
+      {selectMode && (
+        <div className="card" style={{ position: "sticky", bottom: 12, marginTop: 12, display: "flex",
+          alignItems: "center", gap: 12, boxShadow: "0 6px 24px rgba(0,0,0,.12)" }}>
+          <strong>{selected.size} selected</strong>
+          <span style={{ flex: 1, fontSize: 13, color: "var(--tv-text-muted)" }}>Share several documents together as one secure link.</span>
+          <button className="btn btn-secondary btn-sm" onClick={exitSelect}>Cancel</button>
+          <button className="btn btn-primary btn-sm" disabled={selected.size === 0}
+                  onClick={() => setShareDoc({ set: true, documentIds: [...selected], count: selected.size })}>
+            <i className="ti ti-share"></i> Share {selected.size} selected
+          </button>
+        </div>
+      )}
 
       {showUpload && (
         <UploadModal uploadEnabled={config.uploadEnabled} folders={folders} defaultFolder={activeFolder}
@@ -228,7 +257,7 @@ export default function DocumentCenterPage() {
       )}
       {shareDoc && (
         <ShareModal target={shareDoc}
-                    onClose={() => setShareDoc(null)}
+                    onClose={() => { const wasSet = shareDoc?.set; setShareDoc(null); if (wasSet) exitSelect(); }}
                     onCreated={async () => { await loadFolders(); flash("Share link created."); }} />
       )}
       {showShares && (
@@ -238,7 +267,7 @@ export default function DocumentCenterPage() {
   );
 }
 
-function FolderRow({ icon, label, count, active, onClick, onRename, onDelete }) {
+function FolderRow({ icon, label, count, active, onClick, onShare, onRename, onDelete }) {
   return (
     <div onClick={onClick}
          className="doc-folder-row"
@@ -250,8 +279,9 @@ function FolderRow({ icon, label, count, active, onClick, onRename, onDelete }) 
       <i className={`ti ${icon}`}></i>
       <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>{label}</span>
       {count != null && <span className="badge" style={{ fontSize: 11 }}>{count}</span>}
-      {(onRename || onDelete) && (
+      {(onShare || onRename || onDelete) && (
         <span style={{ display: "flex", gap: 2 }} onClick={(e) => e.stopPropagation()}>
+          {onShare && <button className="btn btn-secondary btn-sm" style={{ padding: "1px 5px" }} title="Share folder" onClick={onShare}><i className="ti ti-share"></i></button>}
           {onRename && <button className="btn btn-secondary btn-sm" style={{ padding: "1px 5px" }} title="Rename" onClick={onRename}><i className="ti ti-pencil"></i></button>}
           {onDelete && <button className="btn btn-secondary btn-sm" style={{ padding: "1px 5px" }} title="Delete" onClick={onDelete}><i className="ti ti-trash"></i></button>}
         </span>
@@ -260,15 +290,23 @@ function FolderRow({ icon, label, count, active, onClick, onRename, onDelete }) 
   );
 }
 
-function DocRow({ d, onOpen, onShare, onEdit, onDelete }) {
+function DocRow({ d, selectMode, checked, onToggleSelect, onOpen, onShare, onEdit, onDelete }) {
   const canOpen = d.isFile || !!d.url;
   return (
-    <div className="card" style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12, margin: 0 }}>
+    <div className="card" onClick={selectMode ? onToggleSelect : undefined}
+         style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 12, margin: 0,
+           cursor: selectMode ? "pointer" : "default",
+           borderColor: selectMode && checked ? "var(--tv-forest)" : undefined,
+           background: selectMode && checked ? "var(--tv-forest-tint, rgba(45,90,61,.08))" : undefined }}>
+      {selectMode && (
+        <input type="checkbox" checked={checked} readOnly
+               style={{ width: 18, height: 18, accentColor: "var(--tv-forest)" }} />
+      )}
       <i className={`ti ${d.isFile ? "ti-file-text" : "ti-link"}`} style={{ fontSize: 22, color: "var(--tv-forest)" }}></i>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          <button onClick={canOpen ? onOpen : undefined}
-                  style={{ background: "none", border: "none", padding: 0, cursor: canOpen ? "pointer" : "default",
+          <button onClick={!selectMode && canOpen ? onOpen : undefined}
+                  style={{ background: "none", border: "none", padding: 0, cursor: !selectMode && canOpen ? "pointer" : "default",
                            fontWeight: 600, fontSize: 15, color: "inherit", textAlign: "left" }}>
             {d.label}
           </button>
@@ -282,12 +320,14 @@ function DocRow({ d, onOpen, onShare, onEdit, onDelete }) {
           {d.note ? ` · ${d.note}` : ""}
         </div>
       </div>
-      <div style={{ display: "flex", gap: 6 }}>
-        {canOpen && <button className="btn btn-secondary btn-sm" onClick={onOpen} title="Open"><i className="ti ti-external-link"></i></button>}
-        <button className="btn btn-secondary btn-sm" onClick={onShare} title="Share"><i className="ti ti-share"></i></button>
-        <button className="btn btn-secondary btn-sm" onClick={onEdit} title="Edit / move"><i className="ti ti-pencil"></i></button>
-        <button className="btn btn-secondary btn-sm" onClick={onDelete} title="Delete"><i className="ti ti-trash"></i></button>
-      </div>
+      {!selectMode && (
+        <div style={{ display: "flex", gap: 6 }}>
+          {canOpen && <button className="btn btn-secondary btn-sm" onClick={onOpen} title="Open"><i className="ti ti-external-link"></i></button>}
+          <button className="btn btn-secondary btn-sm" onClick={onShare} title="Share"><i className="ti ti-share"></i></button>
+          <button className="btn btn-secondary btn-sm" onClick={onEdit} title="Edit / move"><i className="ti ti-pencil"></i></button>
+          <button className="btn btn-secondary btn-sm" onClick={onDelete} title="Delete"><i className="ti ti-trash"></i></button>
+        </div>
+      )}
     </div>
   );
 }
@@ -443,6 +483,7 @@ function EditModal({ doc, folders, onClose, onDone }) {
 
 function ShareModal({ target, onClose, onCreated }) {
   const isFolder = !!target.folder;
+  const isSet = !!target.set;
   const [scope, setScope] = useState("VIEW");
   const [granteeKind, setGranteeKind] = useState("CPA");
   const [granteeRef, setGranteeRef] = useState("");
@@ -455,13 +496,16 @@ function ShareModal({ target, onClose, onCreated }) {
   const [err, setErr] = useState("");
 
   const submit = async () => {
+    if (!passcode.trim()) { setErr("A passcode is required to share."); return; }
     setBusy(true); setErr("");
     try {
       const payload = {
         scope, granteeKind, granteeRef, message,
-        passcode: passcode || undefined,
+        passcode: passcode.trim(),
         expiresInDays: expiresInDays ? Number(expiresInDays) : undefined,
-        ...(isFolder ? { folderId: target.id } : { documentId: target.id }),
+        ...(isSet ? { documentIds: target.documentIds }
+          : isFolder ? { folderId: target.id }
+          : { documentId: target.id }),
       };
       const s = await api.createDocShare(payload);
       setCreated(s);
@@ -475,7 +519,9 @@ function ShareModal({ target, onClose, onCreated }) {
     catch { /* clipboard may be blocked; the link is shown for manual copy */ }
   };
 
-  const title = isFolder ? `Share folder “${target.name}”` : `Share “${target.label}”`;
+  const title = isSet ? `Share ${target.count} document${target.count === 1 ? "" : "s"}`
+    : isFolder ? `Share folder “${target.name}”`
+    : `Share “${target.label}”`;
 
   if (created) {
     return (
@@ -526,9 +572,12 @@ function ShareModal({ target, onClose, onCreated }) {
           </select>
         </div>
         <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Passcode (optional)</label>
-          <input style={inputStyle} value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="e.g. 4821" />
+          <label style={labelStyle}>Passcode <span style={{ color: "var(--tv-negative)" }}>*</span></label>
+          <input style={inputStyle} value={passcode} onChange={(e) => setPasscode(e.target.value)} placeholder="required — e.g. 4821" />
         </div>
+      </div>
+      <div style={{ fontSize: 12, color: "var(--tv-text-muted)", marginTop: 4 }}>
+        <i className="ti ti-shield-lock"></i> A passcode is required. Share it with the recipient separately from the link.
       </div>
 
       <label style={labelStyle}>Message (optional)</label>
@@ -537,7 +586,7 @@ function ShareModal({ target, onClose, onCreated }) {
       {err && <div style={{ color: "var(--tv-negative)", fontSize: 13, marginTop: 8 }}>{err}</div>}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 16 }}>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className="btn btn-primary" onClick={submit} disabled={busy}>{busy ? "Creating…" : "Create share link"}</button>
+        <button className="btn btn-primary" onClick={submit} disabled={busy || !passcode.trim()}>{busy ? "Creating…" : "Create share link"}</button>
       </div>
     </Modal>
   );
@@ -595,7 +644,7 @@ function SharesPanel({ onClose }) {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                 <div style={{ minWidth: 0 }}>
                   <div style={{ fontWeight: 600, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <i className={`ti ${s.targetKind === "FOLDER" ? "ti-folder" : "ti-file-text"}`}></i>
+                    <i className={`ti ${s.targetKind === "FOLDER" ? "ti-folder" : s.targetKind === "SET" ? "ti-files" : "ti-file-text"}`}></i>
                     {s.targetLabel}
                     <span className="badge" style={{ color: statusColor(s.status), borderColor: statusColor(s.status) }}>{s.status}</span>
                   </div>
