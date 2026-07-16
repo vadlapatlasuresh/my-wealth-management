@@ -8,6 +8,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -49,9 +50,22 @@ public class AuditChainService {
     private final AuditEventRepository repository;
     private final AuditChainKeyHolder keyHolder;
 
-    /** Compute the chain links and persist. Returns the saved event. */
+    /**
+     * Compute the chain links and persist. Returns the saved event.
+     *
+     * createdAt is truncated to microseconds FIRST, because it is part of the hashed content and
+     * the store only keeps microsecond precision (Postgres `timestamp`, and H2 likewise). Hashing
+     * a nanosecond value that the database then rounds away produces a row whose entry_hash can
+     * never be recomputed from its own persisted fields — verify() reports "hash mismatch" on a
+     * completely untouched log, which is indistinguishable from tampering.
+     *
+     * This bites only where the platform clock has nanosecond resolution: Linux (so CI and
+     * production) but not macOS, where LocalDateTime.now() is already microsecond-precise. That is
+     * why it stayed hidden — it cannot reproduce on a Mac.
+     */
     public synchronized AuditEvent append(AuditEvent e) {
-        if (e.getCreatedAt() == null) e.setCreatedAt(LocalDateTime.now());
+        e.setCreatedAt((e.getCreatedAt() == null ? LocalDateTime.now() : e.getCreatedAt())
+                .truncatedTo(ChronoUnit.MICROS));
         AuditEvent last = repository.findTopByOrderByIdDesc();
         String prev = (last != null && last.getEntryHash() != null) ? last.getEntryHash() : GENESIS;
         e.setPrevHash(prev);

@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -57,7 +58,10 @@ public class AuditCheckpointService {
         cp.setChainHead(chainService.currentHead());
         cp.setLastEventId(last == null ? null : last.getId());
         cp.setEventCount(eventRepository.count());
-        cp.setCreatedAt(LocalDateTime.now());
+        // Microseconds: createdAt is part of the signed content, and the store rounds nanoseconds
+        // away — signing a value the DB won't keep makes the checkpoint fail its own signature
+        // check on re-read. Same trap as AuditChainService.append; only reproduces on Linux.
+        cp.setCreatedAt(LocalDateTime.now().truncatedTo(ChronoUnit.MICROS));
         cp.setSignature(sign(cp));
         AuditCheckpoint saved = checkpointRepository.save(cp);
         publish(saved);

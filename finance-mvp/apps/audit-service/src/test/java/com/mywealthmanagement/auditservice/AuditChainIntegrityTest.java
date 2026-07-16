@@ -46,6 +46,45 @@ class AuditChainIntegrityTest {
         return chain.append(e);
     }
 
+    /**
+     * REGRESSION: a chain written with a nanosecond-precision clock must still verify.
+     *
+     * createdAt is hashed, but the store keeps only microseconds. Hashing a value the database
+     * rounds away yields rows that can never be recomputed from their own persisted fields —
+     * verify() reports "hash mismatch" on a completely untouched log, which is indistinguishable
+     * from tampering. It only reproduces where the clock has nanosecond resolution: Linux (CI and
+     * production), never macOS. So this test supplies the nanoseconds explicitly rather than
+     * trusting the platform clock — otherwise it passes on a Mac while the bug is live in prod,
+     * which is exactly what happened.
+     */
+    @Test
+    void aChainWrittenWithNanosecondTimestampsStillVerifies() {
+        for (int i = 0; i < 3; i++) {
+            AuditEvent e = new AuditEvent();
+            e.setAction("ops.customer.view");
+            e.setActorKind("OPS");
+            e.setActorId("7");
+            e.setTargetUserId("42");
+            e.setOutcome("SUCCESS");
+            e.setCreatedAt(LocalDateTime.now().withNano(123456789)); // nanos the store will round
+            chain.append(e);
+        }
+
+        AuditChainService.ChainStatus status = chain.verify();
+        assertTrue(status.valid(),
+                "an untouched chain must verify regardless of the platform clock's resolution: " + status.detail());
+    }
+
+    /** Same trap, checkpoint edition: its createdAt is signed and must survive the round-trip. */
+    @Test
+    void aCheckpointSignedWithNanosecondTimestampsStillVerifies() {
+        append("ops.customer.view", "7", "42", null);
+        checkpointService.createCheckpoint();
+
+        AuditCheckpointService.CheckpointStatus status = checkpointService.verifyCheckpoints();
+        assertTrue(status.valid(), status.detail());
+    }
+
     @Test
     void newEventsAreWrittenWithTheKeyedChain() {
         AuditEvent e = append("ops.customer.view", "7", "42", null);

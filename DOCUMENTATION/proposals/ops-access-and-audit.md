@@ -135,6 +135,25 @@ what changed. Both tiers land in the same `audit_events` table and the same hash
    history then means also rewriting every published copy. `AuditChainIntegrityTest` performs each
    of these attacks and asserts they're caught.
 
+### ⚠️ The v1 chain never actually verified in production
+
+Found while building this, by a test that only fails on Linux:
+
+`created_at` is part of the hashed content, but the store keeps **microseconds** (Postgres
+`timestamp`; H2 the same). `LocalDateTime.now()` returns **nanoseconds on Linux** and only
+microseconds on macOS. So every row written in production hashed a nanosecond timestamp, the
+database rounded it away on write, and the hash could never be recomputed from the row's own
+persisted fields. `/api/v1/audit/verify` would have reported **"hash mismatch"** on a completely
+untouched log — indistinguishable from tampering.
+
+It never showed up locally because it **cannot reproduce on a Mac**. `AuditChainService.append`
+now truncates to microseconds before hashing, and
+`aChainWrittenWithNanosecondTimestampsStillVerifies` supplies the nanoseconds explicitly rather
+than trusting the platform clock — otherwise the test passes on a laptop while the bug is live.
+
+**What this means for existing rows:** every pre-fix v1 row is unverifiable and always was. The
+chain is trustworthy from this deploy forward. Don't read a v1 failure as evidence of tampering.
+
 **Known limits, stated plainly:**
 - The log line is a real anchor only because logs are retained separately. A GCS bucket with object
   versioning or a WORM store is strictly stronger and drops into `AuditCheckpointService.publish`.
