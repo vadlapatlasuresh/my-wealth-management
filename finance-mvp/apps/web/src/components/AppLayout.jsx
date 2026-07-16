@@ -14,7 +14,7 @@ import OpsPortal from "./OpsPortal";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
-import { SubscriptionProvider, FeatureGate } from "../config/subscription";
+import { SubscriptionProvider, FeatureGate, TrialBanner, TrialOnboardingModal } from "../config/subscription";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { setupAutoTranslate } from "../i18n/domTranslator";
 
@@ -407,6 +407,7 @@ export default function AppLayout(props) {
 
   const memberShell = (
     <SubscriptionProvider>
+      <TrialOnboardingModal />
       <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
         <div className="mobile-nav-backdrop" onClick={closeMobileNav} aria-hidden="true"></div>
         <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} onNavigate={closeMobileNav} />
@@ -422,6 +423,8 @@ export default function AppLayout(props) {
           />
           <OuterTabs />
           <div className="page-content">
+            {/* Time-sensitive subscription notices (trial ending, expired, past due). */}
+            <TrialBanner />
             {/* {error && <p className="error banner-error">{error}</p>} */}
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
