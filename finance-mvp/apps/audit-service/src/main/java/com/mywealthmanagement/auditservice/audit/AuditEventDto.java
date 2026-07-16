@@ -27,4 +27,16 @@ public class AuditEventDto {
     private LocalDateTime createdAt;
     private String geoCity;      // resolved from sourceIp (nullable)
     private String geoCountry;   // resolved from sourceIp (nullable)
+
+    // ---- Actor / target / semantics -----------------------------------------
+    // userId above is the ACTOR (kept for backward compatibility). These say so explicitly and,
+    // crucially, record who was acted UPON — which request-level capture cannot express.
+    private String actorKind;      // MEMBER | OPS | SYSTEM | ANONYMOUS
+    private String actorId;        // ops_users id when actorKind=OPS
+    private String targetUserId;   // the CUSTOMER acted upon
+    private String reason;         // the actor's stated justification
+    private String beforeJson;
+    private String afterJson;
+    private String ticketRef;
+    private Integer hashVersion;   // 1 = legacy unkeyed SHA-256, 2 = keyed HMAC
 }

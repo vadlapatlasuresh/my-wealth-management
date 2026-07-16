@@ -40,13 +40,18 @@ public class PaymentController {
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing token");
         }
-        // Ops staff hold OPS_* roles on a typ=ops token. The old CARE/ADMIN member roles are gone:
-        // they lived on customer rows, which made an agent's token a valid member token everywhere.
-        // JwtAuthFilter already guarantees only ops tokens authenticate here; this is defence in depth.
-        // Phase 2 replaces this with a per-permission check (finance.ledger.view).
-        List<String> roles = jwtService.extractRoles(authHeader.substring(7));
-        if (roles.stream().noneMatch(r -> r.startsWith("OPS_"))) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Customer-care access required");
+        // Authorised by PERMISSION, not by role: "which roles may do this" is a policy decision
+        // that lives in the DB (ops_role_permissions) and is retuned without a deploy. The token
+        // carries the resolved keys. JwtAuthFilter already guarantees only a typ=ops token
+        // authenticates here; this is the authorisation half of that.
+        //
+        // Reading a customer's payment history is customer.data.view. When the financial ops layer
+        // lands (Phase 5) its routes get their own finance.* keys — viewing what a customer was
+        // charged and MOVING their money are not the same authority.
+        List<String> perms = jwtService.extractPermissions(authHeader.substring(7));
+        if (!perms.contains("customer.data.view")) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Missing permission: customer.data.view");
         }
     }
 

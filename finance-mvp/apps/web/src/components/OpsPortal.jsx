@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api, getOpsName, getOpsEmail, getOpsUserId, getOpsRoles, isOpsAdmin } from '../api';
+import { api, getOpsName, getOpsEmail, getOpsRoles, getOpsPermissions, hasOpsPermission } from '../api';
 import CustomerCarePage from '../pages/CustomerCarePage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
+import OpsAccountsPage from '../pages/OpsAccountsPage';
 import CpaModeration from './CpaModeration';
 
 /* OPS_SUPERVISOR → "Supervisor". The OPS_ prefix is meaningful in the token, not to a human. */
@@ -28,11 +28,11 @@ function ts(v) {
 function SessionLog() {
   const [rows, setRows] = useState(null);
   const [error, setError] = useState('');
-  const agentId = getOpsUserId();
 
   async function load() {
     setError('');
     try {
+      // The agent is derived from the token server-side — no id to pass, and none to get wrong.
       const res = await api.opsMyActivity(50);
       setRows(Array.isArray(res) ? res : []);
     } catch (e) {
@@ -40,7 +40,7 @@ function SessionLog() {
       setRows([]);
     }
   }
-  useEffect(() => { if (agentId) load(); /* eslint-disable-next-line */ }, [agentId]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
 
   return (
     <div className="page active">
@@ -90,18 +90,22 @@ function SessionLog() {
  * (AppLayout only renders this for CARE/ADMIN) and re-checked here.
  */
 export default function OpsPortal({ handleLogout }) {
-  const navigate = useNavigate();
-  const [view, setView] = useState('customers'); // customers | analytics | session
   const roles = getOpsRoles();
-  const isAdmin = isOpsAdmin();
   const agentInitial = (getOpsName() || getOpsEmail() || 'A')[0].toUpperCase();
 
+  // Nav is permission-gated, not role-gated: a retuned role takes effect without a code change.
+  // Items the agent can't use are ABSENT rather than disabled — a greyed-out button that exists
+  // only to say "not for you" is noise on a screen meant for working a live call.
   const NAV = [
-    { key: 'customers', label: 'Customers', icon: 'ti ti-users', show: true },
-    { key: 'analytics', label: 'Analytics', icon: 'ti ti-chart-dots', show: true },
-    { key: 'cpas', label: 'CPA Listings', icon: 'ti ti-user-check', show: true },
+    { key: 'customers', label: 'Customers', icon: 'ti ti-users', show: hasOpsPermission('customer.search') },
+    { key: 'analytics', label: 'Analytics', icon: 'ti ti-chart-dots', show: hasOpsPermission('ops.analytics.view') },
+    { key: 'cpas', label: 'CPA Listings', icon: 'ti ti-user-check', show: hasOpsPermission('cpa.moderate') },
+    { key: 'accounts', label: 'Ops Accounts', icon: 'ti ti-shield-lock', show: hasOpsPermission('ops.user.manage') },
     { key: 'session', label: 'My session log', icon: 'ti ti-clipboard-check', show: true },
   ].filter((n) => n.show);
+
+  // Land on the first thing this agent can actually open, not a hardcoded tab they may lack.
+  const [view, setView] = useState(() => (NAV[0] ? NAV[0].key : 'session'));
 
   return (
     <div className="ops-shell">
@@ -135,9 +139,8 @@ export default function OpsPortal({ handleLogout }) {
           ))}
           <div className="ops-nav-foot">
             <div className="setting-help" style={{ padding: '0 14px' }}>
-              {isAdmin
-                ? 'You can manage ops accounts and their roles.'
-                : 'View-only access. Ask an ops admin if you need more.'}
+              You hold {getOpsPermissions().length} permission{getOpsPermissions().length === 1 ? '' : 's'}.
+              Ask an ops admin if you need more.
             </div>
           </div>
         </nav>
@@ -151,6 +154,7 @@ export default function OpsPortal({ handleLogout }) {
             </React.Suspense>
           )}
           {view === 'cpas' && <CpaModeration />}
+          {view === 'accounts' && <OpsAccountsPage />}
           {view === 'session' && <SessionLog />}
         </main>
       </div>

@@ -10,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -41,6 +43,7 @@ public class SupportController {
      *  - structured multi-field {@code first}/{@code last}/{@code email}/{@code phone} (AND-ed).
      * Blank everything = most recent users. Phone is matched on digits only.
      */
+    @PreAuthorize("hasAuthority('customer.search')")
     @GetMapping("/users")
     public Page<SupportUserDto> searchUsers(@RequestParam(required = false) String query,
                                             @RequestParam(required = false) String first,
@@ -70,17 +73,31 @@ public class SupportController {
         return StringUtils.hasText(s) ? s.trim() : "";
     }
 
-    /** Full 360 view: profile + recent activity + issues (failed/denied actions) from audit. */
+    /**
+     * Full 360 view: profile + recent activity + issues (failed/denied actions) from audit.
+     *
+     * Opening a record writes an explicit {@code ops.customer.view} carrying the TARGET customer,
+     * so "who looked at customer 42" is answerable directly rather than by pattern-matching URLs.
+     * No reason is demanded here on purpose: requiring one on every record open trains agents to
+     * type "support" a hundred times a day, which destroys the signal it is meant to create.
+     * Reasons are demanded where they carry weight — see {@link #revealPii}.
+     *
+     * SSN/EIN are NOT in this response; they come from the reveal endpoint.
+     */
+    @PreAuthorize("hasAuthority('customer.view')")
     @GetMapping("/users/{id}")
     public SupportUserDetailDto getUser(@PathVariable Long id) {
         User u = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         List<Map<String, Object>> activity = auditClient.fetchUserActivity(String.valueOf(id), false, 100);
         List<Map<String, Object>> issues = auditClient.fetchUserActivity(String.valueOf(id), true, 100);
+        auditClient.recordOps(currentOpsUserId(), "ops.customer.view", "SUCCESS",
+                String.valueOf(id), null, null, null);
         return toDetail(u, activity, issues);
     }
 
     /** A user's activity timeline; onlyIssues=true returns just the problems encountered. */
+    @PreAuthorize("hasAuthority('customer.view')")
     @GetMapping("/users/{id}/activity")
     public List<Map<String, Object>> getUserActivity(@PathVariable Long id,
                                                      @RequestParam(defaultValue = "false") boolean onlyIssues,
@@ -89,6 +106,44 @@ public class SupportController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
         }
         return auditClient.fetchUserActivity(String.valueOf(id), onlyIssues, clampSize(limit));
+    }
+
+    /**
+     * Unmask a customer's SSN/EIN last-4. Separate endpoint, separate permission, mandatory reason.
+     *
+     * Why this is not just a field on the 360 view: the common support case — "why did my payment
+     * fail?" — never needs an SSN. Leaving it on the record makes every agent's every glance an
+     * unrecorded PII access. Pulling it behind a deliberate, reason-carrying, audited action means
+     * the trail can answer "who looked at this customer's SSN, and why" — and the answer is
+     * usually "nobody", which is the point.
+     *
+     * Still only the last 4. The full value is encrypted at rest and no ops route returns it.
+     */
+    @PreAuthorize("hasAuthority('customer.pii.reveal')")
+    @GetMapping("/users/{id}/pii")
+    public Map<String, Object> revealPii(@PathVariable Long id, @RequestParam String reason) {
+        if (!StringUtils.hasText(reason) || reason.trim().length() < 8) {
+            // A reason nobody can understand later is the same as no reason. Rejected loudly
+            // rather than silently accepted, so the trail stays worth reading.
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "A reason of at least 8 characters is required to reveal PII");
+        }
+        User u = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        auditClient.recordOps(currentOpsUserId(), "ops.pii.reveal", "SUCCESS",
+                String.valueOf(id), reason.trim(), null, null);
+
+        Map<String, Object> pii = new java.util.LinkedHashMap<>();
+        pii.put("ssnLast4", u.getSsnLast4());
+        pii.put("einLast4", u.getEinLast4());
+        return pii;
+    }
+
+    /** The acting ops user's id (subject of the typ=ops token). */
+    private static String currentOpsUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        return auth == null ? null : auth.getName();
     }
 
     // POST /users/{id}/roles (grant/revoke CARE/ADMIN on a customer) has been removed. It was the
@@ -105,9 +160,14 @@ public class SupportController {
 
     private SupportUserDetailDto toDetail(User u, List<Map<String, Object>> activity,
                                          List<Map<String, Object>> issues) {
+        // ssnLast4/einLast4 are deliberately null here — they are only served by GET
+        // /users/{id}/pii, which needs customer.pii.reveal and a written reason. hasSsn/hasEin
+        // let the UI show that something is on file (and offer the reveal) without disclosing it.
         return new SupportUserDetailDto(u.getId(), u.getEmail(), u.getName(), u.getFirstName(),
                 u.getLastName(), u.getPhone(), u.getAccountType(), u.getBusinessName(),
-                u.getSsnLast4(), u.getEinLast4(), u.getPhoneVerified(), u.getIdentityVerified(),
+                null, null,
+                StringUtils.hasText(u.getSsnLast4()), StringUtils.hasText(u.getEinLast4()),
+                u.getPhoneVerified(), u.getIdentityVerified(),
                 roleNames(u), u.getCreatedAt(), u.getUpdatedAt(), issues.size(), activity, issues);
     }
 

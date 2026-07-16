@@ -58,7 +58,9 @@ class SupportFlowTests {
         agent.setEmail("agent@terravest.internal");
         agent.setPasswordHash(encoder.encode("Password123!"));
         agent.setName("Care Agent");
-        agent.setRoles(new LinkedHashSet<>(List.of(OpsRole.OPS_AGENT)));
+        // Role KEYS, not the enum: roles are DB-editable (seeded by V9), so an ops user holds
+        // whatever keys exist rather than a fixed set of enum constants.
+        agent.setRoles(new LinkedHashSet<>(List.of(OpsRole.OPS_AGENT.name())));
         opsUsers.save(agent);
 
         User alice = new User("alice@example.com", encoder.encode("Password123!"),

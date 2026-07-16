@@ -69,8 +69,8 @@ public class OpsBootstrap implements ApplicationRunner {
         user.setName("Ops Admin");
         user.setActive(true);
         user.setCreatedBy("BOOTSTRAP");
-        Set<OpsRole> roles = new LinkedHashSet<>();
-        roles.add(OpsRole.OPS_ADMIN);
+        Set<String> roles = new LinkedHashSet<>();
+        roles.add(OpsRole.OPS_ADMIN.name()); // seeded as a built-in role by migration V9
         user.setRoles(roles);
         opsUserRepository.save(user);
 

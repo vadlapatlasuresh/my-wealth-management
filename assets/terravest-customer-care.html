@@ -177,7 +177,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
 const USERS = {
   1042: {
     id:1042, name:'Alex Kumar', email:'alex.kumar@example.com', accountType:'INDIVIDUAL', business:null,
-    phone:'+1 (512) 555-0192', phoneVerified:true, idLabel:'SSN ••4417', identityVerified:false,
+    phone:'+1 (512) 555-0192', phoneVerified:true, idKind:'SSN', identityVerified:false,
     since:'Mar 2026', roles:['USER'],
     activity:[
       {t:'Jun 7, 09:14', action:'Bill pay submission', service:'payment', status:402, fail:true, ip:'73.12.x.x', note:'Insufficient funds on funding account'},
@@ -188,7 +188,7 @@ const USERS = {
   },
   1043: {
     id:1043, name:'Alexa Romero', email:'alexa.r@example.com', accountType:'BUSINESS', business:'Romero Holdings LLC',
-    phone:'+1 (415) 555-0046', phoneVerified:true, idLabel:'EIN ••8830', identityVerified:true,
+    phone:'+1 (415) 555-0046', phoneVerified:true, idKind:'EIN', identityVerified:true,
     since:'Jan 2026', roles:['USER'],
     activity:[
       {t:'Jun 7, 08:40', action:'Login success', service:'auth', status:'SUCCESS', fail:false, ip:'Chrome · macOS'},
@@ -197,7 +197,7 @@ const USERS = {
   },
   1044: {
     id:1044, name:'Alexander Pike', email:'a.pike@example.com', accountType:'INDIVIDUAL', business:null,
-    phone:'+1 (212) 555-7781', phoneVerified:false, idLabel:'—', identityVerified:false,
+    phone:'+1 (212) 555-7781', phoneVerified:false, idKind:null, identityVerified:false,
     since:'Jun 2026', roles:['USER'],
     activity:[
       {t:'Jun 7, 07:58', action:'SMS code verify', service:'auth', status:401, fail:true, ip:'98.4.x.x', note:'Code expired — 3 attempts'},
@@ -245,7 +245,10 @@ function renderDetail(){
       <div class="kpi-grid">
         <div class="kpi"><div class="kpi-label">Account</div><div class="kpi-val">${u.accountType}</div>${u.business?`<div class="kpi-delta muted">${esc(u.business)}</div>`:''}</div>
         <div class="kpi"><div class="kpi-label">Phone</div><div class="kpi-val">${esc(u.phone)}</div><div class="kpi-delta">${badge(u.phoneVerified,'Verified','Unverified')}</div></div>
-        <div class="kpi"><div class="kpi-label">Identity</div><div class="kpi-val">${esc(u.idLabel)}</div><div class="kpi-delta">${badge(u.identityVerified,'Verified','Unverified')}</div></div>
+        <!-- Identity is MASKED. SSN/EIN aren't on the customer record at all: they come from a
+             separate endpoint needing the customer.pii.reveal permission AND a written reason,
+             recorded against the agent. See terravest-ops-portal.html for the reveal flow. -->
+        <div class="kpi"><div class="kpi-label">Identity</div><div class="kpi-val">${u.idKind ? esc(u.idKind)+' ••••' : '—'}</div><div class="kpi-delta">${badge(u.identityVerified,'Verified','Unverified')}</div></div>
         <div class="kpi"><div class="kpi-label">Member since</div><div class="kpi-val">${u.since}</div><div class="kpi-delta" style="color:${iss.length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${iss.length} issue${iss.length===1?'':'s'}</div></div>
       </div>
 

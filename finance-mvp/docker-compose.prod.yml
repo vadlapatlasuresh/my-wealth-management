@@ -392,6 +392,14 @@ services:
       DATABASE_URL: jdbc:postgresql://postgres:5432/auditdb
       DATABASE_USER: ${POSTGRES_USER:-wealth}
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.prod}
+      # Keys the tamper-evident audit chain (HMAC) and the signed checkpoints. REQUIRED: the
+      # service refuses to start without it outside dev/test, deliberately — an unkeyed chain only
+      # catches a careless UPDATE. Anyone able to write to auditdb could otherwise rewrite a row
+      # AND recompute every later hash, leaving /verify reporting "valid".
+      # NOT the same as AUDIT_INGEST_KEY: that authenticates callers, this one signs history.
+      # Sourced straight from .env.prod (like APP_ENCRYPTION_KEY) rather than the secrets store,
+      # since the chain must be verifiable even when the store is empty or not yet ready.
+      AUDIT_CHAIN_KEY: ${AUDIT_CHAIN_KEY:?set AUDIT_CHAIN_KEY in .env.prod}
       API_GATEWAY_URL: http://api-gateway:8080
       # Health monitor: polls every service + emails an admin on UP/DOWN transitions.
       SERVICE_NOTIFICATION_URL: http://notification-service:8080

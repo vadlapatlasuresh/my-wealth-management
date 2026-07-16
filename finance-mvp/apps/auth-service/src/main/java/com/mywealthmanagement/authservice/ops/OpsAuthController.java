@@ -99,14 +99,23 @@ public class OpsAuthController {
         r.put("token", opsAuthService.issueToken(user));
         r.put("message", "Login successful");
         r.putAll(profileOf(user));
+        r.put("permissions", opsAuthService.permissionsOf(user));
         return ResponseEntity.ok(r);
     }
 
-    /** The signed-in ops user. Requires a typ=ops token — a member token cannot reach this route. */
+    /**
+     * The signed-in ops user, including their effective permissions so the portal can hide what
+     * they cannot do. Client-side gating only — every endpoint re-checks with @PreAuthorize.
+     * Requires a typ=ops token; a member token cannot reach this route.
+     */
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me() {
         return opsAuthService.findById(currentOpsUserId())
-                .map(u -> ResponseEntity.ok(profileOf(u)))
+                .map(u -> {
+                    Map<String, Object> m = new HashMap<>(profileOf(u));
+                    m.put("permissions", opsAuthService.permissionsOf(u));
+                    return ResponseEntity.ok(m);
+                })
                 .orElseGet(() -> ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
     }
 

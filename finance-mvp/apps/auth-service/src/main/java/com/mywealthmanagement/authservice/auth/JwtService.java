@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -113,14 +114,26 @@ public class JwtService {
      * different table from customer ids, so an ops token's subject is meaningless to member
      * routes even if the typ guard were somehow bypassed.
      *
-     * Ops tokens expire faster than member tokens: authority is carried in the token's roles
-     * claim, so a revoked role stays live until expiry. A short TTL is what bounds that window.
+     * Carries both `roles` (for display) and `perms` — the resolved permission keys that
+     * @PreAuthorize actually checks. Ops tokens expire faster than member tokens because
+     * authority is resolved at login: a revoked permission stays live until expiry, and the
+     * short TTL is what bounds that window.
      */
-    public String generateOpsToken(String opsUserId, List<String> roles) {
+    public String generateOpsToken(String opsUserId, List<String> roles, Collection<String> perms) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("roles", roles);
+        claims.put("perms", List.copyOf(perms));
         claims.put(OpsTokens.TYPE_CLAIM, OpsTokens.TYPE_OPS);
         return createToken(claims, opsUserId, OPS_EXPIRATION_TIME);
+    }
+
+    /** Permission keys from the JWT `perms` claim (ops tokens only); empty for member tokens. */
+    public List<String> extractPermissions(String token) {
+        Object raw = extractClaim(token, c -> c.get("perms"));
+        if (raw instanceof List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return Collections.emptyList();
     }
 
     private String createToken(Map<String, Object> claims, String userName, long ttlMillis) {

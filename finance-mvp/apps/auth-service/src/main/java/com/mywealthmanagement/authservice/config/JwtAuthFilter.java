@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -44,12 +45,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null
                 && jwtService.isTokenValid(token)
                 && tokenTypeMatchesSurface(token, request.getRequestURI())) {
-            // Authorities come from the JWT roles claim — member tokens carry customer roles
-            // (USER), ops tokens carry OpsRole values (OPS_AGENT, …). Not a DB lookup.
-            // The subject is the userId for member tokens, the ops_users id for ops tokens.
-            List<SimpleGrantedAuthority> authorities = jwtService.extractRoles(token).stream()
-                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                    .toList();
+            // Authorities come from the JWT, not a DB lookup. The subject is the userId for
+            // member tokens, the ops_users id for ops tokens.
+            //   roles → ROLE_* authorities (USER; or OPS_AGENT, OPS_SUPERVISOR, …)
+            //   perms → bare authorities (customer.view, …) — what @PreAuthorize checks.
+            // Permissions are granted un-prefixed on purpose: hasRole() prepends ROLE_, so
+            // keeping them prefix-free makes it impossible to satisfy a permission check with a
+            // role name or vice-versa.
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>(
+                    jwtService.extractRoles(token).stream()
+                            .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
+                            .toList());
+            jwtService.extractPermissions(token).stream()
+                    .map(SimpleGrantedAuthority::new)
+                    .forEach(authorities::add);
             UsernamePasswordAuthenticationToken authToken =
                     new UsernamePasswordAuthenticationToken(userId, null, authorities);
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

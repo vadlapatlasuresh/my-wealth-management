@@ -38,6 +38,19 @@ public class JwtService {
     }
 
     /**
+     * Permission keys from the JWT `perms` claim (ops tokens only); empty for member tokens.
+     * These are what authorises an ops action — a role name says who someone is, a permission
+     * says what they may do, and only the latter is checked.
+     */
+    public java.util.List<String> extractPermissions(String token) {
+        Object perms = extractClaim(token, c -> c.get("perms"));
+        if (perms instanceof java.util.List<?> list) {
+            return list.stream().map(String::valueOf).toList();
+        }
+        return java.util.List.of();
+    }
+
+    /**
      * True if this token was minted for an internal ops user rather than a customer.
      * See {@link OpsTokens} for why this check exists on every service.
      */
