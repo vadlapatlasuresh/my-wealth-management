@@ -138,7 +138,7 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         if (path.startsWith("/api/v1/real-estate")) return "real-estate";
         if (path.startsWith("/api/v1/business")) return "business-financials";
         if (path.startsWith("/api/v1/ai")) return "ai-insights";
-        if (path.startsWith("/api/v1/payments")) return "payment";
+        if (path.startsWith("/api/v1/payments") || path.startsWith("/api/v1/subscriptions")) return "payment";
         if (path.startsWith("/api/v1/notifications")) return "notification";
         if (path.startsWith("/api/v1/config") || path.startsWith("/api/v1/content")) return "platform-config";
         return "gateway";

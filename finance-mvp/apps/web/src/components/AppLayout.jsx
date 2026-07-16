@@ -14,6 +14,7 @@ import OpsPortal from "./OpsPortal";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
+import { SubscriptionProvider, FeatureGate } from "../config/subscription";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { setupAutoTranslate } from "../i18n/domTranslator";
 
@@ -42,6 +43,8 @@ const SecurityPage    = MODULE_REGISTRY.security.component;
 const MessagesPage    = MODULE_REGISTRY.messages.component;
 const SettingsPage    = MODULE_REGISTRY.settings.component;
 const DocumentCenterPage = MODULE_REGISTRY.documents.component;
+const SubscriptionPage = MODULE_REGISTRY.subscription.component;
+const PlanTierPage    = MODULE_REGISTRY.plantier.component;
 
 
 const navLabels = {
@@ -65,6 +68,7 @@ const navLabels = {
   '/security': 'Security',
   '/messages': 'Messages',
   '/settings': 'Settings',
+  '/subscription': 'Subscription',
   '/styleguide': 'Style Guide',
   '/flowmap': 'UI Flow Map',
   '/guide': 'How to use',
@@ -80,7 +84,7 @@ const PATH_TO_NAVID = {
   '/invest': 'invest', '/mybusiness': 'mybusiness', '/ai-assistant': 'ai-assistant',
   '/calculators': 'calculators', '/goals': 'goals', '/tax': 'tax', '/cpa': 'cpa',
   '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
-  '/documents': 'documents',
+  '/documents': 'documents', '/subscription': 'subscription',
   '/security': 'security', '/messages': 'messages', '/settings': 'settings',
   '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/guide': 'guide',
   '/profile': 'profile', '/learn': 'learn',
@@ -402,6 +406,7 @@ export default function AppLayout(props) {
   const navSections = resolveNav(config, MODULE_REGISTRY, flags);
 
   const memberShell = (
+    <SubscriptionProvider>
       <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
         <div className="mobile-nav-backdrop" onClick={closeMobileNav} aria-hidden="true"></div>
         <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} onNavigate={closeMobileNav} />
@@ -486,19 +491,33 @@ export default function AppLayout(props) {
                 />
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} loadAll={loadAll} />} />
-              <Route path="/mybusiness" element={<MyBusinessPage user={user} formatDate={formatDate} accounts={accounts} transactions={transactions} loadAll={loadAll} />} />
+              <Route path="/mybusiness" element={
+                <FeatureGate feature="business.multiEntity" title="Multi-business dashboards">
+                  <MyBusinessPage user={user} formatDate={formatDate} accounts={accounts} transactions={transactions} loadAll={loadAll} />
+                </FeatureGate>
+              } />
               <Route path="/ai-assistant" element={<AIAssistantPage user={user} />} />
               <Route path="/calculators" element={<CalculatorsPage />} />
               <Route path="/goals" element={<GoalsPage />} />
               <Route path="/tax" element={<TaxPage />} />
               <Route path="/cpa" element={<CpaMarketplacePage />} />
               <Route path="/realestate" element={<RealEstatePage properties={properties} />} />
-              <Route path="/dealroom" element={<DealRoomPage />} />
-              <Route path="/fractional" element={<FractionalLLCPage />} />
+              <Route path="/dealroom" element={
+                <FeatureGate feature="business.dealroom" title="Deal Room">
+                  <DealRoomPage />
+                </FeatureGate>
+              } />
+              <Route path="/fractional" element={
+                <FeatureGate feature="business.fractional" title="Fractional LLC">
+                  <FractionalLLCPage />
+                </FeatureGate>
+              } />
               <Route path="/documents" element={<DocumentCenterPage user={user} formatDate={formatDate} />} />
               <Route path="/security" element={<SecurityPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/subscription" element={<SubscriptionPage />} />
+              <Route path="/plans/:planKey" element={<PlanTierPage />} />
               <Route
                 path="/profile"
                 element={<ProfilePage user={user} accounts={accounts} onLogout={handleLogout} />}
@@ -512,6 +531,7 @@ export default function AppLayout(props) {
           </div>
         </div>
       </div>
+    </SubscriptionProvider>
   );
 
   // /ops/* renders the dedicated Ops Portal (CARE/ADMIN only); everything else is the member app.
