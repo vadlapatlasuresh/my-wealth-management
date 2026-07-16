@@ -1449,6 +1449,22 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 .ops-nav-foot { margin-top: auto; padding: 12px 0 4px; }
 .ops-main { flex: 1; overflow: auto; padding: 20px 22px; }
 
+/* Ops staff sign-in — its own screen because ops identity is its own account.
+   Reuses the member form controls (.form-label/.form-input/.btn) so the two logins feel
+   like one product, while the forest-dark canvas signals "this is the internal tool". */
+.ops-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--tv-forest); }
+.ops-login-card { width: 100%; max-width: 400px; background: var(--tv-card); border: 1px solid var(--tv-border); border-radius: 16px; padding: 28px 26px; box-shadow: 0 12px 36px rgba(0,0,0,.22); }
+.ops-login-brand { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+.ops-login-brand .ops-mark { background: var(--tv-forest); }
+.ops-login-title { font-family: var(--font-display); font-size: 19px; color: var(--tv-text-primary); line-height: 1.15; }
+.ops-login-intro { font-size: 13px; color: var(--tv-text-secondary); margin: 0 0 16px; line-height: 1.5; }
+.ops-login-form { display: flex; flex-direction: column; gap: 7px; }
+.ops-login-form .btn { margin-top: 10px; justify-content: center; }
+.ops-login-error { display: flex; align-items: center; gap: 7px; background: var(--tv-negative-bg); color: var(--tv-negative); border-radius: 9px; padding: 9px 11px; font-size: 13px; margin-bottom: 14px; }
+.ops-login-devcode { font-size: 12px; color: var(--tv-text-muted); background: var(--tv-bg); border-radius: 7px; padding: 7px 9px; }
+.ops-login-foot { display: flex; align-items: flex-start; gap: 7px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--tv-border-light); font-size: 12px; color: var(--tv-text-muted); line-height: 1.5; }
+.ops-login-foot i { color: var(--tv-forest-light); margin-top: 1px; }
+
 @media (max-width: 900px) {
   .ops-nav { width: 56px; }
   .ops-nav-item span { display: none; }

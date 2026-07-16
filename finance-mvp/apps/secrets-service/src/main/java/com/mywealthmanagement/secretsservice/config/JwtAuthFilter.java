@@ -42,7 +42,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             }
         }
 
-        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+        // The ops/member boundary, enforced both ways: an ops token authenticates ONLY on this
+        // service's ops surface, a member token ONLY off it. This service has NO ops surface, so
+        // an ops token is refused on every route here — the KEK is not reachable from the ops
+        // portal by design. See OpsTokens.
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null
+                && jwtService.isOpsToken(token) == OpsTokens.isOpsPath(request.getRequestURI())) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             if (Boolean.TRUE.equals(jwtService.validateToken(token, userDetails))) {
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

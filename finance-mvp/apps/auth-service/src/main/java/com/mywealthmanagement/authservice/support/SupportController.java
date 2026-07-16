@@ -3,7 +3,6 @@ package com.mywealthmanagement.authservice.support;
 import com.mywealthmanagement.authservice.audit.AuditClient;
 import com.mywealthmanagement.authservice.support.dto.SupportUserDetailDto;
 import com.mywealthmanagement.authservice.support.dto.SupportUserDto;
-import com.mywealthmanagement.authservice.user.Role;
 import com.mywealthmanagement.authservice.user.User;
 import com.mywealthmanagement.authservice.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -11,21 +10,22 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
- * Customer-care / support back-office. Gated to ROLE_CARE / ROLE_ADMIN in SecurityConfig.
- * Lets a support agent look up a user and see their full profile + activity + issues encountered.
- * Every access here is itself audited automatically by the gateway's AuditLoggingFilter.
+ * Customer-care / support back-office. Reachable only with a typ=ops token holding an OPS_* role:
+ * JwtAuthFilter refuses member tokens on this path, and SecurityConfig checks the roles.
+ * Lets a support agent look up a customer and see their full profile + activity + issues.
+ *
+ * Every access here is audited automatically by the gateway's AuditLoggingFilter, attributed to
+ * the ops user. NOTE: that row records the ACTOR, not the customer being viewed — "who looked at
+ * customer 42" is currently only answerable from the request path. Adding target_user_id to the
+ * audit schema is Phase 3.
  */
 @RestController
 @RequestMapping("/api/v1/support")
@@ -91,31 +91,10 @@ public class SupportController {
         return auditClient.fetchUserActivity(String.valueOf(id), onlyIssues, clampSize(limit));
     }
 
-    /** Grant/revoke a role (ADMIN only — enforced by SecurityConfig path matcher). */
-    @PostMapping("/users/{id}/roles")
-    public ResponseEntity<SupportUserDto> changeRole(@PathVariable Long id, @RequestBody RoleChange body) {
-        User u = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
-        Role role;
-        try {
-            role = Role.valueOf(body.role().toUpperCase());
-        } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown role: " + body.role());
-        }
-        Set<Role> roles = new LinkedHashSet<>(u.getRoles() != null ? u.getRoles() : Set.of());
-        boolean grant = !"REVOKE".equalsIgnoreCase(body.action());
-        if (grant) roles.add(role); else roles.remove(role);
-        u.setRoles(roles);
-        User saved = userRepository.save(u);
-
-        // Audit this sensitive change explicitly, attributed to the acting admin.
-        String actor = SecurityContextHolder.getContext().getAuthentication().getName();
-        auditClient.record(actor, "support.role." + (grant ? "grant" : "revoke"), "SUCCESS",
-                "target=" + id + " role=" + role);
-        return ResponseEntity.ok(toSummary(saved));
-    }
-
-    public record RoleChange(String role, String action) {}
+    // POST /users/{id}/roles (grant/revoke CARE/ADMIN on a customer) has been removed. It was the
+    // promotion path that turned an ops agent into a customer holding a token every service
+    // trusts — the exact thing separate ops identity exists to prevent. Ops accounts live in
+    // `ops_users` and are managed through the ops-admin surface (Phase 2).
 
     // ---- mapping helpers ----------------------------------------------------
     private SupportUserDto toSummary(User u) {

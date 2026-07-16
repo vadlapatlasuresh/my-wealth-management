@@ -160,7 +160,14 @@ public class CpaController {
         catch (NumberFormatException e) { throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid session"); }
     }
 
-    /** Require an ADMIN or CARE role (from the JWT) for moderation actions; else 403. */
+    /**
+     * Require an ops-staff role (from the JWT) for moderation actions; else 403.
+     *
+     * Ops staff hold OPS_* roles on a typ=ops token. The old CARE/ADMIN member roles are gone:
+     * they lived on customer rows, which made an agent's token a valid member token everywhere.
+     * JwtAuthFilter already restricts /api/v1/cpa/admin/** to ops tokens; this is defence in depth.
+     * Phase 2 replaces this with a per-permission check.
+     */
     private static void requireStaff() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null) {
@@ -168,7 +175,7 @@ public class CpaController {
         }
         boolean staff = auth.getAuthorities().stream()
                 .map(a -> a.getAuthority() == null ? "" : a.getAuthority().toUpperCase())
-                .anyMatch(a -> a.equals("ROLE_ADMIN") || a.equals("ROLE_CARE"));
+                .anyMatch(a -> a.startsWith("ROLE_OPS_"));
         if (!staff) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Staff access required");
         }

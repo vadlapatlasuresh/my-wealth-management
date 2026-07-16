@@ -1,6 +1,14 @@
 # TerraVest Ops Portal — Design Spec (for review)
 
-_Status: **DRAFT for review** · 2026-06-07_
+_Status: **PARTLY BUILT** · drafted 2026-06-07 · identity model superseded 2026-07-16_
+
+> **Read this first.** The portal shell, customer search, and the 360 read-only tabs described
+> below are built. **§2 (agent login) is superseded**: ops staff are no longer customers with a
+> CARE/ADMIN role — they are separate accounts in `ops_users` with their own login and a `typ=ops`
+> token that member routes refuse. The reason is in
+> [`DOCUMENTATION/proposals/ops-portal.md`](../../DOCUMENTATION/proposals/ops-portal.md), which is
+> now the live plan (RBAC, audit actor/target, financial ledger, phasing). This file remains the
+> reference for the UX flows and the mockup.
 
 A dedicated **support / help-desk portal**, separate from the member app, where a customer-care
 agent signs in, looks up a customer (by name / email / phone), sees **everything the customer
@@ -32,13 +40,22 @@ The Deal-Room/Customer-Care page lives _inside_ the member SPA today. For a real
 
 ---
 
-## 2. Agent login & session
-- Reuse **auth-service**; the agent signs in with their work account.
-- Gate the whole portal on **role ∈ {CARE, ADMIN}** (server-enforced; client also hides it).
-- **MFA / 2-step** required for agents (new — members don't need it). Shorter token TTL + idle
-  auto-logout (e.g. 30 min) because agents see customer PII.
-- First admin is bootstrapped via `SUPPORT_BOOTSTRAP_EMAIL` (already built); admins promote other
-  agents from the **Roles & Access** tab (already built: `POST /api/v1/support/users/{id}/roles`).
+## 2. Agent login & session — ⚠️ SUPERSEDED (built differently)
+The original plan was to reuse a customer account and gate on `role ∈ {CARE, ADMIN}`. That was
+built and has since been **replaced**, because it did not actually separate ops from members: the
+JWT secret is shared platform-wide, so an agent's token was a fully valid *member* token on every
+service. The role check on `/api/v1/support/**` was the only thing standing in the way.
+
+**As built (2026-07-16):**
+- Ops accounts live in their own `ops_users` table. **No promotion path** from a customer account.
+- Own login: `POST /api/v1/ops/auth/login` → MFA → `POST /api/v1/ops/auth/mfa/verify` → token.
+  MFA is **not** switchable off for ops, and ops OTP dev-code exposure is its own flag
+  (`OPS_OTP_EXPOSE_DEV_CODE`), never the member one.
+- Tokens carry `typ=ops` + `OPS_*` roles, TTL 60 min. **Every service** refuses a `typ=ops` token
+  off its ops surface, and a member token on it (`OpsTokens` + `JwtAuthFilter`, per service).
+- First admin: `OPS_BOOTSTRAP_EMAIL` + `OPS_BOOTSTRAP_PASSWORD` (replaces `SUPPORT_BOOTSTRAP_EMAIL`).
+- `POST /api/v1/support/users/{id}/roles` and the **Roles & Access** tab are **removed** — granting
+  staff roles onto a customer row was the vulnerability. Ops-account management is Phase 2.
 
 ## 3. Customer search (name / email / phone)
 Today's `GET /api/v1/support/users?query=` matches **email or name only**. To support the requested

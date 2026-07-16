@@ -175,6 +175,20 @@ services:
       # Social sign-in. Blank -> provider disabled + button hidden. Set to activate.
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
+      # --- Ops portal (internal staff) ---------------------------------------
+      # Ops identity is separate from customer identity: own table (ops_users), own login
+      # (/api/v1/ops/auth/**), own token type (typ=ops) that member routes refuse.
+      #
+      # The first ops account is created on startup if it doesn't already exist. Migration V8
+      # revokes the old CARE/ADMIN grants from customer rows, so WITHOUT these two set nobody
+      # has ops access at all — set them for the deploy that ships this, then change the
+      # password on first login and blank OPS_BOOTSTRAP_PASSWORD again.
+      OPS_BOOTSTRAP_EMAIL: ${OPS_BOOTSTRAP_EMAIL:-}
+      OPS_BOOTSTRAP_PASSWORD: ${OPS_BOOTSTRAP_PASSWORD:-}
+      # SECURITY: deliberately NOT wired to OTP_EXPOSE_DEV_CODE above, which is still true in
+      # prod pending SendGrid domain auth. Sharing it would echo every ops MFA code back to the
+      # caller and reduce ops MFA to decoration. Leave false.
+      OPS_OTP_EXPOSE_DEV_CODE: ${OPS_OTP_EXPOSE_DEV_CODE:-false}
 
   account-aggregation-service:
     <<: *java-defaults

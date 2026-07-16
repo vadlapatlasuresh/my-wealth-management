@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { api, isCareAgent } from "../api";
+import { api, isOpsSignedIn } from "../api";
 
 function Kpi({ label, value, sub, tone }) {
   const color = tone === "bad" ? "var(--tv-negative)" : tone === "good" ? "var(--tv-positive)" : "var(--tv-text-primary)";
@@ -31,7 +31,7 @@ export default function AdminDashboardPage() {
   const [days, setDays] = useState(30);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const admin = isCareAgent();
+  const admin = isOpsSignedIn();
 
   useEffect(() => {
     if (!admin) { setLoading(false); return; }

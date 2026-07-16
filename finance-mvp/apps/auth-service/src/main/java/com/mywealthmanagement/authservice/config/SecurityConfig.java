@@ -1,5 +1,6 @@
 package com.mywealthmanagement.authservice.config;
 
+import com.mywealthmanagement.authservice.ops.OpsRole;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpMethod;
@@ -39,8 +40,14 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll() // don't let error-dispatch mask 500s as 403
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/internal/**").permitAll() // server-to-server; guarded by X-Internal-Key
-                .requestMatchers("/api/v1/support/users/*/roles").hasRole("ADMIN") // role changes: admin only
-                .requestMatchers("/api/v1/support/**").hasAnyRole("CARE", "ADMIN") // customer-care only
+                // --- Ops surface: reachable ONLY with a typ=ops token (enforced in JwtAuthFilter,
+                // which refuses to authenticate a member token here and an ops token anywhere else).
+                .requestMatchers("/api/v1/ops/auth/login", "/api/v1/ops/auth/mfa/verify").permitAll()
+                .requestMatchers("/api/v1/support/**").hasAnyRole(
+                        OpsRole.OPS_AGENT.name(), OpsRole.OPS_SUPERVISOR.name(),
+                        OpsRole.OPS_FINANCE.name(), OpsRole.OPS_COMPLIANCE.name(),
+                        OpsRole.OPS_ADMIN.name())
+                .requestMatchers("/api/v1/ops/**").authenticated()
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()
                 .sessionManagement()

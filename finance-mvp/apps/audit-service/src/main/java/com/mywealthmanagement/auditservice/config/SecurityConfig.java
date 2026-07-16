@@ -30,9 +30,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/users/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/events").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/audit/verify").permitAll()
-                // Operator analytics + the system health/alerts feed: admins / customer-care only.
-                .requestMatchers(HttpMethod.GET, "/api/v1/audit/stats").hasAnyRole("ADMIN", "CARE")
-                .requestMatchers(HttpMethod.GET, "/api/v1/audit/health/**").hasAnyRole("ADMIN", "CARE")
+                // Operator analytics + the system health/alerts feed: ops staff only. These are the
+                // only ops-token routes on this service (see OpsTokens); the old CARE/ADMIN member
+                // roles are gone, because they lived on customer rows.
+                .requestMatchers(HttpMethod.GET, "/api/v1/audit/stats")
+                .hasAnyRole("OPS_AGENT", "OPS_SUPERVISOR", "OPS_FINANCE", "OPS_COMPLIANCE", "OPS_ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/v1/audit/health/**")
+                .hasAnyRole("OPS_AGENT", "OPS_SUPERVISOR", "OPS_FINANCE", "OPS_COMPLIANCE", "OPS_ADMIN")
                 // Remaining endpoints (e.g. /me) require a valid user JWT.
                 .anyRequest().authenticated()
                 .and()

@@ -9,8 +9,9 @@ import {
   useNavigate
 } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
-import { api, isCareAgent } from "../api";
+import { api, isOpsSignedIn, setOpsToken } from "../api";
 import OpsPortal from "./OpsPortal";
+import OpsLoginPage from "../pages/OpsLoginPage";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
@@ -156,19 +157,8 @@ function Sidebar({ user, handleLogout, paymentIntents, navSections, onNavigate }
           </React.Fragment>
         ))}
 
-        {/* Single launcher into the dedicated Ops Portal — only for support agents / admins.
-            All customer-care + admin tooling now lives there (separate /ops shell). */}
-        {isCareAgent() && (
-          <React.Fragment>
-            <div className="sidebar-section" style={{ marginTop: 4 }}>
-              <div className="sidebar-section-label">Staff</div>
-            </div>
-            <NavLink to="/ops" title="Ops Portal" className={getNavLinkClass('/ops')}>
-              <i className="ti ti-headset"></i>
-              <span className="nav-label">Ops Portal</span>
-            </NavLink>
-          </React.Fragment>
-        )}
+        {/* No Ops Portal launcher here by design: ops staff are separate accounts with their own
+            login at /ops, so a member session can never reveal (or reach) staff tooling. */}
       </ul>
 
       <div className="sidebar-footer">
@@ -537,16 +527,38 @@ export default function AppLayout(props) {
     </SubscriptionProvider>
   );
 
-  // /ops/* renders the dedicated Ops Portal (CARE/ADMIN only); everything else is the member app.
+  // /ops/* renders the Ops Portal, gated on a separate ops session; everything else is the
+  // member app. An unauthenticated visitor to /ops gets the staff sign-in, NOT a redirect to
+  // the member app — the two are different products that happen to share an origin today.
   return (
     <Router>
       <AutoTranslate />
-      <ShellSwitch
-        memberShell={memberShell}
-        opsElement={isCareAgent() ? <OpsPortal handleLogout={handleLogout} /> : <Navigate to="/" replace />}
-      />
+      <ShellSwitch memberShell={memberShell} opsElement={<OpsShell />} />
     </Router>
   );
+}
+
+/**
+ * The ops half of the app: staff sign-in until there's a valid ops session, the portal after.
+ * Listens for `ops:unauthorized` so an expired ops token drops straight back to sign-in
+ * instead of leaving a shell that 401s on every call.
+ */
+function OpsShell() {
+  const [signedIn, setSignedIn] = React.useState(() => isOpsSignedIn());
+
+  React.useEffect(() => {
+    const onUnauthorized = () => setSignedIn(false);
+    window.addEventListener('ops:unauthorized', onUnauthorized);
+    return () => window.removeEventListener('ops:unauthorized', onUnauthorized);
+  }, []);
+
+  const signOut = React.useCallback(() => {
+    setOpsToken(null);
+    setSignedIn(false);
+  }, []);
+
+  if (!signedIn) return <OpsLoginPage onSignedIn={() => setSignedIn(true)} />;
+  return <OpsPortal handleLogout={signOut} />;
 }
 
 /** Routes /ops/* to the Ops Portal shell; all other paths render the member shell. */
