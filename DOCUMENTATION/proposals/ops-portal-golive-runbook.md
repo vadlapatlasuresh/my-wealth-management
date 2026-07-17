@@ -139,18 +139,28 @@ Watch for these lines:
 ==> Recreating Caddy to pick up the new web build
 ```
 
-Then confirm the migrations and the bootstrap ran:
+Then confirm the migrations and the bootstrap ran.
+
+> **`docker compose` needs `--env-file .env.prod`.** Compose reads `.env` by default, not
+> `.env.prod`, and it interpolates the whole file even for `logs` — so without it you get
+> `required variable JWT_SECRET is missing a value` and nothing runs. `deploy.sh` already passes it
+> (see `COMPOSE=` at the top). Simpler for log checks: use `docker logs <container>` directly, since
+> every service sets an explicit `container_name`.
 
 ```bash
-docker compose -f docker-compose.prod.yml logs auth-service | grep -E "OpsBootstrap|Migrating|V1[01]__"
+# Simplest — no compose, no env interpolation:
+docker logs wealth-auth-service 2>&1 | grep -E "OpsBootstrap|Migrating|V1[01]__"
 # Expect: V9/V10/V11 applied, and
 #   [OpsBootstrap] created first ops account 'you@terravest.app' with OPS_ADMIN.
 
-docker compose -f docker-compose.prod.yml logs audit-service | grep -iE "AUDIT_CHAIN_KEY|INSECURE"
-# Expect: NOTHING. A warning here means AUDIT_CHAIN_KEY is unset and the chain is unkeyed.
+docker logs wealth-audit-service 2>&1 | grep -i INSECURE
+# Expect: NOTHING. A hit means AUDIT_CHAIN_KEY didn't reach the container and the chain is unkeyed.
 
-docker compose -f docker-compose.prod.yml logs caddy | grep -iE "certificate obtained|error"
+docker logs wealth-caddy 2>&1 | grep -iE "certificate obtained|obtaining|error"
 # Expect: a cert obtained for ops.terravest.app
+
+# Via compose instead? Then it MUST be:
+#   docker compose -f docker-compose.prod.yml --env-file .env.prod logs audit-service
 ```
 
 ---
@@ -158,6 +168,37 @@ docker compose -f docker-compose.prod.yml logs caddy | grep -iE "certificate obt
 ## 5. Validation
 
 Work through these in order. Each one checks something a previous step could have silently broken.
+
+### 5.0 Is the ops portal even switched on?
+
+Run this first — it answers "is it live?" in one shot, and every later check assumes it.
+
+```bash
+# On the VM, in the repo dir:
+
+# 1. Is OPS_DOMAIN set to a real hostname (not the inert ops.localhost default)?
+grep '^OPS_DOMAIN=' .env.prod
+#    OPS_DOMAIN=ops.terravest.app   -> live
+#    OPS_DOMAIN=            (blank) -> inert; Caddy is serving ops.localhost internally
+#    (no line at all)               -> inert
+
+# 2. Is the ops origin allowed through gateway CORS?
+grep '^WEB_ORIGINS=' .env.prod
+#    must contain https://ops.terravest.app  -> else every ops API call fails CORS
+
+# 3. Did the ops bundle actually get built and staged?
+ls web-dist-ops/ | head
+#    expect: ops.html, assets/, vendor/ ...
+#    empty/missing -> deploy.sh didn't run the ops build (are you on the merged main?)
+
+# 4. Is Caddy serving it?
+docker exec wealth-caddy ls /srv-ops | head
+#    expect the same files. Nothing here -> the ./web-dist-ops:/srv-ops mount didn't take;
+#    Caddy needs recreating (deploy.sh does this).
+```
+
+If steps 1–4 are all good, `https://ops.terravest.app` should load. If it doesn't, the answer is
+almost always DNS still being Proxied — go back to §1.
 
 ### 5.1 The member app is untouched
 
