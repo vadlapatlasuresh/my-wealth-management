@@ -833,10 +833,29 @@ export const api = {
   opsSetUserActive: (id, active) =>
     request(`/api/v1/ops/admin/users/${id}/active`, { method: "POST", body: JSON.stringify({ active }) }),
 
-  // Unmask a customer's SSN/EIN last-4. Requires customer.pii.reveal AND a written reason,
-  // which is recorded against the agent. Not part of the 360 view on purpose.
+  // Unmask a customer's SSN/EIN last-4. Requires customer.pii.reveal AND a written reason AND the
+  // CALLER verified to the PII tier — the server enforces all three. Not part of the 360 view.
   supportRevealPii: (id, reason) =>
     request(`/api/v1/support/users/${id}/pii?reason=${encodeURIComponent(reason)}`),
+
+  // --- Caller verification: prove the person on the phone is the customer -------------------
+  // Where the caller stands (tier + attempt timeline). Called when the record opens.
+  opsVerifyStatus: (customerId) => request(`/api/v1/ops/verify/${customerId}`),
+  // OTP to the customer's REGISTERED device (never one supplied on the call) -> Tier 2.
+  opsVerifySendOtp: (customerId) =>
+    request(`/api/v1/ops/verify/${customerId}/otp/send`, { method: "POST" }),
+  opsVerifyConfirmOtp: (customerId, code) =>
+    request(`/api/v1/ops/verify/${customerId}/otp/confirm`, { method: "POST", body: JSON.stringify({ code }) }),
+  // A knowledge question to ask, with the expected answer for the agent to compare -> Tier 1.
+  opsVerifyKba: (customerId) => request(`/api/v1/ops/verify/${customerId}/kba`),
+  opsVerifyConfirmKba: (customerId, factKey, passed) =>
+    request(`/api/v1/ops/verify/${customerId}/kba/confirm`, {
+      method: "POST",
+      body: JSON.stringify({ factKey, passed })
+    }),
+  // Freeze disclosure + raise a fraud signal — the "can't verify" button.
+  opsVerifySuspicious: (customerId, note) =>
+    request(`/api/v1/ops/verify/${customerId}/suspicious`, { method: "POST", body: JSON.stringify({ note }) }),
 
   // --- Notes & escalations (customer.note.write / customer.escalate) -----------------------
   opsListNotes: (userId) => request(`/api/v1/ops/cases/customers/${userId}/notes`),

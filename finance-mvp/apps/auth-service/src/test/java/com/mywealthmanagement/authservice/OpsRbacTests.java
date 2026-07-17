@@ -135,7 +135,9 @@ class OpsRbacTests {
         mvc.perform(get("/api/v1/support/users/" + aliceId).header("Authorization", "Bearer " + supervisor))
                 .andExpect(status().isOk());
 
-        // ...but only the supervisor can unmask it.
+        // ...but only the supervisor can unmask it. Verify the caller first so this isolates the
+        // PERMISSION gate — an unverified caller would 403 for either agent regardless of role.
+        verifyCaller(supervisor);
         mvc.perform(get("/api/v1/support/users/" + aliceId + "/pii")
                         .param("reason", "Caller verifying their tax id on file")
                         .header("Authorization", "Bearer " + agent))
@@ -146,6 +148,18 @@ class OpsRbacTests {
                         .header("Authorization", "Bearer " + supervisor))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.ssnLast4").value("4417"));
+    }
+
+    /** Raise the caller to Tier 2 (OTP) for the given agent, so PII-tier disclosure is unblocked. */
+    private void verifyCaller(String token) throws Exception {
+        String sent = mvc.perform(post("/api/v1/ops/verify/" + aliceId + "/otp/send")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String code = om.readTree(sent).get("devCode").asText();
+        mvc.perform(post("/api/v1/ops/verify/" + aliceId + "/otp/confirm")
+                        .contentType(APPLICATION_JSON).content(om.writeValueAsString(java.util.Map.of("code", code)))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
     }
 
     /** The 360 view must not leak what the reveal endpoint exists to protect. */
@@ -217,8 +231,10 @@ class OpsRbacTests {
                         .header("Authorization", "Bearer " + admin))
                 .andExpect(status().isOk());
 
-        // A token minted AFTER the change carries it.
+        // A token minted AFTER the change carries it. Verify the caller so this isolates the
+        // permission retune (an unverified caller would 403 regardless of the new permission).
         String agent = login("agent@terravest.internal");
+        verifyCaller(agent);
         mvc.perform(get("/api/v1/support/users/" + aliceId + "/pii")
                         .param("reason", "Caller verifying their tax id on file")
                         .header("Authorization", "Bearer " + agent))
