@@ -1,10 +1,12 @@
 # Proposal: Ops Portal
 
-**Status:** **Phases 1–4 built (2026-07-16)** · Phases 5–6 open
+**Status:** **Phases 1–5 built (2026-07-16)** · Phase 6 pending a DNS record
 **Built:** separate `ops_users` identity + mandatory MFA + `typ=ops` enforced across all 12 services
 (P1); permission-based RBAC with a DB-editable access matrix (P2); actor/target/reason/diff audit on
-a keyed HMAC chain with signed checkpoints (P3); the ops-admin + access-matrix screens (part of P4).
-**Open:** the financial ops layer (P5) and the `ops.terravest.app` origin split (P6).
+a keyed HMAC chain with signed checkpoints (P3); attention panel, PII-reveal-with-reason, notes,
+escalations, ops-admin screens (P4); append-only ledger + maker-checker adjustments + anomaly queue
+(P5).
+**Open:** the `ops.terravest.app` origin split (P6) — needs a DNS record and a deploy window; see §11.
 
 > **Access-control and audit reference:** [`ops-access-and-audit.md`](ops-access-and-audit.md) —
 > the access matrix, what ops staff can and cannot reach, and what gets recorded.
@@ -498,9 +500,39 @@ power over money before the controls that constrain that power exist**.
 | ~~**1. Foundations**~~ ✅ **BUILT** | `ops_users` + separate login + MFA + `typ=ops` enforced both ways on all 12 services; V8 revokes CARE/ADMIN from customer rows; promotion path removed | Closes the live vulnerability. Nothing else should ship first. |
 | ~~**2. RBAC**~~ ✅ **BUILT** | `OpsPermission` catalog + DB-editable roles (V9), `@PreAuthorize` per endpoint, permission checks across services, ops-admin + access-matrix screens | Everything downstream is gated on this. |
 | ~~**3. Audit upgrade**~~ ✅ **BUILT** | actor/target/reason/diff columns (V5), semantic events, keyed HMAC chain + signed checkpoints (V6), "who touched customer X" query + Staff access tab | Must precede money powers, so the first refund is fully attributable. |
-| **4. Customer 360 rework** — *partly built* | ✅ PII reveal w/ reason, Staff access tab, ops-admin screens · ⬜ attention panel, action rail, tab restructure, notes, escalation queue | Pure support value; no money surface. |
-| **5. Financial layer** | ledger, adjustments + maker-checker, refunds/credits, approval queue, disputes | The controls from 1–3 are now in place. |
-| **6. Anomalies + split** | anomaly rules + supervisor queue; split to `ops.terravest.app` (decision #7) | Ops now has money powers → the origin split stops being optional. |
+| ~~**4. Customer 360 rework**~~ ✅ **BUILT** | PII reveal w/ reason, Staff access tab, ops-admin screens, attention panel, internal notes, escalation queue (V11) | Pure support value; no money surface. |
+| ~~**5. Financial layer**~~ ✅ **BUILT** | append-only ledger, maker-checker adjustments, refunds/credits/goodwill, approval queue, anomaly rules + supervisor queue (payment-service V5, auth V10) | The controls from 1–3 are now in place. |
+| **6. Origin split** — ⬜ **NEEDS A DNS RECORD + A DEPLOY WINDOW** | split to `ops.terravest.app` (decision #7) | Ops now has money powers → the origin split stops being optional. See §11. |
 
 Phases 1–3 are unglamorous and are where nearly all the risk lives. If timelines compress, cut
 scope from 4 and 6 — not from 1–3.
+
+---
+
+## 11. Phase 6 — the origin split (the last pending item)
+
+Decision #7 was "phase it: keep `/ops` in the member SPA while ops is read-only; split to
+`ops.terravest.app` when financial powers land." **They have now landed**, so this is due.
+
+**Why it matters now and didn't before:** ops and the member app share `app.terravest.app`, so they
+share an origin and a `localStorage`. While ops was read-only that was an acceptable trade. Now an
+XSS in the member app sits on the same origin as a session that can move money.
+
+**What it takes:**
+
+| Step | Who |
+|---|---|
+| `ops.terravest.app` A-record → the VM IP, DNS-only/grey-cloud | **You** — Cloudflare |
+| Caddy site block for the new host, with its own (much tighter) CSP — no Plaid/Maps/fonts needed | Me |
+| A second Vite build (ops entry → `dist-ops`), and `/ops` removed from the member bundle | Me |
+| `deploy.sh` builds + mounts both bundles | Me |
+| `GATEWAY_CORS_ALLOWED_ORIGINS` gains `https://ops.terravest.app` | Me + `.env.prod` on the VM |
+
+**Why it isn't in this PR:** it can't be finished without the DNS record — Caddy's ACME will fail for
+a hostname that doesn't resolve. It also restructures the web build and touches a live reverse proxy,
+which is a different risk profile from adding endpoints. It deserves its own PR and a deploy window,
+not a rider on the financial layer.
+
+**Interim mitigation, already in place:** ops tokens are stored under their own key, expire in 60
+minutes, and are refused on every member route — so the shared origin bounds the damage rather than
+handing over the platform. That is a mitigation, not a fix.

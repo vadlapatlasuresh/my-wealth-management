@@ -317,10 +317,19 @@ function badge(ok,y,n){return `<span class="badge ${ok?'badge-forest':'badge-red
 
 const TABS=[['overview','Overview','ti-id-badge-2'],['accounts','Accounts','ti-building-bank'],['tx','Transactions','ti-arrows-exchange'],
   ['budget','Budget & Goals','ti-chart-pie'],['deals','Deal Room','ti-briefcase'],['payments','Payments','ti-receipt'],
-  ['activity','Activity & Issues','ti-history']];
+  ['activity','Activity & Issues','ti-history'],
+  // The money history + where an adjustment is proposed (needs finance.ledger.view).
+  ['financials','Financials','ti-cash'],
+  // The support team's memory: internal notes + escalations, ops-only, append-only.
+  ['notes','Notes','ti-note'],
+  // Who accessed THIS customer, and why (needs audit.query).
+  ['access','Staff access','ti-shield-search']];
 // NOTE: the 'Roles & Access' tab is gone. It granted CARE/ADMIN onto the customer's own row,
 // which is what made an ops agent a member holding a platform-wide token. Ops accounts are
 // separate (ops_users) and are managed from an ops-admin screen, never a customer's record.
+//
+// Tabs are permission-gated in the real app: an agent sees Notes but not Financials, a
+// supervisor sees both. Items you can't use are absent, not disabled.
 
 function tabBody(u){
   const T=(rows,head)=>rows.length?`<table><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table>`:'<div class="help" style="padding:14px 4px">No data.</div>';
@@ -343,6 +352,54 @@ function tabBody(u){
   if(tab==='deals')return T(u.deals.map(a=>`<tr><td><b>${a[0]}</b></td><td><span class="badge badge-forest">${a[1]}</span></td><td>${a[2]}</td><td class="muted">${a[3]}</td></tr>`).join(''),['Deal','Status','Role','Detail']);
   if(tab==='payments')return T(u.payments.map(a=>`<tr><td><b>${a[0]}</b></td><td>${a[1]}</td><td><span class="badge ${a[2]==='FAILED'?'badge-red':'badge-forest'}">${a[2]}</span></td><td class="muted">${a[3]}</td></tr>`).join(''),['Payee','Amount','Status','Date']);
   if(tab==='activity')return T(u.activity.map(e=>`<tr><td class="muted" style="white-space:nowrap">${e.t}</td><td><b>${esc(e.action)}</b>${e.note?`<div class="help">${esc(e.note)}</div>`:''}</td><td><span class="badge badge-gray">${e.svc}</span></td><td><span class="badge ${e.fail?'badge-red':'badge-forest'}">${e.status}</span></td><td class="muted" style="font-size:12px">${e.ip||''}</td></tr>`).join(''),['When','Action','Service','Status','IP']);
+  // Financials: the money history as a statement (newest first, running balance), plus the
+  // propose-adjustment action. Anything above the auto-approve threshold goes to a supervisor.
+  if(tab==='financials')return `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div class="help">Balance</div><div style="font-size:24px;font-weight:700">-$95.00</div>
+        <div class="help">We owe them</div></div>
+      <button class="btn btn-primary btn-sm"><i class="ti ti-cash"></i> Propose adjustment</button>
+    </div>
+    ${T([
+      ['REFUND','-$90.00','-$95.00','ops#3','re_mock_adj-2','BILLING_ERROR: charged twice for June'],
+      ['CREDIT','-$5.00','-$5.00','ops#2','—','SERVICE_ISSUE: outage on the 3rd'],
+      ['CHARGE','$0.00','$0.00','System','ch_1J4k…','Subscription — Pro monthly']
+    ].map(([t,a,b,who,ref,memo])=>`<tr>
+        <td><span class="badge ${a.startsWith('-')?'badge-forest':'badge-gray'}">${t}</span><div class="help">${esc(memo)}</div></td>
+        <td style="text-align:right;font-weight:600">${a}</td>
+        <td style="text-align:right" class="muted">${b}</td>
+        <td class="help">${who}</td><td class="help">${ref}</td></tr>`).join(''),
+      ['What','Amount','Balance','Who','Ref'])}
+    <div class="help" style="margin-top:8px"><i class="ti ti-lock"></i> Append-only: a correction is a new
+      reversing entry, never an edit. Ops can only ever move money in the customer's favour.</div>`;
+
+  // Notes: the team's memory. Append-only, ops-only, pinned first.
+  if(tab==='notes')return `
+    <div class="card" style="border-color:var(--tv-gold);margin-bottom:10px">
+      <span class="badge badge-amber"><i class="ti ti-pin"></i> Pinned</span>
+      Caller disputes the June invoice — do not offer another goodwill credit.
+      <div class="help">Ops #4 · Jun 7, 09:20</div>
+    </div>
+    <div class="card"><div>Verified identity over the phone; walked them through re-linking Plaid.</div>
+      <div class="help">Ops #2 · Jun 6, 16:04</div></div>
+    <div class="help" style="margin-top:8px"><i class="ti ti-lock"></i> Notes cannot be edited — a
+      correction is a new note. An editable note is one nobody can rely on in a dispute.</div>`;
+
+  // Staff access: who looked at THIS customer, and why. The mirror of Activity, which is what the
+  // customer did themselves.
+  if(tab==='access')return `
+    ${T([
+      ['Jun 7, 09:21','ops#4','ops.customer.view','—'],
+      ['Jun 7, 09:20','ops#4','ops.pii.reveal','Caller verifying their tax id on file'],
+      ['Jun 6, 16:02','ops#2','ops.customer.view','—']
+    ].map(([t,who,action,reason])=>`<tr><td class="muted" style="white-space:nowrap">${t}</td>
+        <td><span class="badge badge-gray">${who}</span></td>
+        <td><b>${action}</b>${action==='ops.pii.reveal'?' <span class="badge badge-amber">PII</span>':''}</td>
+        <td class="${reason==='—'?'muted':''}">${esc(reason)}</td></tr>`).join(''),
+      ['When','Staff member','Action','Reason given'])}
+    <div class="help" style="margin-top:8px"><i class="ti ti-shield-search"></i> Every staff action on
+      this member — including yours. Reading this list is itself recorded.</div>`;
+
   return '';
 }
 

@@ -838,6 +838,52 @@ export const api = {
   supportRevealPii: (id, reason) =>
     request(`/api/v1/support/users/${id}/pii?reason=${encodeURIComponent(reason)}`),
 
+  // --- Notes & escalations (customer.note.write / customer.escalate) -----------------------
+  opsListNotes: (userId) => request(`/api/v1/ops/cases/customers/${userId}/notes`),
+  opsAddNote: (userId, body, pinned = false) =>
+    request(`/api/v1/ops/cases/customers/${userId}/notes`, {
+      method: "POST",
+      body: JSON.stringify({ body, pinned })
+    }),
+  opsListEscalations: (userId) => request(`/api/v1/ops/cases/customers/${userId}/escalations`),
+  opsEscalationQueue: () => request("/api/v1/ops/cases/escalations"),
+  opsRaiseEscalation: (userId, payload) =>
+    request(`/api/v1/ops/cases/customers/${userId}/escalations`, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    }),
+  opsResolveEscalation: (id, resolution) =>
+    request(`/api/v1/ops/cases/escalations/${id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ resolution })
+    }),
+
+  // --- Financial ops (finance.* permissions) ------------------------------------------------
+  // A customer's money history + the adjustments against it.
+  opsCustomerLedger: (userId) => request(`/api/v1/payments/ops/customers/${userId}/ledger`),
+  // What can be proposed + the threshold above which a second approver is required.
+  opsAdjustmentOptions: () => request("/api/v1/payments/ops/adjustments/options"),
+  opsProposeAdjustment: (payload) =>
+    request("/api/v1/payments/ops/adjustments", { method: "POST", body: JSON.stringify(payload) }),
+  // The approval queue — everything waiting on a second pair of eyes.
+  opsAdjustmentQueue: () => request("/api/v1/payments/ops/adjustments/queue"),
+  opsApproveAdjustment: (id, decisionNote) =>
+    request(`/api/v1/payments/ops/adjustments/${id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ decisionNote })
+    }),
+  opsRejectAdjustment: (id, decisionNote) =>
+    request(`/api/v1/payments/ops/adjustments/${id}/reject`, {
+      method: "POST",
+      body: JSON.stringify({ decisionNote })
+    }),
+  opsAnomalies: () => request("/api/v1/payments/ops/anomalies"),
+  opsDecideAnomaly: (id, decision, decisionNote) =>
+    request(`/api/v1/payments/ops/anomalies/${id}/decide`, {
+      method: "POST",
+      body: JSON.stringify({ decision, decisionNote })
+    }),
+
   // Customer Care / Support (ops-token only; backend enforces the ops roles)
   // Accepts either a string (free-text query) or an object with any of
   // {query, first, last, email, phone, page, size} for the multi-field help-desk search.

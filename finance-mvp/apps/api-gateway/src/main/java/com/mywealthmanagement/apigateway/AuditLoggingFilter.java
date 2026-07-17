@@ -176,6 +176,14 @@ public class AuditLoggingFilter implements GlobalFilter, Ordered {
         if (SUPPORT_SERVICE_PREFIXES.contains(p[3]) && "support".equals(p[4]) && isNumeric(p[5])) {
             return p[5];
         }
+        // /api/v1/payments/ops/customers/{id}/ledger — the financial ops surface.
+        // Note the sibling routes (/ops/adjustments, /ops/anomalies) carry no customer id in the
+        // path: they act on an adjustment, whose customer is in the body/row. Those handlers emit
+        // their own semantic events naming the target, which is the authoritative record anyway.
+        if (p.length >= 7 && "payments".equals(p[3]) && "ops".equals(p[4])
+                && "customers".equals(p[5]) && isNumeric(p[6])) {
+            return p[6];
+        }
         return null;
     }
 

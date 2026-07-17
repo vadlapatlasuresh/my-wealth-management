@@ -50,14 +50,21 @@ ops_user ──has──> role(s) ──grant──> permission(s) ──checked
 
 ---
 
-## 3. The access matrix (as seeded by V9)
+## 3. The access matrix (V9 + V10 + V11)
 
 | Permission | Agent | Supervisor | Finance | Compliance | Admin |
 |---|:---:|:---:|:---:|:---:|:---:|
 | `customer.search` — find customers | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `customer.view` — open a record | ✅ | ✅ | ✅ | ✅ | ✅ |
 | `customer.data.view` — accounts, transactions, payments, deals | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `customer.note.write` — internal notes | ✅ | ✅ | ✅ | — | ✅ |
+| `customer.escalate` — raise/resolve escalations | ✅ | ✅ | ✅ | — | ✅ |
 | `customer.pii.reveal` — unmask SSN/EIN last-4 | — | ✅ | — | ✅ | ✅ |
+| **`finance.ledger.view`** — a customer's money history | — | ✅ | ✅ | ✅ | ✅ |
+| **`finance.adjustment.create`** — propose a refund/credit | — | — | ✅ | — | ✅ |
+| **`finance.adjustment.approve`** — approve someone else's | — | ✅ | — | — | ✅ |
+| **`finance.dispute.manage`** — disputes/chargebacks | — | — | ✅ | — | ✅ |
+| **`finance.anomaly.review`** — decide flagged anomalies | — | ✅ | — | — | ✅ |
 | `audit.query` — who accessed whom | — | ✅ | — | ✅ | ✅ |
 | `ops.analytics.view` — operator KPIs + health | — | ✅ | — | ✅ | ✅ |
 | `cpa.moderate` — approve/reject CPA listings | — | ✅ | — | — | ✅ |
@@ -69,15 +76,97 @@ ops_user ──has──> role(s) ──grant──> permission(s) ──checked
   needs an SSN. Making it ambient turns every glance into an unrecorded PII access; making it a
   supervisor action with a written reason means the trail can answer "who looked, and why", and the
   answer is usually "nobody".
-- **Compliance holds no `*.manage` / `*.moderate` key.** Read-only by construction, not by convention.
-- **Finance looks thin, honestly.** There is no money surface to gate yet — the ledger, refunds and
-  disputes are Phase 5. Those add `finance.*` keys **with** the endpoints that honour them, and
-  deliberately **not** `finance.adjustment.approve` for Finance: the maker cannot be the checker.
+- **Agents don't touch money at all.** Front-line support escalates to finance. They *do* get notes
+  and escalation, because those aren't a privilege — they're the job.
+- **Finance creates, Supervisor approves, and neither does both.** This is the maker-checker split,
+  and it is the highest-value control in the system: it's what stops one compromised or malicious
+  agent from moving money alone. See §5.
+- **Compliance holds no `*.write` / `*.manage` / `*.moderate` / `*.create` key.** Read-only by
+  construction, not by convention. It can see the money history and the audit trail, and change
+  neither.
+- **Admin holds create *and* approve.** Not a hole: the four-eyes rule is enforced per-adjustment
+  (`decided_by <> requested_by`, in the database), so an admin still cannot approve their own — it
+  just keeps a two-admin team able to operate without inventing a role that exists to click approve.
 
 **Two guardrails on editing the matrix:**
 1. An unknown permission key is rejected (400) — you can't build a role from a key nothing checks.
 2. Removing the last grant of `ops.user.manage` is refused (409) — it would lock everyone out of
    role administration with no way back short of a DB edit.
+
+---
+
+## 5. Money: the ledger and maker-checker
+
+**The ledger is append-only.** No update, no delete. A correction is a new entry that *reverses* the
+original and points at it (`reverses_id`). That's what lets the history answer "how did this balance
+happen, and who did that" instead of only "what is it now".
+
+**Ops can only ever move money in the customer's favour.** Every adjustment kind writes a negative
+ledger amount. There is deliberately no ops path that charges a customer — "give money back" and
+"take money" are wildly different powers, and only the first belongs on a support console.
+
+**Every movement is a request, not a write:**
+
+```
+DRAFT -> PENDING_APPROVAL -> APPROVED -> EXECUTING -> EXECUTED
+                          \-> REJECTED           \-> FAILED
+```
+
+**Four-eyes is enforced three times, and the redundancy is the point:**
+1. **Permissions** — `finance.adjustment.create` and `.approve` are different keys on different roles
+2. **The service** — an explicit check that the approver isn't the requester (409)
+3. **The database** — `CHECK (decided_by <> requested_by)`, which holds for a future refactor that
+   forgets, a code path nobody thought about, or a hand-written `UPDATE` at 2am
+
+**Auto-approve below $25** (`ops_finance_config`, DB-editable). Requiring approval for *everything*
+sounds safer but isn't — it gets routed around by busy agents, and a control everyone works around is
+worse than a threshold everyone respects. **Re-derive this from your actual Stripe refund
+distribution before treating 2500 as settled.**
+
+**Idempotency is non-negotiable.** Execution retries after a timeout are routine; refunding a
+customer twice because of one is the natural failure mode, and it stays invisible until someone
+reconciles the month. The key (`adj-<id>`) dedupes at *both* the provider and the ledger.
+
+**A refund that can't be confirmed FAILS — it never looks executed.** `StripeRefundProvider`
+deliberately does **not** fall back to the mock, unlike `StripePaymentProvider`. Degrading a failed
+charge costs a bill-pay that didn't happen. Degrading a failed *refund* would mark a customer's money
+as returned when it never moved: the ledger would say EXECUTED, the audit trail would agree, and
+nothing in our records would ever contradict it.
+
+> With `payment.provider=mock` (the default), refunds write a real ledger entry and a real audit
+> trail but **move no money**, and say so loudly in the logs.
+
+### Anomalies
+
+A nightly scan (`AnomalyScanJob`) raises findings to a supervisor queue. Rules chosen to catch real
+things rather than fill a dashboard:
+
+| Rule | Catches |
+|---|---|
+| `REPEAT_REFUNDS` | Refund abuse, or a product bug generating refunds |
+| `AGENT_ADJUSTMENT_OUTLIER` | An agent far outside their peer group — **the insider case the ops portal itself creates**. Compared against the median, not the mean: one outlier drags a mean up until it stops flagging the outlier |
+| `LEDGER_DRIFT` | The running balance disagreeing with the sum of entries — always a bug, and the customer is being shown the wrong number |
+
+Findings are deduped per subject per window. A queue that cries wolf gets ignored, which is
+functionally identical to not having one. Accepting *and* dismissing both require a note and are both
+audited — "a supervisor looked and said it was fine" is exactly as important to record as the flag.
+
+---
+
+## 6. Notes & escalations
+
+The support team's memory. Without it, everything an agent learns dies when they hang up and the
+customer explains the problem again to whoever picks up next.
+
+- **Notes are append-only** — no edit path, deliberately. An editable note is one you can't rely on
+  in a dispute; a correction is a new note. Same reasoning as the ledger.
+- **Pinned notes and open escalations drive the attention panel**, above everything else on the
+  record. The panel renders *nothing* when there's nothing to say — an always-present panel that
+  usually reads "no issues" trains people to skip it, and then they skip it on the day it matters.
+- Resolving an escalation requires a resolution note; closing one without a why tells the next agent
+  nothing.
+
+---
 
 ### What ops staff **cannot** reach, by design
 
@@ -85,8 +174,11 @@ ops_user ──has──> role(s) ──grant──> permission(s) ──checked
 |---|---|
 | A customer's **documents** | documents-service has no ops surface — an ops token is refused on every route there |
 | The **encryption keys** (secrets-service `/admin/**`) | Not gateway-exposed, and its ops-path list is empty on purpose. The ops portal must never be a path to the KEK |
-| **Acting as a customer** | Every ops route is read-only over member data. Ops staff view; they never act *as* the customer |
+| **Charging a customer** | Every adjustment kind writes a negative ledger amount. Ops can give money back; there is no path to take it |
+| **Approving their own money movement** | Enforced by the permission split, the service, *and* a DB CHECK constraint |
+| **Acting as a customer** | Every other ops route is read-only over member data. Ops staff view; they never act *as* the customer |
 | **Full SSN/EIN** | Encrypted at rest; no ops route returns more than the last 4 |
+| **Editing a note, a ledger entry, or an audit row** | All three are append-only. Corrections are new records |
 
 ---
 

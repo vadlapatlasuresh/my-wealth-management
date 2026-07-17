@@ -32,6 +32,11 @@ class AuditTargetExtractionTest {
     }
 
     @Test
+    void extractsTargetFromTheFinancialOpsLedgerRoute() {
+        assertEquals("42", AuditLoggingFilter.targetUserIdFrom("/api/v1/payments/ops/customers/42/ledger"));
+    }
+
+    @Test
     void returnsNullWhenThereIsNoTarget() {
         // A search targets nobody in particular.
         assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/support/users"));
@@ -39,6 +44,10 @@ class AuditTargetExtractionTest {
         // Ops-admin routes act on ops accounts, not customers.
         assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/ops/admin/users"));
         assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/ops/auth/me"));
+        // Adjustment/anomaly routes act on a record, not a path-named customer. Their handlers
+        // emit the semantic event that names the target; the gateway must not invent one.
+        assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/payments/ops/adjustments/7/approve"));
+        assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/payments/ops/anomalies"));
         // Member routes: the actor IS the subject, so there is no separate target.
         assertNull(AuditLoggingFilter.targetUserIdFrom("/api/v1/me/snapshot"));
         assertNull(AuditLoggingFilter.targetUserIdFrom(null));
