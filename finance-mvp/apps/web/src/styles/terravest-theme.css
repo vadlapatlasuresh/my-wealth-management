@@ -1465,6 +1465,23 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 .ops-login-foot { display: flex; align-items: flex-start; gap: 7px; margin-top: 20px; padding-top: 14px; border-top: 1px solid var(--tv-border-light); font-size: 12px; color: var(--tv-text-muted); line-height: 1.5; }
 .ops-login-foot i { color: var(--tv-forest-light); margin-top: 1px; }
 
+/* Caller verification banner — the disclosure gate at the top of a customer record. Colour tracks
+   the tier reached, so an agent can see at a glance whether they may read anything back. */
+.caller-verify { border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid; }
+.caller-verify.t0 { background: var(--tv-negative-bg); border-color: var(--tv-negative); }
+.caller-verify.t1 { background: var(--tv-gold-pale); border-color: var(--tv-gold); }
+.caller-verify.t2, .caller-verify.t3 { background: var(--tv-positive-bg); border-color: var(--tv-positive); }
+.caller-verify-row { display: flex; align-items: flex-start; gap: 10px; }
+.caller-verify-row > i { font-size: 20px; margin-top: 1px; }
+.caller-verify.t0 .caller-verify-row > i { color: var(--tv-negative); }
+.caller-verify.t1 .caller-verify-row > i { color: var(--tv-warning); }
+.caller-verify.t2 .caller-verify-row > i, .caller-verify.t3 .caller-verify-row > i { color: var(--tv-positive); }
+.caller-verify-help { font-size: 12.5px; color: var(--tv-text-secondary); margin-top: 2px; }
+.caller-verify-lock { font-size: 12px; color: var(--tv-text-muted); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.caller-verify-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.caller-verify-action { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--tv-border-light); }
+.caller-verify-timeline { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
 @media (max-width: 900px) {
   .ops-nav { width: 56px; }
   .ops-nav-item span { display: none; }

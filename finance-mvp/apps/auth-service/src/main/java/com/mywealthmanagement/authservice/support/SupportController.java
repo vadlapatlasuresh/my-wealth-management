@@ -1,6 +1,8 @@
 package com.mywealthmanagement.authservice.support;
 
 import com.mywealthmanagement.authservice.audit.AuditClient;
+import com.mywealthmanagement.authservice.verify.CallerVerificationService;
+import com.mywealthmanagement.authservice.verify.DisclosureTier;
 import com.mywealthmanagement.authservice.support.dto.SupportUserDetailDto;
 import com.mywealthmanagement.authservice.support.dto.SupportUserDto;
 import com.mywealthmanagement.authservice.user.User;
@@ -36,6 +38,7 @@ public class SupportController {
 
     private final UserRepository userRepository;
     private final AuditClient auditClient;
+    private final CallerVerificationService verification;
 
     /**
      * Help-desk customer search. Supports either:
@@ -118,6 +121,11 @@ public class SupportController {
      * usually "nobody", which is the point.
      *
      * Still only the last 4. The full value is encrypted at rest and no ops route returns it.
+     *
+     * TWO gates, both required: the @PreAuthorize checks the AGENT holds customer.pii.reveal; the
+     * verification check confirms the CALLER has proven who they are. A supervisor reading PII to an
+     * unverified caller is the exact hole caller-verification closes, so permission alone is not
+     * enough here.
      */
     @PreAuthorize("hasAuthority('customer.pii.reveal')")
     @GetMapping("/users/{id}/pii")
@@ -128,6 +136,10 @@ public class SupportController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "A reason of at least 8 characters is required to reveal PII");
         }
+        // The caller must be verified enough for PII (T2 by default, DB-editable). Throws 403 with
+        // a message telling the agent to verify the caller first.
+        verification.requireTierFor(currentOpsUserId(), String.valueOf(id), DisclosureTier.CUSTOMER_PII);
+
         User u = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 

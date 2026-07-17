@@ -1,9 +1,20 @@
 # Proposal: Caller Verification & Tiered Disclosure
 
-**Status:** Design for review — contains product decisions that need your call before build
+**Status:** **Phase A BUILT (2026-07-17)** — sessions + tiered disclosure gate + OTP + KBA + suspicious-freeze + timeline. Phases B–D (step-up, contact-change hardening, edge cohorts) open.
 **Area:** New verification layer in `auth-service` + the ops 360 view (`apps/web`), extends the audit trail
 **Builds on:** the ops portal (identity, RBAC, audit, financial layer — proposals `ops-portal.md`,
 `ops-access-and-audit.md`)
+
+> **As built (Phase A):** `auth-service` migration **V12** (`ops_verification_sessions`,
+> `ops_verification_attempts`, DB-editable `ops_disclosure_tiers`); `CallerVerificationService` +
+> `CallerVerificationController` (`/api/v1/ops/verify/**`); the disclosure gate wired into PII
+> reveal (`requireTierFor` — a supervisor with `customer.pii.reveal` is 403'd until the caller is
+> verified); OTP-to-registered (→T2) and dynamic KBA (→T1, never asks for SSN); the
+> "can't verify" freeze; verification events on the keyed audit chain; and the
+> `components/CallerVerification.jsx` banner on the 360 view (tier-coloured, resets per call,
+> gates the PII reveal button). Decisions 1/2/3/4 taken as recommended; tier→action mapping is
+> DB-editable per decision 2's "adjust after seeing it built". **Verified end-to-end** against
+> running services; 5 dedicated tests + the RBAC suite updated. Phases B–D below remain.
 
 ---
 

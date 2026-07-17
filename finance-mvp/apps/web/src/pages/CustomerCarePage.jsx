@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api, hasOpsPermission } from '../api';
 import CustomerFinancials from '../components/CustomerFinancials';
 import CustomerNotes from '../components/CustomerNotes';
+import CallerVerification from '../components/CallerVerification';
 
 // Light money formatter (no external dep) for the read-only data tabs.
 function money(v) {
@@ -218,7 +219,7 @@ function StaffAccessTab({ userId, name }) {
  * whether something is on file (enough to answer "do you have my tax ID?") without an access, and
  * makes looking a decision the agent has to justify.
  */
-function PiiCell({ detail }) {
+function PiiCell({ detail, callerTier }) {
   const [revealed, setRevealed] = useState(null);
   const [asking, setAsking] = useState(false);
   const [reason, setReason] = useState('');
@@ -227,6 +228,10 @@ function PiiCell({ detail }) {
 
   const onFile = detail.hasSsn || detail.hasEin;
   const canReveal = hasOpsPermission('customer.pii.reveal');
+  // The caller must be verified to the PII tier (T2). This mirrors the server gate — the reveal
+  // still fails server-side below tier, but blocking the button here means the agent gets told to
+  // verify first instead of hitting a 403.
+  const callerVerified = (callerTier ?? 0) >= 2;
 
   // A new customer must never inherit the last one's revealed PII.
   useEffect(() => { setRevealed(null); setAsking(false); setReason(''); setError(''); }, [detail.id]);
@@ -282,7 +287,7 @@ function PiiCell({ detail }) {
   return (
     <div className="kpi-value" style={{ fontSize: 18 }}>
       {onFile ? `${detail.hasSsn ? 'SSN' : 'EIN'} ••••` : '—'}
-      {onFile && canReveal && (
+      {onFile && canReveal && callerVerified && (
         <button
           className="btn btn-secondary btn-sm"
           style={{ marginLeft: 8, verticalAlign: 'middle' }}
@@ -290,6 +295,11 @@ function PiiCell({ detail }) {
         >
           <i className="ti ti-eye"></i> Reveal
         </button>
+      )}
+      {onFile && canReveal && !callerVerified && (
+        <div className="setting-help" style={{ marginTop: 2 }}>
+          <i className="ti ti-lock"></i> Verify the caller to reveal
+        </div>
       )}
       {onFile && !canReveal && (
         <div className="setting-help" style={{ marginTop: 2 }}>On file — you don't have access to view it</div>
@@ -337,6 +347,9 @@ export default function CustomerCarePage() {
   const [loadingList, setLoadingList] = useState(false);
   const [selected, setSelected] = useState(null);
   const [detail, setDetail] = useState(null);
+  // The caller's verification tier for the open record, published up by CallerVerification. Gates
+  // the PII reveal. Resets whenever a different record is opened — verification is per-call.
+  const [callerTier, setCallerTier] = useState(0);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [tab, setTab] = useState('issues'); // issues | activity
   const [error, setError] = useState('');
@@ -382,6 +395,7 @@ export default function CustomerCarePage() {
   async function openUser(u) {
     setSelected(u);
     setDetail(null);
+    setCallerTier(0); // verification is per-call — a new record starts cold
     setLoadingDetail(true);
     setError('');
     try {
@@ -482,6 +496,11 @@ export default function CustomerCarePage() {
             <div className="card"><div className="empty-state"><i className="ti ti-loader"></i><p>Loading member…</p></div></div>
           ) : (
             <>
+              {/* Caller verification — the disclosure gate, above everything. Its tier flows into
+                  PiiCell so the reveal button is gated on the CALLER being verified, not just on
+                  the agent's permission. */}
+              <CallerVerification customerId={detail.id} phone={detail.phone} onTierChange={setCallerTier} />
+
               {/* Profile card */}
               <div className="card" style={{ marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -510,7 +529,7 @@ export default function CustomerCarePage() {
                   </div>
                   <div className="kpi-card">
                     <div className="kpi-label">Identity</div>
-                    <PiiCell detail={detail} />
+                    <PiiCell detail={detail} callerTier={callerTier} />
                     <div className="kpi-delta"><Badge ok={detail.identityVerified} yes="Verified" no="Unverified" /></div>
                   </div>
                   <div className="kpi-card">
