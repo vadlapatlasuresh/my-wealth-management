@@ -17,6 +17,12 @@ The proposal explains *why*; this describes *what is true now*.
 | "What has agent Dana been doing?" | `GET /api/v1/ops/audit/actor/{opsUserId}` — includes `distinctTargets`, the access-review signal |
 | "Has the trail been tampered with?" | `GET /api/v1/audit/verify` — chain + checkpoints, both must hold |
 
+> **A permission is not disclosure clearance.** This document covers what the *agent* is allowed to
+> do. Before an agent may disclose account data to a *caller*, the caller must be verified — a
+> separate, tiered, per-call gate that sits IN FRONT of these permissions. Both must pass: a
+> supervisor holding `customer.pii.reveal` still cannot read PII to an unverified caller. That layer
+> is designed in [`ops-caller-verification.md`](ops-caller-verification.md).
+
 ---
 
 ## 2. How access is decided

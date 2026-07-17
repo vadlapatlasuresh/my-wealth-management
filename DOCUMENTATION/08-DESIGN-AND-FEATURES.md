@@ -41,7 +41,13 @@ forms, empty-states, filter bar, toggle switch, info tooltip, table-scroll, and 
 
 **Design mockups / references:** the HTML mockups in [`assets/`](../assets/) mirror the app at
 full depth (web/iOS/Android) and are kept in sync per `DESIGN_SYNC.md`. The ops portal design is
-[`docs/designs/OPS_PORTAL_DESIGN.md`](../docs/designs/OPS_PORTAL_DESIGN.md).
+[`docs/designs/OPS_PORTAL_DESIGN.md`](../docs/designs/OPS_PORTAL_DESIGN.md), with the built
+architecture and pending design in [`DOCUMENTATION/proposals/`](proposals/):
+- [`ops-portal.md`](proposals/ops-portal.md) — the whole build, phase by phase
+- [`ops-access-and-audit.md`](proposals/ops-access-and-audit.md) — the access matrix + audit trail
+- [`ops-caller-verification.md`](proposals/ops-caller-verification.md) — **design for review**:
+  verifying the person on the phone before disclosing anything, with tiered disclosure
+- [`ops-portal-golive-runbook.md`](proposals/ops-portal-golive-runbook.md) — deploy steps
 
 ---
 
