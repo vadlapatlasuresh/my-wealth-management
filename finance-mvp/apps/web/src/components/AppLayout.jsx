@@ -9,9 +9,7 @@ import {
   useNavigate
 } from 'react-router-dom';
 import { useTranslation } from "react-i18next";
-import { api, isOpsSignedIn, setOpsToken } from "../api";
-import OpsPortal from "./OpsPortal";
-import OpsLoginPage from "../pages/OpsLoginPage";
+import { api } from "../api";
 import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
@@ -527,42 +525,20 @@ export default function AppLayout(props) {
     </SubscriptionProvider>
   );
 
-  // /ops/* renders the Ops Portal, gated on a separate ops session; everything else is the
-  // member app. An unauthenticated visitor to /ops gets the staff sign-in, NOT a redirect to
-  // the member app — the two are different products that happen to share an origin today.
+  // The member app, and only the member app.
+  //
+  // The Ops Portal used to render here at /ops. It now lives on its own origin
+  // (ops.terravest.app) with its own bundle — see apps/web/src/ops-main.jsx and
+  // vite.ops.config.js. Two reasons it moved once ops gained the power to issue refunds:
+  //  - a different origin means a different localStorage, so an XSS in this app cannot read
+  //    an ops session that can move money;
+  //  - no ops screens or permission logic are shipped to members. Not route-guarded — simply
+  //    not in this bundle. (api.js is still shared, so its ops URL builders remain here as
+  //    dead code; they are not a capability — see ops-main.jsx.)
   return (
     <Router>
       <AutoTranslate />
-      <ShellSwitch memberShell={memberShell} opsElement={<OpsShell />} />
+      {memberShell}
     </Router>
   );
-}
-
-/**
- * The ops half of the app: staff sign-in until there's a valid ops session, the portal after.
- * Listens for `ops:unauthorized` so an expired ops token drops straight back to sign-in
- * instead of leaving a shell that 401s on every call.
- */
-function OpsShell() {
-  const [signedIn, setSignedIn] = React.useState(() => isOpsSignedIn());
-
-  React.useEffect(() => {
-    const onUnauthorized = () => setSignedIn(false);
-    window.addEventListener('ops:unauthorized', onUnauthorized);
-    return () => window.removeEventListener('ops:unauthorized', onUnauthorized);
-  }, []);
-
-  const signOut = React.useCallback(() => {
-    setOpsToken(null);
-    setSignedIn(false);
-  }, []);
-
-  if (!signedIn) return <OpsLoginPage onSignedIn={() => setSignedIn(true)} />;
-  return <OpsPortal handleLogout={signOut} />;
-}
-
-/** Routes /ops/* to the Ops Portal shell; all other paths render the member shell. */
-function ShellSwitch({ memberShell, opsElement }) {
-  const location = useLocation();
-  return location.pathname.startsWith('/ops') ? opsElement : memberShell;
 }

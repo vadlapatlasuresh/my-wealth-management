@@ -1,12 +1,12 @@
 # Proposal: Ops Portal
 
-**Status:** **Phases 1–5 built (2026-07-16)** · Phase 6 pending a DNS record
+**Status:** **All phases (1–6) built (2026-07-16).** Phase 6 ships on the next deploy once the DNS record is flipped to grey-cloud — see the [go-live runbook](ops-portal-golive-runbook.md).
 **Built:** separate `ops_users` identity + mandatory MFA + `typ=ops` enforced across all 12 services
 (P1); permission-based RBAC with a DB-editable access matrix (P2); actor/target/reason/diff audit on
 a keyed HMAC chain with signed checkpoints (P3); attention panel, PII-reveal-with-reason, notes,
 escalations, ops-admin screens (P4); append-only ledger + maker-checker adjustments + anomaly queue
 (P5).
-**Open:** the `ops.terravest.app` origin split (P6) — needs a DNS record and a deploy window; see §11.
+**Deploy:** needs `OPS_BOOTSTRAP_*`, `AUDIT_CHAIN_KEY`, `OPS_DOMAIN`, and the ops origin in `WEB_ORIGINS`. Full sequence + validations: [`ops-portal-golive-runbook.md`](ops-portal-golive-runbook.md).
 
 > **Access-control and audit reference:** [`ops-access-and-audit.md`](ops-access-and-audit.md) —
 > the access matrix, what ops staff can and cannot reach, and what gets recorded.
@@ -509,7 +509,42 @@ scope from 4 and 6 — not from 1–3.
 
 ---
 
-## 11. Phase 6 — the origin split (the last pending item)
+## 11. Phase 6 — the origin split ✅ BUILT (2026-07-16), pending a DNS flip to deploy
+
+> **Deploying it: [`ops-portal-golive-runbook.md`](ops-portal-golive-runbook.md)** — the Cloudflare
+> change, the env vars, and the validations.
+
+**As built:**
+
+| Piece | Where |
+|---|---|
+| Separate ops bundle | `apps/web/ops.html` + `src/ops-main.jsx` + `vite.ops.config.js` → `dist-ops/` |
+| `/ops` removed from the member app | `AppLayout.jsx` (member bundle: 200 → 192 modules) |
+| Ops site block, tight CSP | `Caddyfile` `{$OPS_DOMAIN:ops.localhost}`, served from `/srv-ops` |
+| Deploy | `deploy.sh` builds both bundles; compose mounts `./web-dist-ops:/srv-ops` |
+| Config | `OPS_DOMAIN` (compose), ops origin added to `WEB_ORIGINS` |
+
+**Why a second Vite config rather than a second entry:** the member build's `vite-plugin-pwa`
+precaches everything in its output directory — a shared output would push the ops console into every
+member's service-worker cache. Separate outputs make "members never fetch ops assets" a fact about
+directories, not a tree-shaking claim. The ops bundle also ships **no service worker**: a console
+that works offline is one whose staff can't tell whether they're looking at live data, and on a tool
+that issues refunds that's a way to make a real mistake.
+
+**Default is `ops.localhost`, on purpose.** Caddy issues an *internal* cert for `.localhost` and
+never contacts Let's Encrypt, so the ops site block is inert until `OPS_DOMAIN` is set to a real
+name. Pointing it at a name that doesn't resolve would just make ACME fail and retry noisily.
+
+**Honest residue:** `api.js` is shared, so the member bundle still carries the ops URL builders
+(`opsLogin` and friends) — `api` is a single object literal, so those properties survive
+tree-shaking. Dead code, not a capability: the endpoints need a `typ=ops` token no member can get,
+and they're discoverable from the gateway anyway. Worth splitting if `api.js` is ever refactored.
+
+**Not verified locally:** the Caddyfile couldn't be validated in the dev sandbox (no Docker/Caddy).
+The runbook therefore makes `caddy validate` a required pre-flight step — a syntax error there takes
+`app.terravest.app` down too, not just ops.
+
+### The original plan (for context)
 
 Decision #7 was "phase it: keep `/ops` in the member SPA while ops is read-only; split to
 `ops.terravest.app` when financial powers land." **They have now landed**, so this is due.
