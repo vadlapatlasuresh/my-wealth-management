@@ -17,7 +17,8 @@
     "android:run": "npm run build && cap sync android && cap run android",
     "ios:run": "npm run build && cap sync ios && cap run ios",
     "e2e": "playwright test",
-    "e2e:headed": "playwright test --headed"
+    "e2e:headed": "playwright test --headed",
+    "lint": "eslint src"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.0",
@@ -39,6 +40,9 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^10.7.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.7.0",
     "sharp": "^0.34.5",
     "typescript": "^6.0.3",
     "vite": "^5.3.5",

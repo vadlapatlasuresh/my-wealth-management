@@ -384,8 +384,6 @@ export default function CustomerCarePage() {
     setDetail(null);
     setLoadingDetail(true);
     setError('');
-    setRoleNotice('');
-    setConfirmAdmin(false);
     try {
       setDetail(await api.supportGetUser(u.id));
     } catch (e) {

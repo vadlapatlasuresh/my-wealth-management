@@ -92,12 +92,25 @@ jobs:
           print("locale parity OK" if ok else "LOCALE PARITY FAILED")
           sys.exit(0 if ok else 1)
           PY
+      # Catches references to things that don't exist. The build does NOT: an undefined
+      # identifier compiles happily and throws a ReferenceError in the user's browser instead
+      # (`setRoleNotice is not defined` reached production exactly this way). One rule,
+      # no-undef — this is a correctness gate, not a style gate.
+      - name: Lint web (no-undef)
+        working-directory: finance-mvp
+        run: npm run lint -w apps/web
       - name: Run web unit tests
         working-directory: finance-mvp
         run: npm run test -w apps/web
       - name: Build web
         working-directory: finance-mvp
         run: npm run build -w apps/web
+      # The ops portal is a SEPARATE bundle for a separate origin; `npm run build` doesn't
+      # produce it, so without this a broken ops build would sail through CI and only fail on
+      # the VM during deploy.
+      - name: Build ops portal
+        working-directory: finance-mvp
+        run: npm run build:ops -w apps/web
 
   # ---------------------------------------------------------------
   # 2b) Backend-free Playwright smoke test (PRs and main).
