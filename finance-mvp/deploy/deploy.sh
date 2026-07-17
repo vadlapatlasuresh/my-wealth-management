@@ -48,11 +48,33 @@ $COMPOSE pull --ignore-pull-failures
 if grep -q "^WEB_API_BASE=" .env.prod; then
   WEB_API_BASE=$(grep "^WEB_API_BASE=" .env.prod | cut -d= -f2-)
   echo "==> Building web SPA (VITE_API_BASE=$WEB_API_BASE)"
+  # The ops portal calls ITS OWN origin, not the member one.
+  #
+  # Its Caddy block proxies /api/* to the gateway itself, so https://ops.<domain>/api/... works
+  # and is SAME-ORIGIN. That matters three ways:
+  #   - it satisfies the deliberately tight `connect-src 'self'` CSP on the ops host;
+  #   - no CORS is involved at all, so the ops portal can't be broken by a WEB_ORIGINS typo;
+  #   - the ops origin never has to be granted access to the member origin.
+  # Baking the member's WEB_API_BASE into the ops bundle (as this once did) makes every ops
+  # API call a cross-origin request that its own CSP then blocks.
+  OPS_DOMAIN_VAL=$(grep "^OPS_DOMAIN=" .env.prod 2>/dev/null | cut -d= -f2- | tr -d '[:space:]' || true)
+  if [ -n "$OPS_DOMAIN_VAL" ]; then
+    OPS_API_BASE="https://$OPS_DOMAIN_VAL"
+  else
+    # OPS_DOMAIN unset -> the ops site block is inert (Caddy serves ops.localhost with an
+    # internal cert), so this bundle isn't reachable anyway. Point it at the member origin so
+    # the build is still coherent rather than half-configured.
+    OPS_API_BASE="$WEB_API_BASE"
+  fi
+  echo "    ops portal API base: $OPS_API_BASE"
+
   # Two bundles, one npm install: the member app (dist) and the OPS PORTAL (dist-ops).
   # They are separate builds, not two entries of one build, so that ops assets are never
   # precached into members' service workers and never served from the member origin.
-  docker run --rm -v "$PWD":/work -w /work/apps/web -e VITE_API_BASE="$WEB_API_BASE" node:20-alpine \
-    sh -c "npm install --no-audit --no-fund --silent && npm run build && npm run build:ops" >/dev/null
+  # VITE_API_BASE is overridden for the ops build only — different origin, different base.
+  docker run --rm -v "$PWD":/work -w /work/apps/web \
+    -e VITE_API_BASE="$WEB_API_BASE" -e OPS_API_BASE="$OPS_API_BASE" node:20-alpine \
+    sh -c 'npm install --no-audit --no-fund --silent && npm run build && VITE_API_BASE="$OPS_API_BASE" npm run build:ops' >/dev/null
   # Refill web-dist IN PLACE (keep the directory's inode). Caddy bind-mounts
   # ./web-dist:/srv; if we `rm -rf web-dist` the running container keeps pointing
   # at the old (unlinked) inode and serves an empty /srv -> 404 on every page.

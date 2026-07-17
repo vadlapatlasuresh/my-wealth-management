@@ -75,7 +75,10 @@ Set these:
 OPS_DOMAIN=ops.terravest.app
 
 # --- CORS: ADD the ops origin, keep the existing one ---
-# Comma-separated, no spaces, no wildcard. Miss this and every ops API call fails CORS.
+# Comma-separated, no spaces, no wildcard, and NO inline "# comment" — the value would
+# swallow it. Exactly ONE WEB_ORIGINS line: a duplicate silently wins over the first.
+# Belt-and-braces: the ops portal calls its OWN origin (its Caddy block proxies /api/*),
+# so it is same-origin and CORS never engages. This keeps it working if that ever changes.
 WEB_ORIGINS=https://app.terravest.app,https://ops.terravest.app
 
 # --- First ops account (V8 revokes all old staff access — without this nobody can log in) ---
@@ -134,10 +137,16 @@ Watch for these lines:
 
 ```
 ==> Building web SPA (VITE_API_BASE=https://app.terravest.app)
+    ops portal API base: https://ops.terravest.app   <-- MUST be the ops origin, not app
     web built -> web-dist (N entries)
-    ops portal built -> web-dist-ops (N entries)     <-- NEW: the separate ops bundle
+    ops portal built -> web-dist-ops (N entries)     <-- the separate ops bundle
 ==> Recreating Caddy to pick up the new web build
 ```
+
+> **If "ops portal API base" says `https://app.terravest.app`**, `OPS_DOMAIN` wasn't set when the
+> build ran. The portal will load and then fail every call with
+> `Connecting to 'https://app.terravest.app/...' violates ... connect-src 'self'` — the ops CSP
+> correctly refusing a cross-origin call. Set `OPS_DOMAIN` and redeploy; don't widen the CSP.
 
 Then confirm the migrations and the bootstrap ran.
 
