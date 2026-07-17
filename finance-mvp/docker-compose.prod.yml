@@ -99,11 +99,20 @@ services:
       # Built web SPA (apps/web/dist) staged here; Caddy serves it at /. Populated by
       # the web-build step in deploy/deploy.sh. (All-in-one: web + API on one VM.)
       - ./web-dist:/srv:ro
+      # The OPS portal — a SEPARATE bundle (apps/web/dist-ops) for a separate origin, so the
+      # member app never ships agent tooling and an XSS there can't reach an ops session.
+      - ./web-dist-ops:/srv-ops:ro
       - caddy_data:/data
       - caddy_config:/config
     environment:
       API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN in .env.prod}
       ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.prod}
+      # Ops portal hostname. Defaults to ops.localhost, for which Caddy issues an INTERNAL
+      # cert and never contacts Let's Encrypt — so the ops site block is inert until you set
+      # this to a real name. Set it only once the DNS record resolves to this VM and is
+      # GREY-CLOUD (DNS only): behind Cloudflare's proxy the ACME HTTP-01 challenge is
+      # answered by Cloudflare's edge and Caddy never gets a certificate.
+      OPS_DOMAIN: ${OPS_DOMAIN:-ops.localhost}
     depends_on:
       api-gateway:
         condition: service_healthy

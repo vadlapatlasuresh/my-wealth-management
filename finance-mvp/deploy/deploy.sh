@@ -48,8 +48,11 @@ $COMPOSE pull --ignore-pull-failures
 if grep -q "^WEB_API_BASE=" .env.prod; then
   WEB_API_BASE=$(grep "^WEB_API_BASE=" .env.prod | cut -d= -f2-)
   echo "==> Building web SPA (VITE_API_BASE=$WEB_API_BASE)"
+  # Two bundles, one npm install: the member app (dist) and the OPS PORTAL (dist-ops).
+  # They are separate builds, not two entries of one build, so that ops assets are never
+  # precached into members' service workers and never served from the member origin.
   docker run --rm -v "$PWD":/work -w /work/apps/web -e VITE_API_BASE="$WEB_API_BASE" node:20-alpine \
-    sh -c "npm install --no-audit --no-fund --silent && npm run build" >/dev/null
+    sh -c "npm install --no-audit --no-fund --silent && npm run build && npm run build:ops" >/dev/null
   # Refill web-dist IN PLACE (keep the directory's inode). Caddy bind-mounts
   # ./web-dist:/srv; if we `rm -rf web-dist` the running container keeps pointing
   # at the old (unlinked) inode and serves an empty /srv -> 404 on every page.
@@ -58,6 +61,12 @@ if grep -q "^WEB_API_BASE=" .env.prod; then
   find web-dist -mindepth 1 -delete
   cp -r apps/web/dist/. web-dist/
   echo "    web built -> web-dist ($(ls web-dist | wc -l) entries)"
+
+  # Same in-place trick for the ops bundle (Caddy bind-mounts ./web-dist-ops:/srv-ops).
+  mkdir -p web-dist-ops
+  find web-dist-ops -mindepth 1 -delete
+  cp -r apps/web/dist-ops/. web-dist-ops/
+  echo "    ops portal built -> web-dist-ops ($(ls web-dist-ops | wc -l) entries)"
 else
   echo "==> Skipping web build (no WEB_API_BASE in .env.prod; serving existing web-dist if present)"
 fi

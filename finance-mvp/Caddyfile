@@ -51,6 +51,58 @@
     }
 }
 
+# ============================================================
+#  OPS PORTAL — its own origin. {$OPS_DOMAIN} from .env.prod.
+#
+#  Why a separate origin at all: a different host means a different localStorage, so an XSS in
+#  the member app cannot read an ops session — and ops sessions can now issue refunds. While
+#  the portal was read-only, sharing app.terravest.app was an acceptable trade; once it could
+#  move money, it stopped being one.
+#
+#  DEFAULT IS ops.localhost ON PURPOSE. Caddy issues an *internal* cert for .localhost and
+#  never contacts Let's Encrypt, so this block is inert and harmless until OPS_DOMAIN is set
+#  to a real hostname. Pointing it at a name that doesn't resolve (or one behind Cloudflare's
+#  orange cloud) would make ACME fail and retry noisily instead.
+#
+#  DNS MUST BE GREY-CLOUD (DNS only). Proxied means Cloudflare answers the HTTP-01 challenge
+#  with its own edge cert and Caddy never gets one — and it would route ops traffic (customer
+#  PII, SSN reveals, money movements) through a third party's TLS termination, which is not
+#  something app.terravest.app does today.
+# ============================================================
+{$OPS_DOMAIN:ops.localhost} {
+    encode gzip zstd
+
+    # Far tighter than the member app's CSP, because the ops console loads far less: no Plaid,
+    # no Google Maps, no OAuth providers, no translation API. Everything it needs is
+    # same-origin except Google Fonts. A narrow CSP on the highest-privilege surface is worth
+    # more than a convenient one.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=()"
+        # Internal tool: never index it, and don't let a search engine hold a copy of it.
+        X-Robots-Tag "noindex, nofollow, noarchive"
+        Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'none'; worker-src 'none'; upgrade-insecure-requests"
+        -Server
+    }
+
+    # The ops portal talks to the same gateway. GATEWAY_CORS_ALLOWED_ORIGINS must include this
+    # origin or every call fails CORS — see docker-compose.prod.yml.
+    handle /api/* {
+        reverse_proxy api-gateway:8080
+    }
+
+    # Everything else -> the ops SPA (a SEPARATE bundle from the member app: apps/web/dist-ops,
+    # staged to ./web-dist-ops). Members' browsers never fetch these assets.
+    handle {
+        root * /srv-ops
+        try_files {path} /ops.html
+        file_server
+    }
+}
+
 # Canonical redirect: the bare domain + www -> the single app origin (app.terravest.app).
 # Caddy auto-issues certs for these too. (Keeps one canonical URL; good for SEO/cookies.)
 terravest.app, www.terravest.app {
