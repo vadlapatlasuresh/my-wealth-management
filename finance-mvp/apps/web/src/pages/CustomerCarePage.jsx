@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api, hasOpsPermission } from '../api';
+import CustomerFinancials from '../components/CustomerFinancials';
+import CustomerNotes from '../components/CustomerNotes';
 
 // Light money formatter (no external dep) for the read-only data tabs.
 function money(v) {
@@ -66,6 +68,72 @@ const DATA_TABS = {
     ),
   },
 };
+
+/**
+ * The things an agent must not miss, surfaced above everything else: open escalations and pinned
+ * notes.
+ *
+ * This exists because the record's default order is chronological, and chronological is the wrong
+ * order for someone with a caller waiting. "This customer has a dispute open" and "do not offer
+ * another goodwill credit" are worth more in the first two seconds than any table on the page.
+ *
+ * Renders nothing at all when there's nothing to say — an always-present panel that usually reads
+ * "no issues" trains people to skip it, and then they skip it on the day it matters.
+ */
+function AttentionPanel({ userId }) {
+  const [items, setItems] = useState([]);
+
+  useEffect(() => {
+    let live = true;
+    Promise.all([
+      api.opsListEscalations(userId).catch(() => []),
+      api.opsListNotes(userId).catch(() => [])
+    ]).then(([escalations, notes]) => {
+      if (!live) return;
+      const open = (Array.isArray(escalations) ? escalations : []).filter((e) => e.status === 'OPEN');
+      const pinned = (Array.isArray(notes) ? notes : []).filter((n) => n.pinned);
+      setItems([
+        ...open.map((e) => ({
+          key: `esc-${e.id}`,
+          icon: 'ti-flag',
+          severity: e.severity,
+          text: e.summary,
+          meta: `Escalation · raised by ops #${e.raisedBy}`
+        })),
+        ...pinned.map((n) => ({
+          key: `note-${n.id}`,
+          icon: 'ti-pin',
+          severity: null,
+          text: n.body,
+          meta: `Pinned note · ops #${n.authorId}`
+        }))
+      ]);
+    });
+    return () => { live = false; };
+  }, [userId]);
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="card" style={{ marginBottom: 16, borderColor: 'var(--tv-gold)' }}>
+      <div style={{ fontWeight: 600, marginBottom: 8 }}>
+        <i className="ti ti-alert-circle" style={{ color: 'var(--tv-gold)' }}></i> Needs attention
+      </div>
+      {items.map((i) => (
+        <div key={i.key} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', padding: '5px 0' }}>
+          <i className={`ti ${i.icon}`} style={{ color: 'var(--tv-gold)', marginTop: 3 }}></i>
+          <div style={{ flex: 1 }}>
+            <div>
+              {i.severity && <span className={`badge ${i.severity === 'HIGH' ? 'badge-red' : 'badge-amber'}`} style={{ marginRight: 6 }}>{i.severity}</span>}
+              {i.text}
+            </div>
+            <div className="setting-help">{i.meta}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Every recorded staff action taken against THIS customer — who opened their record, who revealed
@@ -463,6 +531,9 @@ export default function CustomerCarePage() {
                     from a customer's record. */}
               </div>
 
+              {/* Attention panel — what the next agent must not miss, above everything else. */}
+              <AttentionPanel userId={detail.id} />
+
               {/* Issue spotlight — the help-desk agent's first read: what did the caller hit? */}
               {(() => {
                 const issues = detail.issues || [];
@@ -522,6 +593,16 @@ export default function CustomerCarePage() {
                       <i className={`ti ${cfg.icon}`} style={{ marginRight: 4 }}></i>{cfg.label}
                     </button>
                   ))}
+                  {/* The money history, and where an adjustment is proposed. Needs finance.ledger.view. */}
+                  {hasOpsPermission('finance.ledger.view') && (
+                    <button className={`seg-btn ${tab === 'financials' ? 'active' : ''}`} onClick={() => setTab('financials')}>
+                      <i className="ti ti-cash" style={{ marginRight: 4 }}></i>Financials
+                    </button>
+                  )}
+                  {/* The team's memory of this customer. */}
+                  <button className={`seg-btn ${tab === 'notes' ? 'active' : ''}`} onClick={() => setTab('notes')}>
+                    <i className="ti ti-note" style={{ marginRight: 4 }}></i>Notes
+                  </button>
                   {/* Who accessed THIS customer — the mirror image of the Activity tab, which
                       shows what the customer did themselves. Needs audit.query. */}
                   {hasOpsPermission('audit.query') && (
@@ -532,6 +613,8 @@ export default function CustomerCarePage() {
                 </div>
 
                 {tab === 'access' ? <StaffAccessTab userId={detail.id} name={detail.name} />
+                 : tab === 'financials' ? <CustomerFinancials userId={detail.id} name={detail.name} />
+                 : tab === 'notes' ? <CustomerNotes userId={detail.id} name={detail.name} />
                  : DATA_TABS[tab] ? (
                   <>
                     <div className="setting-help" style={{ marginBottom: 8 }}>

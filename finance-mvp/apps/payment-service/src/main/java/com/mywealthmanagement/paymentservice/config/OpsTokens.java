@@ -23,12 +23,16 @@ public final class OpsTokens {
 
     /**
      * Paths on THIS service that ops tokens — and only ops tokens — may authenticate against:
-     * the customer-care read-only view of a member's bill-pay intents.
+     *  - /support/  the customer-care read-only view of a member's bill-pay intents
+     *  - /ops/      the financial ops layer: ledger, adjustments, approval + anomaly queues
      *
-     * NOTE: when the financial ops layer lands (ledger, adjustments, refunds), its routes belong
-     * here too — that work is what makes this service's ops surface load-bearing.
+     * This is now the load-bearing one on this service: everything that moves customer money for
+     * ops lives under /ops/, and a member token is refused on all of it.
      */
-    public static final String[] OPS_PATH_PREFIXES = {"/api/v1/payments/support/"};
+    public static final String[] OPS_PATH_PREFIXES = {
+            "/api/v1/payments/support/",
+            "/api/v1/payments/ops/"
+    };
 
     /** True if the request path belongs to this service's ops surface. */
     public static boolean isOpsPath(String path) {

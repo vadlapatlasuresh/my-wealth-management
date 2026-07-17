@@ -67,6 +67,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(body(HttpStatus.BAD_REQUEST, ex.getMessage()));
     }
 
+    /**
+     * A denied @PreAuthorize check is a 403, not a 500.
+     *
+     * Without this the catch-all below swallows Spring Security's AuthorizationDeniedException and
+     * every permission denial on the financial ops routes surfaces as "500 Internal Server Error:
+     * Access Denied" — which reads as a broken server and hides a control that is working exactly
+     * as designed. (AuthorizationDeniedException extends AccessDeniedException, so the parent
+     * covers both.)
+     */
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(Exception ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(body(HttpStatus.FORBIDDEN, "You do not have permission to perform this action"));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneric(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

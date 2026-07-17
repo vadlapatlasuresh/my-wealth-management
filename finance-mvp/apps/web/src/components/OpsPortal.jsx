@@ -3,6 +3,7 @@ import { api, getOpsName, getOpsEmail, getOpsRoles, getOpsPermissions, hasOpsPer
 import CustomerCarePage from '../pages/CustomerCarePage';
 import AdminDashboardPage from '../pages/AdminDashboardPage';
 import OpsAccountsPage from '../pages/OpsAccountsPage';
+import OpsMoneyPage from '../pages/OpsMoneyPage';
 import CpaModeration from './CpaModeration';
 
 /* OPS_SUPERVISOR → "Supervisor". The OPS_ prefix is meaningful in the token, not to a human. */
@@ -98,6 +99,8 @@ export default function OpsPortal({ handleLogout }) {
   // only to say "not for you" is noise on a screen meant for working a live call.
   const NAV = [
     { key: 'customers', label: 'Customers', icon: 'ti ti-users', show: hasOpsPermission('customer.search') },
+    // The money desk: approval + anomaly queues. Visible to whoever can work either one.
+    { key: 'money', label: 'Money desk', icon: 'ti ti-cash', show: hasOpsPermission('finance.adjustment.approve') || hasOpsPermission('finance.anomaly.review') },
     { key: 'analytics', label: 'Analytics', icon: 'ti ti-chart-dots', show: hasOpsPermission('ops.analytics.view') },
     { key: 'cpas', label: 'CPA Listings', icon: 'ti ti-user-check', show: hasOpsPermission('cpa.moderate') },
     { key: 'accounts', label: 'Ops Accounts', icon: 'ti ti-shield-lock', show: hasOpsPermission('ops.user.manage') },
@@ -154,6 +157,7 @@ export default function OpsPortal({ handleLogout }) {
             </React.Suspense>
           )}
           {view === 'cpas' && <CpaModeration />}
+          {view === 'money' && <OpsMoneyPage />}
           {view === 'accounts' && <OpsAccountsPage />}
           {view === 'session' && <SessionLog />}
         </main>
