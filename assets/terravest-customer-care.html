@@ -137,6 +137,9 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
         <i class="ti ti-search muted"></i><input value="alex" oninput="filterUsers(this.value)" placeholder="Search members…">
       </div>
       <span class="pill"><i class="ti ti-shield-lock"></i> Ops-only · separate staff login</span>
+      <!-- Disclosure of account data is gated on VERIFYING THE CALLER (per-call, tiered) — the full
+           flow is in terravest-ops-portal.html and ops-caller-verification.md. -->
+      <span class="pill" style="background:var(--tv-negative-bg);color:var(--tv-negative)"><i class="ti ti-shield-x"></i> Verify caller before disclosing</span>
     </div>
 
     <div class="content">

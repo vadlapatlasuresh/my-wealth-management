@@ -13,8 +13,10 @@
    TerraVest OPS PORTAL — dedicated support / help-desk console
    Design mockup (separate from the member app, separate URL).
    Flow: ops login (own account, not a member login) → search customer
-   (name/email/phone) → full read-only customer 360 (everything the
-   customer sees) → help — every step logged in the agent audit trail.
+   (name/email/phone) → open 360 → VERIFY THE CALLER (OTP to their
+   registered device, or a knowledge question) → disclosure unlocks by the
+   tier reached → help — every step, incl. verification, logged in the audit
+   trail. See DOCUMENTATION/proposals/ops-caller-verification.md.
    IVR + chatbot panels are integration-ready (later).
    ============================================================ */
 :root{
@@ -119,6 +121,13 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
 .spot{border:1px solid var(--tv-negative);border-radius:var(--radius-lg);background:#fff;padding:15px}
 .spot.ok{border-color:var(--tv-positive);background:var(--tv-positive-bg)}
 .viewas{display:flex;align-items:center;gap:8px;background:var(--tv-gold-pale);border:1px solid #ecd9a8;color:var(--tv-warning);border-radius:var(--radius-md);padding:8px 12px;font-size:12.5px;font-weight:600;margin-bottom:14px}
+/* Caller verification banner — the gate on disclosure. Colour tracks the tier reached. */
+.verify{display:flex;align-items:center;gap:10px;border-radius:var(--radius-md);padding:10px 14px;font-size:13px;font-weight:600;margin-bottom:14px;flex-wrap:wrap}
+.verify.t0{background:var(--tv-negative-bg);border:1px solid #f0c4bd;color:var(--tv-negative)}
+.verify.t1{background:var(--tv-gold-pale);border:1px solid #ecd9a8;color:var(--tv-warning)}
+.verify.t2,.verify.t3{background:var(--tv-positive-bg);border:1px solid #b7e0c4;color:var(--tv-positive)}
+.verify .spacer{flex:1}
+.tier-lock{display:inline-flex;align-items:center;gap:5px;color:var(--tv-text-muted);font-size:12px}
 .flow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0 16px}
 .flow .s{display:inline-flex;align-items:center;gap:6px;background:var(--tv-sage-pale);border:1px solid var(--tv-border-light);color:var(--tv-text-secondary);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600}
 
@@ -187,6 +196,7 @@ td{padding:9px 10px;border-bottom:1px solid var(--tv-border-light)}
           <span class="s"><i class="ti ti-phone"></i> Call in</span>
           <span class="s"><i class="ti ti-search"></i> Find customer</span>
           <span class="s"><i class="ti ti-id-badge-2"></i> 360 profile</span>
+          <span class="s"><i class="ti ti-shield-check"></i> Verify the caller</span>
           <span class="s"><i class="ti ti-eye"></i> See their data</span>
           <span class="s"><i class="ti ti-alert-triangle"></i> Spot the issue</span>
           <span class="s"><i class="ti ti-shield-check"></i> Help — every step audited</span>
@@ -298,7 +308,10 @@ function doSearch(){
 function openFromIvr(){document.getElementById('q-phone').value='0192';doSearch();open360(1042);log('Opened from IVR match','phone ••0192 → Alex Kumar #1042')}
 
 function open360(id){selectedId=id;tab='overview';const u=USERS[id];
-  log('Opened customer profile',`${u.name} · #${id} · ${u.email}`);
+  // Verification is per CALL, not per customer: opening the record starts cold at Tier 0 and any
+  // prior reveal is re-masked. A caller verified on the last call is not verified on this one.
+  u.verifyTier=0; u.piiRevealed=false;
+  log('Opened customer profile — caller NOT yet verified (Tier 0)',`${u.name} · #${id} · ${u.email}`);
   renderDetail();document.getElementById('detail').scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 function setTab(t){tab=t;const u=USERS[selectedId];log('Viewed '+t,`${u.name} · #${u.id}`);renderDetail()}
@@ -307,10 +320,13 @@ function setTab(t){tab=t;const u=USERS[selectedId];log('Viewed '+t,`${u.name} ·
    Front-line agents don't hold customer.pii.reveal at all; for them the Reveal button isn't there. */
 function revealPii(){
   const u=USERS[selectedId];
-  const reason=prompt('Why do you need to see this? (recorded against your account)');
+  // Disclosure is gated on the CALLER'S verification tier, not just the agent's permission.
+  // Reading PII to an unverified caller is the exact hole caller-verification closes.
+  if((u.verifyTier||0)<2){ alert('The caller is not verified. Send an OTP to their registered device and confirm the code before revealing any PII.'); return; }
+  const reason=prompt('Why do you need to see this? (recorded against your account, alongside the caller’s verified tier)');
   if(!reason||reason.trim().length<8){ if(reason!==null) alert('A real reason is required — at least 8 characters.'); return; }
   u.piiRevealed=true;
-  log('Revealed PII','⚠ '+u.name+' · #'+u.id+' — '+reason.trim(), true);
+  log('Revealed PII (caller Tier '+(u.verifyTier||0)+')','⚠ '+u.name+' · #'+u.id+' — '+reason.trim(), true);
   renderDetail();
 }
 function badge(ok,y,n){return `<span class="badge ${ok?'badge-forest':'badge-red'}"><i class="ti ${ok?'ti-check':'ti-x'}"></i> ${ok?y:n}</span>`}
@@ -403,9 +419,52 @@ function tabBody(u){
   return '';
 }
 
+/* Caller verification. Tier 0 (unverified) until the agent runs a method; disclosure of anything
+   sensitive is gated on the tier reached, NOT just on the agent's permission. A verified caller is
+   a property of THIS call — it resets when you close the record. See the caller-verification
+   design proposal. */
+const TIER_LABEL={0:'Unverified',1:'Identity (KBA)',2:'Verified (OTP)',3:'Step-up verified'};
+function verifyOtp(){
+  const u=USERS[selectedId];
+  log('Sent verification code to registered '+ (u.phone||'contact'),`${u.name} · #${u.id}`);
+  const code=prompt('A one-time code was sent to the customer’s REGISTERED '+(u.phone?'phone '+u.phone:'email')+'.\nRead it back and enter it (demo: any 6 digits):');
+  if(!code) return;
+  if(!/^\d{4,8}$/.test(code.trim())){ alert('That doesn’t look like the code. Verification not raised.'); log('Caller verification FAILED — OTP','⚠ '+u.name+' · #'+u.id,true); return; }
+  u.verifyTier=2;
+  log('Caller verified — OTP (Tier 0 → Tier 2)',`${u.name} · #${u.id}`);
+  renderDetail();
+}
+function verifyKba(){
+  const u=USERS[selectedId];
+  const ok=confirm('Ask the caller ONE thing only they should know (date of birth, address on file, or last transaction amount).\nDid they answer correctly? — you confirm pass/fail; you never read the answer out.');
+  if(ok){ u.verifyTier=Math.max(u.verifyTier||0,1); log('Caller verified — KBA (Tier 1)',`${u.name} · #${u.id}`); }
+  else { log('Caller verification FAILED — KBA','⚠ '+u.name+' · #'+u.id,true); }
+  renderDetail();
+}
+function flagSuspicious(){
+  const u=USERS[selectedId]; u.verifyTier=0;
+  log('Caller flagged SUSPICIOUS — disclosure frozen, escalated','⚠⚠ '+u.name+' · #'+u.id,true);
+  alert('Disclosure frozen for this call. A HIGH fraud escalation has been raised. You do not have to argue with the caller — offer a callback to the number on file.');
+  renderDetail();
+}
+
 function renderDetail(){
   const u=USERS[selectedId]; if(!u){document.getElementById('detail').innerHTML='';return;}
+  const tier=u.verifyTier||0;
+  const verifyBanner = tier>=2
+    ? `<div class="verify t${tier}"><i class="ti ti-shield-check"></i> Caller verified — ${TIER_LABEL[tier]}
+         <span class="spacer"></span><span class="tier-lock"><i class="ti ti-clock"></i> expires in 28:14</span></div>`
+    : tier===1
+    ? `<div class="verify t1"><i class="ti ti-shield-half"></i> Caller identity confirmed (Tier 1) — can discuss status, not balances or PII
+         <span class="spacer"></span>
+         <button class="btn btn-primary btn-sm" onclick="verifyOtp()"><i class="ti ti-message-dots"></i> Send OTP to raise to Tier 2</button></div>`
+    : `<div class="verify t0"><i class="ti ti-shield-x"></i> Caller NOT verified — do not read any account information back
+         <span class="spacer"></span>
+         <button class="btn btn-primary btn-sm" onclick="verifyOtp()"><i class="ti ti-message-dots"></i> Send OTP</button>
+         <button class="btn btn-secondary btn-sm" onclick="verifyKba()"><i class="ti ti-help-circle"></i> Ask a question</button>
+         <button class="btn btn-danger btn-sm" onclick="flagSuspicious()"><i class="ti ti-alert-triangle"></i> Can’t verify</button></div>`;
   document.getElementById('detail').innerHTML = `
+  ${verifyBanner}
   <div class="viewas"><i class="ti ti-eye"></i> Viewing ${esc(u.name)}’s account — READ-ONLY (you can see everything the customer sees; you cannot move their money)</div>
   <div class="card" style="margin-bottom:14px">
     <div style="display:flex;align-items:center;gap:14px">
@@ -426,7 +485,11 @@ function renderDetail(){
             : u.piiRevealed ? esc(u.idKind)+' ••'+esc(u.idLast4)
             : esc(u.idKind)+' ••••'
         }
-          ${u.idKind && !u.piiRevealed ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px" onclick="revealPii()"><i class="ti ti-eye"></i> Reveal</button>` : ''}
+          ${u.idKind && !u.piiRevealed ? (
+            tier>=2
+              ? `<button class="btn btn-secondary btn-sm" style="margin-left:6px" onclick="revealPii()"><i class="ti ti-eye"></i> Reveal</button>`
+              : `<span class="tier-lock" style="margin-left:6px" title="Verify the caller first"><i class="ti ti-lock"></i> Verify caller to reveal</span>`
+          ) : ''}
         </div>
         <div class="kpi-d">${u.piiRevealed ? '<span class="help"><i class="ti ti-eye"></i> Revealed — recorded against you</span>' : badge(u.identityVerified,'Verified','Unverified')}</div></div>
       <div class="kpi"><div class="kpi-l">Member since</div><div class="kpi-v" style="font-size:15px">${u.since}</div><div class="kpi-d" style="color:${issues(u).length?'var(--tv-negative)':'var(--tv-positive)'}"><i class="ti ti-alert-triangle"></i> ${issues(u).length} issue${issues(u).length===1?'':'s'}</div></div>
