@@ -31,7 +31,7 @@ public class GeminiClient {
     public GeminiClient(
             @Value("${gemini.base-url:https://generativelanguage.googleapis.com}") String baseUrl,
             @Value("${gemini.api-key:${GEMINI_API_KEY:}}") String apiKey,
-            @Value("${gemini.model:gemini-3.5-flash}") String model,
+            @Value("${gemini.model:gemini-flash-latest}") String model,
             @Value("${gemini.max-tokens:2048}") int maxTokens,
             // 2.5-flash "thinks" by default, which consumes the output budget; 0 disables it
             // for fast, predictable replies. Set to -1 to omit thinkingConfig entirely
