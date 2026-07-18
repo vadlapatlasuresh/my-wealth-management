@@ -318,6 +318,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [budgets, setBudgets] = useState([]);         // [{ category, monthlyLimit }] for the selected business
   const [budgetForm, setBudgetForm] = useState({ category: '', limit: '' });
   const [goals, setGoals] = useState({ reserveTarget: 0, taxRate: 0, taxSetAside: 0 });
+  const [vendorMeta, setVendorMeta] = useState([]);   // [{ vendorName, status, renewalDate, notes }]
+  const [vendorEditKey, setVendorEditKey] = useState(null);
+  const [vendorForm, setVendorForm] = useState({ status: 'ACTIVE', renewalDate: '', notes: '' });
   const [shareBizDoc, setShareBizDoc] = useState(null); // business document being securely shared
 
   const [showAddDoc, setShowAddDoc] = useState(false);
@@ -1123,6 +1126,43 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     catch (e) { setError(e?.message || 'Could not save goal.'); loadGoals(); }
   }
 
+  /* ---- Vendors (metadata overlay per selected business) ---- */
+  const loadVendors = useCallback(async () => {
+    const bid = selectedBusiness?.id;
+    if (bid == null) { setVendorMeta([]); return; }
+    try {
+      const rows = await api.getBusinessVendors(bid);
+      setVendorMeta(Array.isArray(rows) ? rows : []);
+    } catch { setVendorMeta([]); }
+  }, [selectedBusiness]);
+  useEffect(() => { loadVendors(); }, [loadVendors]);
+
+  function openVendorEdit(v) {
+    setVendorEditKey(v.name);
+    setVendorForm({ status: v.status || 'ACTIVE', renewalDate: v.renewalDate || '', notes: v.notes || '' });
+  }
+  async function saveVendor(name) {
+    const bid = selectedBusiness?.id;
+    if (bid == null || !name) return;
+    const patch = {
+      status: vendorForm.status,
+      renewalDate: vendorForm.renewalDate || null,
+      notes: vendorForm.notes || null,
+    };
+    try {
+      await api.setBusinessVendor(bid, name, patch);
+      setVendorEditKey(null);
+      await loadVendors();
+      flash('Vendor saved.');
+    } catch (e) { setError(e?.message || 'Could not save vendor.'); }
+  }
+  async function clearVendor(name) {
+    const bid = selectedBusiness?.id;
+    if (bid == null) return;
+    try { await api.deleteBusinessVendor(bid, name); setVendorEditKey(null); await loadVendors(); }
+    catch (e) { setError(e?.message || 'Could not clear vendor.'); }
+  }
+
   /* ---- Document center CRUD ---- */
   /* Resolve which business a new document belongs to. Priority: the invoice it's
      pinned to → the business explicitly chosen (All view) → the selected business. */
@@ -1884,6 +1924,54 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       .map((r) => ({ ...r, riskPct: r.billed > 0 ? r.overdue / r.billed : 0 }))
       .sort((a, b) => b.overdue - a.overdue || b.outstanding - a.outstanding || b.billed - a.billed);
   }, [allInvoices]);
+
+  /* Vendors — spend aggregated from the ledger (money out grouped by merchant/
+     name), merged with the persisted metadata overlay (status/renewal/notes). */
+  const vendorAgg = useMemo(() => {
+    const map = new Map();
+    unifiedTx.forEach((t) => {
+      if (t.amount >= 0) return;
+      const name = (t.merchant || t.name || 'Unknown').trim();
+      if (!name) return;
+      if (!map.has(name)) map.set(name, { name, total: 0, period: 0, count: 0, last: null, cats: new Map() });
+      const v = map.get(name);
+      const amt = Math.abs(t.amount);
+      v.total += amt; v.count += 1;
+      if (inDashPeriod(t.date)) v.period += amt;
+      const d = t.date ? new Date(t.date) : null;
+      if (d && !Number.isNaN(d.getTime()) && (!v.last || d > v.last)) v.last = d;
+      const c = t.category || 'Uncategorized';
+      v.cats.set(c, (v.cats.get(c) || 0) + amt);
+    });
+    const recurringNames = new Set(recurring.map((r) => (r.label || '').trim().toLowerCase()));
+    const metaByName = new Map(vendorMeta.map((m) => [m.vendorName, m]));
+    return [...map.values()].map((v) => {
+      const topCat = [...v.cats.entries()].sort((a, b) => b[1] - a[1])[0];
+      const meta = metaByName.get(v.name);
+      return {
+        name: v.name, total: v.total, period: v.period, count: v.count, last: v.last,
+        topCategory: topCat ? topCat[0] : '—',
+        recurring: recurringNames.has(v.name.toLowerCase()),
+        status: meta?.status || 'ACTIVE',
+        renewalDate: meta?.renewalDate || '',
+        notes: meta?.notes || '',
+        hasMeta: !!meta,
+      };
+    }).sort((a, b) => b.period - a.period || b.total - a.total);
+  }, [unifiedTx, inDashPeriod, recurring, vendorMeta]);
+
+  /* Contract renewals coming up within 60 days (soonest first). */
+  const upcomingRenewals = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return vendorAgg
+      .filter((v) => v.renewalDate)
+      .map((v) => {
+        const d = new Date(v.renewalDate);
+        return { ...v, renewalIn: Number.isNaN(d.getTime()) ? null : Math.round((d - today) / 86400000) };
+      })
+      .filter((v) => v.renewalIn != null && v.renewalIn <= 60)
+      .sort((a, b) => a.renewalIn - b.renewalIn);
+  }, [vendorAgg]);
 
   /* Actual spend per category for the CURRENT calendar month (budgets are
      monthly), over the selected-business ledger. */
@@ -3267,6 +3355,88 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       <i className="ti ti-bulb" style={{ color: 'var(--tv-gold)' }}></i> {recurring.length} recurring charge{recurring.length === 1 ? '' : 's'} detected — reviewing these is often the fastest way to cut fixed costs.
                     </div>
                   </div>
+                )}
+              </div>
+
+              {/* Vendor management — computed spend + persisted overlay */}
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="section-header">
+                  <div className="section-title">
+                    <i className="ti ti-building-store" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
+                    Vendors
+                    <span className="badge badge-gray" style={{ marginLeft: 8 }}>{vendorAgg.length}</span>
+                    {upcomingRenewals.length > 0 && <span className="badge badge-amber" style={{ marginLeft: 4 }}>{upcomingRenewals.length} renewal{upcomingRenewals.length === 1 ? '' : 's'} soon</span>}
+                  </div>
+                </div>
+                {vendorAgg.length === 0 ? (
+                  <div className="empty-state"><i className="ti ti-building-store"></i><p>No vendor spend recorded yet. Vendors appear here as you log or sync expenses.</p></div>
+                ) : (
+                  <>
+                    {upcomingRenewals.length > 0 && (
+                      <div style={{ marginBottom: 12, padding: '8px 12px', borderLeft: '3px solid var(--tv-gold)', background: 'var(--tv-gold-pale)', borderRadius: '0 var(--radius-sm) var(--radius-sm) 0', fontSize: 13, color: 'var(--tv-text-secondary)' }}>
+                        <i className="ti ti-calendar-due" style={{ marginRight: 6, color: 'var(--tv-gold)' }}></i>
+                        Upcoming renewals: {upcomingRenewals.map((v) => `${v.name} (${v.renewalIn <= 0 ? 'due' : `${v.renewalIn}d`})`).join(' · ')}
+                      </div>
+                    )}
+                    {!selectedBusiness && <div className="item-sub" style={{ marginBottom: 8 }}>Select a single business to save vendor status, renewals, and notes.</div>}
+                    <div className="table-scroll">
+                      <table className="tv-table">
+                        <thead><tr><th>Vendor</th><th>Category</th><th style={{ textAlign: 'right' }}>Spend ({dashRange.label})</th><th style={{ textAlign: 'right' }}>Total</th><th>Last paid</th><th>Status</th><th>Renewal</th>{selectedBusiness && <th style={{ width: 40 }}></th>}</tr></thead>
+                        <tbody>
+                          {vendorAgg.map((v) => {
+                            const statusBadgeCls = v.status === 'INACTIVE' ? 'badge-gray' : v.status === 'REVIEW' ? 'badge-amber' : 'badge-green';
+                            const statusLabel = v.status === 'INACTIVE' ? 'Inactive' : v.status === 'REVIEW' ? 'Review' : 'Active';
+                            const editing = vendorEditKey === v.name;
+                            return (
+                              <Fragment key={v.name}>
+                                <tr>
+                                  <td style={{ fontWeight: 500 }}>{v.name} {v.recurring && <span className="badge badge-forest" style={{ marginLeft: 4 }} title="Recurring charge"><i className="ti ti-refresh"></i></span>}</td>
+                                  <td style={{ color: 'var(--tv-text-muted)' }}>{v.topCategory}</td>
+                                  <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(v.period)}</span></td>
+                                  <td style={{ textAlign: 'right', color: 'var(--tv-text-muted)' }}>{currency(v.total)}</td>
+                                  <td style={{ color: 'var(--tv-text-muted)' }}>{v.last ? bizDate(v.last.toISOString().slice(0, 10)) : '—'}</td>
+                                  <td><span className={`badge ${statusBadgeCls}`}>{statusLabel}</span></td>
+                                  <td style={{ color: 'var(--tv-text-muted)', whiteSpace: 'nowrap' }}>{v.renewalDate ? bizDate(v.renewalDate) : '—'}</td>
+                                  {selectedBusiness && (
+                                    <td style={{ textAlign: 'right' }}>
+                                      <button className="icon-btn" title="Edit vendor" onClick={() => (editing ? setVendorEditKey(null) : openVendorEdit(v))}><i className={`ti ${editing ? 'ti-x' : 'ti-pencil'}`}></i></button>
+                                    </td>
+                                  )}
+                                </tr>
+                                {editing && (
+                                  <tr>
+                                    <td colSpan={8} style={{ background: 'var(--tv-bg-subtle, rgba(0,0,0,.02))' }}>
+                                      <div className="grid-3" style={{ gap: 10, alignItems: 'end' }}>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                          <label className="form-label">Status</label>
+                                          <select className="form-select" value={vendorForm.status} onChange={(e) => setVendorForm({ ...vendorForm, status: e.target.value })}>
+                                            <option value="ACTIVE">Active</option><option value="REVIEW">Review</option><option value="INACTIVE">Inactive</option>
+                                          </select>
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                          <label className="form-label">Contract renewal</label>
+                                          <input className="form-input" type="date" value={vendorForm.renewalDate} onChange={(e) => setVendorForm({ ...vendorForm, renewalDate: e.target.value })} />
+                                        </div>
+                                        <div className="form-group" style={{ marginBottom: 0 }}>
+                                          <label className="form-label">Notes</label>
+                                          <input className="form-input" value={vendorForm.notes} onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })} placeholder="e.g. renegotiate rate" />
+                                        </div>
+                                      </div>
+                                      <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                                        <button className="btn btn-primary btn-sm" onClick={() => saveVendor(v.name)}><i className="ti ti-check"></i> Save</button>
+                                        <button className="btn btn-secondary btn-sm" onClick={() => setVendorEditKey(null)}>Cancel</button>
+                                        {v.hasMeta && <button className="btn btn-secondary btn-sm" style={{ marginLeft: 'auto' }} onClick={() => clearVendor(v.name)}><i className="ti ti-trash"></i> Clear</button>}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </Fragment>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
                 )}
               </div>
 

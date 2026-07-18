@@ -32,6 +32,7 @@ public class ManualBusinessController {
     private final BusinessDocumentRepository documentRepo;
     private final BusinessBudgetRepository budgetRepo;
     private final BusinessGoalRepository goalRepo;
+    private final BusinessVendorRepository vendorRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -85,6 +86,7 @@ public class ManualBusinessController {
         documentRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         budgetRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         goalRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        vendorRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -755,6 +757,68 @@ public class ManualBusinessController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
         budgetRepo.deleteByUserIdAndBusinessIdAndCategory(userId(), businessId, str(category));
         return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Vendors (metadata overlay: status, renewal, notes) ---------------- */
+
+    /** The caller's vendor overlays for a business, as {vendorName, status, renewalDate, notes}. */
+    @GetMapping("/businesses/{businessId}/vendors")
+    public List<Map<String, Object>> listVendors(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        return vendorRepo.findByUserIdAndBusinessIdOrderByVendorNameAsc(userId(), businessId).stream()
+                .map(this::vendorToMap)
+                .toList();
+    }
+
+    /** Upsert a vendor's overlay. Body: {status?, renewalDate?, notes?}. */
+    @PutMapping("/businesses/{businessId}/vendors/{vendorName}")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> upsertVendor(
+            @PathVariable Long businessId, @PathVariable String vendorName, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        String name = str(vendorName);
+        if (name == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vendor name is required");
+        BusinessVendor v = vendorRepo.findByUserIdAndBusinessIdAndVendorName(userId(), businessId, name)
+                .orElseGet(() -> {
+                    BusinessVendor n = new BusinessVendor();
+                    n.setUserId(userId());
+                    n.setBusinessId(businessId);
+                    n.setVendorName(name);
+                    return n;
+                });
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            v.setStatus(s == null ? "ACTIVE" : s.toUpperCase());
+        }
+        if (body.containsKey("renewalDate")) v.setRenewalDate(parseDate(body.get("renewalDate")));
+        if (body.containsKey("notes")) v.setNotes(str(body.get("notes")));
+        return ResponseEntity.ok(vendorToMap(vendorRepo.save(v)));
+    }
+
+    /** Remove a vendor's overlay (reverts to computed-only). */
+    @DeleteMapping("/businesses/{businessId}/vendors/{vendorName}")
+    @Transactional
+    public ResponseEntity<Void> deleteVendor(@PathVariable Long businessId, @PathVariable String vendorName) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        vendorRepo.deleteByUserIdAndBusinessIdAndVendorName(userId(), businessId, str(vendorName));
+        return ResponseEntity.noContent().build();
+    }
+
+    private LocalDate parseDate(Object o) {
+        String s = str(o);
+        if (s == null) return null;
+        try { return LocalDate.parse(s); } catch (RuntimeException e) { return null; }
+    }
+    private Map<String, Object> vendorToMap(BusinessVendor v) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("vendorName", v.getVendorName());
+        m.put("status", v.getStatus());
+        m.put("renewalDate", v.getRenewalDate());
+        m.put("notes", v.getNotes());
+        return m;
     }
 
     /* ---------------- Goals (cash reserve + tax set-aside, one row per business) ---------------- */
