@@ -35,15 +35,21 @@ fi
 echo "==> Validating compose config"
 $COMPOSE config >/dev/null
 
-# Reclaim disk BEFORE pulling. Old per-SHA images and build cache accumulate on
-# the VM's small disk and a fresh pull can hit "no space left on device" mid-
-# extract. Images backing currently-running containers are protected by Docker,
-# so this only removes genuinely-unused layers. Runs early so the pull + the
-# Node web-build container below both have headroom.
-echo "==> Reclaiming disk (removing unused images/containers/build cache)"
+# Reclaim disk BEFORE pulling/building. Old per-SHA images and build cache
+# accumulate on the VM's small disk and a fresh pull can hit "no space left on
+# device" mid-extract.
+#
+# IMPORTANT: use `image prune -f` (dangling only) here, NOT `-af`. Our service
+# images are BUILT ON THE VM by build-all.sh and are not yet backing a running
+# container at this point, so `-af` (remove all unused) would DELETE the images
+# build-all.sh just tagged — and the `up -d` below then fails with "not found".
+# The real cleanup of old per-SHA tags happens AFTER `up -d` (see the prune near
+# the end), where the freshly-started stack protects the new images. Container
+# and build-cache prunes are safe to run aggressively here.
+echo "==> Reclaiming disk (removing dangling images/containers/build cache)"
 df -h / | awk 'NR==1 || /\//{print "    "$0}'
 docker container prune -f >/dev/null 2>&1 || true
-docker image prune -af >/dev/null 2>&1 || true
+docker image prune -f >/dev/null 2>&1 || true
 docker builder prune -af >/dev/null 2>&1 || true
 df -h / | awk 'NR==2{print "    after prune: "$4" free on "$6}'
 
