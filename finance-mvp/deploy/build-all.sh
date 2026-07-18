@@ -85,4 +85,9 @@ echo "    Next (TAG is already set in $ENV_FILE):"
 echo "      bash deploy/deploy.sh        # pull (tolerant) -> web build -> up -d -> recreate Caddy"
 echo "    or just restart the backend:"
 echo "      docker compose -f docker-compose.prod.yml --env-file $ENV_FILE up -d"
+echo
+echo "    NOTE: TAG=$TAG is a LOCAL-ONLY tag (CI publishes :latest + full SHA, never this"
+echo "    short SHA). Deploy from THIS host now, while the local images exist. To return to"
+echo "    the normal pull-based deploy later, reset it:"
+echo "      sed -i 's/^TAG=.*/TAG=latest/' $ENV_FILE"
 docker image prune -f >/dev/null 2>&1 || true

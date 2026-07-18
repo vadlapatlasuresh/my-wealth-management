@@ -60,6 +60,39 @@ echo "==> Pulling images (tolerating locally-built ones)"
 # local images. A genuinely-missing image still surfaces at `up -d`, so nothing is masked.
 $COMPOSE pull --ignore-pull-failures
 
+# Preflight: fail FAST and CLEARLY if any service image at this TAG is neither present
+# locally nor pullable. Without this, a missing tag only surfaces as a cryptic
+# "failed to resolve reference … not found" partway through `up -d`.
+#
+# The classic trap: build-all.sh pins .env.prod to a short-SHA tag that exists ONLY as a
+# local image (CI publishes full-SHA + :latest, never the short SHA). If those local
+# images are later gone (or you switch hosts) a pull-based deploy has nothing to run.
+# We check AFTER the pull above, so anything still absent locally is genuinely unavailable.
+echo "==> Preflight: verifying service images are available at TAG=${TAG:-$(grep '^TAG=' .env.prod | cut -d= -f2-)}"
+missing=""
+while IFS= read -r img; do
+  case "$img" in
+    *ghcr.io/*wealth-*)
+      docker image inspect "$img" >/dev/null 2>&1 || missing="$missing $img" ;;
+  esac
+done < <($COMPOSE config --images 2>/dev/null | sort -u)
+if [ -n "$missing" ]; then
+  echo "ERROR: these images are neither built locally nor pullable at this TAG:" >&2
+  for m in $missing; do echo "    - $m" >&2; done
+  cat >&2 <<'EOM'
+
+CI publishes images as :latest and the FULL commit SHA — never a short SHA. Pick one fix:
+  • Deploy the CI-published images (recommended):
+        sed -i 's/^TAG=.*/TAG=latest/' .env.prod && bash deploy/deploy.sh
+  • Or build them on this VM (when CI images are unavailable):
+        bash deploy/build-all.sh && bash deploy/deploy.sh
+        (build-all.sh pins TAG to a local-only SHA on purpose so its local build wins;
+         reset TAG=latest afterwards to go back to the pull-based deploy.)
+EOM
+  exit 1
+fi
+echo "    all service images present ✓"
+
 # Build the web SPA into ./web-dist (Caddy serves it at /). Runs in a Node container
 # so the VM needs no Node install. WEB_API_BASE (in .env.prod) is the public origin the
 # browser calls; same-origin here, so the app hits /api on this same domain.
