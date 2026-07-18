@@ -35,6 +35,18 @@ fi
 echo "==> Validating compose config"
 $COMPOSE config >/dev/null
 
+# Reclaim disk BEFORE pulling. Old per-SHA images and build cache accumulate on
+# the VM's small disk and a fresh pull can hit "no space left on device" mid-
+# extract. Images backing currently-running containers are protected by Docker,
+# so this only removes genuinely-unused layers. Runs early so the pull + the
+# Node web-build container below both have headroom.
+echo "==> Reclaiming disk (removing unused images/containers/build cache)"
+df -h / | awk 'NR==1 || /\//{print "    "$0}'
+docker container prune -f >/dev/null 2>&1 || true
+docker image prune -af >/dev/null 2>&1 || true
+docker builder prune -af >/dev/null 2>&1 || true
+df -h / | awk 'NR==2{print "    after prune: "$4" free on "$6}'
+
 echo "==> Pulling images (tolerating locally-built ones)"
 # Images are built ON the VM by build-all.sh and NOT pushed to a registry, so a plain
 # `pull` aborts with "not found" on those tags. --ignore-pull-failures pulls the public
@@ -121,8 +133,8 @@ while :; do
   sleep 5
 done
 
-echo "==> Pruning dangling images"
-docker image prune -f >/dev/null || true
+echo "==> Pruning now-unused images (old per-SHA tags freed by this deploy)"
+docker image prune -af >/dev/null || true
 
 echo "==> Status"
 $COMPOSE ps
