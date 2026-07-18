@@ -5,6 +5,7 @@ import AddressAutocomplete from "../components/AddressAutocomplete";
 import LastRefreshed from "../components/LastRefreshed";
 import Disclaimer from "../components/Disclaimer";
 import PropertyExpensesDrawer from "../components/PropertyExpensesDrawer";
+import PortfolioExpenseDrawer from "../components/PortfolioExpenseDrawer";
 
 // Normalize a property from the API (which may use value/mortgage or currentValue/loanBalance)
 function normalize(p) {
@@ -45,6 +46,7 @@ export default function RealEstatePage({ properties = [] }) {
   const [notice, setNotice] = useState("");
   const [expensesFor, setExpensesFor] = useState(null); // property whose expense drawer is open
   const [expenseSummaries, setExpenseSummaries] = useState({}); // { [propertyId]: summary }
+  const [showPortfolioExport, setShowPortfolioExport] = useState(false); // combined tax export
   const emptyForm = {
     address: "",
     propertyType: "PRIMARY_RESIDENCE",
@@ -344,6 +346,15 @@ export default function RealEstatePage({ properties = [] }) {
         </div>
         <div className="page-actions" style={{ alignItems: "center" }}>
           <LastRefreshed onRefresh={fetchProperties} />
+          {props.length > 0 && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowPortfolioExport(true)}
+              title="Download or save one combined expense report for all properties"
+            >
+              <i className="ti ti-file-invoice"></i> Tax export
+            </button>
+          )}
           <button
             className="btn btn-primary btn-sm"
             onClick={() => {
@@ -789,6 +800,13 @@ export default function RealEstatePage({ properties = [] }) {
           property={expensesFor}
           onClose={() => setExpensesFor(null)}
           onChanged={() => refreshExpenseSummary(expensesFor.id)}
+        />
+      )}
+
+      {showPortfolioExport && (
+        <PortfolioExpenseDrawer
+          properties={props}
+          onClose={() => setShowPortfolioExport(false)}
         />
       )}
     </div>
