@@ -314,7 +314,7 @@ services:
       AI_MODEL: ${AI_MODEL:-claude-opus-4-8}
       # Google Gemini (used when AI_PROVIDER=gemini)
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
-      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-3.5-flash}
 
   payment-service:
     <<: *java-defaults

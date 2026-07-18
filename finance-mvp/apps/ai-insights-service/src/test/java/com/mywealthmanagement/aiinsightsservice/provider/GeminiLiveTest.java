@@ -22,7 +22,7 @@ class GeminiLiveTest {
 
     private GeminiClient liveClient() {
         String key = System.getenv("GEMINI_API_KEY");
-        String model = System.getenv().getOrDefault("GEMINI_MODEL", "gemini-2.5-flash");
+        String model = System.getenv().getOrDefault("GEMINI_MODEL", "gemini-3.5-flash");
         // 2048 output tokens, thinking disabled (budget 0) — matches the app defaults.
         return new GeminiClient("https://generativelanguage.googleapis.com", key, model, 2048, 0);
     }

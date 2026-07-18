@@ -18,7 +18,7 @@ class ModelRouterTest {
         AnthropicClient anthropic = new AnthropicClient(
                 "https://api.anthropic.com", "", "claude-opus-4-8", "2023-06-01", 1024);
         GeminiClient gemini = new GeminiClient(
-                "https://generativelanguage.googleapis.com", "", "gemini-2.5-flash", 2048, 0);
+                "https://generativelanguage.googleapis.com", "", "gemini-3.5-flash", 2048, 0);
         OpenAiClient openai = new OpenAiClient(
                 "https://api.openai.com", "", "gpt-4o", 1024);
         FinancialSummaryClient summary = new FinancialSummaryClient("http://localhost:8080");
