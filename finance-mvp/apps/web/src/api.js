@@ -504,6 +504,19 @@ export const api = {
   lookupProperty: (address) =>
     request("/api/v1/real-estate/lookup", { method: "POST", body: JSON.stringify({ address }) }),
 
+  // Per-property expense tracking (nested under a property).
+  listPropertyExpenses: (id, year) =>
+    request(`/api/v1/real-estate/${id}/expenses${year ? `?year=${year}` : ""}`),
+  getPropertyExpenseSummary: (id, year) =>
+    request(`/api/v1/real-estate/${id}/expenses/summary${year ? `?year=${year}` : ""}`),
+  getExpenseCategories: (id) => request(`/api/v1/real-estate/${id}/expenses/categories`),
+  addPropertyExpense: (id, body) =>
+    request(`/api/v1/real-estate/${id}/expenses`, { method: "POST", body: JSON.stringify(body) }),
+  updatePropertyExpense: (id, expId, body) =>
+    request(`/api/v1/real-estate/${id}/expenses/${expId}`, { method: "PUT", body: JSON.stringify(body) }),
+  deletePropertyExpense: (id, expId) =>
+    request(`/api/v1/real-estate/${id}/expenses/${expId}`, { method: "DELETE" }),
+
   // Deals — user-registered investment opportunities (real estate + other asset classes)
   getDeals: () => request("/api/v1/deals"),
   getDealTaxonomy: () => request("/api/v1/deals/taxonomy"),

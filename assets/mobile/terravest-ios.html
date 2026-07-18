@@ -1555,6 +1555,11 @@ body{
               <span><i class="ti ti-cash" style="color:var(--tv-forest);"></i> Rent <b>$2,100/mo</b></span>
               <span title="unlevered yield, before the mortgage payment">Cap rate <b>5.8%</b></span>
             </div>
+            <!-- Expenses YTD — taps into the per-property expense tracker -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--tv-border);font-size:12.5px;">
+              <span><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Expenses YTD <b>$3,240</b></span>
+              <span style="display:flex;align-items:center;gap:6px;"><span class="badge" style="background:var(--tv-gold-pale,#FDF5E4);color:var(--tv-gold,#C9973A);font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span><i class="ti ti-chevron-right chev"></i></span>
+            </div>
           </div>
         </div>
         <div class="group" style="margin-top:16px;">
@@ -1572,6 +1577,55 @@ body{
     <div class="home-indicator"></div>
   </div></div>
   <div class="caption-chip"><span class="num">15</span> Properties</div>
+</div>
+
+<!-- ===================== 14b. PROPERTY EXPENSES ===================== -->
+<div class="phone-wrap">
+  <div class="iphone"><div class="screen">
+    <div class="dynamic-island"></div>
+    <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="content">
+      <div class="nav-large" style="display:flex;align-items:center;justify-content:space-between;">
+        <div><div class="muted" style="font-size:12px;"><i class="ti ti-chevron-left"></i> 88 Riverside</div><h1 style="font-size:26px;">Expenses</h1></div>
+        <button class="btn-sm ghost" style="align-self:flex-end;"><i class="ti ti-plus"></i> Add</button>
+      </div>
+      <div class="scroll" style="padding-top:4px;">
+        <!-- year + KPIs -->
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Total 2026</div><div style="font-weight:700;font-size:17px;">$3,240</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">This month</div><div style="font-weight:700;font-size:17px;">$410</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Missing</div><div style="font-weight:700;font-size:17px;color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:13px;"></i> 2</div></div>
+        </div>
+        <!-- expense rows -->
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-tool"></i></div><div class="body"><div class="t">Repairs · Ace Hardware</div><div class="s">Feb 11 · RCPT-1017 · incl. $135 labor</div></div><div class="val"><div class="v">$182.60</div></div></div>
+          <div class="row" style="box-shadow:inset 3px 0 0 var(--tv-gold,#C9973A);"><div class="lead-ic" style="background:#8a9a91;"><i class="ti ti-shopping-bag"></i></div><div class="body"><div class="t">Supplies · Home Depot</div><div class="s" style="color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:11px;"></i> Missing receipt</div></div><div class="val"><div class="v">$34.18</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-briefcase"></i></div><div class="body"><div class="t">Property Management · Summit PM</div><div class="s">Jan 09 · RCPT-1004</div></div><div class="val"><div class="v">$140.00</div></div></div>
+        </div>
+        <!-- category breakdown -->
+        <div class="group" style="margin-top:14px;">
+          <div class="row"><div class="body"><div class="t">Repairs</div></div><div class="val"><div class="v">$182.60</div></div></div>
+          <div class="row"><div class="body"><div class="t">Property Management Fees</div></div><div class="val"><div class="v">$140.00</div></div></div>
+          <div class="row"><div class="body"><div class="t" style="font-weight:700;">Grand total</div></div><div class="val"><div class="v" style="font-weight:700;">$3,240</div></div></div>
+        </div>
+        <!-- export -->
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button class="btn-sm ghost" style="flex:1;"><i class="ti ti-download"></i> Download CSV</button>
+          <button class="btn-sm" style="flex:1;background:var(--tv-forest);color:#fff;border:none;border-radius:10px;padding:9px;"><i class="ti ti-folder"></i> Save to Documents</button>
+        </div>
+        <div class="muted" style="font-size:11px;text-align:center;margin-top:8px;">Accountant-ready · Schedule E · share with your CPA from Documents</div>
+      </div>
+    </div>
+    <div class="tabbar">
+      <div class="tab"><i class="ti ti-home"></i>Home</div>
+      <div class="tab"><i class="ti ti-wallet"></i>Accounts</div>
+      <div class="tab"><i class="ti ti-chart-pie"></i>Budget</div>
+      <div class="tab"><i class="ti ti-chart-line"></i>Invest</div>
+      <div class="tab active"><i class="ti ti-dots"></i>More</div>
+    </div>
+    <div class="home-indicator"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">14b</span> Property Expenses</div>
 </div>
 
 <!-- ===================== 15. CALCULATORS ===================== -->
