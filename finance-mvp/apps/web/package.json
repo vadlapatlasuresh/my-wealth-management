@@ -27,13 +27,16 @@
     "@capacitor/ios": "^8.4.0",
     "i18next": "^26.3.1",
     "i18next-browser-languagedetector": "^8.2.1",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-i18next": "^17.0.8",
     "react-plaid-link": "^3.6.1",
     "react-router-dom": "^6.24.1",
-    "tesseract.js": "^5.1.1"
+    "tesseract.js": "^5.1.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",

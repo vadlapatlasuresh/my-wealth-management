@@ -1,6 +1,8 @@
 package com.mywealthmanagement.businessfinancialsservice.internal;
 
 import com.mywealthmanagement.businessfinancialsservice.business.QboConnectionRepository;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessExpenseLinkRepository;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessExpenseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -17,6 +19,8 @@ import org.springframework.web.server.ResponseStatusException;
 public class InternalPurgeController {
 
     private final QboConnectionRepository qboConnectionRepository;
+    private final BusinessExpenseRepository expenseRepository;
+    private final BusinessExpenseLinkRepository expenseLinkRepository;
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
     private String internalKey;
@@ -29,6 +33,8 @@ public class InternalPurgeController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid internal key");
         }
         qboConnectionRepository.deleteByUserId(userId);
+        expenseLinkRepository.deleteByUserId(userId); // links before their expenses
+        expenseRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();
     }
 }

@@ -616,6 +616,59 @@ export const api = {
   deleteBusinessTransaction: (id) =>
     request(`/api/v1/business/manual/transactions/${id}`, { method: "DELETE" }),
 
+  // Per-business expense tracker. STANDALONE expenses carry their own amount; LINKED ones
+  // derive it from attached ledger transactions (so they never double-count the P&L).
+  listBusinessExpenses: (businessId, params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== "")
+    ).toString();
+    return request(
+      `/api/v1/business/manual/businesses/${businessId}/expenses${qs ? `?${qs}` : ""}`
+    );
+  },
+  createBusinessExpense: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/expenses`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessExpense: (id, payload) =>
+    request(`/api/v1/business/manual/expenses/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessExpense: (id) =>
+    request(`/api/v1/business/manual/expenses/${id}`, { method: "DELETE" }),
+  linkExpenseTransactions: (id, links) =>
+    request(`/api/v1/business/manual/expenses/${id}/links`, {
+      method: "POST",
+      body: JSON.stringify(links),
+    }),
+  unlinkExpenseTransaction: (id, linkId) =>
+    request(`/api/v1/business/manual/expenses/${id}/links/${linkId}`, { method: "DELETE" }),
+  getBusinessExpenseSummary: (businessId, params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== "")
+    ).toString();
+    return request(
+      `/api/v1/business/manual/businesses/${businessId}/expenses/summary${qs ? `?${qs}` : ""}`
+    );
+  },
+  // Consolidated across every business — backs the "all businesses" export.
+  listAllBusinessExpenses: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== "")
+    ).toString();
+    return request(`/api/v1/business/manual/expenses${qs ? `?${qs}` : ""}`);
+  },
+  getAllBusinessExpenseSummary: (params = {}) => {
+    const qs = new URLSearchParams(
+      Object.entries(params).filter(([, v]) => v != null && v !== "")
+    ).toString();
+    return request(`/api/v1/business/manual/expenses/summary${qs ? `?${qs}` : ""}`);
+  },
+  getBusinessExpenseCategories: () =>
+    request(`/api/v1/business/manual/expenses/categories`),
+
   // Trackable business invoices (create / send / track + pending payments).
   getManualInvoices: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/invoices`),

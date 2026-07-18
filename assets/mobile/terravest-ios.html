@@ -1193,6 +1193,20 @@ body{
           <div class="row" style="display:flex;justify-content:space-between;padding:11px 14px;border-bottom:1px solid var(--tv-border);"><div><div style="font-weight:600;">Cedar Rentals LLC</div><div class="muted" style="font-size:11px;">Net $5.7k · Cash $18.4k</div></div><div style="color:var(--tv-positive);font-weight:700;">$9.8k</div></div>
           <div class="row" style="display:flex;justify-content:space-between;padding:11px 14px;font-weight:700;"><div>All businesses</div><div>$51.8k</div></div>
         </div>
+        <!-- Expenses tracker — standalone vs linked kept separate so linked expenses
+             never double-count the ledger-derived P&L. -->
+        <div class="sec-label">Expenses</div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Tracked</div><div style="font-weight:700;font-size:17px;">$18,420</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Standalone</div><div style="font-weight:700;font-size:17px;">$4,180</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Missing</div><div style="font-weight:700;font-size:17px;color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:13px;"></i> 6</div></div>
+        </div>
+        <div class="group" style="display:block;padding:0;">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-cloud"></i></div><div class="body"><div class="t">AWS — May usage</div><div class="s"><i class="ti ti-link" style="font-size:11px;"></i> 2 linked · Software</div></div><div class="val"><div class="v">$1,430</div></div></div>
+          <div class="row" style="box-shadow:inset 3px 0 0 var(--tv-gold,#C9973A);"><div class="lead-ic" style="background:#8a9a91;"><i class="ti ti-tools"></i></div><div class="body"><div class="t">Client lunch — Northwind</div><div class="s" style="color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:11px;"></i> Missing receipt</div></div><div class="val"><div class="v">$182.40</div></div></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-file-invoice"></i></div><div class="body"><div class="t">Export report</div><div class="s">PDF · Excel · CSV · executive summary → Documents</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+
         <!-- Expandable per-business accordion: each business owns its accounts one-to-one -->
         <div class="sec-label">Businesses</div>
         <div class="group" style="display:block;padding:0;">

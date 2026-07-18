@@ -3,6 +3,7 @@ import { currency, rangeStart } from '../utils/format';
 import { api } from '../api';
 import LastRefreshed from '../components/LastRefreshed';
 import PlaidLinkButton from '../components/PlaidLinkButton';
+import ExpensesTab from '../components/business/ExpensesTab';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -31,7 +32,10 @@ const ASSIGNABLE_TYPES = ['Income', 'Expense', 'Payroll', 'Vendor Payment', 'Tra
 const TABS = [
   { id: 'overview', label: 'Overview', icon: 'ti-layout-dashboard' },
   { id: 'tx', label: 'Transactions', icon: 'ti-arrows-exchange' },
-  { id: 'cards', label: 'Credit Card & Expenses', icon: 'ti-credit-card' },
+  { id: 'expenses', label: 'Expenses', icon: 'ti-receipt-2' },
+  // Renamed from "Credit Card & Expenses": the expense analytics moved to the Expenses tab,
+  // so this one is now genuinely just the cards.
+  { id: 'cards', label: 'Credit Cards', icon: 'ti-credit-card' },
   { id: 'tools', label: 'Business Tools', icon: 'ti-tools' },
   { id: 'reports', label: 'Reports', icon: 'ti-report-analytics' },
   { id: 'docs', label: 'Documents', icon: 'ti-folder' },
@@ -3253,7 +3257,34 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
           )}
 
           {/* ============================================================ */}
-          {/* TAB — Credit Card & Expenses                                 */}
+          {/* TAB — Expenses (tracker + spend analytics)                   */}
+          {/* ============================================================ */}
+          {activeTab === 'expenses' && (
+            isAllView || !selectedBusiness ? (
+              <div className="card">
+                <div className="empty-state">
+                  <i className="ti ti-receipt-2"></i>
+                  <p>Pick a single business above to track its expenses.</p>
+                  <div className="item-sub" style={{ marginTop: 6 }}>
+                    You can still export a combined report for every business from any one of them.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <ExpensesTab
+                businessId={selectedBusiness.id}
+                businessName={selectedBusiness.name}
+                businesses={businesses}
+                transactions={unifiedTx}
+                ledgerCategories={categoryOptions.filter((c) => c !== 'ALL')}
+                CategoryBars={CategoryBars}
+                onDocumentsChanged={() => loadBusinessDetail(selectedBusiness.id)}
+              />
+            )
+          )}
+
+          {/* ============================================================ */}
+          {/* TAB — Credit Cards                                           */}
           {/* ============================================================ */}
           {activeTab === 'cards' && (
             <>
@@ -3270,19 +3301,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   )}
                 </div>
 
-                <div className="card">
-                  <div className="section-header">
-                    <div className="section-title"><i className="ti ti-chart-donut" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Spending by category</div>
-                    <span className="badge badge-gray">All accounts</span>
-                  </div>
-                  {spendingByCategory.length === 0 ? (
-                    <div className="empty-state"><i className="ti ti-chart-donut"></i><p>No spend recorded yet.</p></div>
-                  ) : (<CategoryBars rows={spendingByCategory} />)}
-                </div>
-              </div>
-
-              {/* Insights: P&L snapshot + top vendors */}
-              <div className="grid-2" style={{ marginBottom: 16 }}>
+                {/* Spend-by-category and Top-vendors moved to the Expenses tab, where the
+                    expense tracker lives — they were never card-specific. */}
                 <div className="card">
                   <div className="section-header">
                     <div className="section-title"><i className="ti ti-report-money" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>P&amp;L snapshot</div>
@@ -3311,15 +3331,6 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   )}
                 </div>
 
-                <div className="card">
-                  <div className="section-header">
-                    <div className="section-title"><i className="ti ti-building-store" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Top vendors</div>
-                    <span className="badge badge-gray">By spend</span>
-                  </div>
-                  {topVendors.length === 0 ? (
-                    <div className="empty-state"><i className="ti ti-building-store"></i><p>No vendor spend recorded yet.</p></div>
-                  ) : (<CategoryBars rows={topVendors} />)}
-                </div>
               </div>
 
               {/* Recurring charges / subscriptions */}

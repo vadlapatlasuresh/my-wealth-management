@@ -33,6 +33,8 @@ public class ManualBusinessController {
     private final BusinessBudgetRepository budgetRepo;
     private final BusinessGoalRepository goalRepo;
     private final BusinessVendorRepository vendorRepo;
+    private final BusinessExpenseRepository expenseRepo;
+    private final BusinessExpenseLinkRepository expenseLinkRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -87,6 +89,8 @@ public class ManualBusinessController {
         budgetRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         goalRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         vendorRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        expenseLinkRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // links before expenses
+        expenseRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
