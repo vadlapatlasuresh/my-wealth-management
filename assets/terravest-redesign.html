@@ -1133,7 +1133,7 @@ a { text-decoration: none; color: inherit; }
       (Month / Year-to-date / Last 12 months, the latter two as read-only roll-ups).
     • Debt Lab: summary KPIs (total debt, weighted avg APR, min payments, highest APR) and a recommended-strategy callout.
     • Investments: sub-tabs — Stocks & ETFs (synced holdings + recent trade activity), Brokers (link real brokerages via Plaid), Alternatives (LLCs/land/apartments/PE/crypto).
-    • My Business: multi-business + "All businesses" switcher, hero cash header, period selector (this month / year / trailing 12mo / custom) driving ledger-derived P&L KPIs, consolidated by-business breakdown (parts sum to totals), expandable per-business accordion (each business owns its bank/credit accounts one-to-one with its own dashboard + transactions), linked accounts (bank + credit) assigned one-to-one with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L + top-vendor insights, invoices & QuickBooks, per-business document center filed by tax/reporting year.
+    • My Business: multi-business + "All businesses" switcher, hero cash header, period selector (this month / year / trailing 12mo / custom) driving ledger-derived P&L KPIs, consolidated by-business breakdown (parts sum to totals), expandable per-business accordion (each business owns its bank/credit accounts one-to-one with its own dashboard + transactions), linked accounts (bank + credit) assigned one-to-one with link/unlink, cash-flow chart, filterable transactions (deposits/payments/type/status/tags), P&L insights, invoices & QuickBooks, per-business document center filed by tax/reporting year, and a per-business Expenses tab (manual entry with receipt upload, linking existing ledger transactions, category/vendor/status filters, spend-by-category & top-vendor analytics, and PDF/Excel/CSV/executive-summary export for one business or all combined — saved straight into Documents). Standalone vs linked spend is reported separately so linked expenses never double-count the ledger-derived P&L.
     • AI Assistant: portfolio-scope selector (choose which areas to consider) + adaptive suggested prompts.
 
     CHANGELOG — 2026-06-07 (auth + brokers + polish)
@@ -4205,6 +4205,112 @@ a { text-decoration: none; color: inherit; }
           <!-- Folder: Cedar Rentals LLC -->
           <div style="display:flex;align-items:center;gap:8px;margin:16px 0 8px;"><i class="ti ti-folder" style="color:var(--tv-forest-light);font-size:16px;"></i><span style="font-weight:600;font-size:14px;">Cedar Rentals LLC</span><span class="badge badge-gray">1</span></div>
           <div class="list-item"><div class="item-icon icon-forest"><i class="ti ti-file-upload"></i></div><div class="item-main"><div class="item-name">Signed lease — Unit 4B.pdf</div><div class="item-sub"><span class="badge badge-gray">Contract</span> <span class="badge badge-forest">File · 820 KB</span> · 2026 · added Jun 14</div></div><div class="item-right" style="display:flex;align-items:center;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Open</button><button class="icon-btn"><i class="ti ti-trash"></i></button></div></div>
+        </div>
+
+        <!-- ============================================================
+             MY BUSINESS — EXPENSES TAB (per-business expense tracker)
+             Design reference for ExpensesTab / ExpenseFormDrawer /
+             TransactionLinkPicker / ExpenseExportModal.
+             ============================================================ -->
+        <div style="margin-top:28px;">
+          <div class="section-title" style="margin-bottom:10px;"><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Expenses tab &mdash; per-business tracker</div>
+
+          <!-- KPI strip: standalone vs linked is the anti-double-count signal -->
+          <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px;">
+            <div class="kpi-card"><div class="kpi-label">Total tracked</div><div class="kpi-value">$18,420</div><div class="item-sub">24 expenses</div></div>
+            <div class="kpi-card"><div class="kpi-label">Standalone</div><div class="kpi-value">$4,180</div><div class="item-sub">New spend, not in the ledger</div></div>
+            <div class="kpi-card"><div class="kpi-label">Linked</div><div class="kpi-value">$14,240</div><div class="item-sub">Documents existing transactions</div></div>
+            <div class="kpi-card"><div class="kpi-label">Missing receipts</div><div class="kpi-value" style="color:var(--tv-gold);">6</div><div class="item-sub">Chase before filing</div></div>
+          </div>
+
+          <div class="card" style="margin-bottom:16px;">
+            <div class="section-header">
+              <div class="section-title"><i class="ti ti-receipt-2" style="margin-right:6px;color:var(--tv-forest-light);"></i>Expenses</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button>
+                <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add expense</button>
+              </div>
+            </div>
+            <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+              <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search description, vendor, category…"></div>
+              <select class="form-select filter-select"><option>All categories</option><option>Software &amp; Subscriptions</option></select>
+              <select class="form-select filter-select"><option>All vendors</option><option>AWS</option></select>
+              <select class="form-select filter-select"><option>All statuses</option><option>Needs receipt</option></select>
+            </div>
+            <div class="table-scroll" style="margin-top:4px;">
+              <table class="tv-table">
+                <thead><tr><th>Description</th><th>Category</th><th>Vendor</th><th>Date</th><th>Status</th><th>Receipt</th><th style="text-align:right;">Amount</th><th style="width:80px;"></th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><div style="font-weight:500;">AWS — May usage</div><span class="badge badge-gray"><i class="ti ti-link"></i> 2 linked</span></td>
+                    <td class="item-sub">Software &amp; Subscriptions</td><td class="item-sub">AWS</td><td class="item-sub">2026-05-31</td>
+                    <td><span class="badge badge-green">Approved</span></td>
+                    <td><span class="badge badge-green"><i class="ti ti-check"></i> Yes</span></td>
+                    <td style="text-align:right;font-weight:600;">$1,430.00</td>
+                    <td style="text-align:right;"><button class="icon-btn"><i class="ti ti-link"></i></button><button class="icon-btn"><i class="ti ti-pencil"></i></button><button class="icon-btn"><i class="ti ti-trash"></i></button></td>
+                  </tr>
+                  <tr style="box-shadow:inset 3px 0 0 var(--tv-gold);">
+                    <td><div style="font-weight:500;">Client lunch — Northwind</div></td>
+                    <td class="item-sub">Meals &amp; Entertainment</td><td class="item-sub">Osteria</td><td class="item-sub">2026-05-18</td>
+                    <td><span class="badge badge-gold">Needs receipt</span></td>
+                    <td><span class="badge badge-gold"><i class="ti ti-alert-triangle"></i> Missing</span></td>
+                    <td style="text-align:right;font-weight:600;">$182.40</td>
+                    <td style="text-align:right;"><button class="icon-btn"><i class="ti ti-link"></i></button><button class="icon-btn"><i class="ti ti-pencil"></i></button><button class="icon-btn"><i class="ti ti-trash"></i></button></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Transaction link picker (modal) -->
+          <div class="section-title" style="margin:20px 0 10px;"><i class="ti ti-link" style="color:var(--tv-forest);"></i> Link existing transactions &mdash; picker</div>
+          <div style="max-width:900px;border:1px solid var(--tv-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--tv-border);">
+              <div><div class="section-title" style="margin-bottom:2px;"><i class="ti ti-link" style="margin-right:6px;color:var(--tv-forest-light);"></i>Link existing transactions</div><div class="item-sub">Select one or more transactions to attach to this expense.</div></div>
+              <button class="icon-btn"><i class="ti ti-x"></i></button>
+            </div>
+            <div style="padding:18px 22px;">
+              <div class="filter-bar" style="flex-wrap:wrap;gap:10px;">
+                <div class="filter-search"><i class="ti ti-search"></i><input type="text" placeholder="Search description, merchant, or category…"></div>
+                <select class="form-select filter-select"><option>All categories</option></select>
+                <div class="seg-control"><button class="seg-btn active">Money out</button><button class="seg-btn">Money in</button><button class="seg-btn">All</button></div>
+              </div>
+              <div class="table-scroll" style="margin-top:10px;">
+                <table class="tv-table">
+                  <thead><tr><th style="width:38px;"></th><th>Description</th><th>Account</th><th>Category</th><th>Date</th><th style="text-align:right;">Amount</th></tr></thead>
+                  <tbody>
+                    <tr><td><input type="checkbox" checked></td><td><div style="font-weight:500;">AWS</div><div class="item-sub">Amazon Web Services</div></td><td class="item-sub">Amex Business</td><td class="item-sub">Software</td><td class="item-sub">2026-05-31</td><td style="text-align:right;" class="amount-neg">$1,430.00</td></tr>
+                    <tr style="opacity:.55;"><td><input type="checkbox" disabled></td><td><div style="font-weight:500;">AWS</div><span class="badge badge-gray">Already linked</span></td><td class="item-sub">Amex Business</td><td class="item-sub">Software</td><td class="item-sub">2026-04-30</td><td style="text-align:right;" class="amount-neg">$1,290.00</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--tv-border);background:var(--tv-bg);">
+              <div class="item-sub"><strong>1</strong> selected · <strong>$1,430.00</strong></div>
+              <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm">Cancel</button><button class="btn btn-primary btn-sm"><i class="ti ti-link"></i> Link 1 transaction</button></div>
+            </div>
+          </div>
+
+          <!-- Export modal -->
+          <div class="section-title" style="margin:20px 0 10px;"><i class="ti ti-download" style="color:var(--tv-forest);"></i> Export &mdash; single or all businesses</div>
+          <div style="max-width:620px;border:1px solid var(--tv-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);">
+            <div style="padding:18px 22px;border-bottom:1px solid var(--tv-border);"><div class="section-title" style="margin-bottom:2px;"><i class="ti ti-download" style="margin-right:6px;color:var(--tv-forest-light);"></i>Export expenses</div><div class="item-sub">Download it, or file it in this business&rsquo;s Documents.</div></div>
+            <div style="padding:18px 22px;">
+              <div class="form-group"><label class="form-label">Scope</label><div class="seg-control"><button class="seg-btn active">Acme Studio LLC</button><button class="seg-btn">All businesses (3)</button></div></div>
+              <div class="form-group"><label class="form-label">Format</label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+                  <button class="expense-format-card active" style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border:1px solid var(--tv-forest);border-radius:var(--radius-md);background:var(--tv-sage-pale);"><i class="ti ti-file-type-pdf" style="font-size:20px;color:var(--tv-forest);"></i><div><div style="font-weight:600;font-size:13px;">PDF</div><div class="item-sub">Full detail table, branded</div></div></button>
+                  <button class="expense-format-card" style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);background:var(--tv-card);"><i class="ti ti-file-spreadsheet" style="font-size:20px;color:var(--tv-forest);"></i><div><div style="font-weight:600;font-size:13px;">Excel</div><div class="item-sub">Multi-sheet workbook</div></div></button>
+                  <button class="expense-format-card" style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);background:var(--tv-card);"><i class="ti ti-file-text" style="font-size:20px;color:var(--tv-forest);"></i><div><div style="font-weight:600;font-size:13px;">CSV</div><div class="item-sub">Raw rows for any tool</div></div></button>
+                  <button class="expense-format-card" style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px;border:1px solid var(--tv-border);border-radius:var(--radius-md);background:var(--tv-card);"><i class="ti ti-presentation" style="font-size:20px;color:var(--tv-forest);"></i><div><div style="font-weight:600;font-size:13px;">Executive summary</div><div class="item-sub">One-page client-facing</div></div></button>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-top:1px solid var(--tv-border);background:var(--tv-bg);">
+              <div class="item-sub">Acme Studio LLC</div>
+              <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download</button><button class="btn btn-primary btn-sm"><i class="ti ti-folder"></i> Save to Documents</button></div>
+            </div>
+          </div>
         </div>
       </div>
 
