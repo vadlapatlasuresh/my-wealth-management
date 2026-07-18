@@ -110,3 +110,42 @@ in `apps/web/ios` and `apps/web/android`). Note there is also an older React Nat
 7. **Mobile** store builds.
 
 See **[04-ROADMAP-TO-LIVE.md](04-ROADMAP-TO-LIVE.md)** for these grouped into phases.
+
+---
+
+## 3.7 MyBusiness — SMB financial command center 🛠
+
+A per-business "financial operating system" layered on the existing ledger + invoices,
+built in phases on the **MyBusiness** page ([`finance-mvp/apps/web/src/pages/MyBusinessPage.jsx`](../finance-mvp/apps/web/src/pages/MyBusinessPage.jsx))
+and `business-financials-service`.
+
+**Shipped (2026-07-18):**
+- [x] **Phase 1 — Command Center / Overview:** business health score, 90-day cash forecast +
+      shortfall detection, AR aging, rule-based smart insights (all client-computed).
+- [x] **Phase 2 — Collections & customers:** bulk "remind all overdue" (real invoice-send),
+      recurring/subscription detector, per-customer payment behavior.
+- [x] **Phase 3 — Reports:** cash-basis P&L, Balance Sheet, Cash Flow — CSV + print-to-PDF.
+- [x] **Phase 4 — Budgets & variance** (table `business_budgets`, V14).
+- [x] **Phase 5 — Goals:** cash reserve + tax set-aside (table `business_goals`, V15).
+- [x] **Phase 6 — Vendor/procurement management:** computed vendor spend + persisted overlay
+      (status/renewal/notes), renewal alerts (table `business_vendors`, V16).
+
+**Pending — resume here (roughly high→low leverage):**
+- [ ] 🛠 **Expense receipt capture** — mobile/upload receipt scan → OCR extract (reuse
+      `pdfjs-dist` + the image-OCR path already in [`TaxPage.jsx`](../finance-mvp/apps/web/src/pages/TaxPage.jsx)) →
+      auto-match to a transaction; attach via documents-service.
+- [ ] 🛠 **Budget/goal/renewal alerts into the notification fan-out** — surface over-budget,
+      cash-shortfall, and vendor-renewal warnings as real notifications, not just on-page.
+- [ ] 🛠 **Advanced invoicing** — recurring/subscription invoices, milestone billing, partial
+      payments/installments, a hosted customer payment portal. (multi-currency = 🔑)
+- [ ] 🔑 **More accounting/payment/payroll integrations** beyond QuickBooks — Xero, Stripe,
+      Square, Gusto, etc. (each gated behind its key, like the existing provider toggles).
+- [ ] 🛠 **Approval workflows + field-level RBAC** for business roles (Owner/Finance/Bookkeeper/
+      Accountant) — depends on the multi-user model.
+- [ ] 🔑🏗 **Sales-tax / multi-jurisdiction tax engine** (or an Avalara-style integration).
+- [ ] 🏗 **Financing marketplace** — loan/credit-line/invoice-financing readiness scoring.
+- [ ] 🛠 **Benchmarking & vertical modules** — industry benchmarks; job-costing (construction),
+      inventory (retail), time-tracking (services).
+- [ ] 🛠 **Collaboration** — accountant/investor external portals, transaction notes/tasks.
+
+Detail + rationale for each is captured in the `mybusiness-command-center` working memory.

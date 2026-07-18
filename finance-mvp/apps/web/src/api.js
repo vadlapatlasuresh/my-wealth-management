@@ -769,6 +769,20 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  // Per-business vendor overlay: [{ vendorName, status, renewalDate, notes }].
+  getBusinessVendors: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/vendors`),
+  // payload: { status?, renewalDate?: 'yyyy-MM-dd'|null, notes? }.
+  setBusinessVendor: (businessId, vendorName, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/vendors/${encodeURIComponent(vendorName)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessVendor: (businessId, vendorName) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/vendors/${encodeURIComponent(vendorName)}`, {
+      method: "DELETE",
+    }),
+
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
