@@ -4,6 +4,7 @@ import { api } from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
 import LastRefreshed from "../components/LastRefreshed";
 import Disclaimer from "../components/Disclaimer";
+import PropertyExpensesDrawer from "../components/PropertyExpensesDrawer";
 
 // Normalize a property from the API (which may use value/mortgage or currentValue/loanBalance)
 function normalize(p) {
@@ -42,6 +43,8 @@ export default function RealEstatePage({ properties = [] }) {
   const [lookingUp, setLookingUp] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
+  const [expensesFor, setExpensesFor] = useState(null); // property whose expense drawer is open
+  const [expenseSummaries, setExpenseSummaries] = useState({}); // { [propertyId]: summary }
   const emptyForm = {
     address: "",
     propertyType: "PRIMARY_RESIDENCE",
@@ -120,6 +123,27 @@ export default function RealEstatePage({ properties = [] }) {
   useEffect(() => {
     fetchProperties();
   }, [fetchProperties]);
+
+  // Load this-year expense summaries for each property so the cards can show a
+  // compact "Expenses YTD" line. Best-effort and non-blocking — a failure just
+  // hides the line for that card.
+  const refreshExpenseSummary = useCallback(async (id) => {
+    try {
+      const s = await api.getPropertyExpenseSummary(id);
+      setExpenseSummaries((prev) => ({ ...prev, [id]: s }));
+    } catch {
+      /* best-effort */
+    }
+  }, []);
+
+  useEffect(() => {
+    props.forEach((p) => {
+      if (p.id != null && expenseSummaries[p.id] === undefined) {
+        refreshExpenseSummary(p.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [props, refreshExpenseSummary]);
 
   const totalValue = useMemo(
     () => props.reduce((sum, p) => sum + (p.currentValue || 0), 0),
@@ -614,6 +638,13 @@ export default function RealEstatePage({ properties = [] }) {
                     </button>
                     <button
                       className="btn btn-secondary btn-sm"
+                      onClick={() => setExpensesFor(prop)}
+                      title="Track expenses for this property"
+                    >
+                      <i className="ti ti-receipt-2"></i> Expenses
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
                       onClick={() => onRevalue(prop.id)}
                       disabled={revaluingId === prop.id}
                     >
@@ -670,6 +701,36 @@ export default function RealEstatePage({ properties = [] }) {
                   </div>
                 )}
 
+                {/* Expenses YTD summary — links to the per-property expense tracker */}
+                {(() => {
+                  const s = expenseSummaries[prop.id];
+                  const ytd = s ? Number(s.totalYtd || 0) : null;
+                  const missing = s ? Number(s.missingReceiptCount || 0) : 0;
+                  return (
+                    <div
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: "0 18px 14px", padding: "8px 12px", background: "var(--tv-bg)", borderRadius: "var(--radius-md)", fontSize: 12.5, cursor: "pointer" }}
+                      onClick={() => setExpensesFor(prop)}
+                      title="Open the expense tracker for this property"
+                    >
+                      <span style={{ color: "var(--tv-text-secondary)" }}>
+                        <i className="ti ti-receipt-2" style={{ color: "var(--tv-forest)", marginRight: 5 }}></i>
+                        Expenses YTD{" "}
+                        <strong style={{ color: "var(--tv-text-primary)" }}>
+                          {ytd != null ? currency(ytd) : "—"}
+                        </strong>
+                      </span>
+                      <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        {missing > 0 ? (
+                          <span className="badge badge-gold" style={{ fontSize: 10.5 }} title="Expenses missing a receipt reference">
+                            <i className="ti ti-alert-triangle"></i> {missing} missing
+                          </span>
+                        ) : null}
+                        <i className="ti ti-chevron-right" style={{ color: "var(--tv-text-muted)" }}></i>
+                      </span>
+                    </div>
+                  );
+                })()}
+
                 {/* Rental analysis — net cap rate accounts for all monthly carrying costs */}
                 {prop.rentEstimate && (prop.type === "RENTAL_PROPERTY" || prop.type === "Rental") ? (() => {
                   const rent = Number(prop.rentEstimate) || 0;
@@ -722,6 +783,14 @@ export default function RealEstatePage({ properties = [] }) {
           })
         )}
       </div>
+
+      {expensesFor && (
+        <PropertyExpensesDrawer
+          property={expensesFor}
+          onClose={() => setExpensesFor(null)}
+          onChanged={() => refreshExpenseSummary(expensesFor.id)}
+        />
+      )}
     </div>
   );
 }
