@@ -3036,7 +3036,7 @@ a { text-decoration: none; color: inherit; }
         </div>
       </div>
       <div id="page-realestate" class="page">
-        <div class="page-header"><div><div class="page-title">Properties</div><div class="page-subtitle">Your real estate portfolio</div></div><div class="page-actions" style="align-items:center;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add property</button></div></div>
+        <div class="page-header"><div><div class="page-title">Properties</div><div class="page-subtitle">Your real estate portfolio</div></div><div class="page-actions" style="align-items:center;"><span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-clock" style="font-size:13px;"></i> Updated just now</span><button class="btn btn-secondary btn-sm" title="One combined expense report for all properties"><i class="ti ti-file-invoice"></i> Tax export</button><button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add property</button></div></div>
 
         <!-- Edit-property state: clicking "Edit" on a card scrolls here, the form flashes a
              forest ring, and the header names the property being edited (accent border + badge). -->
@@ -3192,6 +3192,52 @@ a { text-decoration: none; color: inherit; }
             <!-- foot -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:var(--tv-card);border-top:1px solid var(--tv-border);">
               <div style="font-size:11.5px;color:var(--tv-text-muted);">Accountant-ready · Schedule E</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download CSV</button>
+                <button class="btn btn-primary btn-sm"><i class="ti ti-folder"></i> Save to Documents</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================
+             PORTFOLIO TAX EXPORT — one combined file across ALL properties
+             (design reference for the PortfolioExpenseDrawer component).
+             ============================================================ -->
+        <div style="margin-top:24px;">
+          <div class="section-title" style="margin-bottom:10px;"><i class="ti ti-file-invoice" style="color:var(--tv-forest);"></i> Tax export &mdash; all properties (one combined file)</div>
+          <div style="max-width:640px;border:1px solid var(--tv-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px;background:var(--tv-card);border-bottom:1px solid var(--tv-border);">
+              <div>
+                <div style="font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--tv-text-primary);"><i class="ti ti-file-invoice" style="color:var(--tv-forest);"></i> Tax export &middot; all properties</div>
+                <div style="font-size:12.5px;color:var(--tv-text-muted);margin-top:2px;">One combined report across your whole portfolio</div>
+              </div>
+              <button class="icon-btn"><i class="ti ti-x"></i></button>
+            </div>
+            <div style="padding:18px 22px;background:var(--tv-bg);">
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Total 2026</div><div style="font-family:var(--font-display);font-size:18px;">$9,180</div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Properties</div><div style="font-family:var(--font-display);font-size:18px;">3 <span style="font-size:12px;color:var(--tv-text-muted);">/ 3</span></div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Missing receipts</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-gold);"><i class="ti ti-alert-triangle"></i> 4</div></div>
+              </div>
+              <div class="section-title" style="font-size:13px;margin-bottom:8px;">By property</div>
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr>
+                  <th style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Property</th>
+                  <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Expenses</th>
+                  <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Total</th>
+                  <th style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Receipts</th>
+                </tr></thead>
+                <tbody>
+                  <tr style="box-shadow:inset 3px 0 0 var(--tv-gold);"><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">123 Maple St</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">9</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,240</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
+                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">456 Oak Ave</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">7</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,910</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
+                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">789 Pine Rd</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">6</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$2,030</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;"><i class="ti ti-check"></i> Complete</span></td></tr>
+                  <tr><td style="padding:9px 10px;font-weight:700;">Grand total</td><td style="padding:9px 10px;text-align:right;font-weight:700;">22</td><td style="padding:9px 10px;text-align:right;font-weight:700;">$9,180</td><td></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:var(--tv-card);border-top:1px solid var(--tv-border);">
+              <div style="font-size:11.5px;color:var(--tv-text-muted);">One file &middot; all properties &middot; Schedule E</div>
               <div style="display:flex;gap:8px;">
                 <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download CSV</button>
                 <button class="btn btn-primary btn-sm"><i class="ti ti-folder"></i> Save to Documents</button>
