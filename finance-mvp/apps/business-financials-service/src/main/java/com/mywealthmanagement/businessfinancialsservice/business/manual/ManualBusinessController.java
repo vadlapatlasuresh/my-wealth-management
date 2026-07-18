@@ -30,6 +30,8 @@ public class ManualBusinessController {
     private final TransactionOverrideRepository overrideRepo;
     private final BusinessLinkedAccountRepository linkedRepo;
     private final BusinessDocumentRepository documentRepo;
+    private final BusinessBudgetRepository budgetRepo;
+    private final BusinessGoalRepository goalRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -81,6 +83,8 @@ public class ManualBusinessController {
         invoiceRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         linkedRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         documentRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        budgetRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        goalRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -703,6 +707,115 @@ public class ManualBusinessController {
     public ResponseEntity<Void> deleteTxOverride(@PathVariable String externalId) {
         overrideRepo.deleteByUserIdAndExternalId(userId(), externalId);
         return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Budgets (per-business, per-category monthly limits) ---------------- */
+
+    /** The caller's budgets for a business, as {category, monthlyLimit}. */
+    @GetMapping("/businesses/{businessId}/budgets")
+    public List<Map<String, Object>> listBudgets(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        return budgetRepo.findByUserIdAndBusinessIdOrderByCategoryAsc(userId(), businessId).stream()
+                .map(this::budgetToMap)
+                .toList();
+    }
+
+    /** Upsert the monthly limit for a category. A limit &le; 0 removes the budget. */
+    @PutMapping("/businesses/{businessId}/budgets/{category}")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> upsertBudget(
+            @PathVariable Long businessId, @PathVariable String category, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        String cat = str(category);
+        if (cat == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category is required");
+        BigDecimal limit = money(body.get("monthlyLimit"));
+        if (limit == null || limit.signum() <= 0) {
+            budgetRepo.deleteByUserIdAndBusinessIdAndCategory(userId(), businessId, cat);
+            return ResponseEntity.noContent().build();
+        }
+        BusinessBudget b = budgetRepo.findByUserIdAndBusinessIdAndCategory(userId(), businessId, cat)
+                .orElseGet(() -> {
+                    BusinessBudget n = new BusinessBudget();
+                    n.setUserId(userId());
+                    n.setBusinessId(businessId);
+                    n.setCategory(cat);
+                    return n;
+                });
+        b.setMonthlyLimit(limit);
+        return ResponseEntity.ok(budgetToMap(budgetRepo.save(b)));
+    }
+
+    /** Remove a category's budget. */
+    @DeleteMapping("/businesses/{businessId}/budgets/{category}")
+    @Transactional
+    public ResponseEntity<Void> deleteBudget(@PathVariable Long businessId, @PathVariable String category) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        budgetRepo.deleteByUserIdAndBusinessIdAndCategory(userId(), businessId, str(category));
+        return ResponseEntity.noContent().build();
+    }
+
+    /* ---------------- Goals (cash reserve + tax set-aside, one row per business) ---------------- */
+
+    /** The business's goals, as {reserveTarget, taxRate, taxSetAside}. Zeros when unset. */
+    @GetMapping("/businesses/{businessId}/goals")
+    public Map<String, Object> getGoals(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        return goalRepo.findByUserIdAndBusinessId(userId(), businessId)
+                .map(this::goalToMap)
+                .orElseGet(() -> {
+                    Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("reserveTarget", BigDecimal.ZERO);
+                    m.put("taxRate", BigDecimal.ZERO);
+                    m.put("taxSetAside", BigDecimal.ZERO);
+                    return m;
+                });
+    }
+
+    /** Upsert the business's goals. Only the fields present in the body are changed. */
+    @PutMapping("/businesses/{businessId}/goals")
+    @Transactional
+    public ResponseEntity<Map<String, Object>> putGoals(
+            @PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        BusinessGoal g = goalRepo.findByUserIdAndBusinessId(userId(), businessId)
+                .orElseGet(() -> {
+                    BusinessGoal n = new BusinessGoal();
+                    n.setUserId(userId());
+                    n.setBusinessId(businessId);
+                    return n;
+                });
+        if (body.containsKey("reserveTarget")) g.setReserveTarget(nonNeg(money(body.get("reserveTarget"))));
+        if (body.containsKey("taxRate")) g.setTaxRate(clampPct(money(body.get("taxRate"))));
+        if (body.containsKey("taxSetAside")) g.setTaxSetAside(nonNeg(money(body.get("taxSetAside"))));
+        return ResponseEntity.ok(goalToMap(goalRepo.save(g)));
+    }
+
+    private BigDecimal nonNeg(BigDecimal v) {
+        if (v == null || v.signum() < 0) return BigDecimal.ZERO;
+        return v;
+    }
+    private BigDecimal clampPct(BigDecimal v) {
+        if (v == null || v.signum() < 0) return BigDecimal.ZERO;
+        return v.compareTo(new BigDecimal("100")) > 0 ? new BigDecimal("100") : v;
+    }
+    private Map<String, Object> goalToMap(BusinessGoal g) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("reserveTarget", g.getReserveTarget());
+        m.put("taxRate", g.getTaxRate());
+        m.put("taxSetAside", g.getTaxSetAside());
+        return m;
+    }
+
+    private Map<String, Object> budgetToMap(BusinessBudget b) {
+        Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("category", b.getCategory());
+        m.put("monthlyLimit", b.getMonthlyLimit());
+        return m;
     }
 
     private Map<String, Object> overrideToMap(TransactionOverride o) {

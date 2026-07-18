@@ -745,6 +745,30 @@ export const api = {
       method: "DELETE",
     }),
 
+  // Per-business monthly category budgets, as [{ category, monthlyLimit }].
+  getBusinessBudgets: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/budgets`),
+  // payload: { monthlyLimit: number }. A limit <= 0 removes the budget.
+  setBusinessBudget: (businessId, category, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/budgets/${encodeURIComponent(category)}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessBudget: (businessId, category) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/budgets/${encodeURIComponent(category)}`, {
+      method: "DELETE",
+    }),
+
+  // Per-business goals: { reserveTarget, taxRate, taxSetAside }.
+  getBusinessGoals: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/goals`),
+  // Partial update: only the fields present in `payload` are changed.
+  setBusinessGoals: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/goals`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+
   // AI Insights Service (Phase 5)
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
