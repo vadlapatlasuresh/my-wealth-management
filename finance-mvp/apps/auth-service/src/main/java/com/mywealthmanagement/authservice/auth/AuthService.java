@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -146,18 +147,41 @@ public class AuthService {
      * is trusted as verified because the provider already verified it.
      */
     public User findOrCreateOAuthUser(String email, String name, String provider) {
-        return userRepository.findByEmail(email).orElseGet(() -> {
-            User u = new User(
-                    email,
-                    passwordEncoder.encode("oauth:" + java.util.UUID.randomUUID()),
-                    Collections.singleton(Role.USER));
-            u.setName(isBlank(name) ? email.split("@")[0] : name);
-            u.setAccountType("INDIVIDUAL");
-            u.setEmailVerified(true);
-            User saved = userRepository.save(u);
-            auditClient.record(String.valueOf(saved.getId()), "auth.oauth.register", "SUCCESS", provider);
-            return saved;
-        });
+        return userRepository.findByEmail(email)
+                .map(existing -> linkOAuthProvider(existing, provider))
+                .orElseGet(() -> {
+                    User u = new User(
+                            email,
+                            passwordEncoder.encode("oauth:" + java.util.UUID.randomUUID()),
+                            Collections.singleton(Role.USER));
+                    u.setName(isBlank(name) ? email.split("@")[0] : name);
+                    u.setAccountType("INDIVIDUAL");
+                    u.setEmailVerified(true);
+                    u.setAuthProvider(provider);
+                    if ("google".equals(provider)) u.setGoogleLinkedAt(LocalDateTime.now());
+                    User saved = userRepository.save(u);
+                    auditClient.record(String.valueOf(saved.getId()), "auth.oauth.register", "SUCCESS", provider);
+                    return saved;
+                });
+    }
+
+    /**
+     * An existing account just authenticated through a social provider. Records the link the
+     * first time it happens.
+     *
+     * Deliberately does NOT overwrite auth_provider: someone who registered with a password and
+     * later clicks "Sign in with Google" can still use that password, so claiming the account is
+     * now a Google account would be false. Stamping google_linked_at instead keeps both facts.
+     *
+     * This is safe as an implicit link only because the provider verified the email before we
+     * ever see it — see GoogleTokenVerifier. It must never be reached with an unverified address.
+     */
+    private User linkOAuthProvider(User user, String provider) {
+        if (!"google".equals(provider) || user.getGoogleLinkedAt() != null) return user;
+        user.setGoogleLinkedAt(LocalDateTime.now());
+        User saved = userRepository.save(user);
+        auditClient.record(String.valueOf(saved.getId()), "auth.oauth.link", "SUCCESS", provider);
+        return saved;
     }
 
     /** Mark a user's email as verified (after an email OTP succeeds). */
