@@ -1189,10 +1189,11 @@ svg{display:block;}
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-forest); color:#fff;"><i class="ti ti-cloud"></i></div><div class="grow"><div class="t1">AWS — May usage</div><div class="t2"><i class="ti ti-link" style="font-size:11px;"></i> 2 linked · Software</div></div><div style="font-weight:700;">$1,430</div></div>
         <div class="lrow" style="box-shadow:inset 3px 0 0 var(--tv-gold,#C9973A);"><div class="cat-icon" style="background:var(--tv-gold-pale,#FDF5E4); color:var(--tv-gold,#C9973A);"><i class="ti ti-tools"></i></div><div class="grow"><div class="t1">Client lunch — Northwind</div><div class="t2" style="color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:11px;"></i> Missing receipt</div></div><div style="font-weight:700;">$182.40</div></div>
       </div>
-      <div class="row" style="gap:8px; margin-bottom:14px;">
+      <div class="row" style="gap:8px; margin-bottom:6px;">
         <button class="btn-tonal" style="flex:1;"><i class="ti ti-plus"></i> Add expense</button>
         <button class="btn-filled" style="flex:1;"><i class="ti ti-download"></i> Export report</button>
       </div>
+      <div class="t2 muted" style="margin-bottom:14px;">PDF · Excel · CSV · executive summary — this business or all combined, saved to Documents</div>
 
       <!-- Year filter — documents filed by tax/reporting year -->
       <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
@@ -1212,6 +1213,70 @@ svg{display:block;}
     <div class="gesture-bar"></div>
   </div></div>
   <div class="caption-chip"><span class="num">13</span>My Business</div>
+</div>
+
+<!-- ============ 12·2 LINK TRANSACTIONS TO AN EXPENSE ============ -->
+<!-- Mirrors the web TransactionLinkPicker: search + filter chips + multi-select, with a
+     sticky confirm bar showing the running selected total. Already-linked rows are
+     rendered disabled so a transaction can't be attached twice. -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Link transactions</span><i class="ti ti-search ab-icon"></i></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:12px;">
+      <div class="t2 muted" style="margin-bottom:10px;">Client lunch — Northwind · select one or more to attach</div>
+
+      <!-- Filter chips -->
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+        <span class="chip" style="background:var(--tv-forest); color:#fff; padding:6px 12px; border-radius:999px; font-size:12px;">Money out</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">All accounts</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">All categories</span>
+        <span class="chip" style="padding:6px 12px; border-radius:999px; font-size:12px; border:1px solid var(--tv-border);">Any date</span>
+      </div>
+
+      <div class="m-card" style="padding:6px 16px;">
+        <!-- selected -->
+        <div class="lrow" style="background:var(--tv-sage-pale,#EAF3EE);">
+          <div class="cat-icon" style="background:var(--tv-forest); color:#fff;"><i class="ti ti-check"></i></div>
+          <div class="grow"><div class="t1">Osteria Bianca</div><div class="t2">Amex Business · Meals · May 18</div></div>
+          <div style="font-weight:700;">$182.40</div>
+        </div>
+        <!-- unselected -->
+        <div class="lrow">
+          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="grow"><div class="t1">Uber Trip</div><div class="t2">Amex Business · Travel · May 18</div></div>
+          <div style="font-weight:700;">$24.80</div>
+        </div>
+        <!-- already linked → disabled -->
+        <div class="lrow" style="opacity:.5;">
+          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="grow"><div class="t1">AWS</div><div class="t2"><span class="chip chip-round" style="height:18px; font-size:10px;">Already linked</span> Software · May 31</div></div>
+          <div style="font-weight:700;">$1,430.00</div>
+        </div>
+        <div class="lrow">
+          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="grow"><div class="t1">Staples</div><div class="t2">Business Checking · Office · May 14</div></div>
+          <div style="font-weight:700;">$96.20</div>
+        </div>
+      </div>
+
+      <div class="t2 muted" style="text-align:center; margin-top:10px;">
+        Linking records the transaction against this expense — it doesn&rsquo;t add new spend to your P&amp;L.
+      </div>
+
+      <!-- Sticky confirm bar -->
+      <div class="m-card elev" style="padding:12px; margin-top:14px;">
+        <div class="row between" style="margin-bottom:8px;">
+          <span class="secondary tiny"><b>1</b> selected</span>
+          <span style="font-weight:700;">$182.40</span>
+        </div>
+        <button class="btn-filled" style="width:100%;"><i class="ti ti-link"></i> Link 1 transaction</button>
+      </div>
+    </div>
+    </div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">13a</span>Link transactions</div>
 </div>
 
 <!-- ============ 12·1 MY BUSINESS — FIRST RUN ============ -->
