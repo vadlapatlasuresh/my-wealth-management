@@ -58,7 +58,12 @@ echo "==> Pulling images (tolerating locally-built ones)"
 # `pull` aborts with "not found" on those tags. --ignore-pull-failures pulls the public
 # images (Caddy, etc.) and SKIPS the local-only GHCR ones; the `up -d` below then uses the
 # local images. A genuinely-missing image still surfaces at `up -d`, so nothing is masked.
-$COMPOSE pull --ignore-pull-failures
+#
+# The pull output is captured so the preflight below can tell the difference between
+# "skipped a local-only tag" (fine) and "failed to refresh a registry tag" (stale image!).
+PULL_LOG=$(mktemp)
+trap 'rm -f "$PULL_LOG"' EXIT
+$COMPOSE pull --ignore-pull-failures 2>&1 | tee "$PULL_LOG" || true
 
 # Preflight: fail FAST and CLEARLY if any service image at this TAG is neither present
 # locally nor pullable. Without this, a missing tag only surfaces as a cryptic
@@ -68,7 +73,18 @@ $COMPOSE pull --ignore-pull-failures
 # local image (CI publishes full-SHA + :latest, never the short SHA). If those local
 # images are later gone (or you switch hosts) a pull-based deploy has nothing to run.
 # We check AFTER the pull above, so anything still absent locally is genuinely unavailable.
-echo "==> Preflight: verifying service images are available at TAG=${TAG:-$(grep '^TAG=' .env.prod | cut -d= -f2-)}"
+RESOLVED_TAG="${TAG:-$(grep '^TAG=' .env.prod | cut -d= -f2- | tr -d '[:space:]')}"
+echo "==> Preflight: verifying service images are available at TAG=$RESOLVED_TAG"
+
+# Is this a tag CI actually publishes? CI tags each image ':latest' and the FULL 40-char
+# commit SHA — never a short SHA. Anything else can only have come from a local
+# build-all.sh run, which changes what a failed pull MEANS (see below).
+if [ "$RESOLVED_TAG" = "latest" ] || printf '%s' "$RESOLVED_TAG" | grep -qE '^[0-9a-f]{40}$'; then
+  REGISTRY_TAG=1
+else
+  REGISTRY_TAG=0
+fi
+
 missing=""
 while IFS= read -r img; do
   case "$img" in
@@ -92,6 +108,51 @@ EOM
   exit 1
 fi
 echo "    all service images present ✓"
+
+# ---------------------------------------------------------------------------
+# Stale-image guard.
+#
+# Presence is NOT freshness. The failure this catches: .env.prod is left pinned to an old
+# tag (or a registry pull silently fails), `up -d` happily starts the STALE LOCAL image,
+# and the only symptom is the app 404ing new endpoints with Spring's
+# "No static resource <path>" — which looks like an application bug, not a deploy problem.
+#
+# Because the pull above already ran, a wealth-* image that FAILED to pull while we are on
+# a registry tag means the local copy could not be refreshed → it may be stale.
+failed_pulls=$(grep -E 'wealth-[a-z-]+' "$PULL_LOG" 2>/dev/null | grep -ciE 'error|✘' || true)
+
+if [ "$REGISTRY_TAG" = "1" ] && [ "${failed_pulls:-0}" -gt 0 ]; then
+  echo "ERROR: TAG=$RESOLVED_TAG is a registry tag, but $failed_pulls service image(s) could not be pulled." >&2
+  cat >&2 <<EOM
+
+Deploying now would silently run whatever STALE copy is already on this host — the symptom
+is new endpoints returning "No static resource ...". Refusing to continue.
+
+Usually this is registry auth. Log in and re-run:
+      echo "\$GHCR_PAT" | docker login ghcr.io -u <github-user> --password-stdin
+      bash deploy/deploy.sh
+
+If the registry is genuinely unavailable, build on this host instead:
+      bash deploy/build-all.sh && bash deploy/deploy.sh
+EOM
+  exit 1
+fi
+
+if [ "$REGISTRY_TAG" = "0" ]; then
+  echo "    WARNING: TAG=$RESOLVED_TAG is a LOCAL-ONLY tag (CI publishes :latest and full SHAs)." >&2
+  echo "             You are deploying images built on this host — they do NOT update from CI." >&2
+  echo "             To deploy the CI build:  sed -i 's/^TAG=.*/TAG=latest/' .env.prod" >&2
+fi
+
+# Always show what is actually about to run, so a stale image is visible at a glance.
+echo "    image build dates:"
+while IFS= read -r img; do
+  case "$img" in
+    *ghcr.io/*wealth-*)
+      created=$(docker image inspect "$img" --format '{{.Created}}' 2>/dev/null | cut -c1-10)
+      printf '      %-72s %s\n' "${img##*/}" "${created:-unknown}" ;;
+  esac
+done < <($COMPOSE config --images 2>/dev/null | sort -u)
 
 # Build the web SPA into ./web-dist (Caddy serves it at /). Runs in a Node container
 # so the VM needs no Node install. WEB_API_BASE (in .env.prod) is the public origin the
