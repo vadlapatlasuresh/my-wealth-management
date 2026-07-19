@@ -49,6 +49,9 @@ Read in order if you're new; jump directly if you know what you need.
 | 7 | **[07-BEGINNER-GUIDE.md](07-BEGINNER-GUIDE.md)** | Build/run/debug with **zero prior experience** (assumes nothing) |
 | 8 | **[08-DESIGN-AND-FEATURES.md](08-DESIGN-AND-FEATURES.md)** | Read the design system and per-feature descriptions |
 | 9 | **[09-RUN-PROMPT.md](09-RUN-PROMPT.md)** | Copy a ready-to-use prompt to run/operate/rebuild the app |
+| 13 | **[13-SHOWCASE-GUIDE.md](13-SHOWCASE-GUIDE.md)** | **Demo & pitch — start here.** The complete showcase guide: app overview, all 46 features with step-by-step demo instructions, presenter notes, and how to run the demo well |
+| 11 | [11-SHOWCASE-AND-DEMO-PREP.md](11-SHOWCASE-AND-DEMO-PREP.md) | *(superseded by 13)* Earlier positioning + Q&A prep |
+| 12 | [12-WALKTHROUGH-SCRIPT.md](12-WALKTHROUGH-SCRIPT.md) | *(superseded by 13)* Earlier narrative walkthrough |
 
 ### Feature backlogs
 

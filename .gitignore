@@ -10,3 +10,6 @@
 # Agent/session artifacts
 agent-transcripts/
 *.jsonl
+
+# Office lock/temp files
+~$*
