@@ -99,6 +99,15 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    // How this account originated: password | google | apple. Set once at creation.
+    @Column(name = "auth_provider", length = 20, nullable = false)
+    private String authProvider = "password";
+
+    // When Google sign-in was first used on this account. Non-null for accounts created via
+    // Google AND for password accounts that later linked Google, so both facts are recoverable.
+    @Column(name = "google_linked_at")
+    private LocalDateTime googleLinkedAt;
+
     @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
