@@ -12,4 +12,7 @@ public interface PrivateHoldingRepository extends JpaRepository<PrivateHolding, 
     Optional<PrivateHolding> findByIdAndUserId(Long id, Long userId);
 
     boolean existsByUserIdAndSourceDealId(Long userId, Long sourceDealId);
+
+    @org.springframework.data.jpa.repository.Query("select distinct h.userId from PrivateHolding h")
+    java.util.List<Long> findDistinctUserIds();
 }
