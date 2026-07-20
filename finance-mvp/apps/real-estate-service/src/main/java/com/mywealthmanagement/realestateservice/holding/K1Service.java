@@ -81,7 +81,14 @@ public class K1Service {
      * missed.
      */
     public K1YearSummaryDto getYear(Integer taxYear) {
-        Long userId = getUserId();
+        return getYearForUser(getUserId(), taxYear);
+    }
+
+    /**
+     * Same, for an explicit user. Split out because the weekly alert job runs with no
+     * SecurityContext to read the caller from.
+     */
+    public K1YearSummaryDto getYearForUser(Long userId, Integer taxYear) {
         int year = taxYear != null ? taxYear : LocalDate.now(clock).getYear() - 1;
 
         Map<Long, PrivateHolding> holdings = holdingRepository.findByUserIdOrderByCreatedAtDesc(userId)

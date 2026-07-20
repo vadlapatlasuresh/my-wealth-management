@@ -51,7 +51,11 @@ public class PrivateHoldingService {
     // ---- holdings ----
 
     public List<PrivateHoldingDto> getHoldings() {
-        Long userId = getUserId();
+        return getHoldingsForUser(getUserId());
+    }
+
+    /** Same, for an explicit user — used by the background alert job. */
+    public List<PrivateHoldingDto> getHoldingsForUser(Long userId) {
         List<PrivateHolding> holdings = holdingRepository.findByUserIdOrderByCreatedAtDesc(userId);
         Map<Long, List<HoldingEntry>> entries = entryRepository.findByUserIdOrderByOccurredOnDescIdDesc(userId)
                 .stream().collect(Collectors.groupingBy(HoldingEntry::getHoldingId));
@@ -177,7 +181,15 @@ public class PrivateHoldingService {
 
     /** Portfolio totals plus the concentration breakdowns. */
     public HoldingSummaryDto getSummary() {
-        List<PrivateHoldingDto> holdings = getHoldings();
+        return getSummaryForUser(getUserId());
+    }
+
+    /**
+     * Same, for an explicit user. Split out because the weekly alert job runs with no
+     * SecurityContext to read the caller from.
+     */
+    public HoldingSummaryDto getSummaryForUser(Long userId) {
+        List<PrivateHoldingDto> holdings = getHoldingsForUser(userId);
 
         HoldingSummaryDto s = new HoldingSummaryDto();
         s.setHoldingCount(holdings.size());
