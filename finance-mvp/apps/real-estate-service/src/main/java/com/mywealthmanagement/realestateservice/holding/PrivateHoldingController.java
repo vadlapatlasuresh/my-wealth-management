@@ -25,6 +25,7 @@ import java.util.Map;
 public class PrivateHoldingController {
 
     private final PrivateHoldingService service;
+    private final K1Service k1Service;
 
     @GetMapping
     public ResponseEntity<List<PrivateHoldingDto>> list() {
@@ -61,6 +62,38 @@ public class PrivateHoldingController {
     @PostMapping("/from-deal/{dealId}")
     public ResponseEntity<PrivateHoldingDto> trackFromDeal(@PathVariable Long dealId) {
         return ResponseEntity.ok(service.trackFromDeal(dealId));
+    }
+
+    // ---- Schedule K-1 tracking ----
+
+    /**
+     * Filing readiness for a tax year, plus the outstanding K-1s to chase. Defaults to the
+     * most recent completed tax year.
+     */
+    @GetMapping("/k1s")
+    public ResponseEntity<com.mywealthmanagement.realestateservice.holding.dto.K1YearSummaryDto> k1Year(
+            @RequestParam(required = false) Integer taxYear) {
+        return ResponseEntity.ok(k1Service.getYear(taxYear));
+    }
+
+    /** Tax years the user could owe K-1s for. */
+    @GetMapping("/k1s/years")
+    public ResponseEntity<List<Integer>> k1Years() {
+        return ResponseEntity.ok(k1Service.availableYears());
+    }
+
+    /** Every tracked K-1, newest tax year first. */
+    @GetMapping("/k1s/all")
+    public ResponseEntity<List<com.mywealthmanagement.realestateservice.holding.dto.K1RecordDto>> k1All() {
+        return ResponseEntity.ok(k1Service.getAll());
+    }
+
+    /** Mark a K-1 received, attach its document, or transcribe its figures. */
+    @PutMapping("/k1s/{id}")
+    public ResponseEntity<com.mywealthmanagement.realestateservice.holding.dto.K1RecordDto> updateK1(
+            @PathVariable Long id,
+            @RequestBody com.mywealthmanagement.realestateservice.holding.dto.K1RecordDto dto) {
+        return ResponseEntity.ok(k1Service.update(id, dto));
     }
 
     @GetMapping("/{id}")

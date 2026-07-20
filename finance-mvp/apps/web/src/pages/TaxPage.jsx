@@ -648,6 +648,9 @@ export default function TaxPage() {
         )}
       </div>
 
+      {/* Private-deal K-1s gate the whole return, so surface them before the figures. */}
+      <K1ReadinessCard taxYear={Number(form.year)} />
+
       <div style={{ display: "grid", gridTemplateColumns: "minmax(0,400px) 1fr", gap: 16, alignItems: "start" }}>
         {/* Inputs */}
         <form className="card" onSubmit={calculate}>
@@ -1059,6 +1062,57 @@ export default function TaxPage() {
 }
 
 // A collapsible group of form fields, matching the page's guide-panel pattern.
+/**
+ * Whether the user's private-holding K-1s have arrived for the tax year being worked on.
+ *
+ * Lives here because this is where the user feels it: a K-1 that has not arrived stops the
+ * return regardless of how complete the rest of the figures are. Renders nothing when the
+ * user has no private holdings, so it stays out of the way for everyone else.
+ */
+function K1ReadinessCard({ taxYear }) {
+  const [data, setData] = useState(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    let active = true;
+    api.getK1Year(taxYear)
+      .then((d) => { if (active) setData(d); })
+      .catch(() => { if (active) setData(null); });
+    return () => { active = false; };
+  }, [taxYear]);
+
+  // Nothing tracked for this year — no reason to take up space.
+  const total = data ? data.expected + data.received + data.notApplicable : 0;
+  if (!data || total === 0) return null;
+
+  const waiting = data.expected > 0;
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+          <i className={waiting ? "ti ti-alert-triangle" : "ti ti-circle-check"}
+            style={{ fontSize: 20, color: waiting ? "var(--tv-negative)" : "var(--tv-positive)" }}></i>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>
+              {waiting
+                ? `Waiting on ${data.expected} Schedule K-1${data.expected === 1 ? "" : "s"} for ${data.taxYear}`
+                : `All ${data.taxYear} Schedule K-1s received`}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--tv-text-muted)" }}>
+              {waiting
+                ? `From your private holdings. Your return isn't complete until they arrive${data.overdue > 0 ? ` — ${data.overdue} past the deadline` : ""}.`
+                : `${data.received} received${data.notApplicable > 0 ? `, ${data.notApplicable} not issued` : ""}. Rental income ${usd(data.rentalIncome || 0)} · distributions ${usd(data.distributions || 0)}.`}
+            </div>
+          </div>
+        </div>
+        <button className="btn btn-secondary btn-sm" onClick={() => navigate("/fractional")}>
+          <i className="ti ti-arrow-right"></i> Track K-1s
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Section({ title, icon, helper, open, onToggle, children }) {
   return (
     <div style={{ borderTop: "1px solid var(--tv-border)", paddingTop: 12 }}>

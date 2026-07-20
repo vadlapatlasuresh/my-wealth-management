@@ -572,6 +572,15 @@ export const api = {
   // directory and the ledger. Records a decision already made off-platform.
   trackHoldingFromDeal: (dealId) =>
     request(`/api/v1/private-holdings/from-deal/${dealId}`, { method: "POST" }),
+  // Schedule K-1 tracking. Expected records are generated server-side per holding per tax
+  // year — a single missing K-1 blocks the whole return, so the gap is what matters.
+  getK1Year: (taxYear) =>
+    request(`/api/v1/private-holdings/k1s${taxYear ? `?taxYear=${taxYear}` : ""}`),
+  getK1Years: () => request("/api/v1/private-holdings/k1s/years"),
+  getAllK1s: () => request("/api/v1/private-holdings/k1s/all"),
+  updateK1: (id, payload) =>
+    request(`/api/v1/private-holdings/k1s/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+
   // Capital account: contributions in, distributions out.
   getHoldingEntries: (id) => request(`/api/v1/private-holdings/${id}/entries`),
   addHoldingEntry: (id, payload) =>

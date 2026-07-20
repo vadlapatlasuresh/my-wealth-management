@@ -76,6 +76,7 @@ export default function FractionalLLCPage() {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_HOLDING);
   const [showHow, setShowHow] = useState(false);
+  const [tab, setTab] = useState('holdings'); // 'holdings' | 'k1'
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -178,9 +179,19 @@ export default function FractionalLLCPage() {
 
       {showHow && <HowThisWorks />}
 
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        <button className={`btn btn-sm ${tab === 'holdings' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setTab('holdings')}>Holdings</button>
+        <button className={`btn btn-sm ${tab === 'k1' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setTab('k1')}>Schedule K-1s</button>
+      </div>
+
       {error && <Banner color="negative">{error}</Banner>}
       {notice && !showForm && <Banner color="positive">{notice}</Banner>}
 
+      {tab === 'k1' ? <K1View /> : (
+      <>
       {showForm && (
         <HoldingForm form={form} setField={setField} editingId={editingId} saving={saving}
           onSubmit={submit} onCancel={closeForm} />
@@ -216,6 +227,273 @@ export default function FractionalLLCPage() {
           </div>
         </>
       )}
+      </>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Schedule K-1 tracking ---------- */
+
+const K1_STATUS_LABEL = { EXPECTED: 'Waiting', RECEIVED: 'Received', NOT_APPLICABLE: 'Not issued' };
+
+/**
+ * K-1 tracking for one tax year.
+ *
+ * The organising idea is filing readiness: a single outstanding K-1 blocks the whole return,
+ * so the headline is "how many are you still waiting on", and the primary action on an
+ * outstanding one is to chase the sponsor by email.
+ */
+function K1View() {
+  const [years, setYears] = useState([]);
+  const [year, setYear] = useState(null);
+  const [data, setData] = useState(null);
+  const [all, setAll] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [editing, setEditing] = useState(null); // the K-1 record being updated
+
+  const load = useCallback(async (y) => {
+    setLoading(true); setError('');
+    try {
+      const [summary, everything] = await Promise.all([
+        api.getK1Year(y),
+        api.getAllK1s().catch(() => []),
+      ]);
+      setData(summary);
+      setAll(everything || []);
+      setYear(summary.taxYear);
+    } catch (err) { setError(err?.message || 'Could not load your K-1s.'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => {
+    api.getK1Years().then((ys) => setYears(ys || [])).catch(() => setYears([]));
+    load();
+  }, [load]);
+
+  if (loading && !data) {
+    return <div className="card" style={{ textAlign: 'center', color: 'var(--tv-text-muted)', fontSize: '13px' }}>Loading K-1s…</div>;
+  }
+  if (!data) {
+    return error ? <Banner color="negative">{error}</Banner> : null;
+  }
+
+  const forYear = all.filter((k) => k.taxYear === year);
+  const tracked = forYear.length > 0 ? forYear : (data.outstanding || []);
+
+  return (
+    <div>
+      {error && <Banner color="negative">{error}</Banner>}
+
+      <div className="card" style={{ marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="section-title" style={{ marginBottom: 0 }}>Filing readiness</div>
+          <select
+            style={{ padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'white' }}
+            value={year || ''} onChange={(e) => load(Number(e.target.value))}>
+            {(years.length ? years : [data.taxYear]).map((y) => (
+              <option key={y} value={y}>Tax year {y}</option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{
+          marginTop: '12px', padding: '12px 14px', borderRadius: 'var(--radius-md)', lineHeight: 1.6, fontSize: '13px',
+          background: data.readyToFile ? 'var(--tv-positive-bg)' : 'var(--tv-negative-bg)',
+          color: data.readyToFile ? 'var(--tv-positive)' : 'var(--tv-negative)',
+        }}>
+          {data.readyToFile ? (
+            <>
+              <i className="ti ti-circle-check"></i> <strong>Nothing outstanding for {data.taxYear}.</strong>{' '}
+              Every K-1 you're owed has arrived{data.notApplicable > 0 ? ` (${data.notApplicable} not issued)` : ''}.
+            </>
+          ) : (
+            <>
+              <i className="ti ti-alert-triangle"></i> <strong>Waiting on {data.expected} K-1{data.expected === 1 ? '' : 's'} for {data.taxYear}.</strong>{' '}
+              You can't file until they arrive
+              {data.overdue > 0 && <> — <strong>{data.overdue}</strong> {data.overdue === 1 ? 'is' : 'are'} already past the 15 April deadline, so an extension may be needed</>}.
+            </>
+          )}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '14px', marginTop: '14px' }}>
+          <Metric label="Received" value={String(data.received)} />
+          <Metric label="Still waiting" value={String(data.expected)} accent={data.expected > 0} />
+          <Metric label="Not issued" value={String(data.notApplicable)} />
+          <Metric label="Rental income (box 2)" value={currency(data.rentalIncome || 0)} />
+          <Metric label="Ordinary income (box 1)" value={currency(data.ordinaryIncome || 0)} />
+          <Metric label="Distributions (box 19)" value={currency(data.distributions || 0)} />
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '10px' }}>
+          Totals cover the K-1s you've marked received and transcribed. They're your own
+          records for tax prep — TerraVest does not verify them or file on your behalf.
+        </div>
+      </div>
+
+      {tracked.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', padding: '32px 20px', color: 'var(--tv-text-muted)', fontSize: '13px' }}>
+          No K-1s tracked for {data.taxYear}. Add a holding and one will be expected for each
+          tax year you held it.
+        </div>
+      ) : (
+        <div className="card">
+          <div className="section-title">K-1s for {data.taxYear}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {tracked.map((k) => (
+              <K1Row key={k.id} k1={k} onEdit={() => setEditing(k)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {editing && (
+        <K1EditModal
+          k1={editing}
+          onClose={() => setEditing(null)}
+          onSaved={async () => { setEditing(null); await load(year); }}
+          onError={setError}
+        />
+      )}
+    </div>
+  );
+}
+
+function K1Row({ k1: k, onEdit }) {
+  const outstanding = k.status === 'EXPECTED';
+  const badge = k.overdue ? 'badge-red' : outstanding ? 'badge-gold' : k.status === 'RECEIVED' ? 'badge-green' : 'badge-gray';
+
+  // Chasing is the whole point of an outstanding K-1 — pre-write the email.
+  const chase = k.sponsorContact
+    ? `mailto:${k.sponsorContact}?subject=${encodeURIComponent(`Schedule K-1 for ${k.taxYear} — ${k.holdingName || ''}`)}` +
+      `&body=${encodeURIComponent(
+        `Hello,\n\nCould you let me know when the ${k.taxYear} Schedule K-1 for ${k.holdingName || 'the partnership'} will be issued?\n\nI need it to complete my return.\n\nThank you.`)}`
+    : null;
+
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+      border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '10px 12px',
+    }}>
+      <div style={{ flex: 1, minWidth: 160 }}>
+        <div style={{ fontWeight: 600, fontSize: '13px' }}>{k.holdingName || `Holding #${k.holdingId}`}</div>
+        <div style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)' }}>
+          {k.sponsorName || 'No sponsor recorded'}
+          {k.receivedOn ? ` · received ${k.receivedOn}` : ''}
+        </div>
+      </div>
+
+      <span className={`badge ${badge}`} style={{ fontSize: '10.5px' }}>
+        {k.overdue ? 'Overdue' : K1_STATUS_LABEL[k.status] || k.status}
+      </span>
+
+      {k.rentalIncome != null && (
+        <span style={{ fontSize: '12.5px', color: 'var(--tv-text-muted)' }}>
+          Box 2 <strong style={{ color: 'var(--tv-text-primary, inherit)' }}>{currency(k.rentalIncome)}</strong>
+        </span>
+      )}
+
+      {k.documentUrl && (
+        <a href={k.documentUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tv-forest)', fontSize: '12.5px' }}>
+          <i className="ti ti-file-text"></i> Document
+        </a>
+      )}
+
+      {outstanding && chase && (
+        <a className="btn btn-secondary btn-sm" href={chase}>
+          <i className="ti ti-mail"></i> Chase sponsor
+        </a>
+      )}
+      <button className="btn btn-secondary btn-sm" onClick={onEdit}>
+        <i className="ti ti-edit"></i> Update
+      </button>
+    </div>
+  );
+}
+
+/** Mark a K-1 received and transcribe the boxes that matter for a return. */
+function K1EditModal({ k1, onClose, onSaved, onError }) {
+  const [form, setForm] = useState({
+    status: k1.status || 'EXPECTED',
+    receivedOn: k1.receivedOn || '',
+    documentUrl: k1.documentUrl || '',
+    ordinaryIncome: k1.ordinaryIncome ?? '',
+    rentalIncome: k1.rentalIncome ?? '',
+    distributions: k1.distributions ?? '',
+    notes: k1.notes || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const save = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.updateK1(k1.id, {
+        status: form.status,
+        receivedOn: form.receivedOn || undefined,
+        documentUrl: form.documentUrl.trim() || undefined,
+        ordinaryIncome: num(form.ordinaryIncome),
+        rentalIncome: num(form.rentalIncome),
+        distributions: num(form.distributions),
+        notes: form.notes.trim() || undefined,
+      });
+      await onSaved();
+    } catch (err) { onError(err?.message || 'Could not update the K-1.'); setSaving(false); }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000,
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+    }} onClick={onClose}>
+      <div className="card" style={{ maxWidth: 560, width: '100%', maxHeight: '90vh', overflowY: 'auto' }}
+        onClick={(e) => e.stopPropagation()}>
+        <div className="section-title">
+          {k1.taxYear} K-1 — {k1.holdingName || `Holding #${k1.holdingId}`}
+        </div>
+        <form onSubmit={save}>
+          <div className="grid-2" style={{ gap: '14px' }}>
+            <div><label style={fieldLabel}>Status</label>
+              <select style={inputStyle} value={form.status} onChange={set('status')}>
+                <option value="EXPECTED">Waiting for it</option>
+                <option value="RECEIVED">Received</option>
+                <option value="NOT_APPLICABLE">Not issued for this year</option>
+              </select></div>
+            <div><label style={fieldLabel}>Received on</label>
+              <input style={inputStyle} type="date" value={form.receivedOn} onChange={set('receivedOn')}
+                disabled={form.status !== 'RECEIVED'} />
+              <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '4px' }}>
+                Left blank, today's date is used.
+              </div></div>
+
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={fieldLabel}>Document link</label>
+              <input style={inputStyle} type="url" value={form.documentUrl} onChange={set('documentUrl')}
+                placeholder="https://… (e.g. the file in your Document Center)" /></div>
+
+            <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--tv-border)', paddingTop: '10px', fontSize: '12px', fontWeight: 600, color: 'var(--tv-text-secondary)' }}>
+              Figures from the form
+            </div>
+            <div><label style={fieldLabel}>Box 1 — ordinary business income</label>
+              <input style={inputStyle} type="number" step="0.01" value={form.ordinaryIncome} onChange={set('ordinaryIncome')} placeholder="0.00" /></div>
+            <div><label style={fieldLabel}>Box 2 — net rental real estate income</label>
+              <input style={inputStyle} type="number" step="0.01" value={form.rentalIncome} onChange={set('rentalIncome')} placeholder="0.00" /></div>
+            <div><label style={fieldLabel}>Box 19 — distributions</label>
+              <input style={inputStyle} type="number" step="0.01" value={form.distributions} onChange={set('distributions')} placeholder="0.00" /></div>
+            <div><label style={fieldLabel}>Notes</label>
+              <input style={inputStyle} value={form.notes} onChange={set('notes')} placeholder="Optional" /></div>
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '10px' }}>
+            Transcribe these from the form you received. They're recorded as-is for your own
+            tax prep — nothing here is calculated, checked or filed for you.
+          </div>
+          <div style={{ display: 'flex', gap: '10px', marginTop: '16px' }}>
+            <button type="submit" className="btn btn-primary btn-sm" disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onClose} disabled={saving}>Cancel</button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
