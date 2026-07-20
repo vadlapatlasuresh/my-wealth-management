@@ -138,11 +138,13 @@ jobs:
       - name: Install Playwright browser
         working-directory: finance-mvp/apps/web
         run: npx playwright install --with-deps chromium
-      - name: Run smoke test (no backend)
+      # Only the specs that stub the API and need no backend. onboarding.spec.js is
+      # excluded on purpose — it requires the full stack (deploy/start-local.sh).
+      - name: Run smoke tests (no backend)
         working-directory: finance-mvp/apps/web
         env:
           E2E_PREVIEW: "1"
-        run: npm run e2e -- smoke.spec.js
+        run: npm run e2e -- smoke.spec.js makepayment.spec.js
 
   # ---------------------------------------------------------------
   # 3) Build & push Docker images to GHCR (main only, after build+test pass).
