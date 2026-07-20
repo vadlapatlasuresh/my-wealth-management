@@ -14,6 +14,11 @@ const ACCOUNTS = [
   { id: 3, name: "Grad Unsubsidized", officialName: "Nelnet", mask: "5540",
     type: "loan", subtype: "student", currentBalance: 28400,
     minimumPayment: 310, nextPaymentDueDate: "2026-08-17" },
+  // Mirrors real production data: the backend only reads Plaid's credit liabilities,
+  // and Plaid has none for auto loans at all, so these fields are null in prod.
+  { id: 5, name: "Auto Loan", officialName: "Toyota Financial", mask: "2277",
+    type: "loan", subtype: "auto", currentBalance: 18600,
+    minimumPayment: null, nextPaymentDueDate: null },
   // No auto loan on purpose — that section must be hidden.
   { id: 4, name: "Everyday Checking", officialName: "Chase", mask: "2841",
     type: "depository", subtype: "checking", currentBalance: 8420, availableBalance: 8420 },
@@ -61,8 +66,14 @@ test("payee list groups by category and hides empty ones", async ({ page }) => {
   await expect(page.locator(".payee-section-header", { hasText: "Student Loans" })).toBeVisible();
 
   // Empty category is hidden, not rendered empty.
-  await expect(page.locator(".payee-section-header", { hasText: "Auto / Car Loans" })).toHaveCount(0);
   await expect(page.locator(".payee-section-header", { hasText: "Other Linked Accounts" })).toHaveCount(0);
+
+  // A loan with no Plaid liability detail must not caption its full principal as a
+  // "Next payment" — it falls back to labelling the figure as the balance.
+  const autoRow = page.locator(".payee-row", { hasText: "Auto Loan" });
+  await expect(autoRow).toContainText("Balance");
+  await expect(autoRow).not.toContainText("Next payment");
+  await expect(autoRow).toContainText("$18,600");
 
   // Funding account must not appear as a payee.
   await expect(page.locator(".payee-row", { hasText: "Everyday Checking" })).toHaveCount(0);

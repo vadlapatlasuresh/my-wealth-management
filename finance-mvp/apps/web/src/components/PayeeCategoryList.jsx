@@ -38,10 +38,19 @@ function PayeeRow({ payee, selected, onSelect, formatDate }) {
   const isCard = payee.categoryId === "credit_card";
 
   // Credit cards read as a balance owed; loans read as their next scheduled payment.
-  const amountLabel = isCard ? "Balance due" : "Next payment";
+  //
+  // Plaid only returns liability detail (minimum payment, due date) for credit and —
+  // once the backend reads them — mortgage and student accounts; auto loans never
+  // carry it. Without that detail a loan has no "next payment" to show, so fall back
+  // to labelling the figure as the outstanding balance rather than captioning the
+  // full principal as a payment amount.
+  const hasScheduledPayment = payee.suggestedAmount != null;
+  const amountLabel = isCard
+    ? "Balance due"
+    : hasScheduledPayment ? "Next payment" : "Balance";
   const amountValue = isCard
     ? payee.lastStatementBalance ?? payee.balance
-    : payee.suggestedAmount ?? payee.balance;
+    : hasScheduledPayment ? payee.suggestedAmount : payee.balance;
 
   // Institution is the lender / servicer name; fall back to the subtype so the
   // secondary line is never blank.
