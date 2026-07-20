@@ -256,9 +256,10 @@ services:
       # Deal Room lead notifications -> notification-service (best-effort, shared key)
       SERVICE_NOTIFICATION_URL: http://notification-service:8080
       NOTIFICATIONS_INTERNAL_KEY: ${NOTIFICATIONS_INTERNAL_KEY:-}
-      # Mirror deal document links into the owner's personal Document Center.
-      DOCUMENTS_URI: http://documents-service:8080
-      DOCUMENTS_INTERNAL_KEY: ${DOCUMENTS_INTERNAL_KEY:-${AUDIT_INGEST_KEY}}
+      # Listing photos -> Google Cloud Storage. Set STORAGE_PROVIDER=gcs + GCS_BUCKET
+      # to enable uploads; left unset, uploads are refused and listings carry no photos.
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-none}
+      GCS_BUCKET: ${GCS_BUCKET:-}
 
   business-financials-service:
     <<: *java-defaults

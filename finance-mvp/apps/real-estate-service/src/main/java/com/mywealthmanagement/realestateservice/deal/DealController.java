@@ -110,6 +110,36 @@ public class DealController {
         return ResponseEntity.ok(dealService.requestContactInfo(id, request));
     }
 
+    /** Owner-only: attach a property photo (max 2 per listing). */
+    @PostMapping("/{id}/images")
+    public ResponseEntity<DealDto> addImage(
+            @PathVariable Long id,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file) {
+        return ResponseEntity.ok(dealService.addImage(id, file));
+    }
+
+    /**
+     * A listing photo's bytes. Visible under the same rule as the listing itself. Served
+     * from this authenticated route rather than a public URL, so the client fetches it as
+     * a blob — object-storage keys are never exposed.
+     */
+    @GetMapping("/{id}/images/{imageId}")
+    public ResponseEntity<byte[]> getImage(@PathVariable Long id, @PathVariable Long imageId) {
+        var download = dealService.getImageBytes(id, imageId);
+        return ResponseEntity.ok()
+                .header("Content-Type", download.contentType() == null
+                        ? "application/octet-stream" : download.contentType())
+                .header("Cache-Control", "private, max-age=3600")
+                .body(download.bytes());
+    }
+
+    /** Owner-only: remove a photo from a listing. */
+    @DeleteMapping("/{id}/images/{imageId}")
+    public ResponseEntity<Void> deleteImage(@PathVariable Long id, @PathVariable Long imageId) {
+        dealService.deleteImage(id, imageId);
+        return ResponseEntity.noContent().build();
+    }
+
     /** The poster's other listings, shown as directory history on the listing page. */
     @GetMapping("/{id}/sponsor-projects")
     public ResponseEntity<List<SponsorProjectDto>> getSponsorProjects(@PathVariable Long id) {
