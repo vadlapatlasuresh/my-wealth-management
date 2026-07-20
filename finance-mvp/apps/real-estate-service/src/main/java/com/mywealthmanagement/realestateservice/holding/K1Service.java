@@ -175,6 +175,9 @@ public class K1Service {
             record.setReceivedOn(null);
         }
 
+        record.setDocumentId(dto.getDocumentId());
+        record.setDocumentName(dto.getDocumentName() == null || dto.getDocumentName().isBlank()
+                ? null : dto.getDocumentName().trim());
         record.setDocumentUrl(Urls.validateOrNull(dto.getDocumentUrl(), "documentUrl"));
         record.setOrdinaryIncome(dto.getOrdinaryIncome());
         record.setRentalIncome(dto.getRentalIncome());
@@ -219,6 +222,8 @@ public class K1Service {
         dto.setTaxYear(r.getTaxYear());
         dto.setStatus(r.getStatus());
         dto.setReceivedOn(r.getReceivedOn());
+        dto.setDocumentId(r.getDocumentId());
+        dto.setDocumentName(r.getDocumentName());
         dto.setDocumentUrl(r.getDocumentUrl());
         dto.setOrdinaryIncome(r.getOrdinaryIncome());
         dto.setRentalIncome(r.getRentalIncome());

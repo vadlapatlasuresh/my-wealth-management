@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { currency } from '../utils/format';
 import { api } from '../api';
+import ShareDocumentsModal from '../components/ShareDocumentsModal';
 
 /**
  * Fractional LLC — the user's ledger of private co-ownership positions.
@@ -254,6 +255,7 @@ function K1View() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null); // the K-1 record being updated
+  const [sharing, setSharing] = useState(null);  // { set, documentIds, count } for the CPA share
 
   const load = useCallback(async (y) => {
     setLoading(true); setError('');
@@ -291,6 +293,8 @@ function K1View() {
       <div className="card" style={{ marginBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <div className="section-title" style={{ marginBottom: 0 }}>Filing readiness</div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <ShareWithCpaButton k1s={all.filter((k) => k.taxYear === year)} taxYear={year} onShare={setSharing} />
           <select
             style={{ padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'white' }}
             value={year || ''} onChange={(e) => load(Number(e.target.value))}>
@@ -298,6 +302,7 @@ function K1View() {
               <option key={y} value={y}>Tax year {y}</option>
             ))}
           </select>
+          </div>
         </div>
 
         <div style={{
@@ -349,6 +354,10 @@ function K1View() {
         </div>
       )}
 
+      {sharing && (
+        <ShareDocumentsModal target={sharing} onClose={() => setSharing(null)} onCreated={() => {}} />
+      )}
+
       {editing && (
         <K1EditModal
           k1={editing}
@@ -359,6 +368,46 @@ function K1View() {
       )}
     </div>
   );
+}
+
+/**
+ * Hand a whole year of K-1s to the accountant in one link.
+ *
+ * Reuses the Document Center's share flow verbatim — passcode, expiry, view-vs-download and
+ * the access log all come with it. That is the entire reason the K-1 file is stored as a
+ * documents-service document rather than against the holding: sharing was already solved.
+ *
+ * Only K-1s with an uploaded document can be shared; one linked to an external URL is a
+ * pointer we do not hold and cannot pass on.
+ */
+function ShareWithCpaButton({ k1s, taxYear, onShare }) {
+  const documentIds = (k1s || []).map((k) => k.documentId).filter(Boolean);
+
+  if (documentIds.length === 0) {
+    return (
+      <span style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)' }}
+        title="Upload a K-1 against a holding to share it">
+        Upload K-1s to share them with your CPA
+      </span>
+    );
+  }
+
+  return (
+    <button className="btn btn-secondary btn-sm"
+      onClick={() => onShare({ set: true, documentIds, count: documentIds.length })}>
+      <i className="ti ti-share"></i> Share {documentIds.length} {taxYear} K-1{documentIds.length === 1 ? '' : 's'} with your CPA
+    </button>
+  );
+}
+
+/** Open a filed K-1. The download endpoint needs the Bearer token, so fetch it as a blob. */
+async function openK1Document(documentId) {
+  try {
+    const url = await api.openDocument(documentId);
+    window.open(url, '_blank', 'noopener');
+  } catch {
+    // The row also shows the document name; a failed open is not worth an error banner here.
+  }
 }
 
 function K1Row({ k1: k, onEdit }) {
@@ -395,11 +444,16 @@ function K1Row({ k1: k, onEdit }) {
         </span>
       )}
 
-      {k.documentUrl && (
+      {k.documentId ? (
+        <button className="btn btn-secondary btn-sm" onClick={() => openK1Document(k.documentId)}
+          title={k.documentName || 'Open the filed K-1'}>
+          <i className="ti ti-file-text"></i> View K-1
+        </button>
+      ) : k.documentUrl ? (
         <a href={k.documentUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--tv-forest)', fontSize: '12.5px' }}>
-          <i className="ti ti-file-text"></i> Document
+          <i className="ti ti-external-link"></i> Document
         </a>
-      )}
+      ) : null}
 
       {outstanding && chase && (
         <a className="btn btn-secondary btn-sm" href={chase}>
@@ -413,11 +467,102 @@ function K1Row({ k1: k, onEdit }) {
   );
 }
 
+/**
+ * Attach the K-1 itself.
+ *
+ * The file goes into the user's Document Center rather than being stored against the holding,
+ * so it lands in the one place that already handles storage, download auth and CPA sharing —
+ * and so the accountant can be given the whole year through the existing secure-link flow
+ * instead of receiving PDFs by email.
+ *
+ * The label is written for them as "<tax year> K-1 — <entity>", because a Document Center full
+ * of files called "k1.pdf" answers nothing about which LLC each one came from.
+ */
+function K1DocumentField({ k1, form, setForm, onError }) {
+  const inputRef = React.useRef(null);
+  const [busy, setBusy] = useState(false);
+
+  const label = `${k1.taxYear} K-1 — ${k1.holdingName || 'Private holding'}`;
+
+  const upload = async (file) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const doc = await api.uploadDocument(file, {
+        label,
+        docType: 'TAX',
+        note: `Schedule K-1 for tax year ${k1.taxYear}`
+          + (k1.sponsorName ? ` · sponsor ${k1.sponsorName}` : ''),
+        periodYear: k1.taxYear,
+      });
+      setForm((f) => ({ ...f, documentId: doc.id, documentName: doc.label || label, status: 'RECEIVED' }));
+    } catch (e) {
+      onError(e?.message || 'Could not upload the K-1. Check that file storage is configured.');
+    } finally { setBusy(false); }
+  };
+
+  const view = async () => {
+    try {
+      const url = await api.openDocument(form.documentId);
+      window.open(url, '_blank', 'noopener');
+    } catch (e) { onError(e?.message || 'Could not open the document.'); }
+  };
+
+  const detach = () => setForm((f) => ({ ...f, documentId: null, documentName: '' }));
+
+  if (form.documentId) {
+    return (
+      <div>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap',
+          border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '10px 12px',
+        }}>
+          <i className="ti ti-file-text" style={{ color: 'var(--tv-forest)' }}></i>
+          <span style={{ flex: 1, fontSize: '13px', minWidth: 120 }}>{form.documentName || label}</span>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={view}>
+            <i className="ti ti-eye"></i> View
+          </button>
+          <button type="button" className="btn btn-secondary btn-sm" style={{ color: 'var(--tv-negative)' }}
+            onClick={detach} title="Remove the link (the file stays in your Document Center)">
+            <i className="ti ti-x"></i>
+          </button>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '6px' }}>
+          Filed in your Document Center. Removing the link here keeps the file there.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <button type="button" className="btn btn-secondary btn-sm"
+        onClick={() => inputRef.current && inputRef.current.click()} disabled={busy}>
+        <i className="ti ti-upload"></i> {busy ? 'Uploading…' : 'Upload the K-1'}
+      </button>
+      <input ref={inputRef} type="file" accept="application/pdf,image/*" style={{ display: 'none' }}
+        onChange={(e) => { upload(e.target.files && e.target.files[0]); e.target.value = ''; }} />
+      <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '6px' }}>
+        Filed in your Document Center as “{label}”, so you can see which LLC it belongs to —
+        and share the year with your CPA in one link.
+      </div>
+      <div style={{ marginTop: '10px' }}>
+        <label style={fieldLabel}>Or link one hosted elsewhere</label>
+        <input style={inputStyle} type="url" value={form.documentUrl}
+          onChange={(e) => setForm((f) => ({ ...f, documentUrl: e.target.value }))}
+          placeholder="https://…" />
+      </div>
+    </div>
+  );
+}
+
 /** Mark a K-1 received and transcribe the boxes that matter for a return. */
 function K1EditModal({ k1, onClose, onSaved, onError }) {
   const [form, setForm] = useState({
     status: k1.status || 'EXPECTED',
     receivedOn: k1.receivedOn || '',
+    documentId: k1.documentId || null,
+    documentName: k1.documentName || '',
     documentUrl: k1.documentUrl || '',
     ordinaryIncome: k1.ordinaryIncome ?? '',
     rentalIncome: k1.rentalIncome ?? '',
@@ -434,6 +579,8 @@ function K1EditModal({ k1, onClose, onSaved, onError }) {
       await api.updateK1(k1.id, {
         status: form.status,
         receivedOn: form.receivedOn || undefined,
+        documentId: form.documentId || undefined,
+        documentName: form.documentName || undefined,
         documentUrl: form.documentUrl.trim() || undefined,
         ordinaryIncome: num(form.ordinaryIncome),
         rentalIncome: num(form.rentalIncome),
@@ -470,9 +617,9 @@ function K1EditModal({ k1, onClose, onSaved, onError }) {
               </div></div>
 
             <div style={{ gridColumn: '1 / -1' }}>
-              <label style={fieldLabel}>Document link</label>
-              <input style={inputStyle} type="url" value={form.documentUrl} onChange={set('documentUrl')}
-                placeholder="https://… (e.g. the file in your Document Center)" /></div>
+              <label style={fieldLabel}>The K-1 document</label>
+              <K1DocumentField k1={k1} form={form} setForm={setForm} onError={onError} />
+            </div>
 
             <div style={{ gridColumn: '1 / -1', borderTop: '1px solid var(--tv-border)', paddingTop: '10px', fontSize: '12px', fontWeight: 600, color: 'var(--tv-text-secondary)' }}>
               Figures from the form

@@ -124,12 +124,12 @@ const GUIDE_GROUPS = [
       },
       {
         to: '/fractional', icon: 'ti ti-brand-stackshare', cls: 'icon-purple', title: 'Fractional LLC',
-        what: 'Co-invest in property through fractional shares.',
+        what: 'Track the property LLCs and syndications you already co-own.',
         steps: [
-          'Tap “How it works” for a quick primer.',
-          'Browse open offerings in the marketplace.',
-          'Invest from the listed minimum.',
-          'Track your holdings and returns in the portfolio.',
+          'Add a holding — the entity, the sponsor, your units and what you committed.',
+          'Log capital in and distributions out to build the capital account.',
+          'Upload each Schedule K-1 so you can see what is still outstanding.',
+          'Share a whole year of K-1s with your CPA through one secure link.',
         ],
       },
     ],

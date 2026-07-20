@@ -49,7 +49,19 @@ public class K1Record {
     @Column(name = "received_on")
     private LocalDate receivedOn;
 
-    /** Where the user filed the PDF — typically their Document Center. */
+    /**
+     * The K-1 in the user's Document Center. Stored as the documents-service id rather than
+     * a URL so the file stays in the one place that already handles storage, download auth
+     * and CPA sharing — the K-1 record points at it instead of owning a second copy.
+     */
+    @Column(name = "document_id")
+    private Long documentId;
+
+    /** The document's label, cached so the ledger can name the file without a second call. */
+    @Column(name = "document_name", length = 300)
+    private String documentName;
+
+    /** An externally hosted K-1, for anyone who files them somewhere else. */
     @Column(name = "document_url", length = 500)
     private String documentUrl;
 
