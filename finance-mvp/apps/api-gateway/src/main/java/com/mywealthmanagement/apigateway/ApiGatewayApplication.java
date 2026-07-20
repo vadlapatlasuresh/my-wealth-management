@@ -64,6 +64,8 @@ public class ApiGatewayApplication {
                         .uri(realEstateUri)) // Route to real-estate-service (deals feature)
                 .route("sponsor_service_route", r -> r.path("/api/v1/sponsor/**")
                         .uri(realEstateUri)) // Route to real-estate-service (sponsor track record)
+                .route("private_holdings_route", r -> r.path("/api/v1/private-holdings/**")
+                        .uri(realEstateUri)) // Route to real-estate-service (private holdings ledger)
                 .route("business_financials_service_route", r -> r.path("/api/v1/business/**")
                         .uri(businessUri)) // Route to business-financials-service
                 .route("ai_insights_service_route", r -> r.path("/api/v1/ai/**")

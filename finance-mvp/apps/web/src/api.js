@@ -556,6 +556,29 @@ export const api = {
   // The poster's other listings, shown as directory history on a listing's detail page.
   getDealSponsorProjects: (id) => request(`/api/v1/deals/${id}/sponsor-projects`),
 
+  // ---------------- Private holdings (Fractional LLC) ----------------
+  // A ledger of co-ownership positions the user already owns, bought off-platform.
+  // Records what they hold; never offers, prices or transfers an interest.
+  getPrivateHoldings: () => request("/api/v1/private-holdings"),
+  getPrivateHoldingsSummary: () => request("/api/v1/private-holdings/summary"),
+  getPrivateHolding: (id) => request(`/api/v1/private-holdings/${id}`),
+  createPrivateHolding: (payload) =>
+    request("/api/v1/private-holdings", { method: "POST", body: JSON.stringify(payload) }),
+  updatePrivateHolding: (id, payload) =>
+    request(`/api/v1/private-holdings/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deletePrivateHolding: (id) =>
+    request(`/api/v1/private-holdings/${id}`, { method: "DELETE" }),
+  // Start tracking a position taken in a Deal Room listing — the one link between the
+  // directory and the ledger. Records a decision already made off-platform.
+  trackHoldingFromDeal: (dealId) =>
+    request(`/api/v1/private-holdings/from-deal/${dealId}`, { method: "POST" }),
+  // Capital account: contributions in, distributions out.
+  getHoldingEntries: (id) => request(`/api/v1/private-holdings/${id}/entries`),
+  addHoldingEntry: (id, payload) =>
+    request(`/api/v1/private-holdings/${id}/entries`, { method: "POST", body: JSON.stringify(payload) }),
+  deleteHoldingEntry: (id, entryId) =>
+    request(`/api/v1/private-holdings/${id}/entries/${entryId}`, { method: "DELETE" }),
+
   // Directory history management (the signed-in user's own previously listed projects)
   getMySponsorProjects: () => request("/api/v1/sponsor/projects"),
   createSponsorProject: (payload) =>
