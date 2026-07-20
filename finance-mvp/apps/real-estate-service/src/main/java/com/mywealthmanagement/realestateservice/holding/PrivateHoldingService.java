@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -189,6 +190,9 @@ public class PrivateHoldingService {
         s.setIncomeReceived(sum(holdings, PrivateHoldingDto::getIncomeReceived));
         s.setUnreturnedCapital(sum(holdings, PrivateHoldingDto::getUnreturnedCapital));
         s.setDistributionRatio(ratio(s.getDistributed(), s.getContributed()));
+        s.setNetWorthValue(sum(holdings, PrivateHoldingDto::getNetWorthValue));
+        s.setValuedCount((int) holdings.stream()
+                .filter(h -> Boolean.TRUE.equals(h.getValueIsUserEstimate())).count());
 
         s.setBySponsor(concentration(holdings, h -> blankToUnknown(h.getSponsorName()), s.getContributed()));
         s.setByAssetType(concentration(holdings, h -> blankToUnknown(h.getAssetType()), s.getContributed()));
@@ -242,6 +246,8 @@ public class PrivateHoldingService {
         dto.setTotalUnits(h.getTotalUnits());
         dto.setCommittedAmount(h.getCommittedAmount());
         dto.setAcquiredOn(h.getAcquiredOn());
+        dto.setEstimatedValue(h.getEstimatedValue());
+        dto.setValuedOn(h.getValuedOn());
         dto.setStatus(h.getStatus());
         dto.setSourceDealId(h.getSourceDealId());
         dto.setNotes(h.getNotes());
@@ -274,6 +280,18 @@ public class PrivateHoldingService {
             dto.setUncalled(h.getCommittedAmount().subtract(contributed).max(BigDecimal.ZERO));
         }
         dto.setOwnershipPct(pct(h.getUnitsHeld(), h.getTotalUnits()));
+
+        // What the position is worth for net worth: the user's mark when they have made one,
+        // else the capital still at risk. An exited position contributes nothing unless the
+        // user says otherwise — its capital has come back and is already counted as cash.
+        if (h.getEstimatedValue() != null) {
+            dto.setNetWorthValue(h.getEstimatedValue());
+            dto.setValueIsUserEstimate(true);
+        } else {
+            dto.setNetWorthValue("EXITED".equals(h.getStatus())
+                    ? BigDecimal.ZERO : dto.getUnreturnedCapital());
+            dto.setValueIsUserEstimate(false);
+        }
         return dto;
     }
 
@@ -310,6 +328,14 @@ public class PrivateHoldingService {
         }
         holding.setCommittedAmount(nonNegativeOrNull(dto.getCommittedAmount(), "committedAmount"));
         holding.setAcquiredOn(dto.getAcquiredOn());
+        holding.setEstimatedValue(nonNegativeOrNull(dto.getEstimatedValue(), "estimatedValue"));
+        // Stamp the mark date automatically — an estimate with no date is indistinguishable
+        // from one made years ago.
+        if (holding.getEstimatedValue() != null) {
+            holding.setValuedOn(dto.getValuedOn() != null ? dto.getValuedOn() : LocalDate.now());
+        } else {
+            holding.setValuedOn(null);
+        }
         holding.setNotes(trimToNull(dto.getNotes()));
         holding.setStatus(normalize(dto.getStatus(), HoldingTaxonomy.STATUSES,
                 creating ? "ACTIVE" : holding.getStatus()));

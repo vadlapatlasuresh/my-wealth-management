@@ -41,6 +41,8 @@ public class SnapshotDto {
         private BigDecimal realEstateValueChange30d;
         private BigDecimal realEstateEquity;
         private BigDecimal realEstateEquityChange30d;
+        private BigDecimal privateHoldings;
+        private BigDecimal privateHoldingsChange30d;
     }
 
     @Data

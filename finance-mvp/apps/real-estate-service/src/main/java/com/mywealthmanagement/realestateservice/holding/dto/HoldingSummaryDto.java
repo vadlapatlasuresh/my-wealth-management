@@ -28,6 +28,10 @@ public class HoldingSummaryDto {
     private BigDecimal incomeReceived;
     private BigDecimal unreturnedCapital;
     private BigDecimal distributionRatio;
+    /** What these positions contribute to net worth, summed across holdings. */
+    private BigDecimal netWorthValue;
+    /** How many carry a user estimate rather than falling back to capital at risk. */
+    private int valuedCount;
 
     private List<Concentration> bySponsor;
     private List<Concentration> byAssetType;

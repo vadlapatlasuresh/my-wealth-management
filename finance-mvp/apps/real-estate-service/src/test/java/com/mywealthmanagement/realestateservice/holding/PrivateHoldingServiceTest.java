@@ -214,6 +214,103 @@ class PrivateHoldingServiceTest {
                 .hasMessageContaining("unitsHeld cannot exceed totalUnits");
     }
 
+    // ---- what a position contributes to net worth ----
+
+    @Test
+    void netWorthValue_usesTheUsersOwnMarkWhenTheyHaveMadeOne() {
+        PrivateHolding h = holding();
+        h.setEstimatedValue(new BigDecimal("140000"));
+        when(holdingRepository.findByIdAndUserId(3L, 1L)).thenReturn(Optional.of(h));
+        when(entryRepository.findByHoldingIdOrderByOccurredOnDescIdDesc(3L)).thenReturn(List.of(
+                entry("CONTRIBUTION", "INITIAL", "75000")));
+
+        authenticateAs("1");
+        PrivateHoldingDto dto = service.getHolding(3L);
+
+        // An appreciated deal should show its value, not merely the cash still in it.
+        assertThat(dto.getNetWorthValue()).isEqualByComparingTo("140000");
+        assertThat(dto.getValueIsUserEstimate()).isTrue();
+    }
+
+    @Test
+    void netWorthValue_fallsBackToCapitalAtRiskWithNoMark() {
+        when(holdingRepository.findByIdAndUserId(3L, 1L)).thenReturn(Optional.of(holding()));
+        when(entryRepository.findByHoldingIdOrderByOccurredOnDescIdDesc(3L)).thenReturn(List.of(
+                entry("CONTRIBUTION", "INITIAL", "75000"),
+                entry("DISTRIBUTION", "RETURN_OF_CAPITAL", "20000")));
+
+        authenticateAs("1");
+        PrivateHoldingDto dto = service.getHolding(3L);
+
+        assertThat(dto.getNetWorthValue()).isEqualByComparingTo("55000");
+        assertThat(dto.getValueIsUserEstimate()).isFalse();
+    }
+
+    @Test
+    void netWorthValue_isZeroForAnExitedPositionWithNoMark() {
+        PrivateHolding h = holding();
+        h.setStatus("EXITED");
+        when(holdingRepository.findByIdAndUserId(3L, 1L)).thenReturn(Optional.of(h));
+        when(entryRepository.findByHoldingIdOrderByOccurredOnDescIdDesc(3L)).thenReturn(List.of(
+                entry("CONTRIBUTION", "INITIAL", "75000")));
+
+        authenticateAs("1");
+        // The capital has come back and is already counted as cash — counting it here too
+        // would double it in net worth.
+        assertThat(service.getHolding(3L).getNetWorthValue()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void create_stampsTheValuationDateWhenAMarkIsGiven() {
+        authenticateAs("1");
+        when(holdingRepository.save(any(PrivateHolding.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PrivateHoldingDto dto = new PrivateHoldingDto();
+        dto.setName("Cedar Ridge Land LLC");
+        dto.setEstimatedValue(new BigDecimal("140000"));
+
+        // An estimate with no date is indistinguishable from one made years ago.
+        assertThat(service.create(dto).getValuedOn()).isNotNull();
+    }
+
+    @Test
+    void update_clearsTheValuationDateWhenTheMarkIsRemoved() {
+        PrivateHolding h = holding();
+        h.setEstimatedValue(new BigDecimal("140000"));
+        h.setValuedOn(java.time.LocalDate.of(2025, 1, 1));
+        when(holdingRepository.findByIdAndUserId(3L, 1L)).thenReturn(Optional.of(h));
+        when(holdingRepository.save(any(PrivateHolding.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(entryRepository.findByHoldingIdOrderByOccurredOnDescIdDesc(3L)).thenReturn(List.of());
+
+        PrivateHoldingDto dto = new PrivateHoldingDto();
+        dto.setName("Cedar Ridge Land LLC");
+        dto.setEstimatedValue(null);
+
+        authenticateAs("1");
+        PrivateHoldingDto saved = service.update(3L, dto);
+        assertThat(saved.getEstimatedValue()).isNull();
+        assertThat(saved.getValuedOn()).isNull();
+    }
+
+    @Test
+    void summary_totalsWhatThePortfolioContributesToNetWorth() {
+        PrivateHolding marked = holding();
+        marked.setId(3L); marked.setEstimatedValue(new BigDecimal("140000"));
+        PrivateHolding unmarked = holding();
+        unmarked.setId(4L);
+        when(holdingRepository.findByUserIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(marked, unmarked));
+        HoldingEntry a = entry("CONTRIBUTION", "INITIAL", "75000");
+        HoldingEntry b = entry("CONTRIBUTION", "INITIAL", "20000"); b.setHoldingId(4L);
+        when(entryRepository.findByUserIdOrderByOccurredOnDescIdDesc(1L)).thenReturn(List.of(a, b));
+
+        authenticateAs("1");
+        var summary = service.getSummary();
+
+        // 140k marked + 20k still at risk on the unmarked one.
+        assertThat(summary.getNetWorthValue()).isEqualByComparingTo("160000");
+        assertThat(summary.getValuedCount()).isEqualTo(1);
+    }
+
     // ---- the Deal Room sync ----
 
     private Deal openDeal() {

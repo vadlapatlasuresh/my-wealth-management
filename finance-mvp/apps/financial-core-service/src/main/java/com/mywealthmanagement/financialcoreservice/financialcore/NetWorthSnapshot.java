@@ -48,6 +48,11 @@ public class NetWorthSnapshot {
     @Column(name = "real_estate_equity", nullable = false)
     private BigDecimal realEstateEquity = BigDecimal.ZERO;
 
+    // Private co-ownership positions (LLC/syndication units) the user holds. Valued by the
+    // holder, or fallen back to their capital still at risk — real-estate-service decides.
+    @Column(name = "private_holdings", nullable = false)
+    private BigDecimal privateHoldings = BigDecimal.ZERO;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

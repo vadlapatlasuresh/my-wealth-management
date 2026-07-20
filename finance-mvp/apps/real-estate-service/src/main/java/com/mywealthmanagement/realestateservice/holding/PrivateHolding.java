@@ -77,6 +77,21 @@ public class PrivateHolding {
     @Column(name = "acquired_on")
     private LocalDate acquiredOn;
 
+    /**
+     * The user's own estimate of what the position is worth today, so net worth reflects an
+     * appreciated deal rather than only the cash still at risk.
+     *
+     * <p>This is the holder's mark on their own asset, exactly like the current value they
+     * enter against a property they own. TerraVest neither produces nor verifies it, and
+     * nothing derives a return from it. Left unset, net worth falls back to unreturned capital.
+     */
+    @Column(name = "estimated_value", precision = 19, scale = 2)
+    private BigDecimal estimatedValue;
+
+    /** When the user last marked the position, so a stale estimate is visible as stale. */
+    @Column(name = "valued_on")
+    private LocalDate valuedOn;
+
     /** ACTIVE | EXITED */
     @Column(nullable = false, length = 20)
     private String status = "ACTIVE";
