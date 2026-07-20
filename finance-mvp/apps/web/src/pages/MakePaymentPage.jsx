@@ -1,14 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { currency } from "../utils/format";
+import PayeeCategoryList from "../components/PayeeCategoryList";
+import { STEPS, DONE_STEP } from "../config/makePaymentFlow";
+import {
+  buildPayeeCategories,
+  CATEGORY_CREDIT_CARD,
+  categoryById,
+  daysUntil,
+} from "../utils/payees";
 
-const STEPS = [
-  { label: "Payee", icon: "1" },
-  { label: "Amount", icon: "2" },
-  { label: "Funding", icon: "3" },
-  { label: "Review", icon: "4" },
-  { label: "Done", icon: "5" },
-];
+/**
+ * Make Payment (formerly "Pay Bills").
+ *
+ * Step 0 is the categorized "Who are you paying?" selector — every linked credit
+ * card, mortgage, student loan and auto loan, grouped under sticky category headers.
+ * Step 1 collapses the old Amount + Funding steps into a single payment-entry screen
+ * pre-filled from the account the user picked.
+ */
+
 
 const PAYEE_TYPES = [
   { value: "UTILITY", label: "Utility" },
@@ -38,10 +48,10 @@ function StatusBadge({ status }) {
   return <span className={`badge ${m.cls}`}><i className={m.icon}></i> {m.label}</span>;
 }
 
-export default function BillPayPage({
+export default function MakePaymentPage({
   step,
   setStep,
-  creditCards = [],
+  accounts = [],
   fundingAccounts = [],
   billPayForm,
   setBillPayForm,
@@ -56,14 +66,24 @@ export default function BillPayPage({
   const navigate = useNavigate();
   const [authorized, setAuthorized] = useState(false);
   const [cancelingId, setCancelingId] = useState(null);
+  const sectionsRef = useRef(null);
 
   // Always start a fresh visit at step 0.
   useEffect(() => { setStep(0); /* eslint-disable-next-line */ }, []);
 
   const update = (field, value) => setBillPayForm((p) => ({ ...p, [field]: value }));
 
-  const isCard = billPayForm.payee_kind === "card";
-  const selectedCard = creditCards.find((c) => c.id === billPayForm.card_account_id);
+  // Every payable linked account, grouped into categories (empty ones dropped).
+  const categories = useMemo(() => buildPayeeCategories(accounts), [accounts]);
+  const allPayees = useMemo(() => categories.flatMap((c) => c.payees), [categories]);
+
+  const isLinked = billPayForm.payee_kind !== "external";
+  // `payee_account_id` supersedes the old card-only `card_account_id`; we read both so
+  // a form persisted by the previous Bill Pay build still resolves to the right account.
+  const selectedPayeeId = billPayForm.payee_account_id || billPayForm.card_account_id || "";
+  const selectedPayee = allPayees.find((p) => p.id === selectedPayeeId) || null;
+  const selectedCategory = selectedPayee ? categoryById(selectedPayee.categoryId) : null;
+
   const selectedFunding = fundingAccounts.find((f) => f.id === billPayForm.funding_account_id);
   const amount = Number(billPayForm.amount) || 0;
   const fundingBalance = fundingBalanceOf(selectedFunding);
@@ -72,60 +92,82 @@ export default function BillPayPage({
   const today = new Date().toISOString().slice(0, 10);
   const isScheduled = billPayForm.scheduled_date && billPayForm.scheduled_date > today;
 
+  const hasCreditCards = categories.some((c) => c.id === CATEGORY_CREDIT_CARD);
+
   // Per-step validation that gates the Next button.
   const stepValid = (s) => {
-    if (s === 0) return isCard ? !!billPayForm.card_account_id : !!billPayForm.payee_name?.trim();
-    if (s === 1) return amount > 0;
-    if (s === 2) return !!billPayForm.funding_account_id && !insufficient;
-    if (s === 3) return authorized && !insufficient && amount > 0 && !!billPayForm.funding_account_id;
+    if (s === 0) return isLinked ? !!selectedPayeeId : !!billPayForm.payee_name?.trim();
+    if (s === 1) return amount > 0 && !!billPayForm.funding_account_id && !insufficient;
+    if (s === 2) return authorized && !insufficient && amount > 0 && !!billPayForm.funding_account_id;
     return true;
   };
 
-  const next = () => { if (stepValid(step)) setStep(Math.min(step + 1, STEPS.length - 1)); };
+  const next = () => { if (stepValid(step)) setStep(Math.min(step + 1, DONE_STEP)); };
   const back = () => setStep(Math.max(step - 1, 0));
 
-  // ---- Upcoming-bill reminders (credit cards with a due date / minimum payment) ----
-  const daysUntil = (iso) => {
-    if (!iso) return null;
-    const due = new Date(`${iso}T00:00:00`);
-    if (Number.isNaN(due.getTime())) return null;
-    const t = new Date(); t.setHours(0, 0, 0, 0);
-    return Math.round((due - t) / 86400000);
-  };
-  const dueCards = creditCards
-    .filter((c) => c.nextPaymentDueDate || c.minPayment != null)
-    .map((c) => ({ ...c, days: daysUntil(c.nextPaymentDueDate) }))
-    .sort((a, b) => (a.days ?? 9999) - (b.days ?? 9999));
-
-  // Jump straight into the wizard to pay a specific card (preselects + suggests min due).
-  const payCard = (c) => {
+  /** Pick a linked account → pre-fill payee + suggested amount, then open payment entry. */
+  const choosePayee = (payee) => {
     setBillPayForm((p) => ({
       ...p,
-      payee_kind: "card",
-      card_account_id: c.id,
-      amount: c.minPayment != null ? c.minPayment : (c.lastStatementBalance ?? c.balance ?? ""),
+      payee_kind: "linked",
+      payee_account_id: payee.id,
+      // Mirrored for backward compatibility with the old card-only field.
+      card_account_id: payee.id,
+      payee_name: `${payee.institution || payee.name}`.trim(),
+      payee_type: payee.payeeType,
+      amount: payee.suggestedAmount != null ? payee.suggestedAmount : "",
     }));
-    setStep(0);
+    setStep(1);
   };
 
-  // Quick-amount chips when paying a card. Prefer the real statement balance from
-  // Plaid Liabilities for the "statement balance" chip; fall back to current balance.
-  const cardBalance = Number(selectedCard?.balance || 0);
-  const statementBalance = selectedCard?.lastStatementBalance != null
-    ? Number(selectedCard.lastStatementBalance)
-    : cardBalance;
-  const minDue = selectedCard?.minPayment != null
-    ? Number(selectedCard.minPayment)
-    : Math.max(25, Math.round(cardBalance * 0.02));
+  /** "Pay a credit card" shortcut — scrolls the Credit Cards section into view. */
+  const jumpToCreditCards = () => {
+    const el = sectionsRef.current?.querySelector(`#payee-section-${CATEGORY_CREDIT_CARD}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Quick-amount chips on the entry screen, driven by whatever the account exposes.
+  const amountChips = useMemo(() => {
+    if (!selectedPayee) return [];
+    const isCard = selectedPayee.categoryId === CATEGORY_CREDIT_CARD;
+    const chips = [];
+    if (selectedPayee.minPayment != null) {
+      chips.push({
+        label: isCard ? "Minimum" : "Scheduled payment",
+        value: selectedPayee.minPayment,
+      });
+    }
+    if (selectedPayee.lastStatementBalance != null) {
+      chips.push({ label: "Statement balance", value: selectedPayee.lastStatementBalance });
+    }
+    if (selectedPayee.balance > 0) {
+      chips.push({
+        label: isCard ? "Current balance" : "Payoff balance",
+        value: selectedPayee.balance,
+      });
+    }
+    // De-duplicate chips that resolve to the same dollar figure.
+    return chips.filter(
+      (c, i) => chips.findIndex((o) => Number(o.value) === Number(c.value)) === i
+    );
+  }, [selectedPayee]);
+
+  const payeeDisplayName = isLinked
+    ? selectedPayee
+      ? `${acctLabel(selectedPayee)} ····${mask4(selectedPayee)}`
+      : "—"
+    : billPayForm.payee_name;
+
+  const dueDays = daysUntil(selectedPayee?.nextPaymentDueDate);
 
   return (
     <>
       <div className="page-header">
         <div>
-          <div className="page-title">Pay a Bill</div>
-          <div className="page-subtitle">Move money to a card or biller — securely</div>
+          <div className="page-title">Make a Payment</div>
+          <div className="page-subtitle">Pay a card, loan or biller — securely</div>
         </div>
-        {step < 4 && (
+        {step < DONE_STEP && (
           <div className="page-actions">
             <button className="btn btn-secondary btn-sm" onClick={() => navigate("/")}>
               <i className="ti ti-x"></i> Cancel
@@ -134,57 +176,8 @@ export default function BillPayPage({
         )}
       </div>
 
-      {/* Upcoming credit-card bills — reminders, all in one place */}
-      {step === 0 && dueCards.length > 0 && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="section-header" style={{ marginBottom: 12 }}>
-            <div className="section-title" style={{ marginBottom: 0 }}>
-              <i className="ti ti-bell-ringing" style={{ color: "var(--tv-gold)", marginRight: 6 }}></i>
-              Upcoming bills
-            </div>
-            <span style={{ fontSize: 12.5, color: "var(--tv-text-muted)" }}>
-              {dueCards.length} card{dueCards.length === 1 ? "" : "s"}
-            </span>
-          </div>
-          <div style={{ display: "grid", gap: 10 }}>
-            {dueCards.map((c) => {
-              const overdue = c.days != null && c.days < 0;
-              const soon = c.days != null && c.days >= 0 && c.days <= 7;
-              const tone = overdue ? "var(--tv-negative)" : soon ? "#B7791F" : "var(--tv-text-muted)";
-              const whenText =
-                c.days == null ? "Payment due"
-                  : overdue ? `${Math.abs(c.days)} days overdue`
-                  : c.days === 0 ? "Due today"
-                  : `Due in ${c.days} day${c.days === 1 ? "" : "s"}`;
-              return (
-                <div key={c.id} className="list-item" style={{ alignItems: "center" }}>
-                  <div className="item-icon icon-red" style={{ width: 40, height: 40, fontSize: 19 }}>
-                    <i className="ti ti-credit-card"></i>
-                  </div>
-                  <div className="item-main">
-                    <div className="item-name">{acctLabel(c)} ····{mask4(c)}</div>
-                    <div className="item-sub" style={{ color: tone, fontWeight: overdue || soon ? 600 : 400 }}>
-                      {whenText}
-                      {c.nextPaymentDueDate ? ` · ${formatDate(new Date(`${c.nextPaymentDueDate}T00:00:00`))}` : ""}
-                      {c.minPayment != null ? ` · min ${currency(c.minPayment)}` : ""}
-                    </div>
-                  </div>
-                  <div className="item-right" style={{ marginRight: 12, textAlign: "right" }}>
-                    <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)" }}>Balance</div>
-                    <div style={{ fontWeight: 600 }}>{currency(c.lastStatementBalance ?? c.balance)}</div>
-                  </div>
-                  <button className="btn btn-primary btn-sm" onClick={() => payCard(c)}>
-                    <i className="ti ti-bolt"></i> Pay
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {/* Stepper */}
-      <div className="stepper" style={{ maxWidth: 640, marginBottom: 20 }}>
+      <div className="stepper" style={{ maxWidth: 560, marginBottom: 20 }}>
         {STEPS.map((s, idx) => (
           <React.Fragment key={idx}>
             <div className={`step ${idx < step ? "done" : ""} ${idx === step ? "active" : ""}`}>
@@ -198,85 +191,101 @@ export default function BillPayPage({
         ))}
       </div>
 
-      {/* ---------------- STEP 0 — Payee ---------------- */}
+      {/* ---------------- STEP 0 — Who are you paying? ---------------- */}
       {step === 0 && (
         <div className="card" style={{ maxWidth: 720 }}>
           <div className="section-title">Who are you paying?</div>
-          <div className="seg-control" style={{ marginBottom: 18 }}>
-            <button className={`seg-btn ${isCard ? "active" : ""}`} onClick={() => update("payee_kind", "card")}>
-              <i className="ti ti-credit-card"></i> Pay a credit card
-            </button>
-            <button className={`seg-btn ${!isCard ? "active" : ""}`} onClick={() => update("payee_kind", "external")}>
-              <i className="ti ti-building-store"></i> Pay a biller
+
+          {/* Prominent shortcut straight to the credit-card section. */}
+          <div className="payee-shortcuts">
+            {isLinked && hasCreditCards && (
+              <button className="btn btn-primary btn-sm" onClick={jumpToCreditCards}>
+                <i className="ti ti-credit-card"></i> Pay a credit card
+              </button>
+            )}
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => update("payee_kind", isLinked ? "external" : "linked")}
+            >
+              <i className="ti ti-building-store"></i>
+              {isLinked ? "Pay someone else" : "Back to linked accounts"}
             </button>
           </div>
 
-          {isCard ? (
-            creditCards.length === 0 ? (
-              <div className="empty-state">
-                <i className="ti ti-credit-card-off"></i>
-                <p>No credit cards linked yet. Link an account to pay a card, or pay a biller instead.</p>
-              </div>
-            ) : (
-              <div style={{ display: "grid", gap: 10 }}>
-                {creditCards.map((c) => {
-                  const active = billPayForm.card_account_id === c.id;
-                  const util = c.creditLimit ? Math.round((Number(c.balance) / Number(c.creditLimit)) * 100) : null;
-                  return (
-                    <button key={c.id} type="button" onClick={() => update("card_account_id", c.id)}
-                      style={{
-                        textAlign: "left", display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
-                        border: `1.5px solid ${active ? "var(--tv-forest)" : "var(--tv-border)"}`,
-                        background: active ? "var(--tv-sage-pale)" : "var(--tv-card)",
-                        borderRadius: "var(--radius-md)", cursor: "pointer",
-                      }}>
-                      <div className="item-icon icon-blue" style={{ width: 42, height: 42, fontSize: 20 }}><i className="ti ti-credit-card"></i></div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600 }}>{acctLabel(c)} ····{mask4(c)}</div>
-                        <div style={{ fontSize: 12.5, color: "var(--tv-text-muted)" }}>
-                          Balance {currency(c.balance)}{util != null ? ` · ${util}% utilization` : ""}
-                        </div>
-                      </div>
-                      {active && <i className="ti ti-circle-check" style={{ color: "var(--tv-forest)", fontSize: 22 }}></i>}
-                    </button>
-                  );
-                })}
-              </div>
-            )
-          ) : (
-            <div className="grid-2">
-              <div className="form-group">
-                <label className="form-label">Payee name</label>
-                <input className="form-input" placeholder="e.g. City Water Utility"
-                  value={billPayForm.payee_name} onChange={(e) => update("payee_name", e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Payee type</label>
-                <select className="form-select" value={billPayForm.payee_type} onChange={(e) => update("payee_type", e.target.value)}>
-                  {PAYEE_TYPES.filter((t) => t.value !== "CREDIT_CARD").map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
+          {isLinked ? (
+            <div ref={sectionsRef}>
+              <PayeeCategoryList
+                categories={categories}
+                selectedPayeeId={selectedPayeeId}
+                onSelect={choosePayee}
+                formatDate={formatDate}
+              />
             </div>
+          ) : (
+            <>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label className="form-label">Payee name</label>
+                  <input className="form-input" placeholder="e.g. City Water Utility"
+                    value={billPayForm.payee_name} onChange={(e) => update("payee_name", e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Payee type</label>
+                  <select className="form-select" value={billPayForm.payee_type}
+                    onChange={(e) => update("payee_type", e.target.value)}>
+                    {PAYEE_TYPES.filter((t) => t.value !== "CREDIT_CARD").map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
+                <button className="btn btn-primary" disabled={!stepValid(0)} onClick={next}>
+                  Continue <i className="ti ti-arrow-right"></i>
+                </button>
+              </div>
+            </>
           )}
-
-          <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 18 }}>
-            <button className="btn btn-primary" disabled={!stepValid(0)} onClick={next}>
-              Continue <i className="ti ti-arrow-right"></i>
-            </button>
-          </div>
         </div>
       )}
 
-      {/* ---------------- STEP 1 — Amount ---------------- */}
+      {/* ---------------- STEP 1 — Payment entry ---------------- */}
       {step === 1 && (
         <div className="card" style={{ maxWidth: 720 }}>
-          <div className="section-title">How much?</div>
-          {isCard && selectedCard && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => update("amount", minDue)}>Minimum {currency(minDue)}</button>
-              <button className="btn btn-secondary btn-sm" onClick={() => update("amount", statementBalance)}>Statement balance {currency(statementBalance)}</button>
+          <div className="section-title">Payment details</div>
+
+          {/* Who we're paying, pre-filled from the selected account. */}
+          <div className="list-item" style={{ alignItems: "center" }}>
+            <div className={`item-icon ${selectedCategory?.iconClass || "icon-gray"}`}
+              style={{ width: 42, height: 42, fontSize: 20 }}>
+              <i className={selectedCategory?.icon || "ti ti-building-store"}></i>
+            </div>
+            <div className="item-main">
+              <div className="item-name">{payeeDisplayName}</div>
+              <div className="item-sub">
+                {selectedCategory?.label || "Biller"}
+                {selectedPayee?.nextPaymentDueDate
+                  ? ` · due ${formatDate(new Date(`${selectedPayee.nextPaymentDueDate}T00:00:00`))}`
+                  : ""}
+                {dueDays != null && dueDays < 0 ? " · overdue" : ""}
+              </div>
+            </div>
+            <button className="btn btn-secondary btn-sm" onClick={() => setStep(0)}>
+              <i className="ti ti-switch-horizontal"></i> Change
+            </button>
+          </div>
+
+          <hr className="divider" />
+
+          {/* Amount — pre-filled with the suggested payment, fully editable. */}
+          {amountChips.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}>
+              {amountChips.map((chip) => (
+                <button key={chip.label} className="btn btn-secondary btn-sm"
+                  onClick={() => update("amount", chip.value)}>
+                  {chip.label} {currency(chip.value)}
+                </button>
+              ))}
             </div>
           )}
           <div className="form-group" style={{ maxWidth: 280 }}>
@@ -288,68 +297,90 @@ export default function BillPayPage({
                 value={billPayForm.amount} onChange={(e) => update("amount", e.target.value)} placeholder="0.00" />
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}>
-            <button className="btn btn-secondary" onClick={back}><i className="ti ti-arrow-left"></i> Back</button>
-            <button className="btn btn-primary" disabled={!stepValid(1)} onClick={next}>Continue <i className="ti ti-arrow-right"></i></button>
-          </div>
-        </div>
-      )}
 
-      {/* ---------------- STEP 2 — Funding ---------------- */}
-      {step === 2 && (
-        <div className="card" style={{ maxWidth: 720 }}>
-          <div className="section-title">Pay from which account?</div>
-          {fundingAccounts.length === 0 ? (
-            <div className="empty-state"><i className="ti ti-building-bank"></i><p>No checking or savings account linked to fund this payment.</p></div>
-          ) : (
-            <div style={{ display: "grid", gap: 10 }}>
-              {fundingAccounts.map((f) => {
-                const active = billPayForm.funding_account_id === f.id;
-                const bal = fundingBalanceOf(f);
-                const tooLow = amount > bal;
-                return (
-                  <button key={f.id} type="button" onClick={() => update("funding_account_id", f.id)}
-                    style={{
-                      textAlign: "left", display: "flex", alignItems: "center", gap: 14, padding: "14px 16px",
-                      border: `1.5px solid ${active ? "var(--tv-forest)" : "var(--tv-border)"}`,
-                      background: active ? "var(--tv-sage-pale)" : "var(--tv-card)",
-                      borderRadius: "var(--radius-md)", cursor: "pointer",
-                    }}>
-                    <div className="item-icon icon-forest" style={{ width: 42, height: 42, fontSize: 20 }}><i className="ti ti-building-bank"></i></div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600 }}>{acctLabel(f)} ····{mask4(f)}</div>
-                      <div style={{ fontSize: 12.5, color: tooLow ? "var(--tv-negative)" : "var(--tv-text-muted)" }}>
-                        Available {currency(bal)}{tooLow ? " · not enough to cover this payment" : ""}
+          {/* Payment source */}
+          <div className="form-group">
+            <label className="form-label">Pay from</label>
+            {fundingAccounts.length === 0 ? (
+              <div className="empty-state"><i className="ti ti-building-bank"></i><p>No checking or savings account linked to fund this payment.</p></div>
+            ) : (
+              <div style={{ display: "grid", gap: 8 }}>
+                {fundingAccounts.map((f) => {
+                  const active = billPayForm.funding_account_id === f.id;
+                  const bal = fundingBalanceOf(f);
+                  const tooLow = amount > bal;
+                  return (
+                    <button key={f.id} type="button"
+                      className={`payee-row ${active ? "selected" : ""}`}
+                      onClick={() => update("funding_account_id", f.id)}>
+                      <div className="item-icon icon-forest" style={{ width: 42, height: 42, fontSize: 20 }}>
+                        <i className="ti ti-building-bank"></i>
                       </div>
-                    </div>
-                    {active && <i className="ti ti-circle-check" style={{ color: "var(--tv-forest)", fontSize: 22 }}></i>}
-                  </button>
-                );
-              })}
+                      <div className="payee-row-main">
+                        <div className="payee-row-name">{acctLabel(f)} ····{mask4(f)}</div>
+                        <div className="payee-row-sub" style={{ color: tooLow ? "var(--tv-negative)" : "var(--tv-text-muted)" }}>
+                          Available {currency(bal)}{tooLow ? " · not enough to cover this payment" : ""}
+                        </div>
+                      </div>
+                      {active && <i className="ti ti-circle-check" style={{ color: "var(--tv-forest)", fontSize: 22 }}></i>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Scheduled date */}
+          <div className="form-group">
+            <label className="form-label">When?</label>
+            <div className="seg-control" style={{ marginBottom: 10 }}>
+              <button className={`seg-btn ${!isScheduled ? "active" : ""}`}
+                onClick={() => update("scheduled_date", "")}>
+                <i className="ti ti-bolt"></i> Pay now
+              </button>
+              <button className={`seg-btn ${isScheduled ? "active" : ""}`}
+                onClick={() => update("scheduled_date", billPayForm.scheduled_date || new Date(Date.now() + 86400000).toISOString().slice(0, 10))}>
+                <i className="ti ti-calendar"></i> Schedule
+              </button>
             </div>
-          )}
+            {isScheduled && (
+              <input className="form-input" type="date" min={today} style={{ maxWidth: 220 }}
+                value={billPayForm.scheduled_date} onChange={(e) => update("scheduled_date", e.target.value)} />
+            )}
+          </div>
+
           {insufficient && (
-            <div style={{ marginTop: 14, padding: "10px 12px", background: "var(--tv-negative-bg)", color: "var(--tv-negative)", borderRadius: "var(--radius-md)", fontSize: 13 }}>
+            <div style={{ marginTop: 4, padding: "10px 12px", background: "var(--tv-negative-bg)", color: "var(--tv-negative)", borderRadius: "var(--radius-md)", fontSize: 13 }}>
               <i className="ti ti-alert-triangle"></i> This account's available balance ({currency(fundingBalance)}) is less than {currency(amount)}. Choose another account or lower the amount.
             </div>
           )}
+
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: 18 }}>
             <button className="btn btn-secondary" onClick={back}><i className="ti ti-arrow-left"></i> Back</button>
-            <button className="btn btn-primary" disabled={!stepValid(2)} onClick={next}>Review <i className="ti ti-arrow-right"></i></button>
+            <button className="btn btn-primary" disabled={!stepValid(1)} onClick={next}>Review <i className="ti ti-arrow-right"></i></button>
           </div>
         </div>
       )}
 
-      {/* ---------------- STEP 3 — Review & schedule ---------------- */}
-      {step === 3 && (
+      {/* ---------------- STEP 2 — Review & authorize ---------------- */}
+      {step === 2 && (
         <div className="grid-2">
           <div className="card">
             <div className="section-title">Review your payment</div>
 
             <div className="list-item">
-              <div className="item-icon icon-blue" style={{ width: 40, height: 40, fontSize: 20 }}><i className={isCard ? "ti ti-credit-card" : "ti ti-building-store"}></i></div>
-              <div className="item-main"><div className="item-name">Paying</div><div className="item-sub">{isCard ? "Credit card" : (PAYEE_TYPES.find(t => t.value === billPayForm.payee_type)?.label || "Biller")}</div></div>
-              <div className="item-right"><div style={{ fontSize: 14, fontWeight: 600 }}>{isCard ? `${acctLabel(selectedCard)} ····${mask4(selectedCard)}` : billPayForm.payee_name}</div></div>
+              <div className={`item-icon ${selectedCategory?.iconClass || "icon-blue"}`} style={{ width: 40, height: 40, fontSize: 20 }}>
+                <i className={selectedCategory?.icon || "ti ti-building-store"}></i>
+              </div>
+              <div className="item-main">
+                <div className="item-name">Paying</div>
+                <div className="item-sub">
+                  {selectedCategory?.label
+                    || PAYEE_TYPES.find((t) => t.value === billPayForm.payee_type)?.label
+                    || "Biller"}
+                </div>
+              </div>
+              <div className="item-right"><div style={{ fontSize: 14, fontWeight: 600 }}>{payeeDisplayName}</div></div>
             </div>
             <div className="list-item">
               <div className="item-icon icon-green" style={{ width: 40, height: 40, fontSize: 20 }}><i className="ti ti-currency-dollar"></i></div>
@@ -361,21 +392,17 @@ export default function BillPayPage({
               <div className="item-main"><div className="item-name">Fund from</div><div className="item-sub">Available: {currency(fundingBalance)}</div></div>
               <div className="item-right"><div style={{ fontSize: 14, fontWeight: 600 }}>{acctLabel(selectedFunding)} ····{mask4(selectedFunding)}</div></div>
             </div>
+            <div className="list-item">
+              <div className="item-icon icon-gold" style={{ width: 40, height: 40, fontSize: 20 }}><i className="ti ti-calendar"></i></div>
+              <div className="item-main"><div className="item-name">When</div></div>
+              <div className="item-right">
+                <div style={{ fontSize: 14, fontWeight: 600 }}>
+                  {isScheduled ? formatDate(new Date(billPayForm.scheduled_date)) : "Pay now"}
+                </div>
+              </div>
+            </div>
 
             <hr className="divider" />
-
-            {/* Schedule */}
-            <div className="form-group">
-              <label className="form-label">When?</label>
-              <div className="seg-control" style={{ marginBottom: 10 }}>
-                <button className={`seg-btn ${!isScheduled ? "active" : ""}`} onClick={() => update("scheduled_date", "")}><i className="ti ti-bolt"></i> Pay now</button>
-                <button className={`seg-btn ${isScheduled ? "active" : ""}`} onClick={() => update("scheduled_date", billPayForm.scheduled_date || new Date(Date.now() + 86400000).toISOString().slice(0, 10))}><i className="ti ti-calendar"></i> Schedule</button>
-              </div>
-              {isScheduled && (
-                <input className="form-input" type="date" min={today} style={{ maxWidth: 220 }}
-                  value={billPayForm.scheduled_date} onChange={(e) => update("scheduled_date", e.target.value)} />
-              )}
-            </div>
 
             <div className="form-group">
               <label className="form-label">Memo (optional)</label>
@@ -395,7 +422,7 @@ export default function BillPayPage({
           <div>
             <div className="card" style={{ marginBottom: 12 }}>
               <div className="section-title">Payment summary</div>
-              {[["Paying", isCard ? `····${mask4(selectedCard)}` : billPayForm.payee_name],
+              {[["Paying", isLinked ? `····${mask4(selectedPayee)}` : billPayForm.payee_name],
                 ["Amount", currency(amount)],
                 ["Payment fee", "$0.00"]].map(([k, v]) => (
                 <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "7px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
@@ -416,7 +443,7 @@ export default function BillPayPage({
               </div>
             )}
             <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", padding: 13, fontSize: 15 }}
-              onClick={onSubmit} disabled={submitting || !stepValid(3)}>
+              onClick={onSubmit} disabled={submitting || !stepValid(2)}>
               <i className={`ti ${submitting ? "ti-loader spin" : "ti-lock"}`}></i>
               {submitting ? "Processing…" : isScheduled ? "Schedule Payment" : "Confirm & Pay"}
             </button>
@@ -429,8 +456,8 @@ export default function BillPayPage({
         </div>
       )}
 
-      {/* ---------------- STEP 4 — Done ---------------- */}
-      {step === 4 && (
+      {/* ---------------- STEP 3 — Done ---------------- */}
+      {step === DONE_STEP && (
         <div className="card" style={{ maxWidth: 560, margin: "0 auto" }}>
           <div className="empty-state">
             <i className="ti ti-circle-check" style={{ color: "var(--tv-positive)", fontSize: 56 }}></i>
@@ -457,7 +484,7 @@ export default function BillPayPage({
       )}
 
       {/* ---------------- Payment history ---------------- */}
-      {step < 4 && (
+      {step < DONE_STEP && (
         <div className="card" style={{ marginTop: 20 }}>
           <div className="section-header" style={{ marginBottom: 0 }}>
             <div className="section-title">Recent payments</div>

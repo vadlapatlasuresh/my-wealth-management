@@ -971,6 +971,45 @@ a { text-decoration: none; color: inherit; }
   border-bottom-color: var(--tv-forest);
 }
 .outer-tab i { font-size: 16px; }
+
+/* ===== Make Payment — "Who are you paying?" categorized payee list ===== */
+.payee-sections { display:flex; flex-direction:column; }
+.payee-section { position:relative; }
+.payee-section-header {
+  position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:8px;
+  padding:9px 4px; margin-bottom:4px; background:var(--tv-card);
+  border-bottom:1px solid var(--tv-border-light);
+  font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--tv-text-secondary);
+}
+.payee-section-header i { font-size:15px; color:var(--tv-forest); }
+.payee-section-count {
+  margin-left:auto; padding:1px 8px; border-radius:var(--radius-sm);
+  background:var(--tv-sage-pale); color:var(--tv-forest); font-size:11.5px; letter-spacing:0;
+}
+.payee-section-body { display:grid; gap:8px; padding:8px 0 16px; }
+.payee-row {
+  display:flex; align-items:center; gap:14px; width:100%; padding:13px 14px;
+  text-align:left; background:var(--tv-card); border:1.5px solid var(--tv-border);
+  border-radius:var(--radius-md); cursor:pointer;
+  transition:border-color .15s ease, background .15s ease;
+}
+.payee-row:hover { border-color:var(--tv-sage); background:var(--tv-sage-pale); }
+.payee-row.selected { border-color:var(--tv-forest); background:var(--tv-sage-pale); }
+.payee-row-main { flex:1; min-width:0; }
+.payee-row-name { font-weight:600; font-size:14px; color:var(--tv-text-primary); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.payee-row-mask { color:var(--tv-text-muted); font-weight:500; }
+.payee-row-sub { font-size:12.5px; margin-top:2px; color:var(--tv-text-muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.payee-row-amount { text-align:right; flex-shrink:0; }
+.payee-row-amount-label { font-size:11.5px; color:var(--tv-text-muted); }
+.payee-row-amount-value { font-weight:600; font-size:14px; color:var(--tv-text-primary); }
+.payee-row-chevron { color:var(--tv-text-muted); font-size:18px; flex-shrink:0; }
+.payee-shortcuts { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+@media (max-width:640px) {
+  .payee-row { gap:10px; padding:12px 11px; }
+  .payee-row-amount-label, .payee-row-chevron { display:none; }
+}
+
 </style>
 </head>
 <body>
@@ -1007,7 +1046,7 @@ a { text-decoration: none; color: inherit; }
         <i class="ti ti-chart-pie"></i> Budgets
       </li>
       <li class="nav-item" data-page="billpay" onclick="navigate('billpay',this)">
-        <i class="ti ti-receipt"></i> Pay Bills
+        <i class="ti ti-receipt"></i> Make Payment
         <span class="nav-badge">3</span>
       </li>
       <li class="nav-item" data-page="debt" onclick="navigate('debt',this)">
@@ -1180,7 +1219,7 @@ a { text-decoration: none; color: inherit; }
     <div class="outer-tabs">
       <div class="outer-tab active" data-page="home" onclick="navigate('home', document.querySelector('[data-page=home].nav-item'))"><i class="ti ti-layout-dashboard"></i>Home</div>
       <div class="outer-tab" data-page="budget" onclick="navigate('budget', document.querySelector('[data-page=budget].nav-item'))"><i class="ti ti-chart-pie"></i>Budgets</div>
-      <div class="outer-tab" data-page="billpay" onclick="navigate('billpay', document.querySelector('[data-page=billpay].nav-item'))"><i class="ti ti-receipt"></i>Bill Pay</div>
+      <div class="outer-tab" data-page="billpay" onclick="navigate('billpay', document.querySelector('[data-page=billpay].nav-item'))"><i class="ti ti-receipt"></i>Make Payment</div>
       <div class="outer-tab" data-page="tax" onclick="navigate('tax', document.querySelector('[data-page=tax].nav-item'))"><i class="ti ti-receipt-tax"></i>Taxes</div>
       <div class="outer-tab" data-page="debt" onclick="navigate('debt', document.querySelector('[data-page=debt].nav-item'))"><i class="ti ti-trending-down"></i>Debt Lab</div>
       <div class="outer-tab" data-page="dealroom" onclick="navigate('dealroom', document.querySelector('[data-page=dealroom].nav-item'))"><i class="ti ti-briefcase"></i>Deal Room</div>
@@ -1733,54 +1772,99 @@ a { text-decoration: none; color: inherit; }
       <!-- =================== BILL PAY =================== -->
       <div id="page-billpay" class="page">
         <div class="page-header">
-          <div><div class="page-title">Pay a Bill</div><div class="page-subtitle">Review and confirm your payment</div></div>
+          <div><div class="page-title">Make a Payment</div><div class="page-subtitle">Pay a card, loan or biller — securely</div></div>
         </div>
 
-        <!-- Upcoming credit-card bills — reminders -->
-        <div class="card" style="margin-bottom:20px;">
-          <div class="section-header" style="margin-bottom:12px;">
-            <div class="section-title"><i class="ti ti-bell-ringing" style="color:var(--tv-gold);margin-right:6px;"></i> Upcoming bills</div>
-            <span style="font-size:12.5px;color:var(--tv-text-muted);">2 cards</span>
+        <!-- "Who are you paying?" — categorized payee selector with sticky headers -->
+        <div class="card" style="margin-bottom:20px;max-width:720px;">
+          <div class="section-title">Who are you paying?</div>
+          <div class="payee-shortcuts">
+            <button class="btn btn-primary btn-sm"><i class="ti ti-credit-card"></i> Pay a credit card</button>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-building-store"></i> Pay someone else</button>
           </div>
-          <div style="display:grid;gap:10px;">
-            <div class="list-item" style="align-items:center;">
-              <div class="item-icon icon-red" style="width:40px;height:40px;font-size:19px;"><i class="ti ti-credit-card"></i></div>
-              <div class="item-main">
-                <div class="item-name">Capital One ····4321</div>
-                <div class="item-sub" style="color:#B7791F;font-weight:600;">Due in 4 days · Jul 5 · min $35</div>
+
+          <div class="payee-sections">
+            <section class="payee-section" id="payee-section-credit_card">
+              <header class="payee-section-header"><i class="ti ti-credit-card"></i><span>Credit Cards</span><span class="payee-section-count">2</span></header>
+              <div class="payee-section-body">
+                <button type="button" class="payee-row">
+                  <div class="item-icon icon-blue" style="width:42px;height:42px;font-size:20px;"><i class="ti ti-credit-card"></i></div>
+                  <div class="payee-row-main">
+                    <div class="payee-row-name">Quicksilver <span class="payee-row-mask">····4321</span></div>
+                    <div class="payee-row-sub" style="color:#B7791F;font-weight:600;">Capital One · Due in 4 days · Jul 5</div>
+                  </div>
+                  <div class="payee-row-amount"><div class="payee-row-amount-label">Balance due</div><div class="payee-row-amount-value">$1,284.00</div></div>
+                  <i class="ti ti-chevron-right payee-row-chevron"></i>
+                </button>
+                <button type="button" class="payee-row">
+                  <div class="item-icon icon-blue" style="width:42px;height:42px;font-size:20px;"><i class="ti ti-credit-card"></i></div>
+                  <div class="payee-row-main">
+                    <div class="payee-row-name">Sapphire Reserve <span class="payee-row-mask">····7788</span></div>
+                    <div class="payee-row-sub">Chase · Due in 12 days · Jul 13</div>
+                  </div>
+                  <div class="payee-row-amount"><div class="payee-row-amount-label">Balance due</div><div class="payee-row-amount-value">$2,210.45</div></div>
+                  <i class="ti ti-chevron-right payee-row-chevron"></i>
+                </button>
               </div>
-              <div class="item-right" style="margin-right:12px;text-align:right;">
-                <div style="font-size:11.5px;color:var(--tv-text-muted);">Balance</div>
-                <div style="font-weight:600;">$1,284.00</div>
+            </section>
+
+            <section class="payee-section" id="payee-section-mortgage">
+              <header class="payee-section-header"><i class="ti ti-home"></i><span>Mortgage</span><span class="payee-section-count">1</span></header>
+              <div class="payee-section-body">
+                <button type="button" class="payee-row">
+                  <div class="item-icon icon-forest" style="width:42px;height:42px;font-size:20px;"><i class="ti ti-home"></i></div>
+                  <div class="payee-row-main">
+                    <div class="payee-row-name">Home Loan <span class="payee-row-mask">····9012</span></div>
+                    <div class="payee-row-sub">Rocket Mortgage · Due in 9 days · Jul 10</div>
+                  </div>
+                  <div class="payee-row-amount"><div class="payee-row-amount-label">Next payment</div><div class="payee-row-amount-value">$2,148.00</div></div>
+                  <i class="ti ti-chevron-right payee-row-chevron"></i>
+                </button>
               </div>
-              <button class="btn btn-primary btn-sm"><i class="ti ti-bolt"></i> Pay</button>
-            </div>
-            <div class="list-item" style="align-items:center;">
-              <div class="item-icon icon-red" style="width:40px;height:40px;font-size:19px;"><i class="ti ti-credit-card"></i></div>
-              <div class="item-main">
-                <div class="item-name">Chase Sapphire Reserve ····7788</div>
-                <div class="item-sub" style="color:var(--tv-text-muted);">Due in 12 days · Jul 13 · min $40</div>
+            </section>
+
+            <section class="payee-section" id="payee-section-student_loan">
+              <header class="payee-section-header"><i class="ti ti-school"></i><span>Student Loans</span><span class="payee-section-count">1</span></header>
+              <div class="payee-section-body">
+                <button type="button" class="payee-row">
+                  <div class="item-icon icon-gold" style="width:42px;height:42px;font-size:20px;"><i class="ti ti-school"></i></div>
+                  <div class="payee-row-main">
+                    <div class="payee-row-name">Grad Unsubsidized <span class="payee-row-mask">····5540</span></div>
+                    <div class="payee-row-sub">Nelnet · Due in 16 days · Jul 17</div>
+                  </div>
+                  <div class="payee-row-amount"><div class="payee-row-amount-label">Next payment</div><div class="payee-row-amount-value">$310.00</div></div>
+                  <i class="ti ti-chevron-right payee-row-chevron"></i>
+                </button>
               </div>
-              <div class="item-right" style="margin-right:12px;text-align:right;">
-                <div style="font-size:11.5px;color:var(--tv-text-muted);">Balance</div>
-                <div style="font-weight:600;">$2,210.45</div>
+            </section>
+
+            <section class="payee-section" id="payee-section-auto_loan">
+              <header class="payee-section-header"><i class="ti ti-car"></i><span>Auto / Car Loans</span><span class="payee-section-count">1</span></header>
+              <div class="payee-section-body">
+                <button type="button" class="payee-row">
+                  <div class="item-icon icon-red" style="width:42px;height:42px;font-size:20px;"><i class="ti ti-car"></i></div>
+                  <div class="payee-row-main">
+                    <div class="payee-row-name">Auto Loan <span class="payee-row-mask">····2277</span></div>
+                    <div class="payee-row-sub">Toyota Financial · Due in 21 days · Jul 22</div>
+                  </div>
+                  <div class="payee-row-amount"><div class="payee-row-amount-label">Next payment</div><div class="payee-row-amount-value">$489.60</div></div>
+                  <i class="ti ti-chevron-right payee-row-chevron"></i>
+                </button>
               </div>
-              <button class="btn btn-primary btn-sm"><i class="ti ti-bolt"></i> Pay</button>
-            </div>
+            </section>
+
           </div>
         </div>
 
         <!-- Stepper -->
-        <div class="stepper" style="max-width:600px;">
-          <div class="step done"><div class="step-circle"><i class="ti ti-check" style="font-size:14px;"></i></div><div class="step-label">Select card</div></div>
+        <div class="stepper" style="max-width:560px;">
+          <div class="step done"><div class="step-circle"><i class="ti ti-check" style="font-size:14px;"></i></div><div class="step-label">Payee</div></div>
           <div class="step-line done"></div>
-          <div class="step done"><div class="step-circle"><i class="ti ti-check" style="font-size:14px;"></i></div><div class="step-label">Amount</div></div>
+          <div class="step done"><div class="step-circle"><i class="ti ti-check" style="font-size:14px;"></i></div><div class="step-label">Payment</div></div>
           <div class="step-line done"></div>
-          <div class="step done"><div class="step-circle"><i class="ti ti-check" style="font-size:14px;"></i></div><div class="step-label">Funding</div></div>
-          <div class="step-line done"></div>
-          <div class="step active"><div class="step-circle">4</div><div class="step-label">Review</div></div>
+          <div class="step active"><div class="step-circle">3</div><div class="step-label">Review</div></div>
           <div class="step-line"></div>
-          <div class="step"><div class="step-circle">5</div><div class="step-label">Done</div></div>
+          <div class="step"><div class="step-circle">4</div><div class="step-label">Done</div></div>
         </div>
 
         <div class="grid-2">
@@ -2524,7 +2608,7 @@ a { text-decoration: none; color: inherit; }
 
             <!-- Finance row 2 -->
             <rect x="160" y="130" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" stroke-width="1"/>
-            <text x="215" y="153" text-anchor="middle" font-size="12" fill="#1A4D3B" font-family="DM Sans,sans-serif" font-weight="600">Pay Bills</text>
+            <text x="215" y="153" text-anchor="middle" font-size="12" fill="#1A4D3B" font-family="DM Sans,sans-serif" font-weight="600">Make Payment</text>
             <text x="215" y="167" text-anchor="middle" font-size="10" fill="#7A9086" font-family="DM Sans,sans-serif">5-step wizard</text>
 
             <rect x="290" y="130" width="110" height="44" rx="8" fill="#EAF3EE" stroke="#8AB89A" stroke-width="1"/>
@@ -5077,7 +5161,7 @@ function navigate(pageId, navEl) {
 
   const labels = {
     home:'Home', accounts:'Accounts', transactions:'Transactions', budget:'Budgets',
-    billpay:'Pay Bills', debt:'Debt Lab', invest:'Investments', realestate:'Properties',
+    billpay:'Make Payment', debt:'Debt Lab', invest:'Investments', realestate:'Properties',
     dealroom:'Deal Room', fractional:'Fractional LLC', security:'Security',
     messages:'Messages', settings:'Settings', styleguide:'Style Guide', flowmap:'UI Flow Map',
     business:'My Business', aiassistant:'AI Assistant', calculators:'Calculators',

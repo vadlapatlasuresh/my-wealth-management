@@ -23,7 +23,7 @@ const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
 const InvestPage      = MODULE_REGISTRY.invest.component;
 const PlanPage        = MODULE_REGISTRY.budget.component;
-const BillPayPage     = MODULE_REGISTRY.billpay.component;
+const MakePaymentPage = MODULE_REGISTRY.billpay.component;
 const LearnPage       = MODULE_REGISTRY.learn.component;
 const ProfilePage     = MODULE_REGISTRY.profile.component;
 const RealEstatePage  = MODULE_REGISTRY.realestate.component;
@@ -51,7 +51,7 @@ const navLabels = {
   '/accounts': 'Accounts',
   '/transactions': 'Transactions',
   '/budget': 'Budgets',
-  '/billpay': 'Pay Bills',
+  '/make-payment': 'Make Payment',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
@@ -79,7 +79,7 @@ const navLabels = {
 // label). Falls back to the English navLabels value when no key exists.
 const PATH_TO_NAVID = {
   '/': 'home', '/accounts': 'accounts', '/transactions': 'transactions',
-  '/budget': 'budget', '/billpay': 'billpay', '/debt': 'debt',
+  '/budget': 'budget', '/make-payment': 'billpay', '/debt': 'debt',
   '/invest': 'invest', '/mybusiness': 'mybusiness', '/ai-assistant': 'ai-assistant',
   '/calculators': 'calculators', '/goals': 'goals', '/tax': 'tax', '/cpa': 'cpa',
   '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
@@ -312,7 +312,7 @@ function OuterTabs() {
   const TABS = [
     { to: '/',            icon: 'ti ti-layout-dashboard', label: 'Home' },
     { to: '/budget',      icon: 'ti ti-chart-pie',        label: 'Budgets' },
-    { to: '/billpay',     icon: 'ti ti-receipt',          label: 'Bill Pay' },
+    { to: '/make-payment', icon: 'ti ti-receipt',         label: 'Make Payment' },
     { to: '/tax',         icon: 'ti ti-receipt-tax',      label: 'Taxes' },
     { to: '/debt',        icon: 'ti ti-trending-down',    label: 'Debt Lab' },
     { to: '/dealroom',    icon: 'ti ti-briefcase',        label: 'Deal Room' },
@@ -449,11 +449,13 @@ export default function AppLayout(props) {
                   formatDate={formatDate}
                 />
               } />
-              <Route path="/billpay" element={
-                <BillPayPage
+              {/* Legacy deep link — /billpay keeps working for saved links and old clients. */}
+              <Route path="/billpay" element={<Navigate to="/make-payment" replace />} />
+              <Route path="/make-payment" element={
+                <MakePaymentPage
                   step={billPayStep}
                   setStep={setBillPayStep}
-                  creditCards={creditCards}
+                  accounts={accounts}
                   fundingAccounts={fundingAccounts}
                   billPayForm={billPayForm}
                   setBillPayForm={setBillPayForm}
