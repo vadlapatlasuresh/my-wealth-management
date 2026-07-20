@@ -48,7 +48,7 @@ const GUIDE_GROUPS = [
         ],
       },
       {
-        to: '/billpay', icon: 'ti ti-receipt', cls: 'icon-forest', title: 'Pay Bills',
+        to: '/make-payment', icon: 'ti ti-receipt', cls: 'icon-forest', title: 'Make Payment',
         what: 'A guided wizard to pay a card or an external biller.',
         steps: [
           'Choose to pay one of your cards or an outside biller.',

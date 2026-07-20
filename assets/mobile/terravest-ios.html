@@ -137,6 +137,14 @@ body{
 .muted{ color:var(--tv-text-muted); }
 .sec-label{ font-size:13px; font-weight:600; color:var(--tv-text-muted); letter-spacing:.4px; text-transform:uppercase; margin:18px 2px 8px; }
 .dark .sec-label{ color:#6f857a; }
+/* Make Payment — sticky category headers on the "Who are you paying?" list */
+.pay-cat{ position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:7px;
+  background:var(--tv-card); padding:8px 2px; margin:14px 0 6px;
+  border-bottom:1px solid var(--tv-border); font-size:12px; font-weight:700;
+  letter-spacing:.5px; text-transform:uppercase; color:var(--tv-text-muted); }
+.pay-cat .n{ margin-left:auto; letter-spacing:0; font-size:11.5px; color:var(--tv-forest);
+  background:var(--tv-sage-pale); border-radius:6px; padding:1px 7px; }
+.dark .pay-cat{ background:#12211b; color:#6f857a; }
 
 /* grouped inset card */
 .group{
@@ -937,7 +945,7 @@ body{
   <div class="caption-chip"><span class="num">9</span> Budget</div>
 </div>
 
-<!-- ===================== 9. PAY BILLS ===================== -->
+<!-- ===================== 9. MAKE PAYMENT ===================== -->
 <div class="phone-wrap">
   <div class="iphone"><div class="screen">
     <div class="dynamic-island"></div>
@@ -945,23 +953,42 @@ body{
     <div class="content">
       <div class="nav-back"><i class="ti ti-chevron-left"></i>Back</div>
       <div style="padding:2px 18px 12px;display:flex;align-items:center;justify-content:space-between;">
-        <h1 style="font-size:26px;font-weight:700;">Pay a bill</h1>
+        <h1 style="font-size:26px;font-weight:700;">Make Payment</h1>
         <div class="dots"><div class="d on"></div><div class="d"></div><div class="d"></div></div>
       </div>
       <div class="scroll" style="padding-top:2px;">
-        <div class="sec-label" style="margin-top:0;"><i class="ti ti-bell-ringing" style="color:var(--tv-gold);"></i> Upcoming bills</div>
-        <div class="group">
-          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Capital One ····4321</div><div class="s" style="color:#B7791F;font-weight:600;">Due in 4 days · Jul 5 · min $35</div></div><div class="val"><div class="v">$1,284</div></div><button class="btn-sm ghost">Pay</button></div>
-          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Chase Sapphire ····7788</div><div class="s">Due in 12 days · Jul 13 · min $40</div></div><div class="val"><div class="v">$2,210</div></div><button class="btn-sm ghost">Pay</button></div>
+        <div style="display:flex;gap:8px;margin:2px 0 4px;">
+          <button class="btn-sm" style="background:var(--tv-forest);color:#fff;"><i class="ti ti-credit-card"></i> Pay a credit card</button>
+          <button class="btn-sm ghost">Pay someone else</button>
         </div>
-        <div class="sec-label">Pay to</div>
-        <div class="segmented"><div class="seg on">Your card</div><div class="seg">External biller</div></div>
+
+        <div class="pay-cat"><i class="ti ti-credit-card"></i>Credit Cards<span class="n">2</span></div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Quicksilver ····4321</div><div class="s" style="color:#B7791F;font-weight:600;">Capital One · Due in 4 days</div></div><div class="val"><div class="v">$1,284</div><div class="s" style="font-size:11px;">Balance due</div></div><i class="ti ti-chevron-right chev"></i></div>
+          <div class="row"><div class="lead-ic" style="background:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Sapphire Reserve ····7788</div><div class="s">Chase · Due in 12 days</div></div><div class="val"><div class="v">$2,210</div><div class="s" style="font-size:11px;">Balance due</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+
+        <div class="pay-cat"><i class="ti ti-home"></i>Mortgage<span class="n">1</span></div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-home"></i></div><div class="body"><div class="t">Home Loan ····9012</div><div class="s">Rocket Mortgage · Due in 9 days</div></div><div class="val"><div class="v">$2,148</div><div class="s" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+
+        <div class="pay-cat"><i class="ti ti-school"></i>Student Loans<span class="n">1</span></div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-school"></i></div><div class="body"><div class="t">Grad Unsub ····5540</div><div class="s">Nelnet · Due in 16 days</div></div><div class="val"><div class="v">$310</div><div class="s" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+
+        <div class="pay-cat"><i class="ti ti-car"></i>Auto / Car Loans<span class="n">1</span></div>
+        <div class="group">
+          <div class="row"><div class="lead-ic" style="background:#8a5a2b;"><i class="ti ti-car"></i></div><div class="body"><div class="t">Auto Loan ····2277</div><div class="s">Toyota Financial · Due in 21 days</div></div><div class="val"><div class="v">$490</div><div class="s" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right chev"></i></div>
+        </div>
+
         <div class="sec-label">Amount</div>
         <div style="text-align:center;padding:14px 0 8px;">
-          <span style="font-family:var(--display);font-size:52px;letter-spacing:-1px;">$250.00</span>
-          <div class="muted" style="font-size:13px;margin-top:2px;">Amex Platinum · balance −$2,140</div>
+          <span style="font-family:var(--display);font-size:52px;letter-spacing:-1px;">$1,284.00</span>
+          <div class="muted" style="font-size:13px;margin-top:2px;">Quicksilver ····4321 · minimum due $35</div>
         </div>
-        <div class="sec-label">Funding account</div>
+        <div class="sec-label">Pay from</div>
         <div class="group">
           <div class="row"><div class="inst" style="background:#117ACA;">CH</div><div class="body"><div class="t">Chase Checking</div><div class="s">•••• 2841 · $8,420 available</div></div><i class="ti ti-chevron-right chev"></i></div>
         </div>
@@ -974,7 +1001,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">10</span> Pay Bills</div>
+  <div class="caption-chip"><span class="num">10</span> Make Payment</div>
 </div>
 
 <!-- ===================== 10. DEBT LAB ===================== -->

@@ -10,7 +10,7 @@ const NAV = [
 export default function Shell({
   page,
   onNavigate,
-  onPayBill,
+  onMakePayment,
   userEmail,
   snapshotTime,
   onRefresh,
@@ -42,8 +42,8 @@ export default function Shell({
           ))}
         </nav>
 
-        <button type="button" className="btn-primary sidebar-cta" onClick={onPayBill}>
-          Pay bill
+        <button type="button" className="btn-primary sidebar-cta" onClick={onMakePayment}>
+          Make Payment
         </button>
 
         <div className="sidebar-footer">

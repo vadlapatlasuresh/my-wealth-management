@@ -15,7 +15,7 @@ const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
 const PlanPage        = React.lazy(() => import('../pages/PlanPage'));
-const BillPayPage     = React.lazy(() => import('../pages/BillPayPage'));
+const MakePaymentPage = React.lazy(() => import('../pages/MakePaymentPage'));
 const InvestPage      = React.lazy(() => import('../pages/InvestPage'));
 const MyBusinessPage  = React.lazy(() => import('../pages/MyBusinessPage'));
 const CalculatorsPage = React.lazy(() => import('../pages/CalculatorsPage'));
@@ -83,10 +83,12 @@ export const MODULE_REGISTRY = {
     route: '/budget', section: SECTION_FINANCE, defaultOrder: 4,
     component: PlanPage, inNavByDefault: true,
   },
+  // Module id stays 'billpay' so saved per-user nav ordering/visibility keeps resolving;
+  // only the user-facing title and route moved to "Make Payment".
   billpay: {
-    id: 'billpay', title: 'Pay Bills', icon: 'ti ti-receipt',
-    route: '/billpay', section: SECTION_FINANCE, defaultOrder: 5,
-    component: BillPayPage, inNavByDefault: true, badge: 'billpay',
+    id: 'billpay', title: 'Make Payment', icon: 'ti ti-receipt',
+    route: '/make-payment', section: SECTION_FINANCE, defaultOrder: 5,
+    component: MakePaymentPage, inNavByDefault: true, badge: 'billpay',
   },
   debt: {
     id: 'debt', title: 'Debt Lab', icon: 'ti ti-trending-down',

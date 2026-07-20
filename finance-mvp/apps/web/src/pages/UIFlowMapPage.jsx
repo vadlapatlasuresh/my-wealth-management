@@ -11,7 +11,7 @@ const SECTIONS = [
       { to: '/accounts', icon: 'ti ti-wallet', label: 'Accounts', sub: 'Linked banks' },
       { to: '/transactions', icon: 'ti ti-arrows-exchange-2', label: 'Transactions', sub: 'Search · sort · export' },
       { to: '/budget', icon: 'ti ti-chart-pie', label: 'Budgets', sub: 'Category limits' },
-      { to: '/billpay', icon: 'ti ti-receipt', label: 'Pay Bills', sub: '5-step wizard' },
+      { to: '/make-payment', icon: 'ti ti-receipt', label: 'Make Payment', sub: '4-step wizard' },
       { to: '/debt', icon: 'ti ti-trending-down', label: 'Debt Lab', sub: 'Strategy compare' },
       { to: '/invest', icon: 'ti ti-chart-line', label: 'Investments', sub: 'Portfolio' },
       { to: '/mybusiness', icon: 'ti ti-briefcase', label: 'My Business', sub: 'P&L · invoices' },

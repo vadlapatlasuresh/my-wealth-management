@@ -7,6 +7,7 @@ import AppLayout from "./components/AppLayout";
 import ProfileGate from "./components/ProfileGate";
 import useIdleLogout from "./hooks/useIdleLogout";
 import { formatDate } from "./utils/format";
+import { DONE_STEP } from "./config/makePaymentFlow";
 
 // A profile clears the mandatory KYC gate once identity + address are on file.
 // SSN (individual) or EIN (business) satisfies the identity requirement; both are
@@ -56,7 +57,11 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [profileChecked, setProfileChecked] = useState(false);
   const [billPayForm, setBillPayForm] = useState({
-    payee_kind: "card", // "card" = pay one of your cards, "external" = pay a biller
+    // "linked" = pay one of your linked accounts (card / mortgage / student / auto loan),
+    // "external" = pay a biller that isn't linked. "card" is the legacy value for "linked".
+    payee_kind: "linked",
+    payee_account_id: "",
+    // Legacy alias of payee_account_id, kept so previously persisted forms still resolve.
     card_account_id: "",
     funding_account_id: "",
     payee_name: "",
@@ -139,13 +144,13 @@ export default function App() {
       if (accountsRes.status === "fulfilled") {
         const accountItems = accountsRes.value ?? [];
         setAccounts(accountItems);
-        const firstCard = accountItems.find((a) => a.type === "CREDIT_CARD");
+        // Plaid `type` is lowercase (credit | depository | loan | investment) — matching
+        // on "CREDIT_CARD"/"CHECKING" here never hit, so these defaults never applied.
         const firstFunding = accountItems.find(
-          (a) => a.type === "CHECKING" || a.type === "SAVINGS"
+          (a) => String(a.type || "").toLowerCase() === "depository"
         );
         setBillPayForm((prev) => ({
           ...prev,
-          card_account_id: prev.card_account_id || firstCard?.id || "",
           funding_account_id: prev.funding_account_id || firstFunding?.id || ""
         }));
       }
@@ -270,10 +275,12 @@ export default function App() {
     setBillPaySubmitting(true);
     try {
       setError("");
-      const isCard = billPayForm.payee_kind === "card";
-      const card = accounts.find((a) => a.id === billPayForm.card_account_id);
-      const payeeName = isCard
-        ? `${card?.institution || card?.name || "Card"} ····${String(card?.account_number || card?.mask || "").slice(-4)}`
+      // "card" is the legacy spelling of "linked" — treat both as paying a linked account.
+      const isLinked = billPayForm.payee_kind !== "external";
+      const payeeAccountId = billPayForm.payee_account_id || billPayForm.card_account_id;
+      const payeeAccount = accounts.find((a) => a.id === payeeAccountId);
+      const payeeName = isLinked
+        ? `${payeeAccount?.officialName || payeeAccount?.name || "Account"} ····${String(payeeAccount?.mask || "").slice(-4)}`
         : billPayForm.payee_name;
 
       // A stable idempotency key for this attempt prevents accidental double charges
@@ -286,16 +293,18 @@ export default function App() {
         amount: Number(billPayForm.amount),
         currency: "USD",
         payee: payeeName,
-        payeeType: isCard ? "CREDIT_CARD" : billPayForm.payee_type,
+        // payee_type is set from the selected account's category (CREDIT_CARD for cards,
+        // LOAN for mortgage/student/auto), so it's already correct for linked payees.
+        payeeType: billPayForm.payee_type,
         fromAccountId: billPayForm.funding_account_id,
-        toAccountId: isCard ? billPayForm.card_account_id : null,
+        toAccountId: isLinked ? payeeAccountId : null,
         scheduledDate: billPayForm.scheduled_date || null,
         memo: billPayForm.memo || null,
         idempotencyKey
       });
       setLastBillPayIntent(resp);
       await loadAll();
-      setBillPayStep(4);
+      setBillPayStep(DONE_STEP);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -366,12 +375,15 @@ export default function App() {
   useIdleLogout(!!user, handleLogout);
 
   function openBillPay() {
-    const firstCard = accounts.find((a) => a.type === "CREDIT_CARD");
-    const firstFunding = accounts.find((a) => a.type === "CHECKING" || a.type === "SAVINGS");
+    const firstFunding = accounts.find(
+      (a) => String(a.type || "").toLowerCase() === "depository"
+    );
+    // Start with no payee selected — the user picks one from the categorized list.
     setBillPayForm((prev) => ({
       ...prev,
-      payee_kind: "card",
-      card_account_id: firstCard?.id || "",
+      payee_kind: "linked",
+      payee_account_id: "",
+      card_account_id: "",
       funding_account_id: firstFunding?.id || prev.funding_account_id || "",
       payee_name: "",
       payee_type: "UTILITY",

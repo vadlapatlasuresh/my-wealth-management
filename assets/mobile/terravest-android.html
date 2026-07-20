@@ -228,6 +228,13 @@ body{
 .secondary{color:var(--tv-text-secondary);}
 .tiny{font-size:12px;}
 .lbl{font-size:12.5px; color:var(--tv-text-secondary); font-weight:500;}
+/* Make Payment — sticky category headers on the "Who are you paying?" list */
+.pay-cat{position:sticky; top:0; z-index:2; display:flex; align-items:center; gap:7px;
+  background:var(--tv-bg); padding:9px 2px; margin:14px 0 6px;
+  border-bottom:1px solid var(--tv-border); font-size:12px; font-weight:700;
+  letter-spacing:.5px; text-transform:uppercase; color:var(--tv-text-secondary);}
+.pay-cat .n{margin-left:auto; letter-spacing:0; font-size:11.5px; color:var(--tv-forest);
+  background:var(--tv-sage-pale); border-radius:6px; padding:1px 7px;}
 .row{display:flex; align-items:center;}
 .between{justify-content:space-between;}
 .gap8{gap:8px;} .gap12{gap:12px;}
@@ -841,33 +848,52 @@ svg{display:block;}
   <div class="caption-chip"><span class="num">09</span>Budget</div>
 </div>
 
-<!-- ============ 9. PAY BILLS ============ -->
+<!-- ============ 9. MAKE PAYMENT ============ -->
 <div class="frame-wrap">
   <div class="pixel"><div class="screen"><div class="punch-hole"></div>
     <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
-    <div class="app-bar"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Pay a bill</span></div>
+    <div class="app-bar"><i class="ti ti-arrow-left ab-icon"></i><span class="ab-title">Make Payment</span></div>
     <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
       <div class="stepper">
-        <div class="step act"><div class="num">1</div><div class="stxt">Details</div></div>
+        <div class="step act"><div class="num">1</div><div class="stxt">Payee</div></div>
         <div class="step-line"></div>
-        <div class="step"><div class="num">2</div><div class="stxt">Review</div></div>
+        <div class="step"><div class="num">2</div><div class="stxt">Payment</div></div>
         <div class="step-line"></div>
-        <div class="step"><div class="num">3</div><div class="stxt">Done</div></div>
+        <div class="step"><div class="num">3</div><div class="stxt">Review</div></div>
+        <div class="step-line"></div>
+        <div class="step"><div class="num">4</div><div class="stxt">Done</div></div>
       </div>
-      <div class="section-title" style="margin-top:6px;"><i class="ti ti-bell-ringing" style="color:var(--tv-gold);"></i> Upcoming bills</div>
+      <div style="display:flex;gap:8px;margin:8px 0 4px;">
+        <button class="btn-pay"><i class="ti ti-credit-card"></i> Pay a credit card</button>
+        <button class="btn-pay" style="background:transparent;color:var(--tv-forest);border:1px solid var(--tv-border);">Pay someone else</button>
+      </div>
+
+      <div class="pay-cat"><i class="ti ti-credit-card"></i>Credit Cards<span class="n">2</span></div>
       <div class="m-card" style="padding:6px 16px;">
-        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Capital One ····4321</div><div class="t2" style="color:#B7791F;font-weight:600;">Due in 4 days · Jul 5 · min $35</div></div><button class="btn-pay">Pay</button></div>
-        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Chase Sapphire ····7788</div><div class="t2">Due in 12 days · Jul 13 · min $40</div></div><button class="btn-pay">Pay</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Quicksilver ····4321</div><div class="t2" style="color:#B7791F;font-weight:600;">Capital One · Due in 4 days</div></div><div style="text-align:right;"><div class="t1">$1,284</div><div class="t2" style="font-size:11px;">Balance due</div></div><i class="ti ti-chevron-right muted"></i></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-credit-card"></i></div><div class="grow"><div class="t1">Sapphire Reserve ····7788</div><div class="t2">Chase · Due in 12 days</div></div><div style="text-align:right;"><div class="t1">$2,210</div><div class="t2" style="font-size:11px;">Balance due</div></div><i class="ti ti-chevron-right muted"></i></div>
       </div>
-      <div class="lbl" style="margin-bottom:8px;">Payee</div>
-      <div class="segmented" style="margin-bottom:18px;">
-        <div class="seg sel"><i class="ti ti-check"></i> Your card</div><div class="seg">External biller</div>
+
+      <div class="pay-cat"><i class="ti ti-home"></i>Mortgage<span class="n">1</span></div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-home"></i></div><div class="grow"><div class="t1">Home Loan ····9012</div><div class="t2">Rocket Mortgage · Due in 9 days</div></div><div style="text-align:right;"><div class="t1">$2,148</div><div class="t2" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right muted"></i></div>
       </div>
+
+      <div class="pay-cat"><i class="ti ti-school"></i>Student Loans<span class="n">1</span></div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold-pale); color:#8a6d1f;"><i class="ti ti-school"></i></div><div class="grow"><div class="t1">Grad Unsub ····5540</div><div class="t2">Nelnet · Due in 16 days</div></div><div style="text-align:right;"><div class="t1">$310</div><div class="t2" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right muted"></i></div>
+      </div>
+
+      <div class="pay-cat"><i class="ti ti-car"></i>Auto / Car Loans<span class="n">1</span></div>
+      <div class="m-card" style="padding:6px 16px;margin-bottom:14px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:#8a5a2b;"><i class="ti ti-car"></i></div><div class="grow"><div class="t1">Auto Loan ····2277</div><div class="t2">Toyota Financial · Due in 21 days</div></div><div style="text-align:right;"><div class="t1">$490</div><div class="t2" style="font-size:11px;">Next payment</div></div><i class="ti ti-chevron-right muted"></i></div>
+      </div>
+
       <div class="m-card" style="text-align:center; padding:22px;">
         <div class="lbl">Amount</div>
-        <div class="big-val" style="margin-top:8px;">$250.00</div>
+        <div class="big-val" style="margin-top:8px;">$1,284.00</div>
       </div>
-      <div class="lbl" style="margin:18px 2px 8px;">Funding account</div>
+      <div class="lbl" style="margin:18px 2px 8px;">Pay from</div>
       <div class="m-card" style="display:flex; align-items:center; gap:12px; padding:14px;">
         <div class="inst" style="background:#117ACA;">CH</div><div class="grow" style="flex:1;"><div class="t1">Chase Checking</div><div class="t2">•••• 4821 · $8,420</div></div><i class="ti ti-chevron-down muted"></i>
       </div>
@@ -881,7 +907,7 @@ svg{display:block;}
     <div class="fab"><i class="ti ti-receipt"></i></div>
     <div class="gesture-bar"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">10</span>Pay Bills</div>
+  <div class="caption-chip"><span class="num">10</span>Make Payment</div>
 </div>
 
 <!-- ============ 10. DEBT LAB ============ -->

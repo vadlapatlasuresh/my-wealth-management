@@ -174,7 +174,7 @@ export default function HomePage({
   // Pay a bill: trigger onPay then go to the bill pay page.
   const handlePayBill = (bill) => {
     if (typeof onPay === "function") onPay(bill);
-    navigate("/billpay");
+    navigate("/make-payment");
   };
 
   const totalUtil =
@@ -455,7 +455,7 @@ export default function HomePage({
         <div className="card">
           <div className="section-header">
             <div className="section-title">Upcoming bills</div>
-            <a onClick={() => navigate('/billpay')} style={{ fontSize: '12.5px', color: 'var(--tv-forest-light)', cursor: 'pointer', fontWeight: '500' }}>View all →</a>
+            <a onClick={() => navigate('/make-payment')} style={{ fontSize: '12.5px', color: 'var(--tv-forest-light)', cursor: 'pointer', fontWeight: '500' }}>View all →</a>
           </div>
           {upcomingBills.length === 0 ? (
             <div className="empty-state">
