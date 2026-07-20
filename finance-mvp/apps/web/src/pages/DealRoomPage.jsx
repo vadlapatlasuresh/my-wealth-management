@@ -875,8 +875,58 @@ function ListingDetail({ deal, onBack, onNotice }) {
             <ExternalLinkButton deal={deal} />
             <ContactButton deal={deal} onRequested={() => onNotice && onNotice('This listing was added to your interests.')} />
           </div>
+
+          <hr className="divider" />
+          <TrackHoldingButton deal={deal} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Bookkeeping hand-off to the Fractional LLC ledger, for a user who has already invested
+ * with this party directly.
+ *
+ * <p>Deliberately placed below the divider and worded in the past tense: it is not a call to
+ * invest and it is not a step in any flow this platform runs. It copies the listing's
+ * descriptive fields into the user's own holdings record so they do not retype them. No money
+ * moves, and the listing's poster is not told.
+ */
+function TrackHoldingButton({ deal }) {
+  const [state, setState] = useState('idle'); // idle | saving | done
+  const [err, setErr] = useState('');
+
+  const track = async () => {
+    setState('saving'); setErr('');
+    try {
+      await api.trackHoldingFromDeal(deal.id);
+      setState('done');
+    } catch (e) {
+      setErr(e?.message || 'Could not add this to your holdings.');
+      setState('idle');
+    }
+  };
+
+  if (state === 'done') {
+    return (
+      <div style={{ fontSize: '12.5px', color: 'var(--tv-positive)', lineHeight: 1.6 }}>
+        <i className="ti ti-check"></i> Added to your Fractional LLC holdings. Record your
+        capital and distributions there to track the position.
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontSize: '11.5px', color: 'var(--tv-text-muted)', lineHeight: 1.6, marginBottom: '8px' }}>
+        Already invested in this directly with the listing party? Track it in your own records.
+      </div>
+      <button className="btn btn-secondary btn-sm" style={{ width: '100%', justifyContent: 'center' }}
+        onClick={track} disabled={state === 'saving'}>
+        <i className="ti ti-bookmarks"></i> {state === 'saving' ? 'Adding…' : 'I invested — track this holding'}
+      </button>
+      {err && <div style={{ fontSize: '12px', color: 'var(--tv-negative)', marginTop: '6px' }}>{err}</div>}
     </div>
   );
 }
