@@ -41,6 +41,7 @@ public class PrivateHoldingService {
     private final PrivateHoldingRepository holdingRepository;
     private final HoldingEntryRepository entryRepository;
     private final DealRepository dealRepository;
+    private final K1RecordRepository k1Repository;
 
     private Long getUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -81,6 +82,8 @@ public class PrivateHoldingService {
     public void delete(Long id) {
         PrivateHolding holding = findOwnedOrThrow(id);
         entryRepository.deleteByHoldingId(holding.getId());
+        // The K-1 history is meaningless without the holding it belongs to.
+        k1Repository.deleteByHoldingId(holding.getId());
         holdingRepository.delete(holding);
     }
 
