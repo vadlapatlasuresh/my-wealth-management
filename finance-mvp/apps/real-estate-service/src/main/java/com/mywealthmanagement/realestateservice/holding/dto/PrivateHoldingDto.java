@@ -43,6 +43,11 @@ public class PrivateHoldingDto {
     private BigDecimal committedAmount;
 
     private LocalDate acquiredOn;
+
+    /** The user's own mark on the position. Self-reported; never produced by TerraVest. */
+    @PositiveOrZero(message = "estimatedValue must be zero or positive")
+    private BigDecimal estimatedValue;
+    private LocalDate valuedOn;
     @Size(max = 20) private String status;
     private Long sourceDealId;
     @Size(max = 2000) private String notes;
@@ -65,6 +70,14 @@ public class PrivateHoldingDto {
     private BigDecimal unreturnedCapital;
     /** distributed / contributed. The plain "how much of my money has come back" ratio. */
     private BigDecimal distributionRatio;
+
+    /**
+     * What this position contributes to net worth: the user's estimate when they have given
+     * one, otherwise the capital still at risk. Never null, so the rollup needs no fallback.
+     */
+    private BigDecimal netWorthValue;
+    /** False when netWorthValue fell back to capital at risk, so the UI can say so. */
+    private Boolean valueIsUserEstimate;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

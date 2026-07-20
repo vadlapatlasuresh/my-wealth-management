@@ -1,8 +1,10 @@
 package com.mywealthmanagement.financialcoreservice.financialcore;
 
 import com.mywealthmanagement.financialcoreservice.clients.AccountAggregationClient;
+import com.mywealthmanagement.financialcoreservice.clients.PrivateHoldingsClient;
 import com.mywealthmanagement.financialcoreservice.clients.RealEstateClient;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.AccountDto;
+import com.mywealthmanagement.financialcoreservice.clients.dtos.PrivateHoldingSummaryDto;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.PropertyDto;
 import com.mywealthmanagement.financialcoreservice.clients.dtos.TransactionDto;
 import com.mywealthmanagement.financialcoreservice.financialcore.dto.SnapshotDto;
@@ -30,6 +32,7 @@ public class FinancialCoreService {
 
     private final AccountAggregationClient accountAggregationClient;
     private final RealEstateClient realEstateClient;
+    private final PrivateHoldingsClient privateHoldingsClient;
     private final NetWorthSnapshotRepository snapshotRepository;
     private final GoalRepository goalRepository;
     private final DebtRepository debtRepository;
@@ -64,6 +67,7 @@ public class FinancialCoreService {
         BigDecimal loansDebt = nz(snap.getLoans());
         BigDecimal realEstateValue = nz(snap.getRealEstateValue());
         BigDecimal realEstateEquity = nz(snap.getRealEstateEquity());
+        BigDecimal privateHoldings = nz(snap.getPrivateHoldings());
         BigDecimal netTotal = nz(snap.getTotal());
 
         // 30-day changes computed from REAL history: current − value ~30 days ago.
@@ -74,6 +78,7 @@ public class FinancialCoreService {
         BigDecimal change30dCreditCards = BigDecimal.ZERO;
         BigDecimal change30dRealEstateValue = BigDecimal.ZERO;
         BigDecimal change30dRealEstateEquity = BigDecimal.ZERO;
+        BigDecimal change30dPrivateHoldings = BigDecimal.ZERO;
         try {
             NetWorthSnapshot prior = snapshotRepository
                     .findFirstByUserIdAndSnapshotDateLessThanEqualOrderBySnapshotDateDesc(
@@ -86,6 +91,7 @@ public class FinancialCoreService {
                 change30dCreditCards = creditCardsDebt.subtract(nz(prior.getCreditCards()));
                 change30dRealEstateValue = realEstateValue.subtract(nz(prior.getRealEstateValue()));
                 change30dRealEstateEquity = realEstateEquity.subtract(nz(prior.getRealEstateEquity()));
+                change30dPrivateHoldings = privateHoldings.subtract(nz(prior.getPrivateHoldings()));
             }
         } catch (Exception e) {
             log.warn("30d change history lookup failed ({}); reporting 0", e.getMessage());
@@ -98,7 +104,8 @@ public class FinancialCoreService {
                 creditCardsDebt, change30dCreditCards,
                 loansDebt,
                 realEstateValue, change30dRealEstateValue,
-                realEstateEquity, change30dRealEstateEquity
+                realEstateEquity, change30dRealEstateEquity,
+                privateHoldings, change30dPrivateHoldings
         );
 
         // --- Time series from REAL persisted daily history (no synthetic curve) ---
@@ -165,18 +172,32 @@ public class FinancialCoreService {
             log.warn("real-estate fetch failed for snapshot ({}); treating as 0", e.getMessage());
         }
 
-        BigDecimal netTotal = cash.add(investments).add(realEstateEquity)
+        // Private co-ownership positions (LLC/syndication units). Best-effort, same contract
+        // as real estate: a failure must never break the snapshot. real-estate-service already
+        // decides whether the figure is the holder's own mark or their capital still at risk,
+        // so nothing is re-judged here.
+        BigDecimal privateHoldings = BigDecimal.ZERO;
+        try {
+            PrivateHoldingSummaryDto summary = privateHoldingsClient.getSummary(authHeader);
+            if (summary != null) {
+                privateHoldings = nz(summary.getNetWorthValue());
+            }
+        } catch (Exception e) {
+            log.warn("private-holdings fetch failed for snapshot ({}); treating as 0", e.getMessage());
+        }
+
+        BigDecimal netTotal = cash.add(investments).add(realEstateEquity).add(privateHoldings)
                 .subtract(creditCardsDebt).subtract(loansDebt);
 
         return persistDailySnapshot(userId, netTotal, cash, investments, creditCardsDebt,
-                loansDebt, realEstateValue, realEstateEquity);
+                loansDebt, realEstateValue, realEstateEquity, privateHoldings);
     }
 
     /** Upsert one net-worth datapoint per user per day. Best-effort; returns the row
      *  (transient if the save failed) so callers can use the computed values. */
     private NetWorthSnapshot persistDailySnapshot(Long userId, BigDecimal total, BigDecimal cash,
             BigDecimal investments, BigDecimal creditCards, BigDecimal loans,
-            BigDecimal realEstateValue, BigDecimal realEstateEquity) {
+            BigDecimal realEstateValue, BigDecimal realEstateEquity, BigDecimal privateHoldings) {
         LocalDate today = LocalDate.now();
         NetWorthSnapshot snap = snapshotRepository
                 .findByUserIdAndSnapshotDate(userId, today)
@@ -190,6 +211,7 @@ public class FinancialCoreService {
         snap.setLoans(loans);
         snap.setRealEstateValue(realEstateValue);
         snap.setRealEstateEquity(realEstateEquity);
+        snap.setPrivateHoldings(privateHoldings);
         try {
             snapshotRepository.save(snap);
         } catch (Exception e) {

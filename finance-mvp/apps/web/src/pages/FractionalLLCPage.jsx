@@ -50,7 +50,7 @@ const labelOf = (v) => (isEnumCode(v) ? humanize(v) : v);
 const EMPTY_HOLDING = {
   name: '', entityType: 'LLC', assetType: '', location: '', sponsorName: '', sponsorContact: '',
   externalUrl: '', unitsHeld: '', totalUnits: '', committedAmount: '', acquiredOn: '',
-  status: 'ACTIVE', notes: '',
+  estimatedValue: '', status: 'ACTIVE', notes: '',
 };
 
 const EMPTY_ENTRY = { direction: 'CONTRIBUTION', category: 'INITIAL', amount: '', occurredOn: '', note: '' };
@@ -101,6 +101,7 @@ export default function FractionalLLCPage() {
       location: h.location || '', sponsorName: h.sponsorName || '', sponsorContact: h.sponsorContact || '',
       externalUrl: h.externalUrl || '', unitsHeld: h.unitsHeld ?? '', totalUnits: h.totalUnits ?? '',
       committedAmount: h.committedAmount ?? '', acquiredOn: h.acquiredOn || '',
+      estimatedValue: h.estimatedValue ?? '',
       status: h.status || 'ACTIVE', notes: h.notes || '',
     });
     setNotice(''); setShowForm(true);
@@ -121,6 +122,7 @@ export default function FractionalLLCPage() {
       unitsHeld: num(form.unitsHeld), totalUnits: num(form.totalUnits),
       committedAmount: num(form.committedAmount),
       acquiredOn: form.acquiredOn || undefined,
+      estimatedValue: num(form.estimatedValue),
       status: form.status, notes: form.notes.trim() || undefined,
     };
     try {
@@ -547,6 +549,10 @@ function PortfolioSummary({ summary }) {
     <div className="card" style={{ marginBottom: '16px' }}>
       <div className="section-title">Portfolio</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px' }}>
+        {stat('In your net worth', currency(summary.netWorthValue || 0),
+          summary.valuedCount === summary.holdingCount
+            ? 'Your estimates'
+            : `${summary.valuedCount} valued · rest at capital risk`)}
         {stat('Contributed', currency(summary.contributed || 0), `${summary.holdingCount} holdings · ${summary.activeCount} active`)}
         {stat('Uncalled', currency(summary.uncalled || 0), 'Still callable')}
         {stat('Distributed', currency(summary.distributed || 0),
@@ -635,6 +641,8 @@ function HoldingCard({ holding: h, onOpen, onEdit, onDelete }) {
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+        <Metric label={h.valueIsUserEstimate ? 'Your value' : 'At risk (no value set)'}
+          value={currency(h.netWorthValue || 0)} />
         <Metric label="Contributed" value={currency(h.contributed || 0)} />
         <Metric label="Distributed" value={currency(h.distributed || 0)} />
         <Metric label="Still at risk" value={currency(h.unreturnedCapital || 0)} />
@@ -713,6 +721,15 @@ function HoldingForm({ form, setField, editingId, saving, onSubmit, onCancel }) 
             </div></div>
           <div><label style={fieldLabel}>Acquired on</label>
             <input style={inputStyle} type="date" value={form.acquiredOn} onChange={setField('acquiredOn')} /></div>
+
+          <div style={{ gridColumn: '1 / -1' }}>
+            <label style={fieldLabel}>Your estimated value today ($)</label>
+            <input style={inputStyle} type="number" min="0" value={form.estimatedValue} onChange={setField('estimatedValue')} placeholder="Leave blank to use your capital at risk" />
+            <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '4px' }}>
+              Your own mark on the position, used in your net worth. TerraVest doesn't value
+              these — left blank, we count the capital you still have at risk instead.
+            </div>
+          </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={fieldLabel}>Sponsor / deal link</label>
@@ -818,6 +835,8 @@ function HoldingDetail({ holding: h, onBack, onChanged }) {
           <Metric label="Income received" value={currency(h.incomeReceived || 0)} />
           <Metric label="Still at risk" value={currency(h.unreturnedCapital || 0)} />
           <Metric label="Ownership" value={pct(h.ownershipPct)} />
+          <Metric label={h.valueIsUserEstimate ? `Your value${h.valuedOn ? ` (${h.valuedOn})` : ''}` : 'Counted at capital risk'}
+            value={currency(h.netWorthValue || 0)} />
           <Metric label="Returned / in"
             value={h.distributionRatio != null ? `${Number(h.distributionRatio).toFixed(2)}×` : '—'} />
         </div>
