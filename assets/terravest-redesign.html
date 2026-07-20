@@ -2520,19 +2520,19 @@ a { text-decoration: none; color: inherit; }
             <rect x="475" y="390" width="55" height="28" rx="6" fill="#1A4D3B" stroke="#1A4D3B"/>
             <text x="502" y="408" text-anchor="middle" font-size="10" fill="white" font-family="DM Sans,sans-serif">Done ✓</text>
 
-            <!-- Journey 2: Investment subscription -->
-            <text x="160" y="450" font-size="11" fill="#4A5E54" font-family="DM Sans,sans-serif" font-weight="600">Investment subscription:</text>
+            <!-- Journey 2: Track a private holding -->
+            <text x="160" y="450" font-size="11" fill="#4A5E54" font-family="DM Sans,sans-serif" font-weight="600">Track a private holding:</text>
             <rect x="160" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-            <text x="205" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Browse deals</text>
+            <text x="205" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Add holding</text>
             <line x1="250" y1="472" x2="265" y2="472" stroke="#C9973A" stroke-width="1" marker-end="url(#arr2)"/>
             <rect x="265" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-            <text x="310" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Review docs</text>
+            <text x="310" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Log capital</text>
             <line x1="355" y1="472" x2="370" y2="472" stroke="#C9973A" stroke-width="1" marker-end="url(#arr2)"/>
             <rect x="370" y="458" width="90" height="28" rx="6" fill="#FDF5E4" stroke="#C9973A"/>
-            <text x="415" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Acknowledge</text>
+            <text x="415" y="476" text-anchor="middle" font-size="10" fill="#1A4D3B" font-family="DM Sans,sans-serif">Upload K-1</text>
             <line x1="460" y1="472" x2="475" y2="472" stroke="#C9973A" stroke-width="1" marker-end="url(#arr2)"/>
             <rect x="475" y="458" width="80" height="28" rx="6" fill="#1A4D3B" stroke="#1A4D3B"/>
-            <text x="515" y="476" text-anchor="middle" font-size="10" fill="white" font-family="DM Sans,sans-serif">Subscribe ✓</text>
+            <text x="515" y="476" text-anchor="middle" font-size="10" fill="white" font-family="DM Sans,sans-serif">Share w/ CPA ✓</text>
 
             <!-- Settings section -->
             <text x="160" y="530" font-size="10" fill="#7A9086" font-family="DM Sans,sans-serif" font-weight="600" letter-spacing="1">ACCOUNT</text>
@@ -3189,67 +3189,173 @@ a { text-decoration: none; color: inherit; }
       <div id="page-fractional" class="page">
         <div class="page-header">
           <div>
-            <div class="page-title">Fractional LLC <span class="badge badge-gray" style="vertical-align:middle;">Example offerings — not live</span></div>
-            <div class="page-subtitle">Co-invest in land &amp; property through fractional ownership</div>
+            <div class="page-title">Fractional LLC</div>
+            <div class="page-subtitle">Track the property LLCs and syndications you co-own — capital in, distributions out, and where your money is concentrated.</div>
           </div>
           <div class="page-actions">
-            <button class="btn btn-secondary btn-sm"><i class="ti ti-help-circle"></i> How it works</button>
-            <button class="btn btn-primary btn-sm"><i class="ti ti-building-store"></i> Browse deals</button>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-help-circle"></i> How this works</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add a holding</button>
           </div>
         </div>
 
-        <!-- How it works panel -->
-        <div class="card" style="margin-bottom:16px;">
-          <div class="section-title">How it works</div>
-          <div class="grid-2" style="gap:14px;">
-            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">1</div><div><div style="font-weight:600;font-size:13.5px;">Pick a deal</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Browse curated land &amp; property offerings.</div></div></div>
-            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">2</div><div><div style="font-weight:600;font-size:13.5px;">Buy fractional shares</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Invest from a low minimum and own a slice.</div></div></div>
-            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">3</div><div><div style="font-weight:600;font-size:13.5px;">Earn passively</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Receive distributions as the asset performs.</div></div></div>
-            <div style="display:flex;gap:10px;"><div class="item-icon icon-forest" style="flex-shrink:0;">4</div><div><div style="font-weight:600;font-size:13.5px;">Exit when eligible</div><div style="font-size:12.5px;color:var(--tv-text-muted);">Sell your shares at a liquidity window.</div></div></div>
-          </div>
-          <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:12px;"><i class="ti ti-info-circle"></i> Illustrative only — not investment advice.</div>
-        </div>
-
-        <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr);">
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-coins" style="color:var(--tv-forest-light)"></i> Total Invested</div><div class="kpi-value">$0</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-cash" style="color:#6B46C1"></i> Current Value</div><div class="kpi-value">$0</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-trending-up" style="color:var(--tv-positive)"></i> Total Return</div><div class="kpi-value">+0%</div><div class="kpi-delta pos">all-time</div></div>
-          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-list" style="color:var(--tv-gold)"></i> Active Holdings</div><div class="kpi-value">0</div></div>
-        </div>
-
+        <!-- Tabs -->
         <div class="seg-control" style="margin-bottom:16px;">
-          <button class="seg-btn active">My Holdings</button>
-          <button class="seg-btn">Marketplace</button>
+          <button class="seg-btn active">Holdings</button>
+          <button class="seg-btn">Schedule K-1s</button>
         </div>
 
-        <!-- My Holdings (honest empty) -->
+        <!-- Portfolio: what these positions contribute, and the concentration behind them -->
         <div class="card" style="margin-bottom:16px;">
-          <div class="section-title">My holdings</div>
-          <div class="empty-state"><i class="ti ti-brand-stackshare"></i><p>You don't own any fractional LLC positions yet.</p></div>
+          <div class="section-title">Portfolio</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">In your net worth</div><div style="font-family:var(--font-display);font-size:19px;">$185,000</div><div style="font-size:11px;color:var(--tv-text-muted);">1 valued · rest at capital risk</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">Contributed</div><div style="font-family:var(--font-display);font-size:19px;">$120,000</div><div style="font-size:11px;color:var(--tv-text-muted);">2 holdings · 2 active</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">Uncalled</div><div style="font-family:var(--font-display);font-size:19px;">$25,000</div><div style="font-size:11px;color:var(--tv-text-muted);">Still callable</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">Distributed</div><div style="font-family:var(--font-display);font-size:19px;">$32,000</div><div style="font-size:11px;color:var(--tv-text-muted);">0.27× of capital in</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">Capital returned</div><div style="font-family:var(--font-display);font-size:19px;">$20,000</div><div style="font-size:11px;color:var(--tv-text-muted);">Basis paid back</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;">Still at risk</div><div style="font-family:var(--font-display);font-size:19px;">$100,000</div><div style="font-size:11px;color:var(--tv-text-muted);">Unreturned basis</div></div>
+          </div>
+          <hr class="divider" />
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <div style="flex:1 1 200px;">
+              <div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;margin-bottom:6px;">By sponsor</div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span>Ridge Capital</span><span style="font-weight:600;">62.5%</span></div>
+              <div style="height:5px;background:var(--tv-border);border-radius:999px;overflow:hidden;margin-top:3px;"><div style="width:62.5%;height:100%;background:var(--tv-forest);"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:7px;"><span>Harbor Group</span><span style="font-weight:600;">37.5%</span></div>
+              <div style="height:5px;background:var(--tv-border);border-radius:999px;overflow:hidden;margin-top:3px;"><div style="width:37.5%;height:100%;background:var(--tv-forest);"></div></div>
+            </div>
+            <div style="flex:1 1 200px;">
+              <div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;margin-bottom:6px;">By asset type</div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span>Land</span><span style="font-weight:600;">62.5%</span></div>
+              <div style="height:5px;background:var(--tv-border);border-radius:999px;overflow:hidden;margin-top:3px;"><div style="width:62.5%;height:100%;background:var(--tv-forest);"></div></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:7px;"><span>Multifamily</span><span style="font-weight:600;">37.5%</span></div>
+              <div style="height:5px;background:var(--tv-border);border-radius:999px;overflow:hidden;margin-top:3px;"><div style="width:37.5%;height:100%;background:var(--tv-forest);"></div></div>
+            </div>
+            <div style="flex:1 1 200px;">
+              <div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:600;margin-bottom:6px;">By location</div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span>Bozeman, MT</span><span style="font-weight:600;">62.5%</span></div>
+              <div style="height:5px;background:var(--tv-border);border-radius:999px;overflow:hidden;margin-top:3px;"><div style="width:62.5%;height:100%;background:var(--tv-forest);"></div></div>
+            </div>
+          </div>
         </div>
 
-        <!-- Marketplace (example offerings) -->
+        <!-- Holdings -->
+        <div class="grid-3" style="margin-bottom:20px;">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="font-family:var(--font-display);font-size:16px;">Cedar Ridge Land LLC</div><span class="badge badge-green">Active</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;"><span class="badge badge-gray">LLC • Land</span><span class="badge badge-forest">12.5% owned</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-briefcase"></i> Ridge Capital</div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Bozeman, MT</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Your value</div><div style="font-weight:600;font-size:13.5px;">$140,000</div></div>
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Contributed</div><div style="font-weight:600;font-size:13.5px;">$75,000</div></div>
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Distributed</div><div style="font-weight:600;font-size:13.5px;">$32,000</div></div>
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Uncalled</div><div style="font-weight:600;font-size:13.5px;color:var(--tv-gold);">$25,000</div></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center;"><i class="ti ti-edit"></i> Edit</button>
+              <button class="btn btn-secondary btn-sm" style="color:var(--tv-negative);"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;"><div style="font-family:var(--font-display);font-size:16px;">Harborview Apartments LP</div><span class="badge badge-green">Active</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;"><span class="badge badge-gray">LP • Multifamily</span><span class="badge badge-forest">5.0% owned</span></div>
+            <div style="font-size:12px;color:var(--tv-text-muted);"><i class="ti ti-briefcase"></i> Harbor Group</div>
+            <div style="font-size:12px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Tampa, FL</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">At risk (no value set)</div><div style="font-weight:600;font-size:13.5px;">$45,000</div></div>
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Contributed</div><div style="font-weight:600;font-size:13.5px;">$45,000</div></div>
+              <div><div style="font-size:11px;color:var(--tv-text-muted);">Distributed</div><div style="font-weight:600;font-size:13.5px;">$9,000</div></div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <button class="btn btn-secondary btn-sm" style="flex:1;justify-content:center;"><i class="ti ti-edit"></i> Edit</button>
+              <button class="btn btn-secondary btn-sm" style="color:var(--tv-negative);"><i class="ti ti-trash"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Holding detail: the capital account and the ledger behind it -->
+        <div class="section-title">Holding detail — Cedar Ridge Land LLC</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title">Capital account</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;">
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Committed</div><div style="font-weight:600;">$100,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Contributed</div><div style="font-weight:600;">$75,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Uncalled</div><div style="font-weight:600;color:var(--tv-gold);">$25,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Capital returned</div><div style="font-weight:600;">$20,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Income received</div><div style="font-weight:600;">$12,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Still at risk</div><div style="font-weight:600;">$55,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Ownership</div><div style="font-weight:600;">12.5%</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Returned / in</div><div style="font-weight:600;">0.43×</div></div>
+          </div>
+        </div>
+        <div class="card" style="margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="section-title" style="margin-bottom:0;">Ledger</div>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Record a movement</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 12px;">
+              <i class="ti ti-arrow-up-right" style="color:var(--tv-positive);"></i>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Rental Income</div><div style="font-size:11.5px;color:var(--tv-text-muted);">2026-01-15</div></div>
+              <span class="badge badge-green" style="font-size:10px;">Income</span>
+              <div style="font-weight:600;color:var(--tv-positive);">+$12,000</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 12px;">
+              <i class="ti ti-arrow-up-right" style="color:var(--tv-positive);"></i>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Return Of Capital</div><div style="font-size:11.5px;color:var(--tv-text-muted);">2025-08-01</div></div>
+              <span class="badge badge-gray" style="font-size:10px;">Returns capital</span>
+              <div style="font-weight:600;color:var(--tv-positive);">+$20,000</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 12px;">
+              <i class="ti ti-arrow-down-right" style="color:var(--tv-text-muted);"></i>
+              <div style="flex:1;"><div style="font-weight:600;font-size:13px;">Capital Call</div><div style="font-size:11.5px;color:var(--tv-text-muted);">2025-02-10</div></div>
+              <div style="font-weight:600;">−$25,000</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule K-1s: filing readiness, the chase list, and the CPA hand-off -->
+        <div class="section-title">Schedule K-1s</div>
+        <div class="card" style="margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div class="section-title" style="margin-bottom:0;">Filing readiness</div>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-share"></i> Share 1 2025 K-1 with your CPA</button>
+              <select class="filter-select"><option>Tax year 2025</option><option>Tax year 2024</option></select>
+            </div>
+          </div>
+          <div style="margin-top:12px;padding:12px 14px;border-radius:var(--radius-md);background:var(--tv-negative-bg);color:var(--tv-negative);font-size:13px;line-height:1.6;">
+            <i class="ti ti-alert-triangle"></i> <strong>Waiting on 1 K-1 for 2025.</strong> You can't file until they arrive — <strong>1</strong> is already past the 15 April deadline, so an extension may be needed.
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:14px;margin-top:14px;">
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Received</div><div style="font-weight:600;">1</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Still waiting</div><div style="font-weight:600;color:var(--tv-gold);">1</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Not issued</div><div style="font-weight:600;">0</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Rental income (box 2)</div><div style="font-weight:600;">$12,000</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Ordinary income (box 1)</div><div style="font-weight:600;">$0</div></div>
+            <div><div style="font-size:11px;color:var(--tv-text-muted);">Distributions (box 19)</div><div style="font-weight:600;">$9,000</div></div>
+          </div>
+        </div>
         <div class="card">
-          <div class="section-header"><div class="section-title">Marketplace</div><span class="badge badge-gray">Example offerings — not live</span></div>
-          <div class="grid-2">
-            <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:16px;">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Willow Creek Land</div><span class="badge badge-amber">Medium risk</span></div>
-              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Bozeman, MT · <span class="badge badge-green" style="font-size:10px;">Target 14–18%</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--tv-text-muted);">Minimum</span><span style="font-weight:600;">$500</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--tv-text-muted);">Total raise</span><span style="font-weight:600;">$1,200,000</span></div>
-              <div class="progress-bar"><div class="progress-fill" style="width:62%;background:var(--tv-forest);"></div></div>
-              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">$744,000 raised · 62% funded</div>
-              <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">Invest</button>
+          <div class="section-title">K-1s for 2025</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 12px;">
+              <div style="flex:1;min-width:160px;"><div style="font-weight:600;font-size:13px;">Cedar Ridge Land LLC</div><div style="font-size:11.5px;color:var(--tv-text-muted);">Ridge Capital · received 2026-03-02</div></div>
+              <span class="badge badge-green" style="font-size:10.5px;">Received</span>
+              <span style="font-size:12.5px;color:var(--tv-text-muted);">Box 2 <strong>$12,000</strong></span>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-file-text"></i> View K-1</button>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-edit"></i> Update</button>
             </div>
-            <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:16px;">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Maple Ridge Apartments</div><span class="badge badge-green">Lower risk</span></div>
-              <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Round Rock, TX · <span class="badge badge-green" style="font-size:10px;">Target 9–12%</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px;"><span style="color:var(--tv-text-muted);">Minimum</span><span style="font-weight:600;">$1,000</span></div>
-              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:8px;"><span style="color:var(--tv-text-muted);">Total raise</span><span style="font-weight:600;">$3,500,000</span></div>
-              <div class="progress-bar"><div class="progress-fill" style="width:38%;background:var(--tv-forest);"></div></div>
-              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;">$1,330,000 raised · 38% funded</div>
-              <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">Invest</button>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:10px 12px;">
+              <div style="flex:1;min-width:160px;"><div style="font-weight:600;font-size:13px;">Harborview Apartments LP</div><div style="font-size:11.5px;color:var(--tv-text-muted);">Harbor Group</div></div>
+              <span class="badge badge-red" style="font-size:10.5px;">Overdue</span>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-mail"></i> Chase sponsor</button>
+              <button class="btn btn-secondary btn-sm"><i class="ti ti-edit"></i> Update</button>
             </div>
+          </div>
+          <div style="font-size:11px;color:var(--tv-text-muted);margin-top:10px;">
+            Uploaded K-1s are filed in the Document Center as “2025 K-1 — &lt;entity&gt;”, so a whole year can be handed to a CPA through one secure link.
           </div>
         </div>
       </div>

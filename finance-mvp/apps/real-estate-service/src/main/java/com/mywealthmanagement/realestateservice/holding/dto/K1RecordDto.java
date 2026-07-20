@@ -20,6 +20,9 @@ public class K1RecordDto {
     /** EXPECTED | RECEIVED | NOT_APPLICABLE */
     @Size(max = 20) private String status;
     private LocalDate receivedOn;
+    /** documents-service id of the filed K-1, when the user attached one. */
+    private Long documentId;
+    @Size(max = 300) private String documentName;
     @Size(max = 500) private String documentUrl;
 
     private BigDecimal ordinaryIncome;   // box 1

@@ -54,8 +54,8 @@ const JOURNEYS = [
     steps: ['Add debts', 'Set extra payment', 'Run strategies', 'Compare savings'],
   },
   {
-    title: 'Fractional invest', icon: 'ti ti-brand-stackshare',
-    steps: ['Browse deals', 'Review docs', 'Invest', 'Track returns'],
+    title: 'Track a private holding', icon: 'ti ti-brand-stackshare',
+    steps: ['Add holding', 'Log capital', 'Upload K-1', 'Share with CPA'],
   },
   {
     title: 'AI insight → action', icon: 'ti ti-sparkles',
