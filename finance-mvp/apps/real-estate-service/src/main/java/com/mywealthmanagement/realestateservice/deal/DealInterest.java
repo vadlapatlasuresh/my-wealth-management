@@ -8,9 +8,13 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * A lead: a person who expressed interest in a {@link Deal}. Captured when an investor
- * clicks "I'm interested" and consents to share their contact details with the deal's
- * owner (the sponsoring LLC/company). The owner can then view these leads for their deal.
+ * A record that someone requested a {@link Deal} listing's contact details. Written when
+ * a viewer clicks "Request Contact Info", purely so they can find the listing again under
+ * "My Interests".
+ *
+ * <p>This is a bookmark, not a lead pipeline. It carries no commitment amount, no investor
+ * attestation and no workflow status: the directory does not broker introductions, it just
+ * hands over the poster's own email and steps out of the way.
  */
 @Entity
 @Table(name = "deal_interests")
@@ -25,11 +29,11 @@ public class DealInterest {
     @Column(name = "deal_id", nullable = false)
     private Long dealId;
 
-    // The deal owner (sponsor) who receives this lead — denormalized for fast lookup.
+    // The listing's owner — denormalized for fast lookup.
     @Column(name = "owner_user_id", nullable = false)
     private Long ownerUserId;
 
-    // The authenticated user who expressed interest (if any).
+    // The authenticated user who requested the contact details (if any).
     @Column(name = "interested_user_id")
     private Long interestedUserId;
 
@@ -44,18 +48,6 @@ public class DealInterest {
 
     @Column(length = 2000)
     private String message;
-
-    // How much the investor indicated they'd like to invest (optional, non-binding).
-    @Column(name = "commitment_amount")
-    private java.math.BigDecimal commitmentAmount;
-
-    // The investor's self-attestation that they're an accredited investor.
-    @Column(name = "accredited", nullable = false)
-    private boolean accredited;
-
-    // Lead status as the sponsor works it: NEW | CONTACTED | COMMITTED | PASSED.
-    @Column(nullable = false, length = 20)
-    private String status = "NEW";
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

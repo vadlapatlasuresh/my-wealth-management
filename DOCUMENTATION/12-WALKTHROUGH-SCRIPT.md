@@ -255,12 +255,12 @@ Move quickly through these four. They're table stakes — show competence, don't
 **Click:** Deal Room.
 
 **Say:**
-> "And when she wants to put money to work — a marketplace of real estate deals from sponsors. She
-> can browse deals, look at a sponsor's track record before trusting them, watch a deal, and
-> register interest.
+> "And a simple bulletin board of real estate projects. She can browse listings, see the photos and
+> the location, look at what else that party has listed, and save the ones she likes.
 >
-> And Fractional LLC lets her co-invest in a property alongside other investors instead of buying
-> one alone."
+> Two things she can do on any listing: open the poster's own site in a new tab, or get their email
+> and write to them herself. We're a noticeboard — we don't vet listings, we don't advise, and
+> nothing is transacted here."
 
 *(For investors, add: "This is also a future revenue line — we sit between sponsors and qualified
 investors we already know the financial picture of.")*
@@ -490,7 +490,7 @@ For when someone asks "what else does it do?"
 | **Documents** | "Everything in folders, one secure link to your accountant." |
 | **CPA sharing** | "View-only, expires, needs a passcode, and you see when they opened it." |
 | **CPA Marketplace** | "Don't have an accountant? Find one." |
-| **Deal Room** | "A marketplace of real estate deals, with sponsor track records." |
+| **Deal Room** | "A bulletin board of real estate listings. Informational only — we don't vet or broker anything." |
 | **Fractional LLC** | "Co-invest in a property instead of buying it alone." |
 
 ### Everything else

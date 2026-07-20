@@ -114,12 +114,12 @@ const GUIDE_GROUPS = [
       },
       {
         to: '/dealroom', icon: 'ti ti-briefcase', cls: 'icon-forest', title: 'Deal Room',
-        what: 'Review a co-investment opportunity end to end.',
+        what: 'Browse the property listing directory.',
         steps: [
-          'Read the deal terms, projected returns and risk factors.',
-          'Open and acknowledge the deal documents.',
-          'Subscribe to receive deal updates.',
-          'Express interest when you’re ready.',
+          'Browse listings by category and property type.',
+          'Open a listing for photos, location and description.',
+          'Save listings you want to come back to.',
+          'Request contact info to email the poster directly, or open their external listing.',
         ],
       },
       {

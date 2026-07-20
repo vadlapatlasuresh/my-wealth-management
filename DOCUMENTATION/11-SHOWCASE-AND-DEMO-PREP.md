@@ -263,7 +263,7 @@ throughout, so someone with three LLCs gets three isolated books plus a consolid
 | **Tax estimator** | Filing status, W-2s, self-employment income, and a genuine rental model: gross rents, mortgage interest, property tax, insurance, repairs, management, **cost basis and land value for depreciation**, and **prior-year suspended loss carryforward**. Plus guidance on the 20% QBI deduction, quarterly estimates, dependent care, and energy/EV credits. |
 | **Document Center** | Personal folders, uploads, a cross-app document registry, and **CPA secure sharing**: view-only links with expiry, mandatory passcode, and an access log. Multi-file share sets. |
 | **CPA Marketplace** | Connect to a professional. |
-| **Deal Room** | Sponsor marketplace — deals, leads, docs, watchlist, express interest, sponsor track record. |
+| **Deal Room** | Passive property directory — post/browse listings, saved listings, request contact info, directory history. Informational only. |
 | **Fractional LLC** | Co-investment marketplace. |
 
 ### Cross-cutting

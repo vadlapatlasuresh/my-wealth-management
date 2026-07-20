@@ -517,7 +517,8 @@ export const api = {
   deletePropertyExpense: (id, expId) =>
     request(`/api/v1/real-estate/${id}/expenses/${expId}`, { method: "DELETE" }),
 
-  // Deals — user-registered investment opportunities (real estate + other asset classes)
+  // Deal Room — a passive property directory. Listings are descriptive only: no returns,
+  // no entry price, no offering documents, and no transaction ever happens here.
   getDeals: () => request("/api/v1/deals"),
   getDealTaxonomy: () => request("/api/v1/deals/taxonomy"),
   getMarketplace: (filters = {}) => {
@@ -536,24 +537,14 @@ export const api = {
   updateDeal: (id, payload) =>
     request(`/api/v1/deals/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
   deleteDeal: (id) => request(`/api/v1/deals/${id}`, { method: "DELETE" }),
-  // Express interest in a deal — shares the investor's contact details with the deal owner.
-  expressDealInterest: (id, payload) =>
+  // Log that the viewer asked for a listing's contact details, so it shows up under
+  // "My Interests". The actual email is opened in the viewer's own mail client.
+  requestDealContactInfo: (id, payload) =>
     request(`/api/v1/deals/${id}/interests`, { method: "POST", body: JSON.stringify(payload) }),
-  // Owner-only: the list of investors who expressed interest in a deal.
-  getDealInterests: (id) => request(`/api/v1/deals/${id}/interests`),
-  // Owner-only: update a lead's status (NEW/CONTACTED/COMMITTED/PASSED).
-  updateLeadStatus: (dealId, interestId, status) =>
-    request(`/api/v1/deals/${dealId}/interests/${interestId}/status`, { method: "PUT", body: JSON.stringify({ status }) }),
-  // Sponsor track record (previous projects) shown on a deal's detail page.
+  // The poster's other listings, shown as directory history on a listing's detail page.
   getDealSponsorProjects: (id) => request(`/api/v1/deals/${id}/sponsor-projects`),
-  // Deal documents (link-based: PPM, financials, data room).
-  getDealDocuments: (id) => request(`/api/v1/deals/${id}/documents`),
-  addDealDocument: (id, payload) =>
-    request(`/api/v1/deals/${id}/documents`, { method: "POST", body: JSON.stringify(payload) }),
-  deleteDealDocument: (id, docId) =>
-    request(`/api/v1/deals/${id}/documents/${docId}`, { method: "DELETE" }),
 
-  // Sponsor track record management (the signed-in user's own previous projects)
+  // Directory history management (the signed-in user's own previously listed projects)
   getMySponsorProjects: () => request("/api/v1/sponsor/projects"),
   createSponsorProject: (payload) =>
     request("/api/v1/sponsor/projects", { method: "POST", body: JSON.stringify(payload) }),

@@ -53,7 +53,7 @@ Playwright browser suite:
 - **Real estate:** add property → appears in list → revalue.
 - **Planning:** goals CRUD; debt add + payoff scenario; budgets.
 - **Investments:** link broker, add alternative investments.
-- **Deal Room:** create deal → marketplace; watch; express interest; sponsor track-record.
+- **Deal Room:** passive property directory — post listing → directory; save; request contact info (mailto); directory history. No financial terms, no offering docs, no transactions.
 - **Business:** manual business + accounts (create → list).
 - **Notifications:** preferences update; test notification.
 - **AI:** chat + insights refresh (mock responses until a key is added).

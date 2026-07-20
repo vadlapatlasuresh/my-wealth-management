@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
-/** A lead as shown to the deal owner — includes the interested person's contact details. */
+/** A recorded contact request on a listing. */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -17,8 +17,5 @@ public class DealInterestDto {
     private String email;
     private String phone;
     private String message;
-    private java.math.BigDecimal commitmentAmount;
-    private boolean accredited;
-    private String status;
     private LocalDateTime createdAt;
 }

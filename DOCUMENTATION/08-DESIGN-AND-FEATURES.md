@@ -70,7 +70,7 @@ service. For full depth, see the inventory doc.
 | **Cash** | Cash position view | account-aggregation / financial-core |
 | **Pay Bills** | Multi-step: payee → amount → funding → schedule → confirm (idempotent, cancelable) | payment |
 | **Real Estate / Properties** | Auto-estimate value, equity, rental cap-rate; add/revalue properties | real-estate (RentCast) |
-| **Deal Room** | Sponsor marketplace: deals, leads, docs, watch, express interest, sponsor track-record | real-estate |
+| **Deal Room** | Passive property directory: post/browse listings, save, request contact info via mailto, directory history. Descriptive only — no returns, entry prices or offering documents | real-estate |
 | **Fractional LLC** | Co-investment marketplace | real-estate |
 | **My Business** | Multi-business, P&L, cash flow, invoices, expenses, QuickBooks connect | business-financials (QBO) |
 | **AI Assistant** | Insights + chat with scope, response styles, prompt library, voice, disclaimer | ai-insights (Anthropic/Gemini) |

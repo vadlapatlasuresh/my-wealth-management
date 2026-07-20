@@ -14,5 +14,4 @@ public class SponsorProjectDto {
     private String url;
     private String location;
     private Integer year;
-    private String outcome;
 }

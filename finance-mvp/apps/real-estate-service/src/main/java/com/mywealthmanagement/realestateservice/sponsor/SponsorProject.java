@@ -9,7 +9,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDateTime;
 
 /**
- * A sponsor's previous project — their track record. Owned by the user (sponsor) and
+ * A property the user has listed before — one entry of their directory history. Descriptive
+ * only: it deliberately records no outcome or performance figure. Owned by the user and
  * reusable across all of their deals; investors viewing a deal can see the sponsor's
  * past projects to vet them.
  */
@@ -41,9 +42,6 @@ public class SponsorProject {
     // Column is "project_year" because YEAR is a reserved word in H2.
     @Column(name = "project_year")
     private Integer year;
-
-    @Column(length = 200)
-    private String outcome;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

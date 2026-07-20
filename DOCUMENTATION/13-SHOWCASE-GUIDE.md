@@ -537,21 +537,22 @@ cap rate.
 ---
 
 ### Feature 27 — Deal Room
-**What it is:** A marketplace of sponsor real-estate deals with track records.
+**What it is:** A passive bulletin-board directory of real-estate listings. Informational only — TerraVest does not vet, endorse, advise on, or facilitate anything listed.
 
 **Demo steps:**
 1. Sidebar → **Deal Room**.
-2. Browse the **deal list**.
-3. Open a deal — terms, documents, sponsor detail.
-4. Show the **sponsor track record**.
-5. **Watch** a deal, then **express interest**.
+2. Browse the **listing directory** — photos and location lead each card.
+3. Point out the **red disclaimer banner**: not a broker-dealer, no vetting, no advice.
+4. Open a listing — photos, description, **Directory History** of the posting party.
+5. **Save** a listing, then **Request Contact Information** (opens their own mail client).
 
 **Say:**
-> "When she wants to put money to work — deals from sponsors, with the sponsor's track record
-> visible before she trusts them."
+> "A noticeboard for real estate projects. She sees the property, the location, and who posted it.
+> If she's interested, she goes to their site or emails them directly — everything happens off
+> our platform."
 
-**For investors, add:** *"This is also a future revenue line — we sit between sponsors and
-qualified investors whose financial picture we already know."*
+**For investors, add:** *"Deliberately a passive directory: no vetting, no advice, no securities
+handling. That keeps it a listing product rather than a regulated intermediary."*
 
 ---
 
