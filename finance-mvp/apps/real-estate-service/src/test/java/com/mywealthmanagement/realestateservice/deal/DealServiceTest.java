@@ -14,7 +14,6 @@ import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -35,9 +34,6 @@ class DealServiceTest {
 
     @Mock
     private com.mywealthmanagement.realestateservice.sponsor.SponsorProjectRepository sponsorProjectRepository;
-
-    @Mock
-    private DealDocumentRepository documentRepository;
 
     @Mock
     private DealWatchRepository watchRepository;
@@ -72,10 +68,9 @@ class DealServiceTest {
         dto.setTitle("Cedar Ridge Farmland");
         dto.setCategory("real_estate");          // lower-case on purpose; should normalize
         dto.setLocation("Bozeman, MT");
-        dto.setTargetRaise(new BigDecimal("250000"));
-        dto.setMinInvestment(new BigDecimal("25000"));
-        dto.setTargetIrr(new BigDecimal("18.5"));
-        dto.setHoldPeriodMonths(48);
+        dto.setDescription("40 acres of pasture with county road frontage.");
+        dto.setWebsiteUrl("https://cedarridge.example.com/listing");
+        dto.setContactEmail("owner@example.com");
         return dto;
     }
 
@@ -88,7 +83,6 @@ class DealServiceTest {
 
         assertThat(created.getCategory()).isEqualTo("REAL_ESTATE");
         assertThat(created.getStatus()).isEqualTo("DRAFT");
-        assertThat(created.getAmountCommitted()).isEqualByComparingTo("0");
     }
 
     @Test
@@ -102,15 +96,75 @@ class DealServiceTest {
                 .hasMessageContaining("Title is required");
     }
 
+    // ---- compliance: a listing is a pointer off-platform, never a set of terms ----
+
     @Test
-    void createDeal_rejectsNegativeTargetRaise() {
+    void createDeal_requiresAnExternalListingUrl() {
         authenticateAs("1");
         DealDto dto = validDto();
-        dto.setTargetRaise(new BigDecimal("-1"));
+        dto.setWebsiteUrl(null);
 
         assertThatThrownBy(() -> service.createDeal(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("cannot be negative");
+                .hasMessageContaining("external listing URL is required");
+    }
+
+    @Test
+    void createDeal_requiresAContactRouteForInquiries() {
+        authenticateAs("1");
+        DealDto dto = validDto();
+        dto.setContactEmail(null);
+        dto.setContactPhone(null);
+
+        assertThatThrownBy(() -> service.createDeal(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("contact email or phone");
+    }
+
+    @Test
+    void createDeal_acceptsPhoneOnlyContact() {
+        authenticateAs("1");
+        when(dealRepository.save(any(Deal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DealDto dto = validDto();
+        dto.setContactEmail(null);
+        dto.setContactPhone("+1 555 0100");
+
+        assertThat(service.createDeal(dto).getContactPhone()).isEqualTo("+1 555 0100");
+    }
+
+    @Test
+    void createDeal_rejectsMalformedContactEmail() {
+        authenticateAs("1");
+        DealDto dto = validDto();
+        dto.setContactEmail("not-an-email");
+
+        assertThatThrownBy(() -> service.createDeal(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("valid email");
+    }
+
+    @Test
+    void createDeal_roundTripsImageUrls() {
+        authenticateAs("1");
+        when(dealRepository.save(any(Deal.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        DealDto dto = validDto();
+        dto.setImageUrls(java.util.List.of("https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg"));
+
+        assertThat(service.createDeal(dto).getImageUrls())
+                .containsExactly("https://cdn.example.com/a.jpg", "https://cdn.example.com/b.jpg");
+    }
+
+    @Test
+    void createDeal_rejectsUnsafeImageUrlScheme() {
+        authenticateAs("1");
+        DealDto dto = validDto();
+        dto.setImageUrls(java.util.List.of("https://cdn.example.com/a.jpg", "javascript:alert(1)"));
+
+        assertThatThrownBy(() -> service.createDeal(dto))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("imageUrls");
     }
 
     @Test
@@ -125,13 +179,12 @@ class DealServiceTest {
         DealDto bad = validDto();
         bad.setWebsiteUrl("javascript:alert(1)");
         assertThatThrownBy(() -> service.createDeal(bad))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("http");
+                .isInstanceOf(ResponseStatusException.class);
     }
 
     @Test
     void updateDeal_deniesAccessToAnotherUsersDeal() {
-        // Deal owned by user 1.
+        // Listing owned by user 1.
         Deal owned = new Deal();
         owned.setId(7L);
         owned.setUserId(1L);
@@ -151,89 +204,35 @@ class DealServiceTest {
         Deal deal = new Deal();
         deal.setId(7L);
         deal.setUserId(ownerId);
-        deal.setTitle("Open Deal");
+        deal.setTitle("Open Listing");
         deal.setCategory("REAL_ESTATE");
+        deal.setWebsiteUrl("https://example.com/listing");
+        deal.setContactEmail("owner@example.com");
         deal.setStatus("OPEN");
         return deal;
     }
 
     private DealInterestRequest interestRequest() {
         DealInterestRequest req = new DealInterestRequest();
-        req.setName("Jane Investor");
+        req.setName("Jane Doe");
         req.setEmail("jane@example.com");
         req.setPhone("+1 555 0100");
-        req.setMessage("Interested — please send the PPM.");
-        req.setCommitmentAmount(new BigDecimal("50000"));
-        req.setAccredited(true);
+        req.setMessage("Is the parcel still available?");
         return req;
     }
 
-    @Test
-    void expressInterest_capturesLeadAndSharesWithOwner() {
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-        when(interestRepository.save(any(DealInterest.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        authenticateAs("2"); // a different user expresses interest
-        DealInterestDto lead = service.expressInterest(7L, interestRequest());
-
-        assertThat(lead.getName()).isEqualTo("Jane Investor");
-        assertThat(lead.getEmail()).isEqualTo("jane@example.com");
-        assertThat(lead.getPhone()).isEqualTo("+1 555 0100");
-    }
+    // ---- taxonomy ----
 
     @Test
-    void expressInterest_rejectedWhenDealNotOpen() {
-        Deal draft = openDealOwnedBy(1L);
-        draft.setStatus("DRAFT");
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(draft));
-
-        authenticateAs("2");
-        assertThatThrownBy(() -> service.expressInterest(7L, interestRequest()))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("not open");
-    }
-
-    @Test
-    void expressInterest_rejectedForOwnDeal() {
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-
-        authenticateAs("1"); // the owner cannot express interest in their own deal
-        assertThatThrownBy(() -> service.expressInterest(7L, interestRequest()))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("You own this deal");
-    }
-
-    @Test
-    void getInterests_deniedForNonOwner() {
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-
-        authenticateAs("2"); // not the owner -> 404, no leads leaked
-        assertThatThrownBy(() -> service.getInterests(7L))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Deal not found");
-    }
-
-    // ---- taxonomy + return structure ----
-
-    @Test
-    void createDeal_acceptsValidSubcategoryAndFixedReturnRange() {
+    void createDeal_acceptsValidPropertyType() {
         authenticateAs("1");
         when(dealRepository.save(any(Deal.class))).thenAnswer(inv -> inv.getArgument(0));
 
         DealDto dto = validDto();
         dto.setCategory("REAL_ESTATE");
         dto.setSubcategory("multifamily");          // lower-case; normalized
-        dto.setReturnType("fixed");
-        dto.setAnnualReturnMin(new BigDecimal("12"));
-        dto.setAnnualReturnMax(new BigDecimal("24"));
-        dto.setDistributionFrequency("quarterly");
 
-        DealDto created = service.createDeal(dto);
-        assertThat(created.getSubcategory()).isEqualTo("MULTIFAMILY");
-        assertThat(created.getReturnType()).isEqualTo("FIXED");
-        assertThat(created.getAnnualReturnMin()).isEqualByComparingTo("12");
-        assertThat(created.getAnnualReturnMax()).isEqualByComparingTo("24");
-        assertThat(created.getDistributionFrequency()).isEqualTo("QUARTERLY");
+        assertThat(service.createDeal(dto).getSubcategory()).isEqualTo("MULTIFAMILY");
     }
 
     @Test
@@ -241,7 +240,7 @@ class DealServiceTest {
         authenticateAs("1");
         DealDto dto = validDto();
         dto.setCategory("REAL_ESTATE");
-        dto.setSubcategory("VENTURE"); // a private-equity subcategory, not real estate
+        dto.setSubcategory("RETAIL"); // a business property type, not real estate
 
         assertThatThrownBy(() -> service.createDeal(dto))
                 .isInstanceOf(ResponseStatusException.class)
@@ -249,83 +248,78 @@ class DealServiceTest {
     }
 
     @Test
-    void createDeal_rejectsReturnMinAboveMax() {
+    void createDeal_rejectsRetiredSecuritiesCategories() {
         authenticateAs("1");
         DealDto dto = validDto();
-        dto.setAnnualReturnMin(new BigDecimal("24"));
-        dto.setAnnualReturnMax(new BigDecimal("12"));
+        dto.setCategory("PRIVATE_EQUITY");
 
         assertThatThrownBy(() -> service.createDeal(dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("cannot exceed");
+                .hasMessageContaining("Invalid value");
     }
 
     @Test
-    void marketplace_filtersByCategoryAndSubcategory() {
+    void directory_filtersByCategoryAndPropertyType() {
         Deal a = openDealOwnedBy(1L); a.setId(1L); a.setCategory("REAL_ESTATE"); a.setSubcategory("MULTIFAMILY");
         Deal b = openDealOwnedBy(1L); b.setId(2L); b.setCategory("REAL_ESTATE"); b.setSubcategory("LAND");
-        Deal c = openDealOwnedBy(1L); c.setId(3L); c.setCategory("STARTUP"); c.setSubcategory("SEED");
+        Deal c = openDealOwnedBy(1L); c.setId(3L); c.setCategory("BUSINESS"); c.setSubcategory("RETAIL");
         when(dealRepository.findByStatusOrderByCreatedAtDesc("OPEN")).thenReturn(java.util.List.of(a, b, c));
 
         authenticateAs("9");
-        assertThat(service.getMarketplace("REAL_ESTATE", "MULTIFAMILY", null, null, null, null)).hasSize(1);
-        assertThat(service.getMarketplace("REAL_ESTATE", null, null, null, null, null)).hasSize(2);
-        assertThat(service.getMarketplace(null, null, null, null, null, null)).hasSize(3);
+        assertThat(service.getMarketplace("REAL_ESTATE", "MULTIFAMILY", null, null)).hasSize(1);
+        assertThat(service.getMarketplace("REAL_ESTATE", null, null, null)).hasSize(2);
+        assertThat(service.getMarketplace(null, null, null, null)).hasSize(3);
         // Pagination: limit 2 of 3.
-        assertThat(service.getMarketplace(null, null, null, "NEWEST", 2, 0)).hasSize(2);
+        assertThat(service.getMarketplace(null, null, 2, 0)).hasSize(2);
     }
 
-    // ---- two-sided interest workflow ----
+    // ---- contact requests ----
 
     @Test
-    void expressInterest_rejectsDuplicate() {
+    void requestContactInfo_recordsTheRequestAndNotifiesThePoster() {
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
+        when(interestRepository.save(any(DealInterest.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        authenticateAs("2"); // a different user asks for the contact details
+        DealInterestDto record = service.requestContactInfo(7L, interestRequest());
+
+        assertThat(record.getName()).isEqualTo("Jane Doe");
+        assertThat(record.getEmail()).isEqualTo("jane@example.com");
+        assertThat(record.getPhone()).isEqualTo("+1 555 0100");
+        org.mockito.Mockito.verify(leadNotifier).notifyNewInterest(eq(1L), any(), eq("Jane Doe"));
+    }
+
+    @Test
+    void requestContactInfo_rejectedWhenListingNotPublished() {
+        Deal draft = openDealOwnedBy(1L);
+        draft.setStatus("DRAFT");
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(draft));
+
+        authenticateAs("2");
+        assertThatThrownBy(() -> service.requestContactInfo(7L, interestRequest()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("not published");
+    }
+
+    @Test
+    void requestContactInfo_rejectedForOwnListing() {
+        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
+
+        authenticateAs("1");
+        assertThatThrownBy(() -> service.requestContactInfo(7L, interestRequest()))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("You posted this listing");
+    }
+
+    @Test
+    void requestContactInfo_rejectsDuplicate() {
         lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
         when(interestRepository.existsByDealIdAndInterestedUserId(7L, 2L)).thenReturn(true);
 
         authenticateAs("2");
-        assertThatThrownBy(() -> service.expressInterest(7L, interestRequest()))
+        assertThatThrownBy(() -> service.requestContactInfo(7L, interestRequest()))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("already expressed");
-    }
-
-    @Test
-    void updateLeadStatus_ownerUpdates_andRejectsInvalid() {
-        DealInterest interest = new DealInterest();
-        interest.setId(3L); interest.setDealId(7L); interest.setStatus("NEW");
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-        lenient().when(interestRepository.findById(3L)).thenReturn(Optional.of(interest));
-        lenient().when(interestRepository.save(any(DealInterest.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        authenticateAs("1");
-        assertThat(service.updateLeadStatus(7L, 3L, "contacted").getStatus()).isEqualTo("CONTACTED");
-        assertThatThrownBy(() -> service.updateLeadStatus(7L, 3L, "BOGUS"))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Invalid lead status");
-    }
-
-    @Test
-    void expressInterest_rejectedWithoutAccreditation() {
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-        DealInterestRequest req = interestRequest();
-        req.setAccredited(false);
-
-        authenticateAs("2");
-        assertThatThrownBy(() -> service.expressInterest(7L, req))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("accredited");
-    }
-
-    @Test
-    void expressInterest_capturesCommitmentAndNotifiesSponsor() {
-        lenient().when(dealRepository.findById(7L)).thenReturn(Optional.of(openDealOwnedBy(1L)));
-        when(interestRepository.save(any(DealInterest.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        authenticateAs("2");
-        var lead = service.expressInterest(7L, interestRequest());
-
-        assertThat(lead.getCommitmentAmount()).isEqualByComparingTo("50000");
-        assertThat(lead.isAccredited()).isTrue();
-        org.mockito.Mockito.verify(leadNotifier).notifyNewInterest(eq(1L), any(), eq("Jane Investor"));
+                .hasMessageContaining("already requested");
     }
 
     @Test
@@ -335,7 +329,7 @@ class DealServiceTest {
 
         authenticateAs("2");
         service.watch(7L);
-        service.watch(7L); // already watched -> no second save
+        service.watch(7L); // already saved -> no second save
         org.mockito.Mockito.verify(watchRepository, org.mockito.Mockito.times(1)).save(any(DealWatch.class));
 
         service.unwatch(7L);
@@ -343,17 +337,21 @@ class DealServiceTest {
     }
 
     @Test
-    void getMyInterests_includesDealTitle() {
+    void getMyInterests_includesListingTitle() {
         DealInterest interest = new DealInterest();
-        interest.setId(3L); interest.setDealId(7L); interest.setStatus("NEW"); interest.setName("Jane");
+        interest.setId(3L); interest.setDealId(7L); interest.setName("Jane");
         when(interestRepository.findByInterestedUserIdOrderByCreatedAtDesc(2L)).thenReturn(java.util.List.of(interest));
-        Deal deal = openDealOwnedBy(1L);
-        when(dealRepository.findAllById(any())).thenReturn(java.util.List.of(deal));
+        when(dealRepository.findAllById(any())).thenReturn(java.util.List.of(openDealOwnedBy(1L)));
 
         authenticateAs("2");
         var mine = service.getMyInterests();
         assertThat(mine).hasSize(1);
-        assertThat(mine.get(0).getDealTitle()).isEqualTo("Open Deal");
-        assertThat(mine.get(0).getStatus()).isEqualTo("NEW");
+        assertThat(mine.get(0).getDealTitle()).isEqualTo("Open Listing");
+    }
+
+    @Test
+    void taxonomy_exposesNoReturnStructure() {
+        var taxonomy = service.getTaxonomy();
+        assertThat(taxonomy).containsOnlyKeys("categories", "subcategories", "statuses");
     }
 }

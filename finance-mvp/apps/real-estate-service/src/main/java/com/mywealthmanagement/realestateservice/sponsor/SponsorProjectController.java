@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Manage the authenticated sponsor's own track record (previous projects).
+ * Manage the authenticated user's own directory history (previously listed properties).
  * Routed through the gateway at {@code /api/v1/sponsor/projects}.
  */
 @RestController

@@ -2186,257 +2186,113 @@ a { text-decoration: none; color: inherit; }
       <!-- =================== DEAL ROOM =================== -->
       <div id="page-dealroom" class="page">
         <div class="page-header">
-          <div><div class="page-title">Deal Room</div><div class="page-subtitle">Register deals, browse the marketplace, and connect with interested investors</div></div>
+          <div><div class="page-title">Deal Room</div><div class="page-subtitle">A simple bulletin board directory for posting and browsing real estate projects. This platform is purely for information and does not facilitate any investments or offer financial advice.</div></div>
           <div class="page-actions">
-            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Register a deal</button>
+            <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Post a listing</button>
           </div>
+        </div>
+
+        <!-- MANDATORY global disclaimer — non-dismissible, shown on the index and on every listing detail view -->
+        <div style="border:1px solid var(--tv-negative);border-left:4px solid var(--tv-negative);background:var(--tv-negative-bg);color:var(--tv-negative);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.6;">
+          <strong>MANDATORY DISCLAIMER:</strong> This platform is an informational directory only. TerraVest is <strong>not a registered broker-dealer or investment advisor</strong>, does not facilitate securities transactions, and provides no investment advice or recommendations. We do <strong>not verify, vet, screen, endorse or manage</strong> any property listed here. All discussions and transactions occur offline, directly with the listing party, at your own risk.
         </div>
 
         <!-- Tabs -->
         <div class="seg-control" style="margin-bottom:16px;">
-          <button class="seg-btn">My Deals</button>
+          <button class="seg-btn">My Listings</button>
           <button class="seg-btn active">Marketplace</button>
           <button class="seg-btn">Saved</button>
           <button class="seg-btn">My Interests</button>
-          <button class="seg-btn">Track Record</button>
+          <button class="seg-btn">Directory History</button>
         </div>
 
-        <!-- Marketplace filter bar -->
+        <!-- Directory filter bar — descriptive filters only, newest-first ordering -->
         <div class="filter-bar">
-          <select class="filter-select"><option>All categories</option><option>Real Estate</option><option>Business</option><option>Private Equity</option><option>Startup</option></select>
-          <select class="filter-select"><option>All subcategories</option><option>Multifamily</option><option>Land</option><option>Commercial</option></select>
-          <select class="filter-select"><option>All return types</option><option>Fixed</option><option>Equity (IRR)</option><option>Hybrid</option></select>
-          <select class="filter-select"><option>Sort: Newest</option><option>Highest return</option><option>Lowest minimum</option><option>Largest raise</option></select>
+          <select class="filter-select"><option>All categories</option><option>Real Estate</option><option>Business Property</option><option>Other</option></select>
+          <select class="filter-select"><option>All property types</option><option>Multifamily</option><option>Land</option><option>Commercial</option><option>Mixed Use</option></select>
+          <span style="flex:1;"></span>
+          <span style="font-size:11.5px;color:var(--tv-text-muted);">Newest first</span>
           <button class="btn btn-secondary btn-sm"><i class="ti ti-x"></i> Clear</button>
         </div>
 
-        <!-- Marketplace deal cards -->
+        <!-- Directory listing cards — photo and location lead, descriptive tags only -->
         <div class="grid-3" style="margin-bottom:20px;">
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Willow Creek Land LLC</div><span class="badge badge-green">Open</span></div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Real Estate</span><span class="badge badge-gray">Land</span><span class="badge badge-forest">Equity (IRR)</span></div>
-            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Bozeman, MT</div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$1.2M</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$25,000</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Target IRR</span><span style="font-weight:600;color:var(--tv-positive);">18–22%</span></div>
-            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+            <div style="height:150px;border-radius:var(--radius-md);background:var(--tv-sage-pale);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--tv-forest);margin-bottom:10px;">🏞️</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">The Melissa Property</div><span class="badge badge-green">Open</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge badge-gray">Real Estate • Multifamily</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:8px;"><i class="ti ti-map-pin"></i> Melissa, Texas</div>
+            <div style="font-size:12.5px;color:var(--tv-text-secondary);line-height:1.6;margin-bottom:12px;">Development site with zoning potential for multi-family. Located near historic downtown Melissa with excellent road access.</div>
+            <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px;" href="#" target="_blank" rel="noopener noreferrer external">View Listing Details (External Link) <i class="ti ti-external-link"></i></a>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;"><i class="ti ti-mail"></i> Request Contact Information</button>
           </div>
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Maple Ridge Apartments</div><span class="badge badge-green">Open</span></div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Real Estate</span><span class="badge badge-gray">Multifamily</span><span class="badge badge-forest">Hybrid</span></div>
-            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Round Rock, TX</div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$3.5M</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$50,000</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Target IRR</span><span style="font-weight:600;color:var(--tv-positive);">12–15%</span></div>
-            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+            <div style="height:150px;border-radius:var(--radius-md);background:var(--tv-sage-pale);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--tv-forest);margin-bottom:10px;">🏗️</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Mansfield Sports District</div><span class="badge badge-green">Open</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge badge-gray">Real Estate • Mixed Use</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:8px;"><i class="ti ti-map-pin"></i> Mansfield, Texas</div>
+            <div style="font-size:12.5px;color:var(--tv-text-secondary);line-height:1.6;margin-bottom:12px;">Expansive parcel in the Mansfield corridor. Concept plans for an integrated sports, retail and hospitality complex.</div>
+            <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px;" href="#" target="_blank" rel="noopener noreferrer external">View Listing Details (External Link) <i class="ti ti-external-link"></i></a>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;"><i class="ti ti-mail"></i> Request Contact Information</button>
           </div>
           <div class="card">
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Cedar Coffee Roasters</div><span class="badge badge-gray">Funded</span></div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;"><span class="badge badge-gray">Business</span><span class="badge badge-gray">Franchise</span><span class="badge badge-forest">Fixed</span></div>
-            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Denver, CO</div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Target raise</span><span style="font-weight:600;">$450K</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;"><span style="color:var(--tv-text-muted);">Min investment</span><span style="font-weight:600;">$10,000</span></div>
-            <div style="display:flex;justify-content:space-between;font-size:12.5px;"><span style="color:var(--tv-text-muted);">Annual return</span><span style="font-weight:600;color:var(--tv-positive);">9%</span></div>
-            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;margin-top:12px;">View details</button>
+            <div style="height:150px;border-radius:var(--radius-md);background:var(--tv-sage-pale);display:flex;align-items:center;justify-content:center;font-size:34px;color:var(--tv-forest);margin-bottom:10px;">🌲</div>
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;">Willow Creek Land</div><span class="badge badge-green">Open</span></div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;"><span class="badge badge-gray">Real Estate • Land</span></div>
+            <div style="font-size:12.5px;color:var(--tv-text-muted);margin-bottom:8px;"><i class="ti ti-map-pin"></i> Bozeman, Montana</div>
+            <div style="font-size:12.5px;color:var(--tv-text-secondary);line-height:1.6;margin-bottom:12px;">120 acres of entitled residential land with county road frontage and existing utility stubs at the north boundary.</div>
+            <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-bottom:8px;" href="#" target="_blank" rel="noopener noreferrer external">View Listing Details (External Link) <i class="ti ti-external-link"></i></a>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;"><i class="ti ti-mail"></i> Request Contact Information</button>
           </div>
         </div>
 
-        <!-- Deal detail (drill-in) with Express interest panel -->
-        <div class="section-title">Deal detail — Willow Creek Land LLC</div>
+        <!-- Listing detail (drill-in) — photos and description only, two actions -->
+        <div class="section-title">Listing detail — The Melissa Property</div>
         <div class="page-actions" style="margin-bottom:14px;">
-          <button class="btn btn-secondary btn-sm"><i class="ti ti-arrow-left"></i> Back to marketplace</button>
-          <button class="btn btn-secondary btn-sm"><i class="ti ti-bookmark"></i> Save deal</button>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-arrow-left"></i> Back to the directory</button>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-bookmark"></i> Save listing</button>
         </div>
 
-        <div class="grid-2">
-          <!-- Main content -->
-          <div class="col-span-2" style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
-            <div>
-              <!-- Header card -->
-              <div class="card" style="margin-bottom:16px;">
-                <div style="display:flex;gap:16px;align-items:flex-start;">
-                  <div style="width:64px;height:64px;background:var(--tv-sage-pale);border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:30px;color:var(--tv-forest);flex-shrink:0;">🌲</div>
-                  <div style="flex:1;">
-                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;">
-                      <div style="font-family:var(--font-display);font-size:22px;">Willow Creek Land LLC</div>
-                      <span class="badge badge-forest">Core Plus</span>
-                      <span class="badge badge-gray">Real Estate</span>
-                      <span class="badge badge-gray">Land Development</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--tv-text-muted);margin-bottom:12px;"><i class="ti ti-map-pin"></i> Bozeman, Montana</div>
-                    <div style="display:flex;gap:24px;">
-                      <div><div style="font-size:11.5px;color:var(--tv-text-muted);font-weight:500;">Minimum Investment</div><div style="font-family:var(--font-display);font-size:22px;color:var(--tv-forest);">$25,000</div><div style="font-size:11.5px;color:var(--tv-text-muted);">Per Investor</div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        <!-- The disclaimer repeats on the detail view -->
+        <div style="border:1px solid var(--tv-negative);border-left:4px solid var(--tv-negative);background:var(--tv-negative-bg);color:var(--tv-negative);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:12.5px;line-height:1.6;">
+          <strong>MANDATORY DISCLAIMER:</strong> This platform is an informational directory only. TerraVest is <strong>not a registered broker-dealer or investment advisor</strong>, does not facilitate securities transactions, and provides no investment advice or recommendations. We do <strong>not verify, vet, screen, endorse or manage</strong> any property listed here. All discussions and transactions occur offline, directly with the listing party, at your own risk.
+        </div>
 
-              <!-- Overview -->
-              <div class="card" style="margin-bottom:16px;">
-                <div class="section-title">Overview</div>
-                <p style="font-size:13.5px;color:var(--tv-text-secondary);line-height:1.7;">Willow Creek Land LLC is a purpose-built entity formed to acquire and develop 120 acres of entitled residential land in Bozeman, Montana. The project is well-positioned in a high-growth submarket with strong demand drivers, limited inventory, and a clear path to value creation.</p>
+        <div style="display:grid;grid-template-columns:1fr 340px;gap:16px;">
+          <div>
+            <div class="card" style="margin-bottom:16px;">
+              <div style="height:260px;border-radius:var(--radius-md);background:var(--tv-sage-pale);display:flex;align-items:center;justify-content:center;font-size:52px;color:var(--tv-forest);">🏞️</div>
+              <div style="display:flex;gap:8px;margin-top:8px;">
+                <div style="width:84px;height:64px;border-radius:var(--radius-md);background:var(--tv-sage-pale);"></div>
+                <div style="width:84px;height:64px;border-radius:var(--radius-md);background:var(--tv-sage-pale);"></div>
               </div>
-
-              <!-- Key Terms -->
-              <div class="card" style="margin-bottom:16px;">
-                <div class="section-title">Key terms</div>
-                <div class="grid-3" style="gap:16px;">
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Investment Type</div><div style="font-weight:600;">Equity</div></div>
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Target IRR</div><div style="font-weight:600;color:var(--tv-positive);">18–22%</div></div>
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Investment Structure</div><div style="font-weight:600;">LLC Membership</div></div>
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Target Hold Period</div><div style="font-weight:600;">36–48 months</div></div>
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Distributions</div><div style="font-weight:600;">Quarterly</div></div>
-                  <div><div style="font-size:11.5px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:500;">Preferred Return</div><div style="font-weight:600;">8.0%</div></div>
-                </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 8px;">
+                <div style="font-family:var(--font-display);font-size:22px;">The Melissa Property</div>
+                <span class="badge badge-green">Open</span>
+                <span class="badge badge-gray">Real Estate • Multifamily</span>
               </div>
-
-              <!-- Fee Structure -->
-              <div class="card" style="margin-bottom:16px;background:var(--tv-bg);">
-                <div class="section-title">Fee structure</div>
-                <div class="grid-3" style="gap:12px;">
-                  <div style="background:white;border-radius:var(--radius-md);padding:12px;border:1px solid var(--tv-border);">
-                    <div style="font-size:11px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Acquisition Fee</div>
-                    <div style="font-weight:600;">2.0%</div>
-                    <div style="font-size:11.5px;color:var(--tv-text-muted);">of Purchase Price</div>
-                  </div>
-                  <div style="background:white;border-radius:var(--radius-md);padding:12px;border:1px solid var(--tv-border);">
-                    <div style="font-size:11px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Asset Mgmt Fee</div>
-                    <div style="font-weight:600;">1.5%</div>
-                    <div style="font-size:11.5px;color:var(--tv-text-muted);">of Gross Asset Value</div>
-                  </div>
-                  <div style="background:white;border-radius:var(--radius-md);padding:12px;border:1px solid var(--tv-border);">
-                    <div style="font-size:11px;color:var(--tv-text-muted);margin-bottom:3px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;">Performance Fee</div>
-                    <div style="font-weight:600;">20.0%</div>
-                    <div style="font-size:11.5px;color:var(--tv-text-muted);">above 8% pref. return</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Interest-committed progress -->
-              <div class="card" style="margin-bottom:16px;">
-                <div class="section-title">Interest committed</div>
-                <div class="progress-bar" style="height:8px;"><div class="progress-fill" style="width:48%;background:var(--tv-forest);"></div></div>
-                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px;"><span style="font-weight:600;">$576,000 of $1,200,000 · 48%</span><span style="color:var(--tv-text-muted);">Indicative interest, not binding</span></div>
-              </div>
-
-              <!-- Put your cash to work — deal vs bank comparison -->
-              <div class="card" style="margin-bottom:16px;">
-                <div class="section-title">Put your cash to work</div>
-                <p style="font-size:12.5px;color:var(--tv-text-muted);line-height:1.6;margin:-4px 0 12px;">See what an investment here could earn versus leaving the same cash in a savings account.</p>
-                <div class="form-group" style="margin-bottom:12px;">
-                  <label class="form-label">Fund from a linked account</label>
-                  <select class="filter-select" style="width:100%;"><option>Chase Savings · savings — $42,180</option><option>Ally Cash · checking — $18,500</option><option>Custom amount</option></select>
-                  <div style="margin-top:6px;color:var(--tv-forest);font-size:12px;font-weight:600;cursor:pointer;">Use all my liquid cash ($60,680)</div>
-                </div>
-                <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:10px;align-items:end;">
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Amount to invest</label><input class="form-input" value="$25,000"></div>
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">This deal (%/yr)</label><input class="form-input" value="20"></div>
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Bank (%/yr)</label><input class="form-input" value="4"></div>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
-                  <div style="border:1px solid var(--tv-forest);background:var(--tv-forest);color:white;border-radius:var(--radius-md);padding:12px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-weight:600;font-size:13px;">This deal</span><span style="font-size:11px;opacity:.85;">20%/yr</span></div>
-                    <div style="font-size:11px;opacity:.8;">In 1 year</div>
-                    <div style="font-family:var(--font-display);font-size:19px;">$30,000</div>
-                    <div style="font-size:12px;font-weight:600;color:var(--tv-gold-light);">+$5,000</div>
-                    <div style="margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.2);">
-                      <div style="font-size:11px;opacity:.8;">Over 42 months</div>
-                      <div style="font-family:var(--font-display);font-size:16px;">$47,325</div>
-                      <div style="font-size:12px;font-weight:600;color:var(--tv-gold-light);">+$22,325</div>
-                    </div>
-                  </div>
-                  <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="font-weight:600;font-size:13px;">Bank savings</span><span style="font-size:11px;opacity:.7;">4%/yr</span></div>
-                    <div style="font-size:11px;opacity:.6;">In 1 year</div>
-                    <div style="font-family:var(--font-display);font-size:19px;">$26,000</div>
-                    <div style="font-size:12px;font-weight:600;color:var(--tv-positive);">+$1,000</div>
-                    <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--tv-border);">
-                      <div style="font-size:11px;opacity:.6;">Over 42 months</div>
-                      <div style="font-family:var(--font-display);font-size:16px;">$28,678</div>
-                      <div style="font-size:12px;font-weight:600;color:var(--tv-positive);">+$3,678</div>
-                    </div>
-                  </div>
-                </div>
-                <div style="margin-top:12px;padding:12px 14px;border-radius:var(--radius-md);background:var(--tv-positive-bg);color:var(--tv-positive);font-size:13px;line-height:1.5;">
-                  <i class="ti ti-trending-up"></i> That's <strong>+$4,000</strong> more in the first year than a 4% savings account — $25,000 → <strong>$30,000</strong> vs $26,000.
-                </div>
-                <div style="font-size:11px;color:var(--tv-text-muted);margin-top:8px;line-height:1.5;">Illustrative only — projections compound the rates you enter and are not a guarantee. Private deals carry risk of loss; savings rates vary.</div>
-              </div>
-
-              <!-- Express interest panel -->
-              <div class="card" style="margin-bottom:16px;border-left:4px solid var(--tv-forest);">
-                <div class="section-title">Express interest</div>
-                <div class="grid-2" style="gap:12px;">
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Full name *</label><input class="form-input" placeholder="Alex Kim"></div>
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Email *</label><input class="form-input" placeholder="alex@example.com"></div>
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Phone</label><input class="form-input"></div>
-                  <div class="form-group" style="margin-bottom:0;"><label class="form-label">Amount you'd consider</label><input class="form-input" placeholder="$25,000"></div>
-                  <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Message</label><input class="form-input" placeholder="Optional note to the sponsor"></div>
-                </div>
-                <div style="display:flex;align-items:flex-start;gap:10px;margin-top:12px;"><div class="tv-checkbox checked"><i class="ti ti-check"></i></div><p style="font-size:12.5px;color:var(--tv-text-muted);">I confirm I am an accredited investor.</p></div>
-                <button class="btn btn-primary" style="margin-top:12px;"><i class="ti ti-send"></i> Send interest</button>
-              </div>
-
-              <!-- Risk Factors -->
-              <div class="card" style="border-left:4px solid var(--tv-negative);">
-                <div class="section-title">Risk factors</div>
-                <ul style="font-size:13px;color:var(--tv-text-secondary);line-height:1.9;padding-left:18px;">
-                  <li>Real estate investments are illiquid and there is no guarantee of a market for interests.</li>
-                  <li>The project may not achieve expected returns and investors may lose some or all of their investment.</li>
-                  <li>Market conditions, regulatory changes, and other factors may materially impact results.</li>
-                </ul>
-              </div>
+              <div style="font-size:13px;color:var(--tv-text-muted);margin-bottom:10px;"><i class="ti ti-map-pin"></i> Melissa, Texas</div>
+              <div class="section-title">Property description</div>
+              <p style="font-size:13.5px;color:var(--tv-text-secondary);line-height:1.7;">Premier development site with zoning potential for multi-family. Located near historic downtown Melissa with excellent road access. Level topography across the majority of the parcel, with municipal water and sewer available at the eastern boundary.</p>
             </div>
 
-            <!-- Document Checklist -->
-            <div>
-              <div class="card" style="position:sticky;top:0;">
-                <div class="section-title">Document checklist</div>
-                <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
-                  <svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="none" stroke="#DDE5E1" stroke-width="7"/><circle cx="32" cy="32" r="26" fill="none" stroke="#1A4D3B" stroke-width="7" stroke-dasharray="57.5 105" stroke-dashoffset="35" stroke-linecap="round"/><text x="32" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#111D17" font-family="DM Serif Display,serif">2/7</text></svg>
-                  <div>
-                    <div style="font-size:16px;font-weight:700;">2 of 7 completed</div>
-                    <div style="font-size:12px;color:var(--tv-text-muted);">Review all docs to subscribe.</div>
-                  </div>
-                </div>
-                <div style="display:flex;flex-direction:column;gap:9px;">
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--tv-positive-bg);border:1px solid rgba(30,123,75,.2);border-radius:var(--radius-md);">
-                    <i class="ti ti-check-circle" style="color:var(--tv-positive);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Private Placement Memo</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <span class="badge badge-green" style="font-size:10.5px;">Acknowledged</span>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--tv-positive-bg);border:1px solid rgba(30,123,75,.2);border-radius:var(--radius-md);">
-                    <i class="ti ti-check-circle" style="color:var(--tv-positive);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Operating Agreement</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <span class="badge badge-green" style="font-size:10.5px;">Acknowledged</span>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border:1px solid var(--tv-border);border-radius:var(--radius-md);">
-                    <i class="ti ti-file-text" style="color:var(--tv-text-muted);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Subscription Agreement</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11.5px;">Acknowledge</button>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border:1px solid var(--tv-border);border-radius:var(--radius-md);">
-                    <i class="ti ti-file-text" style="color:var(--tv-text-muted);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Summary of Terms</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11.5px;">Acknowledge</button>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border:1px solid var(--tv-border);border-radius:var(--radius-md);">
-                    <i class="ti ti-file-text" style="color:var(--tv-text-muted);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Risk Factors</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11.5px;">Acknowledge</button>
-                  </div>
-                  <div style="display:flex;align-items:center;gap:10px;padding:10px;background:white;border:1px solid var(--tv-border);border-radius:var(--radius-md);">
-                    <i class="ti ti-file-text" style="color:var(--tv-text-muted);font-size:18px;flex-shrink:0;"></i>
-                    <div style="flex:1;font-size:13px;"><div style="font-weight:500;">Financial Projections</div><div style="font-size:11px;color:var(--tv-text-muted);">PDF</div></div>
-                    <button class="btn btn-secondary btn-sm" style="padding:4px 10px;font-size:11.5px;">Acknowledge</button>
-                  </div>
-                </div>
-                <hr class="divider">
-                <div style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tv-text-muted);margin-bottom:12px;"><i class="ti ti-lock" style="font-size:16px;"></i> You must acknowledge all documents to subscribe.</div>
-                <button class="btn btn-primary" style="width:100%;justify-content:center;opacity:.5;cursor:not-allowed;">Subscribe to Opportunity</button>
-                <button class="btn btn-secondary" style="width:100%;justify-content:center;margin-top:8px;"><i class="ti ti-bookmark"></i> Add to Watchlist</button>
+            <div class="card">
+              <div class="section-title">Directory history</div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:-4px;margin-bottom:10px;">Other projects this party has listed. Self-reported and not verified by TerraVest.</div>
+              <div style="border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px;">
+                <div style="font-weight:600;">Harborview Apartments <span style="color:var(--tv-text-muted);font-weight:400;">· 2023</span></div>
+                <div style="font-size:12px;color:var(--tv-text-muted);margin-top:2px;"><i class="ti ti-map-pin"></i> Tampa, FL</div>
+                <div style="font-size:12.5px;color:var(--tv-text-secondary);margin-top:6px;line-height:1.6;">Mid-rise residential building on the eastern waterfront.</div>
               </div>
             </div>
+          </div>
+
+          <!-- The only two things a viewer can do -->
+          <div class="card" style="align-self:start;">
+            <div class="section-title">Contact the listing party</div>
+            <p style="font-size:13px;color:var(--tv-text-secondary);line-height:1.6;">All details, documents and discussions are handled directly by the party who posted this listing. TerraVest does not vet this listing and is not involved in any transaction that follows.</p>
+            <a class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:10px;margin-bottom:8px;" href="#" target="_blank" rel="noopener noreferrer external">View Listing Details (External Link) <i class="ti ti-external-link"></i></a>
+            <button class="btn btn-secondary btn-sm" style="width:100%;justify-content:center;"><i class="ti ti-mail"></i> Request Contact Information</button>
           </div>
         </div>
       </div>

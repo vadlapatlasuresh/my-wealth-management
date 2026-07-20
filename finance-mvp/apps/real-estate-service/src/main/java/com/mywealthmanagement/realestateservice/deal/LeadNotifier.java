@@ -11,8 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Best-effort deal-event notifier: posts in-app notifications to the notification-service's
- * internal ingest endpoint so investors and sponsors are kept in the loop on the deals they
+ * Best-effort directory-event notifier: posts in-app notifications to the notification-service's
+ * internal ingest endpoint so posters and viewers are kept in the loop on the listings they
  * care about. Authenticated service-to-service with a shared {@code X-Internal-Key}.
  * <p>
  * Every alert is tagged {@code type: "DEAL"} and gated on the recipient's {@code dealAlerts}
@@ -38,28 +38,16 @@ public class LeadNotifier {
         this.enabled = enabled;
     }
 
-    /** A sponsor gains a new interested investor on one of their deals. */
-    public void notifyNewInterest(Long sponsorUserId, String dealTitle, String investorName) {
-        send(sponsorUserId, "New investor interest",
-                investorName + " expressed interest in \"" + dealTitle + "\".");
+    /** Someone requested the contact details on one of this user's listings. */
+    public void notifyNewInterest(Long posterUserId, String dealTitle, String requesterName) {
+        send(posterUserId, "Someone requested your contact details",
+                requesterName + " requested the contact details on your listing \"" + dealTitle + "\".");
     }
 
-    /** An investor's lead was moved to a new status (e.g. CONTACTED, COMMITTED) by the sponsor. */
-    public void notifyLeadStatusChanged(Long investorUserId, String dealTitle, String newStatus) {
-        send(investorUserId, "Update on \"" + dealTitle + "\"",
-                "The sponsor moved your interest to " + prettyStatus(newStatus) + ".");
-    }
-
-    /** A watched deal changed status (e.g. OPEN -> FUNDED / CLOSED). Notifies one watcher. */
+    /** A saved listing changed status (e.g. OPEN -> CLOSED). Notifies one watcher. */
     public void notifyWatcherStatusChanged(Long watcherUserId, String dealTitle, String newStatus) {
         send(watcherUserId, "\"" + dealTitle + "\" is now " + prettyStatus(newStatus),
-                "A deal on your watchlist changed status to " + prettyStatus(newStatus) + ".");
-    }
-
-    /** A new document was posted to a watched deal. Notifies one watcher. */
-    public void notifyWatcherNewDocument(Long watcherUserId, String dealTitle, String docLabel) {
-        send(watcherUserId, "New document on \"" + dealTitle + "\"",
-                "The sponsor added \"" + docLabel + "\" to a deal on your watchlist.");
+                "A listing you saved changed status to " + prettyStatus(newStatus) + ".");
     }
 
     /** Common dispatch: DEAL type, dealAlerts-gated, email + SMS when the user opted in. */

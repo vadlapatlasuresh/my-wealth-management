@@ -44,7 +44,6 @@ class SponsorProjectServiceTest {
         d.setName("Harborview Apartments");
         d.setLocation("Tampa, FL");
         d.setYear(2023);
-        d.setOutcome("Sold 2023 · 21% IRR");
         d.setUrl("https://harborview.example.com");
         return d;
     }
@@ -58,7 +57,6 @@ class SponsorProjectServiceTest {
 
         assertThat(created.getName()).isEqualTo("Harborview Apartments");
         assertThat(created.getUrl()).isEqualTo("https://harborview.example.com");
-        assertThat(created.getOutcome()).isEqualTo("Sold 2023 · 21% IRR");
     }
 
     @Test

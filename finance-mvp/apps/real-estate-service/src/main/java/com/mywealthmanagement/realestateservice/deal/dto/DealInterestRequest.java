@@ -3,7 +3,11 @@ package com.mywealthmanagement.realestateservice.deal.dto;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** Payload an interested investor submits to express interest in a deal. */
+/**
+ * Payload recorded when a viewer requests a listing's contact details. It logs that the
+ * request happened (so the viewer can find the listing again under "My Interests") and
+ * nothing more — the actual conversation happens off-platform via the mailto: link.
+ */
 @Data
 @NoArgsConstructor
 public class DealInterestRequest {
@@ -11,6 +15,4 @@ public class DealInterestRequest {
     private String email;
     private String phone;
     private String message;
-    private java.math.BigDecimal commitmentAmount;
-    private boolean accredited;
 }

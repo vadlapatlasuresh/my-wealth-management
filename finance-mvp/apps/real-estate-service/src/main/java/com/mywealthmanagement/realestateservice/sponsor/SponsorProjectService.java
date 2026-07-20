@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * CRUD for a sponsor's track record (their previous projects). All writes are scoped to
+ * CRUD for a user's directory history (their previously listed properties). All writes are scoped to
  * the authenticated owner; the public read used on deal pages lives in DealService so it
  * can be gated by the deal's visibility.
  */
@@ -68,12 +68,11 @@ public class SponsorProjectService {
         project.setUrl(Urls.validateOrNull(dto.getUrl(), "url"));
         project.setLocation(dto.getLocation());
         project.setYear(dto.getYear());
-        project.setOutcome(dto.getOutcome());
     }
 
     public static SponsorProjectDto toDto(SponsorProject p) {
         return new SponsorProjectDto(
                 p.getId(), p.getName(), p.getDescription(), p.getUrl(),
-                p.getLocation(), p.getYear(), p.getOutcome());
+                p.getLocation(), p.getYear());
     }
 }

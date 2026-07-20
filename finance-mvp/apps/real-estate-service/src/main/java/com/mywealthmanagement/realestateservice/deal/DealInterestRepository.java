@@ -2,9 +2,7 @@ package com.mywealthmanagement.realestateservice.deal;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 public interface DealInterestRepository extends JpaRepository<DealInterest, Long> {
@@ -21,7 +19,4 @@ public interface DealInterestRepository extends JpaRepository<DealInterest, Long
 
     @Query("select distinct i.interestedUserId from DealInterest i")
     List<Long> findDistinctInterestedUserIds();
-
-    @Query("select coalesce(sum(i.commitmentAmount), 0) from DealInterest i where i.dealId = :dealId")
-    BigDecimal sumCommitmentByDealId(@Param("dealId") Long dealId);
 }

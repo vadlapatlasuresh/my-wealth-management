@@ -1,7 +1,6 @@
 package com.mywealthmanagement.realestateservice.deal;
 
 import com.mywealthmanagement.realestateservice.common.Urls;
-import com.mywealthmanagement.realestateservice.deal.dto.DealDocumentDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -24,9 +23,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * CRUD for user-registered investment deals. Every operation is scoped to the
- * authenticated user; a deal owned by someone else is indistinguishable from a
+ * CRUD for the passive property directory. Every operation is scoped to the
+ * authenticated user; a listing owned by someone else is indistinguishable from a
  * non-existent one (returns 404) to avoid leaking existence (IDOR-safe).
+ *
+ * <p>The directory is informational only. It does not vet or endorse listings, give
+ * advice, or facilitate any transaction — so this service deliberately neither accepts
+ * nor returns returns, yields, IRR, minimum entry amounts or raise progress. Contact
+ * happens off-platform between the two parties.
  */
 @Service
 @RequiredArgsConstructor
@@ -35,11 +39,9 @@ public class DealService {
     private final DealRepository dealRepository;
     private final DealInterestRepository interestRepository;
     private final SponsorProjectRepository sponsorProjectRepository;
-    private final DealDocumentRepository documentRepository;
     private final DealWatchRepository watchRepository;
     private final LeadNotifier leadNotifier;
     private final com.mywealthmanagement.realestateservice.comms.NotificationClient notificationClient;
-    private final com.mywealthmanagement.realestateservice.comms.DocumentsRegistryClient documentsRegistryClient;
     private final DealBroadcaster dealBroadcaster;
     private final com.mywealthmanagement.realestateservice.audit.AuditClient auditClient;
 
@@ -47,7 +49,7 @@ public class DealService {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
     }
 
-    /** The owner's own deals, each annotated with how many investors are interested. */
+    /** The owner's own listings. */
     public List<DealDto> getDeals() {
         return getDeals(getUserId());
     }
@@ -55,32 +57,29 @@ public class DealService {
     /** Same, for an explicit user — used by the customer-care read-only view. */
     public List<DealDto> getDeals(Long userId) {
         return dealRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(deal -> {
-                    DealDto dto = toDto(deal);
-                    dto.setInterestCount((int) interestRepository.countByDealId(deal.getId()));
-                    dto.setCommittedAmount(interestRepository.sumCommitmentByDealId(deal.getId()));
-                    return dto;
-                })
+                .map(this::toDto)
                 .collect(Collectors.toList());
     }
 
     /**
-     * Public marketplace: OPEN deals from every sponsor, optionally filtered by category,
-     * subcategory, and return type, with sorting and pagination. Blank/null params ignored.
+     * The public directory: OPEN listings from every poster, optionally filtered by
+     * category and property type, with pagination. Blank/null params ignored.
      *
-     * @param sort   NEWEST (default) | RETURN_DESC | MIN_INVESTMENT_ASC | TARGET_RAISE_DESC
+     * <p>Sorting is by recency only. There is deliberately no "best performing" or
+     * "lowest entry" ordering — ranking listings by financial attractiveness is exactly
+     * the editorial judgement a passive directory must not make.
+     *
      * @param limit  max results (default 24, capped at 100); offset for paging.
      */
-    public List<DealDto> getMarketplace(String category, String subcategory, String returnType,
-                                        String sort, Integer limit, Integer offset) {
+    public List<DealDto> getMarketplace(String category, String subcategory,
+                                        Integer limit, Integer offset) {
         String cat = trimUpperOrNull(category);
         String sub = trimUpperOrNull(subcategory);
-        String ret = trimUpperOrNull(returnType);
         List<Deal> filtered = dealRepository.findByStatusOrderByCreatedAtDesc("OPEN").stream()
                 .filter(d -> cat == null || cat.equals(d.getCategory()))
                 .filter(d -> sub == null || sub.equals(d.getSubcategory()))
-                .filter(d -> ret == null || ret.equals(d.getReturnType()))
-                .sorted(marketplaceComparator(trimUpperOrNull(sort)))
+                .sorted(Comparator.comparing(
+                        Deal::getCreatedAt, Comparator.nullsLast(Comparator.<LocalDateTime>naturalOrder())).reversed())
                 .collect(Collectors.toList());
 
         int from = Math.max(0, offset == null ? 0 : offset);
@@ -92,92 +91,7 @@ public class DealService {
         return filtered.subList(from, to).stream().map(this::toDto).collect(Collectors.toList());
     }
 
-    private Comparator<Deal> marketplaceComparator(String sort) {
-        Comparator<Deal> byNewest = Comparator.comparing(
-                Deal::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder())).reversed();
-        if (sort == null) {
-            return byNewest;
-        }
-        switch (sort) {
-            case "RETURN_DESC":
-                return Comparator.comparing(DealService::returnScore,
-                        Comparator.nullsLast(Comparator.naturalOrder())).reversed();
-            case "MIN_INVESTMENT_ASC":
-                return Comparator.comparing(Deal::getMinInvestment,
-                        Comparator.nullsLast(Comparator.naturalOrder()));
-            case "TARGET_RAISE_DESC":
-                return Comparator.comparing(Deal::getTargetRaise,
-                        Comparator.nullsLast(Comparator.naturalOrder())).reversed();
-            default:
-                return byNewest;
-        }
-    }
-
-    /** A single comparable "return" figure: prefer max annual return, else target IRR. */
-    private static BigDecimal returnScore(Deal d) {
-        if (d.getAnnualReturnMax() != null) return d.getAnnualReturnMax();
-        if (d.getAnnualReturnMin() != null) return d.getAnnualReturnMin();
-        return d.getTargetIrr();
-    }
-
-    // ---- Deal documents (link-based attachments) ----
-
-    public DealDocumentDto addDocument(Long dealId, DealDocumentDto dto) {
-        Deal deal = findOwnedOrThrow(dealId);
-        String label = dto.getLabel() == null ? "" : dto.getLabel().trim();
-        if (label.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Document label is required");
-        }
-        String url = Urls.validateOrNull(dto.getUrl(), "url");
-        if (url == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A document URL is required");
-        }
-        DealDocument doc = new DealDocument();
-        doc.setDealId(deal.getId());
-        doc.setOwnerUserId(deal.getUserId());
-        doc.setLabel(label);
-        doc.setUrl(url);
-        doc.setDocType(trimUpperOrNull(dto.getDocType()));
-        DealDocument savedDoc = documentRepository.save(doc);
-        DealDocumentDto saved = toDocumentDto(savedDoc);
-        // Also register it in the owner's personal Document Center (best-effort) so that
-        // center remains the single source of truth for all of their documents.
-        documentsRegistryClient.register(savedDoc.getOwnerUserId(), savedDoc.getId(),
-                savedDoc.getLabel(), savedDoc.getDocType(), savedDoc.getUrl());
-        // Best-effort: let everyone watching this deal know a new document landed.
-        notifyWatchers(deal, watcher -> leadNotifier.notifyWatcherNewDocument(watcher, deal.getTitle(), label));
-        return saved;
-    }
-
-    /** Documents for a deal — same visibility as the deal (OPEN or owner). */
-    public List<DealDocumentDto> getDocumentsForDeal(Long dealId) {
-        Deal deal = dealRepository.findById(dealId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found"));
-        boolean isOwner = deal.getUserId().equals(getUserId());
-        if (!isOwner && !"OPEN".equals(deal.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found");
-        }
-        return documentRepository.findByDealIdOrderByCreatedAtDesc(dealId).stream()
-                .map(this::toDocumentDto).collect(Collectors.toList());
-    }
-
-    public void deleteDocument(Long dealId, Long docId) {
-        findOwnedOrThrow(dealId);
-        DealDocument doc = documentRepository.findById(docId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
-        if (!doc.getDealId().equals(dealId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found");
-        }
-        documentRepository.delete(doc);
-        // Keep the owner's Document Center in sync (best-effort).
-        documentsRegistryClient.unregister(doc.getOwnerUserId(), doc.getId());
-    }
-
-    private DealDocumentDto toDocumentDto(DealDocument d) {
-        return new DealDocumentDto(d.getId(), d.getDealId(), d.getLabel(), d.getUrl(), d.getDocType(), d.getCreatedAt());
-    }
-
-    // ---- Watchlist (saved deals) ----
+    // ---- Watchlist (saved listings) ----
 
     public void watch(Long dealId) {
         Deal deal = dealRepository.findById(dealId)
@@ -206,19 +120,16 @@ public class DealService {
                 .map(this::toDto).collect(Collectors.toList());
     }
 
-    /** The taxonomy (categories, subcategories, return types, …) for building UI dropdowns. */
+    /** The taxonomy (categories, property types, statuses) for building UI dropdowns. */
     public Map<String, Object> getTaxonomy() {
         Map<String, Object> t = new java.util.LinkedHashMap<>();
         t.put("categories", DealTaxonomy.CATEGORIES);
         t.put("subcategories", DealTaxonomy.SUBCATEGORIES);
-        t.put("returnTypes", DealTaxonomy.RETURN_TYPES);
-        t.put("distributionFrequencies", DealTaxonomy.DISTRIBUTION_FREQUENCIES);
         t.put("statuses", DealTaxonomy.STATUSES);
-        t.put("leadStatuses", DealTaxonomy.LEAD_STATUSES);
         return t;
     }
 
-    /** Owner can view their deal in any status; everyone else only if it is OPEN. */
+    /** Owner can view their listing in any status; everyone else only if it is OPEN. */
     public DealDto getDeal(Long id) {
         Deal deal = dealRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found"));
@@ -226,30 +137,31 @@ public class DealService {
         if (!isOwner && !"OPEN".equals(deal.getStatus())) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found");
         }
-        DealDto dto = toDto(deal);
-        dto.setCommittedAmount(interestRepository.sumCommitmentByDealId(deal.getId()));
-        return dto;
+        return toDto(deal);
     }
 
     /**
-     * Record an investor's interest in an OPEN deal and share their contact details with
-     * the deal's owner. The interested user cannot express interest in their own deal.
+     * Record that the current user asked for an OPEN listing's contact details, so they can
+     * find it again under "My Interests". The poster's email is handed to the browser as a
+     * mailto: link; this platform sends nothing on anyone's behalf and brokers no
+     * introduction. A user cannot request contact details for their own listing.
      */
-    public DealInterestDto expressInterest(Long dealId, DealInterestRequest request) {
+    public DealInterestDto requestContactInfo(Long dealId, DealInterestRequest request) {
         if (request == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing details");
         }
         Deal deal = dealRepository.findById(dealId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found"));
         if (!"OPEN".equals(deal.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "This deal is not open to investors");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This listing is not published");
         }
         Long userId = getUserId();
         if (deal.getUserId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You own this deal");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "You posted this listing");
         }
         if (interestRepository.existsByDealIdAndInterestedUserId(deal.getId(), userId)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "You've already expressed interest in this deal");
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "You've already requested contact details for this listing");
         }
 
         String name = request.getName() == null ? "" : request.getName().trim();
@@ -260,11 +172,6 @@ public class DealService {
         if (!email.contains("@")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A valid email is required");
         }
-        // Accreditation gate: the investor must attest before contact details are shared.
-        if (!request.isAccredited()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Please confirm you are an accredited investor to continue");
-        }
 
         DealInterest interest = new DealInterest();
         interest.setDealId(deal.getId());
@@ -274,21 +181,17 @@ public class DealService {
         interest.setEmail(email);
         interest.setPhone(request.getPhone() == null ? null : request.getPhone().trim());
         interest.setMessage(request.getMessage() == null ? null : request.getMessage().trim());
-        interest.setCommitmentAmount(nonNegativeOrNull(request.getCommitmentAmount(), "commitmentAmount"));
-        interest.setAccredited(true);
-        interest.setStatus("NEW");
         DealInterestDto saved = toInterestDto(interestRepository.save(interest));
 
-        // Best-effort: notify the sponsor in-app. Never fail the interest if this errors.
+        // Best-effort: let the poster know someone looked them up. Never fail the request.
         leadNotifier.notifyNewInterest(deal.getUserId(), deal.getTitle(), name);
-        // Confirm the registration back to the investor so they know it went through.
-        notificationClient.notify(userId, "DEAL", "Interest registered",
-                "You registered interest in \"" + deal.getTitle()
-                        + "\". The sponsor has been notified and may reach out with next steps.", "dealAlerts");
+        notificationClient.notify(userId, "DEAL", "Contact details requested",
+                "You requested the contact details for \"" + deal.getTitle()
+                        + "\". Any follow-up happens directly between you and the poster.", "dealAlerts");
         return saved;
     }
 
-    /** The deals the current investor has expressed interest in, with each deal's title/status. */
+    /** The listings the current user has requested contact details for. */
     public List<MyInterestDto> getMyInterests() {
         List<DealInterest> interests = interestRepository.findByInterestedUserIdOrderByCreatedAtDesc(getUserId());
         Map<Long, Deal> deals = dealRepository.findAllById(
@@ -300,41 +203,13 @@ public class DealService {
                     i.getId(), i.getDealId(),
                     deal != null ? deal.getTitle() : "(removed)",
                     deal != null ? deal.getStatus() : null,
-                    i.getStatus(), i.getMessage(), i.getCreatedAt());
+                    i.getMessage(), i.getCreatedAt());
         }).collect(Collectors.toList());
     }
 
-    /** Owner-only: update the lead status of an interest on one of the owner's deals. */
-    public DealInterestDto updateLeadStatus(Long dealId, Long interestId, String status) {
-        Deal deal = findOwnedOrThrow(dealId); // 404 unless caller owns the deal
-        DealInterest interest = interestRepository.findById(interestId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Interest not found"));
-        if (!interest.getDealId().equals(dealId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Interest not found");
-        }
-        String next = trimUpperOrNull(status);
-        if (next == null || !DealTaxonomy.LEAD_STATUSES.contains(next)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid lead status: " + status);
-        }
-        interest.setStatus(next);
-        DealInterestDto result = toInterestDto(interestRepository.save(interest));
-        // Best-effort: keep the investor informed of where their interest stands.
-        leadNotifier.notifyLeadStatusChanged(interest.getInterestedUserId(), deal.getTitle(), next);
-        return result;
-    }
-
-    /** Owner-only: the list of investors who expressed interest in one of the owner's deals. */
-    public List<DealInterestDto> getInterests(Long dealId) {
-        findOwnedOrThrow(dealId); // 404 unless the caller owns the deal
-        return interestRepository.findByDealIdOrderByCreatedAtDesc(dealId).stream()
-                .map(this::toInterestDto)
-                .collect(Collectors.toList());
-    }
-
     /**
-     * The track record (previous projects) of a deal's sponsor, for investors vetting the
-     * deal. Visible under the same rule as the deal itself: the deal must be OPEN, or the
-     * caller must be its owner.
+     * The poster's previously listed projects. Visible under the same rule as the listing
+     * itself: the listing must be OPEN, or the caller must be its owner.
      */
     public List<SponsorProjectDto> getSponsorProjectsForDeal(Long dealId) {
         Deal deal = dealRepository.findById(dealId)
@@ -425,37 +300,69 @@ public class DealService {
         }
         deal.setSubcategory(subcategory);
 
-        // Return structure.
-        String returnType = optionalEnum(dto.getReturnType(), DealTaxonomy.RETURN_TYPES, "returnType");
-        deal.setReturnType(returnType);
-        BigDecimal rMin = percentOrNull(dto.getAnnualReturnMin(), "annualReturnMin");
-        BigDecimal rMax = percentOrNull(dto.getAnnualReturnMax(), "annualReturnMax");
-        if (rMin != null && rMax != null && rMin.compareTo(rMax) > 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "annualReturnMin cannot exceed annualReturnMax");
-        }
-        deal.setAnnualReturnMin(rMin);
-        deal.setAnnualReturnMax(rMax);
-        deal.setDistributionFrequency(optionalEnum(dto.getDistributionFrequency(),
-                DealTaxonomy.DISTRIBUTION_FREQUENCIES, "distributionFrequency"));
-
         deal.setDescription(dto.getDescription());
         deal.setLocation(dto.getLocation());
-        deal.setWebsiteUrl(Urls.validateOrNull(dto.getWebsiteUrl(), "websiteUrl"));
-        deal.setTargetRaise(nonNegativeOrNull(dto.getTargetRaise(), "targetRaise"));
-        deal.setMinInvestment(nonNegativeOrNull(dto.getMinInvestment(), "minInvestment"));
-        deal.setTargetIrr(percentOrNull(dto.getTargetIrr(), "targetIrr"));
-        deal.setHoldPeriodMonths(dto.getHoldPeriodMonths());
+
+        // The external link is mandatory: every listing must hand the reader off to the
+        // poster's own site or offering portal rather than resolving anything here.
+        String websiteUrl = Urls.validateOrNull(dto.getWebsiteUrl(), "websiteUrl");
+        if (websiteUrl == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "An external listing URL is required");
+        }
+        deal.setWebsiteUrl(websiteUrl);
+
+        deal.setImageUrls(joinImageUrls(dto.getImageUrls()));
+
+        String contactEmail = trimToNull(dto.getContactEmail());
+        if (contactEmail != null && !contactEmail.contains("@")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "contactEmail must be a valid email");
+        }
+        deal.setContactEmail(contactEmail);
+        deal.setContactPhone(trimToNull(dto.getContactPhone()));
+        if (deal.getContactEmail() == null && deal.getContactPhone() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Provide a contact email or phone number for inquiries");
+        }
 
         // Status defaults to DRAFT on create; on update keep the existing value if omitted.
         String defaultStatus = creating ? "DRAFT" : deal.getStatus();
         deal.setStatus(normalize(dto.getStatus(), DealTaxonomy.STATUSES, defaultStatus));
+    }
 
-        if (dto.getAmountCommitted() != null) {
-            deal.setAmountCommitted(nonNegativeOrNull(dto.getAmountCommitted(), "amountCommitted"));
-        } else if (deal.getAmountCommitted() == null) {
-            deal.setAmountCommitted(BigDecimal.ZERO);
+    /**
+     * Validate each photo URL and flatten to the newline-separated column form. A bad
+     * scheme fails the whole request rather than being dropped quietly — silently losing
+     * a poster's photo is worse than telling them which one we rejected.
+     */
+    private String joinImageUrls(List<String> urls) {
+        if (urls == null || urls.isEmpty()) {
+            return null;
         }
+        List<String> valid = urls.stream()
+                .filter(u -> u != null && !u.isBlank())
+                .limit(12)
+                .map(u -> Urls.validateOrNull(u, "imageUrls"))
+                .filter(u -> u != null)
+                .collect(Collectors.toList());
+        return valid.isEmpty() ? null : String.join("\n", valid);
+    }
+
+    private static List<String> splitImageUrls(String joined) {
+        if (joined == null || joined.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(joined.split("\n"))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private String normalize(String value, Set<String> allowed, String fallback) {
@@ -469,42 +376,11 @@ public class DealService {
         return upper;
     }
 
-    private BigDecimal nonNegativeOrNull(BigDecimal value, String field) {
-        if (value == null) {
-            return null;
-        }
-        if (value.signum() < 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " cannot be negative");
-        }
-        return value;
-    }
-
-    /** A percentage value: non-negative and capped at a sane 1000% to catch fat-finger input. */
-    private BigDecimal percentOrNull(BigDecimal value, String field) {
-        BigDecimal v = nonNegativeOrNull(value, field);
-        if (v != null && v.compareTo(BigDecimal.valueOf(1000)) > 0) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, field + " looks too large");
-        }
-        return v;
-    }
-
     private String trimUpperOrNull(String value) {
         if (value == null || value.isBlank()) {
             return null;
         }
         return value.trim().toUpperCase();
-    }
-
-    /** Optional enum: null/blank -> null; otherwise must be in {@code allowed}. */
-    private String optionalEnum(String value, Set<String> allowed, String field) {
-        String v = trimUpperOrNull(value);
-        if (v == null) {
-            return null;
-        }
-        if (!allowed.contains(v)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid " + field + ": " + value);
-        }
-        return v;
     }
 
     private DealDto toDto(Deal d) {
@@ -513,19 +389,13 @@ public class DealService {
         dto.setTitle(d.getTitle());
         dto.setCategory(d.getCategory());
         dto.setSubcategory(d.getSubcategory());
-        dto.setReturnType(d.getReturnType());
-        dto.setAnnualReturnMin(d.getAnnualReturnMin());
-        dto.setAnnualReturnMax(d.getAnnualReturnMax());
-        dto.setDistributionFrequency(d.getDistributionFrequency());
         dto.setDescription(d.getDescription());
         dto.setLocation(d.getLocation());
         dto.setWebsiteUrl(d.getWebsiteUrl());
-        dto.setTargetRaise(d.getTargetRaise());
-        dto.setMinInvestment(d.getMinInvestment());
-        dto.setTargetIrr(d.getTargetIrr());
-        dto.setHoldPeriodMonths(d.getHoldPeriodMonths());
+        dto.setImageUrls(splitImageUrls(d.getImageUrls()));
+        dto.setContactEmail(d.getContactEmail());
+        dto.setContactPhone(d.getContactPhone());
         dto.setStatus(d.getStatus());
-        dto.setAmountCommitted(d.getAmountCommitted());
         dto.setCreatedAt(d.getCreatedAt());
         dto.setUpdatedAt(d.getUpdatedAt());
         return dto;
@@ -539,9 +409,6 @@ public class DealService {
                 i.getEmail(),
                 i.getPhone(),
                 i.getMessage(),
-                i.getCommitmentAmount(),
-                i.isAccredited(),
-                i.getStatus(),
                 i.getCreatedAt()
         );
     }

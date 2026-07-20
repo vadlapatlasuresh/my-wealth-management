@@ -1,6 +1,5 @@
 package com.mywealthmanagement.realestateservice.deal;
 
-import com.mywealthmanagement.realestateservice.deal.dto.DealDocumentDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
@@ -18,8 +17,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * REST API for user-registered investment deals (real estate and other asset classes).
- * Routed through the gateway at {@code /api/v1/deals}.
+ * REST API for the passive property directory. Routed through the gateway at
+ * {@code /api/v1/deals}.
+ *
+ * <p>The surface is deliberately narrow: post, browse, save, and request a poster's
+ * contact details. There is no endpoint that returns financial terms, ranks listings by
+ * attractiveness, serves offering documents, or tracks anyone through a pipeline.
  */
 @RestController
 @RequestMapping("/api/v1/deals")
@@ -58,19 +61,17 @@ public class DealController {
         }
     }
 
-    /** Public marketplace of OPEN deals, optionally filtered/sorted/paged. Literal paths before /{id}. */
+    /** The public directory of OPEN listings, optionally filtered/paged. Literal paths before /{id}. */
     @GetMapping("/marketplace")
     public ResponseEntity<List<DealDto>> getMarketplace(
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String subcategory,
-            @RequestParam(required = false) String returnType,
-            @RequestParam(required = false) String sort,
             @RequestParam(required = false) Integer limit,
             @RequestParam(required = false) Integer offset) {
-        return ResponseEntity.ok(dealService.getMarketplace(category, subcategory, returnType, sort, limit, offset));
+        return ResponseEntity.ok(dealService.getMarketplace(category, subcategory, limit, offset));
     }
 
-    /** The investor's saved/watchlisted deals. */
+    /** The viewer's saved listings. */
     @GetMapping("/watchlist")
     public ResponseEntity<List<DealDto>> getWatchlist() {
         return ResponseEntity.ok(dealService.getWatchlist());
@@ -98,52 +99,24 @@ public class DealController {
         return ResponseEntity.ok(dealService.getDeal(id));
     }
 
-    /** An investor expresses interest; their contact details are shared with the deal owner. */
+    /**
+     * Record that the caller asked for this listing's contact details. Returns the record
+     * only; the poster's email is already on the listing and the browser opens a mailto:
+     * link with it. Nothing is sent on anyone's behalf.
+     */
     @PostMapping("/{id}/interests")
-    public ResponseEntity<DealInterestDto> expressInterest(
+    public ResponseEntity<DealInterestDto> requestContactInfo(
             @PathVariable Long id, @RequestBody DealInterestRequest request) {
-        return ResponseEntity.ok(dealService.expressInterest(id, request));
+        return ResponseEntity.ok(dealService.requestContactInfo(id, request));
     }
 
-    /** Owner-only: list investors who expressed interest in this deal. */
-    @GetMapping("/{id}/interests")
-    public ResponseEntity<List<DealInterestDto>> getInterests(@PathVariable Long id) {
-        return ResponseEntity.ok(dealService.getInterests(id));
-    }
-
-    /** Owner-only: update a lead's status (NEW/CONTACTED/COMMITTED/PASSED). */
-    @PutMapping("/{id}/interests/{interestId}/status")
-    public ResponseEntity<DealInterestDto> updateLeadStatus(
-            @PathVariable Long id, @PathVariable Long interestId, @RequestBody Map<String, String> body) {
-        return ResponseEntity.ok(dealService.updateLeadStatus(id, interestId, body.get("status")));
-    }
-
-    /** The sponsor's track record (previous projects) shown on the deal page. */
+    /** The poster's other listings, shown as directory history on the listing page. */
     @GetMapping("/{id}/sponsor-projects")
     public ResponseEntity<List<SponsorProjectDto>> getSponsorProjects(@PathVariable Long id) {
         return ResponseEntity.ok(dealService.getSponsorProjectsForDeal(id));
     }
 
-    /** Document links on a deal (visible when the deal is OPEN or you own it). */
-    @GetMapping("/{id}/documents")
-    public ResponseEntity<List<DealDocumentDto>> getDocuments(@PathVariable Long id) {
-        return ResponseEntity.ok(dealService.getDocumentsForDeal(id));
-    }
-
-    /** Owner-only: attach a document link to a deal. */
-    @PostMapping("/{id}/documents")
-    public ResponseEntity<DealDocumentDto> addDocument(@PathVariable Long id, @RequestBody DealDocumentDto dto) {
-        return ResponseEntity.ok(dealService.addDocument(id, dto));
-    }
-
-    /** Owner-only: remove a document from a deal. */
-    @DeleteMapping("/{id}/documents/{docId}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long id, @PathVariable Long docId) {
-        dealService.deleteDocument(id, docId);
-        return ResponseEntity.noContent().build();
-    }
-
-    /** Save a deal to the investor's watchlist. */
+    /** Save a listing to the viewer's saved list. */
     @PostMapping("/{id}/watch")
     public ResponseEntity<Void> watch(@PathVariable Long id) {
         dealService.watch(id);
