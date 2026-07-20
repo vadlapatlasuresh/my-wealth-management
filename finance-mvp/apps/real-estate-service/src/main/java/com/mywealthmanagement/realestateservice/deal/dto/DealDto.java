@@ -38,7 +38,11 @@ public class DealDto {
     @Size(max = 500, message = "websiteUrl must be at most 500 characters")
     private String websiteUrl;
 
-    /** Hosted property photo URLs, in display order. */
+    /**
+     * Read-only. Authenticated paths to this listing's uploaded photos, in display order.
+     * Populated by the server; anything a client sends here is ignored — photos are
+     * managed through the /images endpoints.
+     */
     private List<String> imageUrls;
 
     @Size(max = 320, message = "contactEmail must be at most 320 characters")

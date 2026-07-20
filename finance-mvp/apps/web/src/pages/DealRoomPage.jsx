@@ -39,7 +39,7 @@ const humanize = (v) => (v ? v.split('_').map((w) => w.charAt(0) + w.slice(1).to
 
 const EMPTY_FORM = {
   title: '', category: 'REAL_ESTATE', subcategory: '', status: 'DRAFT', location: '',
-  websiteUrl: '', description: '', imageUrls: '', contactEmail: '', contactPhone: '',
+  websiteUrl: '', description: '', contactEmail: '', contactPhone: '',
 };
 
 const labelFor = (list, value) => (list.find((o) => o.value === value) || {}).label || value;
@@ -50,8 +50,27 @@ const inputStyle = {
 };
 const fieldLabel = { fontSize: '11.5px', color: 'var(--tv-text-muted)', fontWeight: 600, marginBottom: '4px', display: 'block' };
 
-/** Split the textarea of image URLs into a clean array (and back again). */
-const parseImageUrls = (text) => (text || '').split('\n').map((s) => s.trim()).filter(Boolean);
+/** Two photos per listing — enough to show the property, small enough to stay cheap. */
+const MAX_IMAGES = 2;
+const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/** Photo URLs look like /api/v1/deals/{dealId}/images/{imageId}. */
+const imageIdFromUrl = (url) => (url || '').split('/').pop();
+
+/**
+ * The app shell scrolls `.page-content`, not the window, so `window.scrollTo` is a
+ * no-op here. Scroll whichever of the two actually owns the overflow.
+ */
+function scrollPageToTop() {
+  if (typeof document === 'undefined') return;
+  const pane = document.querySelector('.page-content');
+  if (pane && pane.scrollHeight > pane.clientHeight) {
+    pane.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 export default function DealRoomPage() {
   // view: 'mine' | 'market' | 'detail' | 'saved' | 'interests' | 'history'
@@ -72,6 +91,10 @@ export default function DealRoomPage() {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  // Photos already stored on the listing being edited (server URLs), and newly picked
+  // File objects not yet uploaded — uploads need a listing id, so they go up after save.
+  const [existingImages, setExistingImages] = useState([]);
+  const [pickedImages, setPickedImages] = useState([]);
 
   const loadMine = useCallback(async () => {
     setLoading(true); setError('');
@@ -129,19 +152,51 @@ export default function DealRoomPage() {
   const isListTab = view === 'mine' || view === 'market' || view === 'history' || view === 'interests' || view === 'saved';
 
   // ---- create / edit ----
-  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setNotice(''); setShowForm(true); };
+  // The form renders at the top of the page, so opening it from a card further down
+  // leaves the user staring at the unchanged grid. Bring the form into view.
+  const openCreate = () => {
+    // The form only renders on the listing tabs — jump to My Listings when the user
+    // hits "Post a listing" from Saved / My Interests / Directory History.
+    if (view !== 'mine' && view !== 'market') { setView('mine'); loadMine(); }
+    setEditingId(null); setForm(EMPTY_FORM);
+    setExistingImages([]); setPickedImages([]);
+    setNotice(''); setShowForm(true);
+    scrollPageToTop();
+  };
   const openEdit = (deal) => {
     setEditingId(deal.id);
     setForm({
       title: deal.title || '', category: deal.category || 'OTHER', subcategory: deal.subcategory || '',
       status: deal.status || 'DRAFT', location: deal.location || '', websiteUrl: deal.websiteUrl || '',
-      description: deal.description || '', imageUrls: (deal.imageUrls || []).join('\n'),
+      description: deal.description || '',
       contactEmail: deal.contactEmail || '', contactPhone: deal.contactPhone || '',
     });
+    setExistingImages(deal.imageUrls || []);
+    setPickedImages([]);
     setNotice(''); setShowForm(true);
+    scrollPageToTop();
   };
-  const closeForm = () => { setShowForm(false); setEditingId(null); setForm(EMPTY_FORM); };
+  const closeForm = () => {
+    setShowForm(false); setEditingId(null); setForm(EMPTY_FORM);
+    setExistingImages([]); setPickedImages([]);
+  };
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  /** Add newly picked files, keeping the total (stored + pending) within the cap. */
+  const addImages = (files) => {
+    setError('');
+    const room = MAX_IMAGES - existingImages.length - pickedImages.length;
+    if (room <= 0) { setError(`You can add up to ${MAX_IMAGES} photos.`); return; }
+    const accepted = [];
+    for (const file of Array.from(files).slice(0, room)) {
+      if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) { setError('Photos must be JPEG, PNG or WebP.'); continue; }
+      if (file.size > MAX_IMAGE_BYTES) { setError(`"${file.name}" is larger than 8MB.`); continue; }
+      accepted.push(file);
+    }
+    if (accepted.length) setPickedImages((p) => [...p, ...accepted]);
+  };
+  const removeExistingImage = (url) => setExistingImages((imgs) => imgs.filter((u) => u !== url));
+  const removePickedImage = (idx) => setPickedImages((p) => p.filter((_, i) => i !== idx));
 
   const submitDeal = async (e) => {
     e.preventDefault();
@@ -157,13 +212,35 @@ export default function DealRoomPage() {
       location: form.location.trim() || undefined,
       websiteUrl: form.websiteUrl.trim(),
       description: form.description.trim() || undefined,
-      imageUrls: parseImageUrls(form.imageUrls),
       contactEmail: form.contactEmail.trim() || undefined,
       contactPhone: form.contactPhone.trim() || undefined,
     };
     try {
-      if (editingId) { await api.updateDeal(editingId, payload); setNotice('Listing updated.'); }
-      else { await api.createDeal(payload); setNotice('Listing posted.'); }
+      // Photos are uploaded against a listing id, so the row has to exist first.
+      const saved = editingId
+        ? await api.updateDeal(editingId, payload)
+        : await api.createDeal(payload);
+      const dealId = editingId || saved?.id;
+
+      // Drop any stored photo the user removed while editing.
+      if (editingId) {
+        const kept = new Set(existingImages);
+        const removed = (deals.find((d) => d.id === editingId)?.imageUrls || []).filter((u) => !kept.has(u));
+        for (const url of removed) {
+          await api.deleteDealImage(dealId, imageIdFromUrl(url)).catch(() => {});
+        }
+      }
+
+      // Upload the new photos. A storage failure must not lose the listing itself —
+      // the row is already saved, so surface the problem and keep going.
+      let uploadError = '';
+      for (const file of pickedImages) {
+        try { await api.uploadDealImage(dealId, file); }
+        catch (err) { uploadError = err?.message || 'Could not upload one of the photos.'; }
+      }
+
+      setNotice(editingId ? 'Listing updated.' : 'Listing posted.');
+      if (uploadError) setError(uploadError);
       closeForm(); await loadMine();
     } catch (err) { setError(err?.message || 'Could not save the listing.'); }
     finally { setSaving(false); }
@@ -196,7 +273,9 @@ export default function DealRoomPage() {
             or offer financial advice.
           </div>
         </div>
-        {(view === 'mine' || view === 'market') && (
+        {/* Available from every listing tab — openCreate jumps to My Listings when the
+            current tab has nowhere to render the form. */}
+        {isListTab && (
           <div className="page-actions">
             <button className="btn btn-primary btn-sm" onClick={openCreate}>
               <i className="ti ti-plus"></i> Post a listing
@@ -225,7 +304,10 @@ export default function DealRoomPage() {
 
       {/* Create/edit form */}
       {showForm && (view === 'mine' || view === 'market') && (
-        <ListingForm form={form} setField={setField} editingId={editingId} saving={saving} onSubmit={submitDeal} onCancel={closeForm} />
+        <ListingForm form={form} setField={setField} editingId={editingId} saving={saving}
+          onSubmit={submitDeal} onCancel={closeForm}
+          existingImages={existingImages} pickedImages={pickedImages}
+          onAddImages={addImages} onRemoveExistingImage={removeExistingImage} onRemovePickedImage={removePickedImage} />
       )}
 
       {/* MY LISTINGS */}
@@ -361,22 +443,52 @@ function EmptyState({ icon, title, body, cta, onCta }) {
   );
 }
 
+const photoPlaceholder = (height) => ({
+  height, borderRadius: 'var(--radius-md)', background: 'var(--tv-border)',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  color: 'var(--tv-text-muted)', fontSize: '24px',
+});
+
+/**
+ * A stored property photo. The image endpoint needs the Bearer token, so a plain
+ * <img src> can't fetch it — pull the bytes as a blob and render the object URL,
+ * revoking it on unmount so we don't leak blobs as the user pages the directory.
+ */
+function StoredImage({ url, alt, style, fallbackHeight = 150 }) {
+  const [objectUrl, setObjectUrl] = useState('');
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let created = '';
+    setFailed(false); setObjectUrl('');
+    if (!url) return undefined;
+    api.openDealImage(url)
+      .then((u) => {
+        if (!active) { URL.revokeObjectURL(u); return; }
+        created = u; setObjectUrl(u);
+      })
+      .catch(() => { if (active) setFailed(true); });
+    return () => { active = false; if (created) URL.revokeObjectURL(created); };
+  }, [url]);
+
+  if (failed || !url) return <div style={photoPlaceholder(fallbackHeight)}><i className="ti ti-photo-off"></i></div>;
+  if (!objectUrl) return <div style={photoPlaceholder(fallbackHeight)}></div>;
+  return <img src={objectUrl} alt={alt} style={style} />;
+}
+
 /** The property photo, or a neutral placeholder. Photos lead the card, never numbers. */
 function ListingPhoto({ deal, height = 150 }) {
   const first = (deal.imageUrls || [])[0];
   if (!first) {
     return (
-      <div style={{
-        height, borderRadius: 'var(--radius-md)', background: 'var(--tv-border)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--tv-text-muted)', fontSize: '24px',
-      }}>
+      <div style={photoPlaceholder(height)}>
         <i className="ti ti-building-community"></i>
       </div>
     );
   }
   return (
-    <img src={first} alt={deal.title}
+    <StoredImage url={first} alt={deal.title} fallbackHeight={height}
       style={{ width: '100%', height, objectFit: 'cover', borderRadius: 'var(--radius-md)', display: 'block' }} />
   );
 }
@@ -513,7 +625,82 @@ function DirectoryFilters({ filters, onChange }) {
   );
 }
 
-function ListingForm({ form, setField, editingId, saving, onSubmit, onCancel }) {
+/**
+ * Up to two property photos. Shows what is already stored alongside what has just been
+ * picked, so the count the user sees is the count that will end up on the listing.
+ */
+function ImagePicker({ existing, picked, onAdd, onRemoveExisting, onRemovePicked }) {
+  const inputRef = React.useRef(null);
+  const total = existing.length + picked.length;
+  const full = total >= MAX_IMAGES;
+
+  const tile = {
+    position: 'relative', width: '110px', height: '84px', borderRadius: 'var(--radius-md)',
+    overflow: 'hidden', border: '1px solid var(--tv-border)', flexShrink: 0,
+  };
+  const removeBtn = {
+    position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px',
+    borderRadius: '50%', border: 'none', cursor: 'pointer', lineHeight: 1,
+    background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '12px',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {existing.map((url) => (
+          <div key={url} style={tile}>
+            <StoredImage url={url} alt="Property photo" fallbackHeight={84}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            <button type="button" style={removeBtn} title="Remove photo" onClick={() => onRemoveExisting(url)}>
+              <i className="ti ti-x"></i>
+            </button>
+          </div>
+        ))}
+        {picked.map((file, i) => (
+          <div key={`${file.name}-${i}`} style={tile}>
+            <LocalImagePreview file={file} />
+            <button type="button" style={removeBtn} title="Remove photo" onClick={() => onRemovePicked(i)}>
+              <i className="ti ti-x"></i>
+            </button>
+          </div>
+        ))}
+        {!full && (
+          <button type="button" onClick={() => inputRef.current && inputRef.current.click()}
+            style={{
+              ...tile, border: '1px dashed var(--tv-border)', background: 'transparent',
+              cursor: 'pointer', color: 'var(--tv-text-muted)', fontSize: '12px',
+              display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px',
+            }}>
+            <i className="ti ti-camera-plus" style={{ fontSize: '18px' }}></i>
+            Add photo
+          </button>
+        )}
+      </div>
+      <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" multiple
+        style={{ display: 'none' }}
+        onChange={(e) => { onAdd(e.target.files); e.target.value = ''; }} />
+      <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '6px' }}>
+        Up to {MAX_IMAGES} photos · JPEG, PNG or WebP · max 8MB each. {total}/{MAX_IMAGES} added.
+      </div>
+    </div>
+  );
+}
+
+/** Thumbnail for a not-yet-uploaded File, read straight from the browser. */
+function LocalImagePreview({ file }) {
+  const [url, setUrl] = useState('');
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (!url) return <div style={photoPlaceholder(84)}></div>;
+  return <img src={url} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />;
+}
+
+function ListingForm({ form, setField, editingId, saving, onSubmit, onCancel,
+                      existingImages, pickedImages, onAddImages, onRemoveExistingImage, onRemovePickedImage }) {
   const typeOptions = PROPERTY_TYPES[form.category] || [];
   // Changing category invalidates the property type — clear it.
   const onCategory = (e) => { setField('category')(e); setField('subcategory')({ target: { value: '' } }); };
@@ -558,9 +745,9 @@ function ListingForm({ form, setField, editingId, saving, onSubmit, onCancel }) 
 
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={fieldLabel}>Property Images</label>
-            <textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' }} value={form.imageUrls} onChange={setField('imageUrls')}
-              placeholder={'https://your-site.com/photo-1.jpg\nhttps://your-site.com/photo-2.jpg'} />
-            <div style={{ fontSize: '11px', color: 'var(--tv-text-muted)', marginTop: '4px' }}>One hosted image URL per line.</div>
+            <ImagePicker
+              existing={existingImages} picked={pickedImages}
+              onAdd={onAddImages} onRemoveExisting={onRemoveExistingImage} onRemovePicked={onRemovePickedImage} />
           </div>
 
           <div style={{ gridColumn: '1 / -1' }}>
@@ -627,8 +814,8 @@ function ListingDetail({ deal, onBack, onNotice }) {
           {images.length > 1 && (
             <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
               {images.slice(1).map((src) => (
-                <img key={src} src={src} alt={deal.title}
-                  style={{ width: '84px', height: '64px', objectFit: 'cover', borderRadius: 'var(--radius-md)' }} />
+                <StoredImage key={src} url={src} alt={deal.title} fallbackHeight={64}
+                  style={{ width: '84px', height: '64px', objectFit: 'cover', borderRadius: 'var(--radius-md)', display: 'block' }} />
               ))}
             </div>
           )}

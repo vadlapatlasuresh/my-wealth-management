@@ -48,15 +48,12 @@ public class Deal {
     @Column(length = 200)
     private String location;
 
+    // Property photos live in the deal_images table (bytes in object storage), not here.
+
     // Required external link. Every listing sends people off this domain entirely —
     // to the poster's own site or their own legal offering portal.
     @Column(name = "website_url", nullable = false, length = 500)
     private String websiteUrl;
-
-    // Newline-separated hosted image URLs. The directory links to property photos, it
-    // never stores them, which keeps third-party media off our infrastructure.
-    @Column(name = "image_urls", length = 2000)
-    private String imageUrls;
 
     // Where inquiries go. Surfaced to viewers as a mailto:/tel: link so the conversation
     // happens directly between the two parties, off-platform.

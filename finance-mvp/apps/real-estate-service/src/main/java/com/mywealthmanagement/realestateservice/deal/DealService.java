@@ -6,6 +6,7 @@ import com.mywealthmanagement.realestateservice.deal.dto.DealInterestDto;
 import com.mywealthmanagement.realestateservice.deal.dto.DealInterestRequest;
 import com.mywealthmanagement.realestateservice.deal.dto.MyInterestDto;
 import com.mywealthmanagement.realestateservice.sponsor.SponsorProjectRepository;
+import com.mywealthmanagement.realestateservice.storage.DealImageStorageService;
 import com.mywealthmanagement.realestateservice.sponsor.SponsorProjectService;
 import com.mywealthmanagement.realestateservice.sponsor.dto.SponsorProjectDto;
 import lombok.RequiredArgsConstructor;
@@ -36,10 +37,15 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DealService {
 
+    /** A listing shows what the property looks like; it is not a media host. */
+    public static final int MAX_IMAGES = 2;
+
     private final DealRepository dealRepository;
     private final DealInterestRepository interestRepository;
     private final SponsorProjectRepository sponsorProjectRepository;
     private final DealWatchRepository watchRepository;
+    private final DealImageRepository imageRepository;
+    private final DealImageStorageService imageStorage;
     private final LeadNotifier leadNotifier;
     private final com.mywealthmanagement.realestateservice.comms.NotificationClient notificationClient;
     private final DealBroadcaster dealBroadcaster;
@@ -56,9 +62,7 @@ public class DealService {
 
     /** Same, for an explicit user — used by the customer-care read-only view. */
     public List<DealDto> getDeals(Long userId) {
-        return dealRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+        return toDtos(dealRepository.findByUserIdOrderByCreatedAtDesc(userId));
     }
 
     /**
@@ -88,7 +92,7 @@ public class DealService {
         if (from >= filtered.size()) {
             return List.of();
         }
-        return filtered.subList(from, to).stream().map(this::toDto).collect(Collectors.toList());
+        return toDtos(filtered.subList(from, to));
     }
 
     // ---- Watchlist (saved listings) ----
@@ -116,8 +120,8 @@ public class DealService {
                 .map(DealWatch::getDealId).collect(Collectors.toList());
         Map<Long, Deal> deals = dealRepository.findAllById(dealIds).stream()
                 .collect(Collectors.toMap(Deal::getId, d -> d));
-        return dealIds.stream().map(deals::get).filter(d -> d != null)
-                .map(this::toDto).collect(Collectors.toList());
+        return toDtos(dealIds.stream().map(deals::get).filter(d -> d != null)
+                .collect(Collectors.toList()));
     }
 
     /** The taxonomy (categories, property types, statuses) for building UI dropdowns. */
@@ -253,8 +257,16 @@ public class DealService {
         return toDto(saved);
     }
 
+    @Transactional
     public void deleteDeal(Long id) {
-        dealRepository.delete(findOwnedOrThrow(id));
+        Deal deal = findOwnedOrThrow(id);
+        // Take the photos and their stored bytes down with the listing, so deleting a
+        // listing does not strand objects in the bucket.
+        for (DealImage image : imageRepository.findByDealIdOrderBySortOrderAscIdAsc(id)) {
+            imageStorage.delete(image.getObjectName());
+        }
+        imageRepository.deleteByDealId(id);
+        dealRepository.delete(deal);
     }
 
     /**
@@ -312,8 +324,6 @@ public class DealService {
         }
         deal.setWebsiteUrl(websiteUrl);
 
-        deal.setImageUrls(joinImageUrls(dto.getImageUrls()));
-
         String contactEmail = trimToNull(dto.getContactEmail());
         if (contactEmail != null && !contactEmail.contains("@")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "contactEmail must be a valid email");
@@ -328,34 +338,6 @@ public class DealService {
         // Status defaults to DRAFT on create; on update keep the existing value if omitted.
         String defaultStatus = creating ? "DRAFT" : deal.getStatus();
         deal.setStatus(normalize(dto.getStatus(), DealTaxonomy.STATUSES, defaultStatus));
-    }
-
-    /**
-     * Validate each photo URL and flatten to the newline-separated column form. A bad
-     * scheme fails the whole request rather than being dropped quietly — silently losing
-     * a poster's photo is worse than telling them which one we rejected.
-     */
-    private String joinImageUrls(List<String> urls) {
-        if (urls == null || urls.isEmpty()) {
-            return null;
-        }
-        List<String> valid = urls.stream()
-                .filter(u -> u != null && !u.isBlank())
-                .limit(12)
-                .map(u -> Urls.validateOrNull(u, "imageUrls"))
-                .filter(u -> u != null)
-                .collect(Collectors.toList());
-        return valid.isEmpty() ? null : String.join("\n", valid);
-    }
-
-    private static List<String> splitImageUrls(String joined) {
-        if (joined == null || joined.isBlank()) {
-            return List.of();
-        }
-        return java.util.Arrays.stream(joined.split("\n"))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .collect(Collectors.toList());
     }
 
     private String trimToNull(String value) {
@@ -383,7 +365,107 @@ public class DealService {
         return value.trim().toUpperCase();
     }
 
+    // ---- Property photos ----
+
+    /**
+     * Attach a photo to one of the caller's listings. Capped at {@link #MAX_IMAGES}; the
+     * bytes go to object storage and the row keeps only the pointer.
+     */
+    public DealDto addImage(Long dealId, org.springframework.web.multipart.MultipartFile file) {
+        Deal deal = findOwnedOrThrow(dealId);
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No photo was uploaded");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_IMAGE_TYPES.contains(contentType.toLowerCase())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Photos must be JPEG, PNG or WebP");
+        }
+        if (imageRepository.countByDealId(dealId) >= MAX_IMAGES) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "A listing can have at most " + MAX_IMAGES + " photos");
+        }
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (java.io.IOException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not read the uploaded photo");
+        }
+        DealImageStorageService.Stored stored =
+                imageStorage.upload(dealId, file.getOriginalFilename(), contentType, bytes);
+
+        DealImage image = new DealImage();
+        image.setDealId(dealId);
+        image.setOwnerUserId(deal.getUserId());
+        image.setObjectName(stored.objectName());
+        image.setContentType(stored.contentType());
+        image.setSizeBytes(stored.size());
+        image.setSortOrder((int) imageRepository.countByDealId(dealId));
+        imageRepository.save(image);
+        return toDto(deal);
+    }
+
+    /** Serve a photo's bytes. Same visibility rule as the listing: OPEN, or you own it. */
+    public DealImageStorageService.Download getImageBytes(Long dealId, Long imageId) {
+        Deal deal = dealRepository.findById(dealId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found"));
+        boolean isOwner = deal.getUserId().equals(getUserId());
+        if (!isOwner && !"OPEN".equals(deal.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Deal not found");
+        }
+        DealImage image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found"));
+        if (!image.getDealId().equals(dealId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
+        }
+        return imageStorage.download(image.getObjectName());
+    }
+
+    /** Owner-only: remove a photo from a listing, and its stored bytes. */
+    public void deleteImage(Long dealId, Long imageId) {
+        findOwnedOrThrow(dealId);
+        DealImage image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found"));
+        if (!image.getDealId().equals(dealId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Photo not found");
+        }
+        imageRepository.delete(image);
+        imageStorage.delete(image.getObjectName());
+    }
+
+    private static final Set<String> ALLOWED_IMAGE_TYPES =
+            Set.of("image/jpeg", "image/png", "image/webp");
+
+    /** Clients never see storage keys — only this stable, authenticated path. */
+    private static String imagePath(DealImage image) {
+        return "/api/v1/deals/" + image.getDealId() + "/images/" + image.getId();
+    }
+
+    /** Map a list of listings, batch-loading their photos so this stays one extra query. */
+    private List<DealDto> toDtos(List<Deal> deals) {
+        if (deals.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, List<String>> byDeal = imageRepository
+                .findByDealIdInOrderBySortOrderAscIdAsc(deals.stream().map(Deal::getId).collect(Collectors.toList()))
+                .stream()
+                .collect(Collectors.groupingBy(DealImage::getDealId,
+                        Collectors.mapping(DealService::imagePath, Collectors.toList())));
+        return deals.stream().map(d -> {
+            DealDto dto = toDtoWithoutImages(d);
+            dto.setImageUrls(byDeal.getOrDefault(d.getId(), List.of()));
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
     private DealDto toDto(Deal d) {
+        DealDto dto = toDtoWithoutImages(d);
+        dto.setImageUrls(imageRepository.findByDealIdOrderBySortOrderAscIdAsc(d.getId())
+                .stream().map(DealService::imagePath).collect(Collectors.toList()));
+        return dto;
+    }
+
+    private DealDto toDtoWithoutImages(Deal d) {
         DealDto dto = new DealDto();
         dto.setId(d.getId());
         dto.setTitle(d.getTitle());
@@ -392,7 +474,6 @@ public class DealService {
         dto.setDescription(d.getDescription());
         dto.setLocation(d.getLocation());
         dto.setWebsiteUrl(d.getWebsiteUrl());
-        dto.setImageUrls(splitImageUrls(d.getImageUrls()));
         dto.setContactEmail(d.getContactEmail());
         dto.setContactPhone(d.getContactPhone());
         dto.setStatus(d.getStatus());

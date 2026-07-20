@@ -541,6 +541,18 @@ export const api = {
   // "My Interests". The actual email is opened in the viewer's own mail client.
   requestDealContactInfo: (id, payload) =>
     request(`/api/v1/deals/${id}/interests`, { method: "POST", body: JSON.stringify(payload) }),
+  // Property photos on a listing (max 2). Owner-only writes; reads follow listing
+  // visibility. The image endpoint needs the Bearer token, so reads go through
+  // fetchObjectUrl rather than a bare <img src>.
+  uploadDealImage: (dealId, file) => {
+    const fd = new FormData();
+    fd.append("file", file);
+    return uploadRequest(`/api/v1/deals/${dealId}/images`, fd);
+  },
+  deleteDealImage: (dealId, imageId) =>
+    request(`/api/v1/deals/${dealId}/images/${imageId}`, { method: "DELETE" }),
+  // `url` is the server-provided path, e.g. /api/v1/deals/7/images/3.
+  openDealImage: (url) => fetchObjectUrl(url),
   // The poster's other listings, shown as directory history on a listing's detail page.
   getDealSponsorProjects: (id) => request(`/api/v1/deals/${id}/sponsor-projects`),
 
