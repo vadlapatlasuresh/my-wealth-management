@@ -132,10 +132,31 @@ export function getStoredName() {
   return localStorage.getItem("terravet_name") || "";
 }
 
-// NOTE: getUserRoles()/getCurrentUserId()/isCareAgent()/isAdmin() are gone. They read roles and
-// the subject off the *member* token to gate staff tooling — CARE/ADMIN no longer exist, and the
-// ops portal reads its own session instead (isOpsSignedIn / getOpsRoles / getOpsUserId). Nothing
-// about a member token can confer ops access any more.
+// NOTE: getUserRoles()/isCareAgent()/isAdmin() are gone. They read roles off the *member* token to
+// gate staff tooling — CARE/ADMIN no longer exist, and the ops portal reads its own session instead
+// (isOpsSignedIn / getOpsRoles / getOpsUserId). Nothing about a member token can confer ops access.
+
+/** Decode the member JWT payload. Client-side display/scoping only — the backend re-checks everything. */
+function memberClaims() {
+  try {
+    const payload = (authToken || "").split(".")[1];
+    if (!payload) return null;
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The signed-in member's own user id (the JWT `sub`), or null when signed out. This is the SAME id
+ * the backend isolates every row on, so it is the correct key for scoping any per-user client-side
+ * storage (e.g. the AI chat transcript) so one user can never read another's data on a shared device.
+ * Storage/display use only — it grants no access; every endpoint re-derives identity from the token.
+ */
+export function getCurrentUserId() {
+  const sub = memberClaims()?.sub;
+  return sub != null ? String(sub) : null;
+}
 
 async function request(path, options = {}) {
   const token = tokenFor(path);
