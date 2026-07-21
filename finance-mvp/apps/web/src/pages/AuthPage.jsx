@@ -31,6 +31,14 @@ function scorePassword(pwd) {
   return { score, label: "Strong", color: "var(--tv-positive)", pct: 100 };
 }
 
+// Dev-only escape hatch: skip the phone/email verification requirement on signup so
+// local testing doesn't need a real OTP round-trip. Off unless explicitly set, so prod
+// (where this env var is absent) keeps verification mandatory. Matches the repo's
+// env-driven convention — see .env.example / CONFIG.md.
+const SKIP_SIGNUP_VERIFICATION =
+  ((typeof import.meta !== "undefined" && import.meta.env &&
+    import.meta.env.VITE_SKIP_SIGNUP_VERIFICATION) || "") === "true";
+
 // Digits-only extraction, used for phone/SSN/EIN masking + length checks.
 const digits = (v) => (v || "").replace(/\D/g, "");
 
@@ -278,8 +286,9 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     (authForm.password || "").length >= 8 &&
     confirmPwd === authForm.password &&
     !!authForm.agreedToTerms &&
-    phoneVerified && // phone verification is REQUIRED in this flow
-    emailVerified;   // email verification is REQUIRED in this flow
+    // Phone + email verification are REQUIRED in this flow, unless the dev-only
+    // VITE_SKIP_SIGNUP_VERIFICATION escape hatch is set (absent/false in prod).
+    (SKIP_SIGNUP_VERIFICATION || (phoneVerified && emailVerified));
 
   const canSubmit = isLogin ? loginValid : signupValid;
 
