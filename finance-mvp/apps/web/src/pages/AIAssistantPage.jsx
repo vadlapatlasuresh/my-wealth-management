@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { api } from '../api';
+import { api, getCurrentUserId } from '../api';
 import LastRefreshed from "../components/LastRefreshed";
 import Disclaimer from "../components/Disclaimer";
 
@@ -107,16 +107,35 @@ function RichText({ text }) {
 
 const fmtTime = (ts) => { try { return new Date(ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 
+/* The conversation is persisted in localStorage so it survives reloads, but a single shared key
+   would let the next person to sign in on the same device read (and re-send to the AI) the previous
+   user's chat. Scope the key to the signed-in user's id — the same id the backend isolates on — so
+   each user only ever sees their own history. Signed-out/unknown falls back to a throwaway slot that
+   is never populated with real data. */
+const LEGACY_CHAT_KEY = 'tv_ai_chat';
+function chatStorageKey() {
+  const uid = getCurrentUserId();
+  return uid ? `tv_ai_chat:${uid}` : `${LEGACY_CHAT_KEY}:anon`;
+}
+/* Read this user's saved conversation. Also purge the old un-scoped blob: it can't be attributed to
+   a specific user, so it must never be shown to whoever happens to be signed in now. */
+function loadSavedMessages(key) {
+  try { localStorage.removeItem(LEGACY_CHAT_KEY); } catch { /* ignore */ }
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+}
+
 export default function AIAssistantPage({ user }) {
   const [insights, setInsights] = useState([]);
   const [loadingInsights, setLoadingInsights] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [insightsError, setInsightsError] = useState('');
 
-  // Conversation persists across reloads.
-  const [messages, setMessages] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('tv_ai_chat')) || []; } catch { return []; }
-  });
+  // Storage key scoped to the signed-in user so conversations never bleed across accounts
+  // on a shared device. Fixed for the life of this mount (the page remounts on login/logout).
+  const chatKey = useMemo(() => chatStorageKey(), []);
+
+  // Conversation persists across reloads — read only THIS user's saved transcript.
+  const [messages, setMessages] = useState(() => loadSavedMessages(chatKey));
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState('');
@@ -135,8 +154,8 @@ export default function AIAssistantPage({ user }) {
   const recognitionRef = useRef(null);
   const speechSupported = typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition);
 
-  // Persist conversation + style.
-  useEffect(() => { localStorage.setItem('tv_ai_chat', JSON.stringify(messages.slice(-50))); }, [messages]);
+  // Persist conversation (under this user's scoped key) + style.
+  useEffect(() => { localStorage.setItem(chatKey, JSON.stringify(messages.slice(-50))); }, [messages, chatKey]);
   useEffect(() => { localStorage.setItem('tv_ai_style', responseStyle); }, [responseStyle]);
   useEffect(() => { localStorage.setItem('tv_ai_model', selectedModel); }, [selectedModel]);
 
@@ -211,7 +230,7 @@ export default function AIAssistantPage({ user }) {
 
   function newChat() {
     setMessages([]); setChatError(''); setInput('');
-    localStorage.removeItem('tv_ai_chat');
+    localStorage.removeItem(chatKey);
   }
 
   function copyMessage(text, idx) {
