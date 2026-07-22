@@ -18,6 +18,10 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { setupAutoTranslate } from "../i18n/domTranslator";
 
 // Lazy page components come from the module registry so modules code-split.
+const TodayPage       = MODULE_REGISTRY.today.component;
+const RecurringPage   = MODULE_REGISTRY.recurring.component;
+const HealthScorePage = MODULE_REGISTRY.healthscore.component;
+const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
 const HomePage        = MODULE_REGISTRY.home.component;
 const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
@@ -47,11 +51,15 @@ const PlanTierPage    = MODULE_REGISTRY.plantier.component;
 
 
 const navLabels = {
+  '/today': 'Today',
   '/': 'Home',
   '/accounts': 'Accounts',
   '/transactions': 'Transactions',
   '/budget': 'Budgets',
   '/make-payment': 'Make Payment',
+  '/recurring': 'Recurring',
+  '/health-score': 'Health Score',
+  '/cash-flow': 'Cash Flow',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
@@ -417,6 +425,20 @@ export default function AppLayout(props) {
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
             <Routes>
+              <Route path="/today" element={
+                <TodayPage
+                  snapshot={snapshot}
+                  accounts={accounts}
+                  transactions={transactions}
+                  paymentIntents={paymentIntents}
+                  insights={insights}
+                  user={user}
+                  formatDate={formatDate}
+                />
+              } />
+              <Route path="/recurring" element={<RecurringPage />} />
+              <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
+              <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
               <Route path="/" element={
                 <HomePage
                   snapshot={snapshot}

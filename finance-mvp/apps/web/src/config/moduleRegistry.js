@@ -11,6 +11,10 @@ import React from 'react';
 */
 
 // Lazy page components (code-split per module).
+const TodayPage       = React.lazy(() => import('../pages/TodayPage'));
+const RecurringPage   = React.lazy(() => import('../pages/RecurringPage'));
+const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
+const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -39,16 +43,26 @@ const DocumentCenterPage = React.lazy(() => import('../pages/DocumentCenterPage'
 const SubscriptionPage = React.lazy(() => import('../pages/SubscriptionPage'));
 const PlanTierPage    = React.lazy(() => import('../pages/PlanTierPage'));
 
-/* Section ids used to group modules in the sidebar. */
-export const SECTION_FINANCE = 'finance';
+/* Section ids used to group modules in the sidebar.
+   Mirrors the server config (platform-config-service V7). SECTION_FINANCE is retained
+   as a legacy id so any stored per-user/remote config still resolves, but no module
+   defaults into it anymore. */
+export const SECTION_DAILY = 'daily';
+export const SECTION_MONEY = 'money';
+export const SECTION_GROW = 'grow';
+export const SECTION_BUSINESS = 'business';
 export const SECTION_REALESTATE = 'realestate';
 export const SECTION_SETTINGS = 'settings';
+export const SECTION_FINANCE = 'finance'; // legacy — kept for backward-compatible resolution
 
 /* Default sidebar sections, in display order. */
 export const DEFAULT_SECTIONS = [
-  { id: SECTION_FINANCE,    label: 'Finance',     order: 1 },
-  { id: SECTION_REALESTATE, label: 'Real Estate', order: 2 },
-  { id: SECTION_SETTINGS,   label: 'Settings',    order: 3 },
+  { id: SECTION_DAILY,      label: 'Today',          order: 1 },
+  { id: SECTION_MONEY,      label: 'Money',          order: 2 },
+  { id: SECTION_GROW,       label: 'Grow',           order: 3 },
+  { id: SECTION_BUSINESS,   label: 'Business & Tax', order: 4 },
+  { id: SECTION_REALESTATE, label: 'Real Estate',    order: 5 },
+  { id: SECTION_SETTINGS,   label: 'More',           order: 6 },
 ];
 
 /* Registry: one entry per module id.
@@ -63,66 +77,91 @@ export const DEFAULT_SECTIONS = [
    - inNavByDefault: whether it shows in the sidebar by default
 */
 export const MODULE_REGISTRY = {
+  // Today — the daily-open surface (Phase 1 of the personal-finance expansion).
+  // feature_key: individual.todayFeed (Free tier). First item in the Finance section.
+  today: {
+    id: 'today', title: 'Today', icon: 'ti ti-sun',
+    route: '/today', section: SECTION_DAILY, defaultOrder: 1,
+    component: TodayPage, inNavByDefault: true,
+  },
   home: {
     id: 'home', title: 'Home', icon: 'ti ti-layout-dashboard',
-    route: '/', section: SECTION_FINANCE, defaultOrder: 1,
+    route: '/', section: SECTION_MONEY, defaultOrder: 1,
     component: HomePage, inNavByDefault: true,
   },
   accounts: {
     id: 'accounts', title: 'Accounts', icon: 'ti ti-wallet',
-    route: '/accounts', section: SECTION_FINANCE, defaultOrder: 2,
+    route: '/accounts', section: SECTION_MONEY, defaultOrder: 2,
     component: AccountsPage, inNavByDefault: true,
   },
   transactions: {
     id: 'transactions', title: 'Transactions', icon: 'ti ti-arrows-exchange-2',
-    route: '/transactions', section: SECTION_FINANCE, defaultOrder: 3,
+    route: '/transactions', section: SECTION_MONEY, defaultOrder: 3,
     component: TransactionsPage, inNavByDefault: true,
   },
   budget: {
     id: 'budget', title: 'Budgets', icon: 'ti ti-chart-pie',
-    route: '/budget', section: SECTION_FINANCE, defaultOrder: 4,
+    route: '/budget', section: SECTION_MONEY, defaultOrder: 4,
     component: PlanPage, inNavByDefault: true,
   },
   // Module id stays 'billpay' so saved per-user nav ordering/visibility keeps resolving;
   // only the user-facing title and route moved to "Make Payment".
   billpay: {
     id: 'billpay', title: 'Make Payment', icon: 'ti ti-receipt',
-    route: '/make-payment', section: SECTION_FINANCE, defaultOrder: 5,
+    route: '/make-payment', section: SECTION_MONEY, defaultOrder: 5,
     component: MakePaymentPage, inNavByDefault: true, badge: 'billpay',
+  },
+  // Recurring & subscriptions radar (Phase 2). feature_key: individual.recurring.
+  recurring: {
+    id: 'recurring', title: 'Recurring', icon: 'ti ti-repeat',
+    route: '/recurring', section: SECTION_MONEY, defaultOrder: 6,
+    component: RecurringPage, inNavByDefault: true,
+  },
+  // Cash-flow view: money in vs out + safe-to-spend (Phase 2). feature_key: individual.cashflow.
+  cashflow: {
+    id: 'cashflow', title: 'Cash Flow', icon: 'ti ti-arrows-exchange',
+    route: '/cash-flow', section: SECTION_MONEY, defaultOrder: 7,
+    component: CashFlowPage, inNavByDefault: true,
   },
   debt: {
     id: 'debt', title: 'Debt Lab', icon: 'ti ti-trending-down',
-    route: '/debt', section: SECTION_FINANCE, defaultOrder: 6,
+    route: '/debt', section: SECTION_GROW, defaultOrder: 2,
     component: PlanPage, inNavByDefault: true,
   },
   invest: {
     id: 'invest', title: 'Investments', icon: 'ti ti-chart-line',
-    route: '/invest', section: SECTION_FINANCE, defaultOrder: 7,
+    route: '/invest', section: SECTION_GROW, defaultOrder: 3,
     component: InvestPage, inNavByDefault: true,
   },
   mybusiness: {
     id: 'mybusiness', title: 'My Business', icon: 'ti ti-briefcase',
-    route: '/mybusiness', section: SECTION_FINANCE, defaultOrder: 8,
+    route: '/mybusiness', section: SECTION_BUSINESS, defaultOrder: 1,
     component: MyBusinessPage, inNavByDefault: true,
   },
   'ai-assistant': {
     id: 'ai-assistant', title: 'AI Assistant', icon: 'ti ti-sparkles',
-    route: '/ai-assistant', section: SECTION_FINANCE, defaultOrder: 9,
+    route: '/ai-assistant', section: SECTION_GROW, defaultOrder: 5,
     component: AIAssistantPage, inNavByDefault: true,
+  },
+  // Financial health score (Phase 2). feature_key: individual.healthScore (Free floor).
+  healthscore: {
+    id: 'healthscore', title: 'Health Score', icon: 'ti ti-heartbeat',
+    route: '/health-score', section: SECTION_GROW, defaultOrder: 6,
+    component: HealthScorePage, inNavByDefault: true,
   },
   calculators: {
     id: 'calculators', title: 'Calculators', icon: 'ti ti-calculator',
-    route: '/calculators', section: SECTION_FINANCE, defaultOrder: 10,
+    route: '/calculators', section: SECTION_GROW, defaultOrder: 4,
     component: CalculatorsPage, inNavByDefault: true,
   },
   goals: {
     id: 'goals', title: 'Goals', icon: 'ti ti-target',
-    route: '/goals', section: SECTION_FINANCE, defaultOrder: 11,
+    route: '/goals', section: SECTION_GROW, defaultOrder: 1,
     component: GoalsPage, inNavByDefault: true,
   },
   tax: {
     id: 'tax', title: 'Taxes', icon: 'ti ti-receipt-tax',
-    route: '/tax', section: SECTION_FINANCE, defaultOrder: 12,
+    route: '/tax', section: SECTION_BUSINESS, defaultOrder: 2,
     component: TaxPage, inNavByDefault: true,
   },
   // "Find a CPA" lives under Taxes now (surfaced prominently on the Tax page), so it's a
@@ -221,14 +260,20 @@ export const MODULE_REGISTRY = {
 /* DEFAULT_MODULES: ordered list of ids that appear in the sidebar today,
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
-  [SECTION_FINANCE]:    ['home', 'accounts', 'transactions', 'budget', 'billpay', 'debt', 'invest', 'mybusiness', 'ai-assistant', 'calculators', 'goals', 'tax'],
+  [SECTION_DAILY]:      ['today'],
+  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow'],
+  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore'],
+  [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
-  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'settings', 'subscription'],
+  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings'],
 };
 
 /* Flat ordered list of every default-nav module id, in sidebar order. */
 export const DEFAULT_MODULE_ORDER = [
-  ...DEFAULT_MODULES[SECTION_FINANCE],
+  ...DEFAULT_MODULES[SECTION_DAILY],
+  ...DEFAULT_MODULES[SECTION_MONEY],
+  ...DEFAULT_MODULES[SECTION_GROW],
+  ...DEFAULT_MODULES[SECTION_BUSINESS],
   ...DEFAULT_MODULES[SECTION_REALESTATE],
   ...DEFAULT_MODULES[SECTION_SETTINGS],
 ];
