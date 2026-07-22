@@ -45,6 +45,7 @@ The sidebar (web) / bottom tabs (mobile) are config-driven (`moduleRegistry.js` 
 - **Today** — Today, Alerts
 - **Money** — Home, Accounts, Transactions, Budgets, Make Payment, Recurring, Cash Flow, Spending
 - **Grow** — Goals, Debt Lab, Investments, Calculators, AI Assistant, Health Score, Emergency Fund, Coach
+- **Shared** — Household, Goals & Bills
 - **Business & Tax** — My Business, Taxes
 - **Real Estate** — Properties, Deal Room, Fractional LLC
 - **More** — Documents, Security, Messages, Subscription, Settings, Profile
@@ -85,6 +86,36 @@ Surfacing of the existing `RecurringBillDetector` (`/api/v1/aggregation/recurrin
 - **Aha numbers** (2 KPI): monthly burn "~${x}/mo · on {n} recurring charges"; annualized "${y}/yr · cancel one you forgot…".
 - **Subscription list**: per charge — repeat icon, name, "{cadence} · seen {n}× · next {date}", median amount, and a due chip ("Due today"/"Tomorrow"/"in {n} days", red when ≤5 days).
 **States**: loading ("Scanning your transactions…"); empty ("No recurring charges yet" + Link accounts); error message inline. Footer note on median amounts + auto-drop-off.
+
+## Household (HouseholdPage)  ·  *NEW, Phase 3a*  ·  feature_key `individual.household` (Plus, owner-pays)
+
+Membership + invitations. **No financial data is shared** — a household grants access to
+household-owned objects only.
+
+**Header**: "Household" / "Share goals and bills with a partner — without sharing everything".
+**States / sections**
+- **Not in a household**: "Start a household" (name + Create) and "Got an invite?" (paste code + Join).
+- **In a household**: name card with member count and your role, plus **Leave**.
+- **Members**: avatar, name/email, Owner|Member; owners get **Remove** on other members.
+- **Invite someone** (owner only): email field → **Create invite**; the single-use code is shown
+  **once** in a highlighted box with **Copy code**; pending invites listed with **Revoke**.
+- Footer states plainly that accounts, transactions, properties and business data are not shared.
+**Rules surfaced**: code is single-use, expires in 7 days, and only works for the invited email.
+
+## Shared goals & bills (SharedMoneyPage)  ·  *NEW, Phase 3b*  ·  feature_key `individual.sharedGoals`
+
+Household-**owned** goals and bills — not shared views of personal ones.
+
+**Header**: "Shared goals & bills" / "What you're saving for together — and who actually paid".
+**Tabs**: **Shared goals** / **Shared bills**.
+**Goals tab**: "New shared goal" (name + target → Add); each goal card shows saved-of-target, a
+progress bar, a **per-member contribution split** ("Alex $11,200 · Jordan $7,200"), an
+"Add contribution" field, and Delete.
+**Bills tab**: "New shared bill" (name + amount → Add); each bill shows amount + cadence,
+total paid to date, a **who-paid-what** list (member, amount, date), **I paid this**, and Delete.
+**States**: "Start a household first" (→ Household) when the user has none; per-tab empty states.
+**Guarantee**: contributions and payments are always attributed to the caller — you cannot log
+money as someone else.
 
 ## Money Coach (CoachPage)  ·  *NEW, Phase 3*  ·  feature_key `individual.aiProactive`
 

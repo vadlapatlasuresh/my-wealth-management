@@ -20,6 +20,7 @@ const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage')
 const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
 const CoachPage       = React.lazy(() => import('../pages/CoachPage'));
 const HouseholdPage   = React.lazy(() => import('../pages/HouseholdPage'));
+const SharedMoneyPage = React.lazy(() => import('../pages/SharedMoneyPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -174,6 +175,12 @@ export const MODULE_REGISTRY = {
     route: '/household', section: SECTION_SHARED, defaultOrder: 1,
     component: HouseholdPage, inNavByDefault: true,
   },
+  // Household-owned goals & bills (Phase 3b). feature_key: individual.sharedGoals.
+  sharedmoney: {
+    id: 'sharedmoney', title: 'Goals & Bills', icon: 'ti ti-users-group',
+    route: '/shared-money', section: SECTION_SHARED, defaultOrder: 2,
+    component: SharedMoneyPage, inNavByDefault: true,
+  },
   // Emergency-fund coach (Phase 2). feature_key: individual.emergencyFund (Free floor).
   emergencyfund: {
     id: 'emergencyfund', title: 'Emergency Fund', icon: 'ti ti-umbrella',
@@ -300,7 +307,7 @@ export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending'],
   [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach'],
-  [SECTION_SHARED]:     ['household'],
+  [SECTION_SHARED]:     ['household', 'sharedmoney'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
   [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings'],
