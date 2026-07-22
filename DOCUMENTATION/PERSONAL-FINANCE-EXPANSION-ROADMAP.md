@@ -150,9 +150,9 @@ All retention-layer features shipped. 80/80 unit tests. Remaining polish (not bl
 
 Doubles TAM and builds the defensible differentiator.
 
-- ⬜ **Shared household** — invite partner/spouse; shared accounts + goals; per-person/joint views. New: household model + invitation flow (`auth-service` for invites, scoping across services).
-- ⬜ **Shared goals & bills** — split a goal, assign a bill, who-paid-what.
-- ⬜ **Proactive AI** — evolve `ai-assistant` from chat to action ("you're $3,100 short on taxes — move it?"), grounded in real numbers (`ai-insights-service`). This is the moat; ties personal + business + tax.
+- 📋 **Shared household** — DESIGN DOC WRITTEN, awaiting decisions: [`docs/designs/SHARED_HOUSEHOLD_DESIGN.md`](../docs/designs/SHARED_HOUSEHOLD_DESIGN.md). Key finding: the JWT subject *is* the user id and every service authorizes via `WHERE user_id = :me` across **~59 user_id columns in 10 services**, so a "share everything" approach would require auditing every query — one miss is a cross-household leak. Recommended instead: phase it, starting with **household-owned** goals/bills that never touch existing scoping.
+- 📋 **Shared goals & bills** — covered by the same doc (slice 3b: new household-owned entities, not shared views).
+- ✅ **Proactive AI — the Money Coach** — `utils/recommendations.js` + 7 tests composes anomalies, cash flow, emergency-fund gap, health factors, spending movers and debt into three ranked bands (Do this now / Worth doing soon / Opportunities), each with a real number and a deep link. Server AI insights merge in badged "AI". **Money figures are computed by our own math, never by a model** — a recommendation cannot hallucinate an amount (there's a test asserting no figures are invented with no data). `CoachPage` in Grow (nav row V14); synced into all three mockups + the inventory.
 
 **Exit criteria:** ≥X% of active accounts add a second household member; proactive AI drives a measurable action (transfer/goal set) per active user.
 
