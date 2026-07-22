@@ -186,6 +186,10 @@ services:
       # test setup. MUST be set OTP_EXPOSE_DEV_CODE=false in .env.prod before real
       # users (do it together with enabling SendGrid/Twilio, or codes won't deliver).
       OTP_EXPOSE_DEV_CODE: ${OTP_EXPOSE_DEV_CODE:-true}
+      # SECURITY: false makes /login return a JWT directly with NO second factor at all.
+      # Testing-only escape hatch; defaults true so an unset var can never disable MFA.
+      # Must be true before real users — check it together with OTP_EXPOSE_DEV_CODE above.
+      MFA_ENABLED: ${MFA_ENABLED:-true}
       # Social sign-in. Blank -> provider disabled + button hidden. Set to activate.
       GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
       APPLE_OAUTH_CLIENT_ID: ${APPLE_OAUTH_CLIENT_ID:-}
