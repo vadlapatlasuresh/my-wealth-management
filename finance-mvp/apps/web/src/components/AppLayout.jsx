@@ -24,6 +24,9 @@ const HealthScorePage = MODULE_REGISTRY.healthscore.component;
 const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
 const AlertsPage      = MODULE_REGISTRY.alerts.component;
 const SpendingPage    = MODULE_REGISTRY.spending.component;
+const EmergencyFundPage = MODULE_REGISTRY.emergencyfund.component;
+const CoachPage       = MODULE_REGISTRY.coach.component;
+const HouseholdPage   = MODULE_REGISTRY.household.component;
 const HomePage        = MODULE_REGISTRY.home.component;
 const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
@@ -64,6 +67,9 @@ const navLabels = {
   '/health-score': 'Health Score',
   '/cash-flow': 'Cash Flow',
   '/spending': 'Spending',
+  '/emergency-fund': 'Emergency Fund',
+  '/coach': 'Coach',
+  '/household': 'Household',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
@@ -374,7 +380,7 @@ export default function AppLayout(props) {
     setDebtLoading, setStrategy, setExtraPayment, setPlanTab,
     setBillPayStep, setUser, setBillPayForm, setBillPaySubmitting,
     setLastBillPayIntent, setProperties, setError, setLoading,
-    loadAll, syncWithIntegrator, submitAuth, submitBillPay,
+    loadAll, syncWithIntegrator, submitAuth, submitBillPay, dataLoadFailed,
     cancelPaymentIntent,
     runAllDebtScenarios, handleLogout, openBillPay, formatDate
   } = props;
@@ -425,6 +431,25 @@ export default function AppLayout(props) {
           <div className="page-content">
             {/* Time-sensitive subscription notices (trial ending, expired, past due). */}
             <TrialBanner />
+            {/* A partial load failure used to be console-only, so every data-driven screen
+                silently rendered its "link an account" empty state even for users WITH data.
+                Say it out loud instead, and offer a retry. */}
+            {dataLoadFailed && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                padding: '10px 14px', margin: '0 0 14px', borderRadius: 'var(--radius-md, 10px)',
+                background: 'rgba(192,57,43,.10)', border: '1px solid var(--tv-negative, #c0392b)',
+              }}>
+                <i className="ti ti-cloud-off" style={{ color: 'var(--tv-negative, #c0392b)', fontSize: 18 }}></i>
+                <span style={{ flex: 1, minWidth: 180, fontSize: 13.5 }}>
+                  We couldn't load your accounts or transactions. Screens below may look empty —
+                  that's this error, not missing data.
+                </span>
+                <button className="btn btn-primary btn-sm" onClick={() => loadAll && loadAll()}>
+                  Retry
+                </button>
+              </div>
+            )}
             {/* {error && <p className="error banner-error">{error}</p>} */}
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
@@ -445,6 +470,9 @@ export default function AppLayout(props) {
               <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
               <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
+              <Route path="/emergency-fund" element={<EmergencyFundPage accounts={accounts} transactions={transactions} />} />
+              <Route path="/coach" element={<CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />} />
+              <Route path="/household" element={<HouseholdPage />} />
               <Route path="/" element={
                 <HomePage
                   snapshot={snapshot}

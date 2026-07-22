@@ -17,6 +17,9 @@ const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
 const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
 const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
 const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage'));
+const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
+const CoachPage       = React.lazy(() => import('../pages/CoachPage'));
+const HouseholdPage   = React.lazy(() => import('../pages/HouseholdPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -52,6 +55,7 @@ const PlanTierPage    = React.lazy(() => import('../pages/PlanTierPage'));
 export const SECTION_DAILY = 'daily';
 export const SECTION_MONEY = 'money';
 export const SECTION_GROW = 'grow';
+export const SECTION_SHARED = 'shared';
 export const SECTION_BUSINESS = 'business';
 export const SECTION_REALESTATE = 'realestate';
 export const SECTION_SETTINGS = 'settings';
@@ -62,9 +66,10 @@ export const DEFAULT_SECTIONS = [
   { id: SECTION_DAILY,      label: 'Today',          order: 1 },
   { id: SECTION_MONEY,      label: 'Money',          order: 2 },
   { id: SECTION_GROW,       label: 'Grow',           order: 3 },
-  { id: SECTION_BUSINESS,   label: 'Business & Tax', order: 4 },
-  { id: SECTION_REALESTATE, label: 'Real Estate',    order: 5 },
-  { id: SECTION_SETTINGS,   label: 'More',           order: 6 },
+  { id: SECTION_SHARED,     label: 'Shared',         order: 4 },
+  { id: SECTION_BUSINESS,   label: 'Business & Tax', order: 5 },
+  { id: SECTION_REALESTATE, label: 'Real Estate',    order: 6 },
+  { id: SECTION_SETTINGS,   label: 'More',           order: 7 },
 ];
 
 /* Registry: one entry per module id.
@@ -156,6 +161,24 @@ export const MODULE_REGISTRY = {
     id: 'ai-assistant', title: 'AI Assistant', icon: 'ti ti-sparkles',
     route: '/ai-assistant', section: SECTION_GROW, defaultOrder: 5,
     component: AIAssistantPage, inNavByDefault: true,
+  },
+  // Money Coach — proactive next-best-actions (Phase 3). feature_key: individual.aiProactive.
+  coach: {
+    id: 'coach', title: 'Coach', icon: 'ti ti-compass',
+    route: '/coach', section: SECTION_GROW, defaultOrder: 8,
+    component: CoachPage, inNavByDefault: true,
+  },
+  // Shared household (Phase 3a). feature_key: individual.household (Plus; owner-pays).
+  household: {
+    id: 'household', title: 'Household', icon: 'ti ti-home-heart',
+    route: '/household', section: SECTION_SHARED, defaultOrder: 1,
+    component: HouseholdPage, inNavByDefault: true,
+  },
+  // Emergency-fund coach (Phase 2). feature_key: individual.emergencyFund (Free floor).
+  emergencyfund: {
+    id: 'emergencyfund', title: 'Emergency Fund', icon: 'ti ti-umbrella',
+    route: '/emergency-fund', section: SECTION_GROW, defaultOrder: 7,
+    component: EmergencyFundPage, inNavByDefault: true,
   },
   // Financial health score (Phase 2). feature_key: individual.healthScore (Free floor).
   healthscore: {
@@ -276,7 +299,8 @@ export const MODULE_REGISTRY = {
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending'],
-  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore'],
+  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach'],
+  [SECTION_SHARED]:     ['household'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
   [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings'],
@@ -287,6 +311,7 @@ export const DEFAULT_MODULE_ORDER = [
   ...DEFAULT_MODULES[SECTION_DAILY],
   ...DEFAULT_MODULES[SECTION_MONEY],
   ...DEFAULT_MODULES[SECTION_GROW],
+  ...DEFAULT_MODULES[SECTION_SHARED],
   ...DEFAULT_MODULES[SECTION_BUSINESS],
   ...DEFAULT_MODULES[SECTION_REALESTATE],
   ...DEFAULT_MODULES[SECTION_SETTINGS],

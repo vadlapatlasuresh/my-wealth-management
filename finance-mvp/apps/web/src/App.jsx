@@ -31,6 +31,9 @@ export default function App() {
   const [snapshot, setSnapshot] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [transactions, setTransactions] = useState([]);
+  // True when a CRITICAL dataset (accounts/transactions) failed to load. Without this a
+  // partial failure is invisible and every data-driven screen wrongly says "link an account".
+  const [dataLoadFailed, setDataLoadFailed] = useState(false);
   const [insights, setInsights] = useState([]);
   const [paymentIntents, setPaymentIntents] = useState([]);
   const [debtScenarios, setDebtScenarios] = useState({});
@@ -125,6 +128,7 @@ export default function App() {
     try {
       setLoading(true);
       setError("");
+      setDataLoadFailed(false);
 
       const results = await Promise.allSettled([
         api.getSnapshot(),
@@ -178,6 +182,11 @@ export default function App() {
           "Some data failed to load:",
           failed.map((f) => f.reason?.message || f.reason)
         );
+      }
+      // Accounts + transactions drive every data-derived screen. If either failed we must say
+      // so — otherwise the empty states claim "no data" when the truth is "couldn't load".
+      if (accountsRes.status === "rejected" || txRes.status === "rejected") {
+        setDataLoadFailed(true);
       }
     } catch (err) {
       setError(err.message || String(err));
@@ -472,6 +481,7 @@ export default function App() {
       setSnapshot={setSnapshot}
       setAccounts={setAccounts}
       setTransactions={setTransactions}
+      dataLoadFailed={dataLoadFailed}
       setInsights={setInsights}
       setPaymentIntents={setPaymentIntents}
       setDebtScenarios={setDebtScenarios}

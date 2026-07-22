@@ -134,7 +134,13 @@ The features that create reasons to open the app; highest retention ROI.
 - ✅ **Spending insights** — `utils/spending.js` + 8 tests: category breakdown with shares, month-over-month movers ("dining up 30%"), top merchants, 30d/90d/12mo range toggle. `SpendingInsightsPage` in Money (V12).
 - ⚠️ **Sign-convention fix (important)** — Plaid returns `amount > 0` for a **charge**, and the API does not flip it (verified against the data, `RecurringBillDetector`, and `api.js`). The health-score/cash-flow/alerts utils had assumed the opposite, so income/spend, savings rate, emergency-fund months and anomaly detection were inverted. Fixed and encoded in the test fixtures. **The same inversion existed pre-existing on `TransactionsPage` and `HomePage`** (every purchase painted green as income) — also fixed: category icon, IN/OUT filter, Money In/Out/Net tiles, amount cells, and Home's recent-transaction rows.
 
-**Still to build in Phase 2:** emergency-fund coach (dedicated screen). *(Pending mobile visual task: re-theme the legacy per-frame bottom tab bars to Today·Money·Grow·AI·More across all existing frames; and design-sync the Alerts + Spending screens into the three mockups.)*
+- ✅ **Emergency-fund coach** — target sized to **real** monthly expenses (reuses `summarizeAccounts` + `monthlyCashFlow` from `healthScore.js`, so "months of expenses" is consistent app-wide). 3/6/12-month target, 6/12/24-month horizon → required monthly saving, and 1/3/6-month milestones. `utils/emergencyFund.js` + 8 tests; nav row V13.
+- ✅ **Designs re-synced** — audited drift, then added **Alerts + Spending + Emergency Fund** to web + iOS + Android mockups and the inventory. Also fixed 3 pre-existing gaps in the web `navigate()` label map.
+
+### ✅ Phase 2 COMPLETE
+All retention-layer features shipped. 80/80 unit tests. Remaining polish (not blocking Phase 3):
+- Re-theme the legacy per-frame mobile bottom tab bars to Today·Money·Grow·AI·More (new frames already use them).
+- iOS mockup carries a 1-div imbalance that pre-dates this work.
 
 **Exit criteria:** D1/D7 open-rate measurably up; recurring radar produces a real "found $X/mo" moment on first run; health score gives a first-run "aha".
 
@@ -144,9 +150,9 @@ The features that create reasons to open the app; highest retention ROI.
 
 Doubles TAM and builds the defensible differentiator.
 
-- ⬜ **Shared household** — invite partner/spouse; shared accounts + goals; per-person/joint views. New: household model + invitation flow (`auth-service` for invites, scoping across services).
-- ⬜ **Shared goals & bills** — split a goal, assign a bill, who-paid-what.
-- ⬜ **Proactive AI** — evolve `ai-assistant` from chat to action ("you're $3,100 short on taxes — move it?"), grounded in real numbers (`ai-insights-service`). This is the moat; ties personal + business + tax.
+- 📋 **Shared household** — DESIGN DOC WRITTEN, awaiting decisions: [`docs/designs/SHARED_HOUSEHOLD_DESIGN.md`](../docs/designs/SHARED_HOUSEHOLD_DESIGN.md). Key finding: the JWT subject *is* the user id and every service authorizes via `WHERE user_id = :me` across **~59 user_id columns in 10 services**, so a "share everything" approach would require auditing every query — one miss is a cross-household leak. Recommended instead: phase it, starting with **household-owned** goals/bills that never touch existing scoping.
+- 📋 **Shared goals & bills** — covered by the same doc (slice 3b: new household-owned entities, not shared views).
+- ✅ **Proactive AI — the Money Coach** — `utils/recommendations.js` + 7 tests composes anomalies, cash flow, emergency-fund gap, health factors, spending movers and debt into three ranked bands (Do this now / Worth doing soon / Opportunities), each with a real number and a deep link. Server AI insights merge in badged "AI". **Money figures are computed by our own math, never by a model** — a recommendation cannot hallucinate an amount (there's a test asserting no figures are invented with no data). `CoachPage` in Grow (nav row V14); synced into all three mockups + the inventory.
 
 **Exit criteria:** ≥X% of active accounts add a second household member; proactive AI drives a measurable action (transfer/goal set) per active user.
 
