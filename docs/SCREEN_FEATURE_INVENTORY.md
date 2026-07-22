@@ -39,6 +39,65 @@ Split-screen auth: left brand panel, right form panel.
 
 ---
 
+## Navigation structure (Phase 2 expansion)
+
+The sidebar (web) / bottom tabs (mobile) are config-driven (`moduleRegistry.js` + `platform-config-service`). Sections, in order:
+- **Today** — Today
+- **Money** — Home, Accounts, Transactions, Budgets, Make Payment, Recurring, Cash Flow
+- **Grow** — Goals, Debt Lab, Investments, Calculators, AI Assistant, Health Score
+- **Business & Tax** — My Business, Taxes
+- **Real Estate** — Properties, Deal Room, Fractional LLC
+- **More** — Documents, Security, Messages, Subscription, Settings, Profile
+
+Mobile bottom tabs: **Today · Money · Grow · AI · More**. *(Existing mobile frames still show the legacy Home/Accounts/Budget/Invest/More tab bar; the new-screen frames use the new tabs — a full per-frame tab-bar re-theme is a pending visual task.)*
+
+---
+
+## Today (TodayPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.todayFeed` (Free)
+
+The daily-open surface. A composition of data the app already loads — no new backend.
+
+**Header**: live greeting "{Good morning/…}, {name}" + date · time; sub "here's what needs you today".
+**Sections/cards**
+- **Financial health card** (clickable → Health Score): conic-gradient score ring (0–100) + band ("Good") + the weakest factor's action line + chevron.
+- **Quick stats** (3 clickable tiles): Net worth (→ home), Available cash (→ accounts), Bills due soon ("{n} scheduled", → make-payment).
+- **Needs you today**: prioritized action list from real state — bills due within 7 days (amber, "Review" → make-payment), low-cash warning (red, → accounts), up to 2 AI/system insights ("Ask AI"). Empty: "You're all caught up."
+- **Recent activity**: top 6 transactions (in/out arrow, label, category, signed amount), "View all →" (→ transactions).
+**States**: full empty state ("Link an account to begin" + Link accounts CTA) when no accounts/transactions; per-section empty states.
+
+## Cash Flow (CashFlowPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.cashflow`
+
+Money in vs out over time + an honest safe-to-spend number. Computed client-side (`utils/cashflow.js`).
+
+**Header**: "Cash flow" / "What's coming in, what's going out, and what's safe to spend".
+**Sections/cards**
+- **Safe to spend** headline card: wallet chip, big number, "{cash} cash − {scheduled bills}" breakdown (red when negative).
+- **Averages** (3 KPI tiles): Avg money in (green), Avg money out (gold), Avg net (green/red) — all "/mo".
+- **Last 6 months** card: grouped bar chart, income (forest) vs spend (gold) per month, with a legend.
+**States**: empty state ("No cash flow yet" + Link accounts) until there's ≥1 month of activity. Disclaimer: "estimate for guidance, not financial advice."
+
+## Recurring & subscriptions (RecurringPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.recurring` (Free hook)
+
+Surfacing of the existing `RecurringBillDetector` (`/api/v1/aggregation/recurring-bills`).
+
+**Header**: "Recurring & subscriptions" / "Every repeating charge we found…".
+**Sections/cards**
+- **Aha numbers** (2 KPI): monthly burn "~${x}/mo · on {n} recurring charges"; annualized "${y}/yr · cancel one you forgot…".
+- **Subscription list**: per charge — repeat icon, name, "{cadence} · seen {n}× · next {date}", median amount, and a due chip ("Due today"/"Tomorrow"/"in {n} days", red when ≤5 days).
+**States**: loading ("Scanning your transactions…"); empty ("No recurring charges yet" + Link accounts); error message inline. Footer note on median amounts + auto-drop-off.
+
+## Financial Health Score (HealthScorePage)  ·  *NEW, Phase 2*  ·  feature_key `individual.healthScore` (Free)
+
+A single 0–100 score with an action-first breakdown. Computed client-side (`utils/healthScore.js`).
+
+**Header**: "Financial health score" / "One number for where you stand — and the moves that raise it".
+**Sections/cards**
+- **Gauge card**: semicircular SVG gauge (color by score: forest ≥80/≥60, gold ≥40, red below) with the number + "out of 100", the band label, and "Based on {n} factors…".
+- **What's driving it**: one row per factor (Savings rate, Emergency fund, Debt load, Net worth) — icon, label, band badge, detail line, a mini progress bar (colored by score), and a concrete action line. Only factors with data are shown/weighted.
+**States**: empty ("Link accounts to see your score" + CTA) when nothing computable. Disclaimer: "estimate for guidance, not financial advice."
+
+---
+
 ## Home / Dashboard (HomePage)
 
 **Header**: live greeting "{Good morning/…}, {name}" with date · time clock (ticks each minute); actions: Last-refreshed indicator, **Export** (downloads transactions CSV), **Add Account** (→ /accounts).

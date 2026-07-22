@@ -1031,7 +1031,14 @@ a { text-decoration: none; color: inherit; }
 
     <ul class="sidebar-nav" style="padding-top:12px;">
       <div class="sidebar-section">
-        <div class="sidebar-section-label">Finance</div>
+        <div class="sidebar-section-label">Today</div>
+      </div>
+      <li class="nav-item" data-page="today" onclick="navigate('today',this)">
+        <i class="ti ti-sun"></i> Today
+      </li>
+
+      <div class="sidebar-section" style="margin-top:16px;">
+        <div class="sidebar-section-label">Money</div>
       </div>
       <li class="nav-item active" data-page="home" onclick="navigate('home',this)">
         <i class="ti ti-layout-dashboard"></i> Home
@@ -1049,6 +1056,19 @@ a { text-decoration: none; color: inherit; }
         <i class="ti ti-receipt"></i> Make Payment
         <span class="nav-badge">3</span>
       </li>
+      <li class="nav-item" data-page="recurring" onclick="navigate('recurring',this)">
+        <i class="ti ti-repeat"></i> Recurring
+      </li>
+      <li class="nav-item" data-page="cashflow" onclick="navigate('cashflow',this)">
+        <i class="ti ti-arrows-exchange"></i> Cash Flow
+      </li>
+
+      <div class="sidebar-section" style="margin-top:16px;">
+        <div class="sidebar-section-label">Grow</div>
+      </div>
+      <li class="nav-item" data-page="goals" onclick="navigate('goals',this)">
+        <i class="ti ti-target"></i> Goals
+      </li>
       <li class="nav-item" data-page="debt" onclick="navigate('debt',this)">
         <i class="ti ti-trending-down"></i> Debt Lab
       </li>
@@ -1058,8 +1078,21 @@ a { text-decoration: none; color: inherit; }
       <li class="nav-item" data-page="calculators" onclick="navigate('calculators',this)">
         <i class="ti ti-calculator"></i> Calculators
       </li>
-      <li class="nav-item" data-page="goals" onclick="navigate('goals',this)">
-        <i class="ti ti-target"></i> Goals
+      <li class="nav-item" data-page="aiassistant" onclick="navigate('aiassistant',this)">
+        <i class="ti ti-robot"></i> AI Assistant
+      </li>
+      <li class="nav-item" data-page="healthscore" onclick="navigate('healthscore',this)">
+        <i class="ti ti-heartbeat"></i> Health Score
+      </li>
+
+      <div class="sidebar-section" style="margin-top:16px;">
+        <div class="sidebar-section-label">Business &amp; Tax</div>
+      </div>
+      <li class="nav-item" data-page="business" onclick="navigate('business',this)">
+        <i class="ti ti-briefcase"></i> My Business
+      </li>
+      <li class="nav-item" data-page="business-firstrun" onclick="navigate('business-firstrun',this)" style="font-size:12.5px;color:var(--tv-text-muted);">
+        <i class="ti ti-sparkles"></i> My Business · First run
       </li>
       <li class="nav-item" data-page="tax" onclick="navigate('tax',this)">
         <i class="ti ti-receipt-tax"></i> Taxes
@@ -1078,22 +1111,8 @@ a { text-decoration: none; color: inherit; }
         <i class="ti ti-brand-stackshare"></i> Fractional LLC
       </li>
 
-      
       <div class="sidebar-section" style="margin-top:16px;">
-        <div class="sidebar-section-label">Business</div>
-      </div>
-      <li class="nav-item" data-page="business" onclick="navigate('business',this)">
-        <i class="ti ti-briefcase"></i> My Business
-      </li>
-      <li class="nav-item" data-page="business-firstrun" onclick="navigate('business-firstrun',this)" style="font-size:12.5px;color:var(--tv-text-muted);">
-        <i class="ti ti-sparkles"></i> My Business · First run
-      </li>
-      <li class="nav-item" data-page="aiassistant" onclick="navigate('aiassistant',this)">
-        <i class="ti ti-robot"></i> AI Assistant
-      </li>
-
-      <div class="sidebar-section" style="margin-top:16px;">
-        <div class="sidebar-section-label">Settings</div>
+        <div class="sidebar-section-label">More</div>
       </div>
       <li class="nav-item" data-page="documents" onclick="navigate('documents',this)">
         <i class="ti ti-folders"></i> Documents
@@ -1507,6 +1526,127 @@ a { text-decoration: none; color: inherit; }
       </div>
 
       <!-- =================== BUDGET =================== -->
+      <!-- ============ TODAY (daily-open surface) ============ -->
+      <div id="page-today" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Good morning, Alex</div><div class="page-subtitle">Monday, Jul 21 · 8:24 AM — here's what needs you today</div></div>
+        </div>
+
+        <!-- Financial health score: the daily centerpiece -->
+        <div class="card kpi-clickable" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;cursor:pointer;" onclick="navigate('healthscore',document.querySelector('[data-page=healthscore].nav-item'))">
+          <div style="position:relative;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--tv-forest-light) 281deg, var(--tv-border) 0);flex:0 0 auto;">
+            <div style="width:44px;height:44px;border-radius:50%;background:var(--tv-white);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:var(--tv-forest-light);">78</div>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:15px;font-weight:700;">Financial health: Good</div>
+            <div class="page-subtitle" style="margin:0;font-size:12.5px;">Build toward 3–6 months of expenses in an easy-access account.</div>
+          </div>
+          <i class="ti ti-chevron-right" style="color:var(--tv-text-muted);"></i>
+        </div>
+
+        <!-- Quick stats -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-forest-light)"><div class="kpi-label"><i class="ti ti-scale" style="color:var(--tv-forest-light)"></i> Net worth</div><div class="kpi-value" style="font-size:20px;">$486,200</div></div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:var(--tv-gold)"><div class="kpi-label"><i class="ti ti-wallet" style="color:var(--tv-gold)"></i> Available cash</div><div class="kpi-value" style="font-size:20px;">$12,480</div></div>
+          <div class="kpi-card kpi-clickable" style="--kpi-accent:#6B46C1"><div class="kpi-label"><i class="ti ti-receipt" style="color:#6B46C1"></i> Bills due soon</div><div class="kpi-value" style="font-size:20px;">$1,240</div><div class="kpi-delta">3 scheduled</div></div>
+        </div>
+
+        <!-- Needs you today -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title">Needs you today</div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-receipt"></i></div><div class="item-main"><div class="item-name">2 bills due within 7 days — $1,240</div></div><div class="item-right"><button class="btn btn-secondary btn-sm" onclick="navigate('billpay',document.querySelector('[data-page=billpay].nav-item'))">Review</button></div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-sparkles"></i></div><div class="item-main"><div class="item-name">Dining is up 30% vs last month.</div></div><div class="item-right"><button class="btn btn-secondary btn-sm" onclick="navigate('aiassistant',document.querySelector('[data-page=aiassistant].nav-item'))">Ask AI</button></div></div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="card">
+          <div class="section-header"><div class="section-title">Recent activity</div><a onclick="navigate('transactions',document.querySelector('[data-page=transactions].nav-item'))" style="font-size:12.5px;color:var(--tv-forest-light);cursor:pointer;font-weight:500;">View all →</a></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-arrow-down-left"></i></div><div class="item-main"><div class="item-name">Payroll — Acme Co</div><div class="item-sub">Income</div></div><div class="item-right" style="color:var(--tv-positive);font-weight:600;">+$4,200.00</div></div>
+          <div class="list-item"><div class="item-icon icon-red"><i class="ti ti-arrow-up-right"></i></div><div class="item-main"><div class="item-name">Whole Foods</div><div class="item-sub">Groceries</div></div><div class="item-right" style="font-weight:600;">-$128.44</div></div>
+          <div class="list-item"><div class="item-icon icon-red"><i class="ti ti-arrow-up-right"></i></div><div class="item-main"><div class="item-name">Netflix</div><div class="item-sub">Entertainment</div></div><div class="item-right" style="font-weight:600;">-$15.99</div></div>
+        </div>
+      </div>
+
+      <!-- ============ RECURRING & SUBSCRIPTIONS RADAR ============ -->
+      <div id="page-recurring" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Recurring &amp; subscriptions</div><div class="page-subtitle">Every repeating charge we found — so nothing bills you by surprise</div></div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(2,1fr);">
+          <div class="kpi-card" style="--kpi-accent:var(--tv-gold)"><div class="kpi-label">You're spending about</div><div class="kpi-value" style="font-size:26px;">$247<span style="font-size:14px;font-weight:500;">/mo</span></div><div class="kpi-delta">on 9 recurring charges</div></div>
+          <div class="kpi-card" style="--kpi-accent:#6B46C1"><div class="kpi-label">That's</div><div class="kpi-value" style="font-size:26px;">$2,964<span style="font-size:14px;font-weight:500;">/yr</span></div><div class="kpi-delta">Cancel one you forgot and it adds up fast</div></div>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden;">
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-repeat"></i></div><div class="item-main"><div class="item-name">Adobe Creative Cloud</div><div class="item-sub">Monthly · seen 12× · next Aug 3</div></div><div class="item-right" style="text-align:right;"><div style="font-weight:700;">$54.99</div><div style="font-size:12px;color:var(--tv-negative);font-weight:600;">in 3 days</div></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-repeat"></i></div><div class="item-main"><div class="item-name">Spotify Family</div><div class="item-sub">Monthly · seen 11× · next Aug 9</div></div><div class="item-right" style="text-align:right;"><div style="font-weight:700;">$16.99</div><div style="font-size:12px;color:var(--tv-text-muted);font-weight:600;">in 19 days</div></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-repeat"></i></div><div class="item-main"><div class="item-name">Planet Fitness</div><div class="item-sub">Monthly · seen 13× · next Aug 1</div></div><div class="item-right" style="text-align:right;"><div style="font-weight:700;">$24.99</div><div style="font-size:12px;color:var(--tv-negative);font-weight:600;">Due today</div></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-repeat"></i></div><div class="item-main"><div class="item-name">iCloud+ Storage</div><div class="item-sub">Monthly · seen 12× · next Aug 14</div></div><div class="item-right" style="text-align:right;"><div style="font-weight:700;">$9.99</div><div style="font-size:12px;color:var(--tv-text-muted);font-weight:600;">in 24 days</div></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-repeat"></i></div><div class="item-main"><div class="item-name">The Times</div><div class="item-sub">Yearly · seen 2× · next Feb 2</div></div><div class="item-right" style="text-align:right;"><div style="font-weight:700;">$120.00</div><div style="font-size:12px;color:var(--tv-text-muted);font-weight:600;">in 196 days</div></div></div>
+        </div>
+        <div class="page-subtitle" style="font-size:12px;margin-top:12px;">Detected from your transaction history. Amounts are the typical (median) charge; a cancelled subscription drops off once it stops appearing.</div>
+      </div>
+
+      <!-- ============ CASH FLOW ============ -->
+      <div id="page-cashflow" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Cash flow</div><div class="page-subtitle">What's coming in, what's going out, and what's safe to spend</div></div>
+        </div>
+
+        <div class="card" style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+          <span style="display:inline-flex;width:46px;height:46px;align-items:center;justify-content:center;border-radius:12px;background:var(--tv-sage-pale);color:var(--tv-forest-light);flex:0 0 auto;"><i class="ti ti-wallet" style="font-size:22px;"></i></span>
+          <div style="flex:1;min-width:0;">
+            <div class="page-subtitle" style="margin:0;font-size:12.5px;">Safe to spend right now</div>
+            <div style="font-size:26px;font-weight:800;">$11,240</div>
+            <div class="page-subtitle" style="margin:0;font-size:12px;">$12,480 cash − $1,240 scheduled bills</div>
+          </div>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);">
+          <div class="kpi-card" style="--kpi-accent:var(--tv-forest-light)"><div class="kpi-label">Avg money in</div><div class="kpi-value" style="font-size:20px;color:var(--tv-positive);">$7,900<span style="font-size:13px;font-weight:500;">/mo</span></div></div>
+          <div class="kpi-card" style="--kpi-accent:var(--tv-gold)"><div class="kpi-label">Avg money out</div><div class="kpi-value" style="font-size:20px;color:var(--tv-gold);">$5,430<span style="font-size:13px;font-weight:500;">/mo</span></div></div>
+          <div class="kpi-card" style="--kpi-accent:var(--tv-forest-light)"><div class="kpi-label">Avg net</div><div class="kpi-value" style="font-size:20px;color:var(--tv-positive);">+$2,470<span style="font-size:13px;font-weight:500;">/mo</span></div></div>
+        </div>
+
+        <div class="card">
+          <div class="section-header"><div class="section-title">Last 6 months</div><div style="display:flex;gap:12px;font-size:12px;"><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--tv-forest-light);"></span> In</span><span style="display:inline-flex;align-items:center;gap:5px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--tv-gold);"></span> Out</span></div></div>
+          <div style="display:flex;align-items:flex-end;gap:10px;height:150px;padding:8px 4px;">
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:96px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:70px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">Feb</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:104px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:82px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">Mar</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:90px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:100px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">Apr</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:110px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:72px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">May</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:100px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:78px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">Jun</div></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="flex:1;display:flex;align-items:flex-end;gap:3px;width:100%;justify-content:center;"><div style="width:42%;max-width:18px;height:124px;border-radius:4px 4px 0 0;background:var(--tv-forest-light);"></div><div style="width:42%;max-width:18px;height:66px;border-radius:4px 4px 0 0;background:var(--tv-gold);"></div></div><div class="page-subtitle" style="margin:0;font-size:11px;">Jul</div></div>
+          </div>
+        </div>
+        <div class="page-subtitle" style="font-size:12px;margin-top:12px;">An estimate for guidance, not financial advice. "Safe to spend" subtracts only bills we can see scheduled.</div>
+      </div>
+
+      <!-- ============ FINANCIAL HEALTH SCORE ============ -->
+      <div id="page-healthscore" class="page">
+        <div class="page-header">
+          <div><div class="page-title">Financial health score</div><div class="page-subtitle">One number for where you stand — and the moves that raise it</div></div>
+        </div>
+
+        <div class="card" style="display:flex;flex-direction:column;align-items:center;margin-bottom:16px;">
+          <div style="position:relative;width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:conic-gradient(var(--tv-forest-light) 281deg, var(--tv-border) 0);">
+            <div style="width:92px;height:92px;border-radius:50%;background:var(--tv-white);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:38px;font-weight:800;color:var(--tv-forest-light);line-height:1;">78</div><div style="font-size:12px;color:var(--tv-text-muted);">out of 100</div></div>
+          </div>
+          <div style="font-size:18px;font-weight:700;color:var(--tv-forest-light);margin-top:8px;">Good</div>
+          <div class="page-subtitle" style="text-align:center;margin-top:4px;">Based on 4 factors from your linked accounts.</div>
+        </div>
+
+        <div class="card">
+          <div class="section-header"><div class="section-title">What's driving it</div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-pig-money"></i></div><div class="item-main"><div class="item-name">Savings rate <span style="float:right;color:var(--tv-positive);font-weight:700;font-size:13px;">Great</span></div><div class="item-sub">31% of income kept</div><div style="height:6px;border-radius:6px;background:var(--tv-border);overflow:hidden;margin:6px 0;"><div style="width:88%;height:100%;background:var(--tv-forest-light);"></div></div><div style="font-size:12.5px;color:var(--tv-text-muted);">You're saving well — keep it up.</div></div></div>
+          <div class="list-item"><div class="item-icon icon-amber"><i class="ti ti-umbrella"></i></div><div class="item-main"><div class="item-name">Emergency fund <span style="float:right;color:var(--tv-warning);font-weight:700;font-size:13px;">Fair</span></div><div class="item-sub">2.3 months of expenses saved</div><div style="height:6px;border-radius:6px;background:var(--tv-border);overflow:hidden;margin:6px 0;"><div style="width:44%;height:100%;background:var(--tv-gold);"></div></div><div style="font-size:12.5px;color:var(--tv-text-muted);">Build toward 3–6 months of expenses in an easy-access account.</div></div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-scale"></i></div><div class="item-main"><div class="item-name">Debt load <span style="float:right;color:var(--tv-positive);font-weight:700;font-size:13px;">Good</span></div><div class="item-sub">Debt is 22% of your assets</div><div style="height:6px;border-radius:6px;background:var(--tv-border);overflow:hidden;margin:6px 0;"><div style="width:78%;height:100%;background:var(--tv-forest-light);"></div></div><div style="font-size:12.5px;color:var(--tv-text-muted);">Debt is well under control.</div></div></div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-trending-up"></i></div><div class="item-main"><div class="item-name">Net worth <span style="float:right;color:var(--tv-positive);font-weight:700;font-size:13px;">Great</span></div><div class="item-sub">Trending up</div><div style="height:6px;border-radius:6px;background:var(--tv-border);overflow:hidden;margin:6px 0;"><div style="width:90%;height:100%;background:var(--tv-forest-light);"></div></div><div style="font-size:12.5px;color:var(--tv-text-muted);">Your net worth is growing.</div></div></div>
+        </div>
+        <div class="page-subtitle" style="font-size:12px;margin-top:12px;">An estimate for guidance, not financial advice. It updates as your accounts and spending change.</div>
+      </div>
+
       <div id="page-budget" class="page">
         <!-- Keep-it-current drift nudge (shows when live spending no longer matches the saved budget) -->
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;background:var(--tv-sage-pale);border:1px solid var(--tv-forest);border-radius:var(--radius-md);">
@@ -5128,7 +5268,8 @@ function navigate(pageId, navEl) {
     messages:'Messages', settings:'Settings', styleguide:'Style Guide', flowmap:'UI Flow Map',
     business:'My Business', aiassistant:'AI Assistant', calculators:'Calculators',
     goals:'Goals', tax:'Taxes', cpa:'Find a CPA', admin:'Admin · Analytics', customercare:'Customer Care',
-    profile:'Profile', auth:'Auth / KYC'
+    profile:'Profile', auth:'Auth / KYC',
+    today:'Today', recurring:'Recurring', cashflow:'Cash Flow', healthscore:'Health Score'
   };
   document.getElementById('topbar-label').textContent = labels[pageId] || 'TerraVest';
   document.querySelector('.page-content').scrollTop = 0;
