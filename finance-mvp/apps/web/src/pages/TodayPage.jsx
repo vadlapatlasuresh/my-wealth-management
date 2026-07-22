@@ -232,7 +232,8 @@ export default function TodayPage({
               <div style={{ display: "flex", flexDirection: "column" }}>
                 {recent.map((t, i) => {
                   const amt = Number(t.amount) || 0;
-                  const isIn = amt >= 0;
+                  // Plaid convention: positive = money OUT (a charge), negative = money IN.
+                  const isIn = amt < 0;
                   return (
                     <div key={t.id || i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: i < recent.length - 1 ? "1px solid var(--tv-border, rgba(0,0,0,.06))" : "none" }}>
                       <i className={isIn ? "ti ti-arrow-down-left" : "ti ti-arrow-up-right"} style={{ color: isIn ? "var(--tv-forest, #2f7a5b)" : "var(--tv-red, #c0392b)", fontSize: 16 }} />

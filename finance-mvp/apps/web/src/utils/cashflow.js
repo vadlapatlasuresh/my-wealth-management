@@ -1,6 +1,7 @@
 // Pure personal cash-flow helpers (no React), unit-testable in isolation. Side-effect free.
-// Sign convention matches the rest of the app (TransactionsPage): amount >= 0 is money IN,
-// < 0 is money OUT. feature_key: individual.cashflow.
+// SIGN CONVENTION (Plaid, stored raw — the API does not flip it): amount > 0 is money OUT
+// (a charge), < 0 is money IN (income). Verified against the data and the backend's
+// RecurringBillDetector. feature_key: individual.cashflow.
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
@@ -31,7 +32,7 @@ export function monthlyBuckets(transactions = [], months = 6) {
     const b = index.get(monthKey(d));
     if (!b) continue;
     const amt = num(t.amount);
-    if (amt >= 0) b.income += amt; else b.spend += -amt;
+    if (amt > 0) b.spend += amt; else b.income += -amt;
   }
   for (const b of buckets) b.net = b.income - b.spend;
   return buckets;

@@ -1,6 +1,7 @@
 // Pure smart-alert / anomaly-detection helpers (no React), unit-testable in isolation.
-// Side-effect free. Sign convention matches the app (TransactionsPage): amount >= 0 is
-// money IN, < 0 is money OUT (spend). feature_key: individual.smartAlerts.
+// Side-effect free. SIGN CONVENTION (Plaid, stored raw — the API does not flip it):
+// amount > 0 is money OUT (a charge), < 0 is money IN. Verified against the data and the
+// backend's RecurringBillDetector. feature_key: individual.smartAlerts.
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const DAY = 24 * 3600 * 1000;
@@ -20,13 +21,13 @@ function spendEvents(transactions = []) {
   const out = [];
   for (const t of transactions || []) {
     const amt = num(t.amount);
-    if (amt >= 0) continue; // only outflows
+    if (amt <= 0) continue; // only outflows (positive = a charge)
     const ts = t.date ? new Date(t.date).getTime() : NaN;
     if (Number.isNaN(ts)) continue;
     out.push({
       name: t.name || t.description || t.merchant || "Transaction",
       key: normalize(t.name || t.description || t.merchant),
-      amount: -amt,
+      amount: amt,
       ts,
       category: (t.category || "").toLowerCase(),
     });

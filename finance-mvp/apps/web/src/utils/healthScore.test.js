@@ -21,10 +21,11 @@ describe("monthlyCashFlow", () => {
   it("returns nulls when there are no dated transactions", () => {
     expect(monthlyCashFlow([]).monthlyIncome).toBeNull();
   });
-  it("treats positive as income and negative as spend", () => {
+  // Plaid convention: positive = money OUT (charge), negative = money IN (income).
+  it("treats negative as income and positive as spend", () => {
     const { monthlyIncome, monthlySpend } = monthlyCashFlow([
-      { amount: 3000, date: daysAgo(20) },
-      { amount: -1000, date: daysAgo(10) },
+      { amount: -3000, date: daysAgo(20) },
+      { amount: 1000, date: daysAgo(10) },
     ]);
     expect(monthlyIncome).toBeGreaterThan(0);
     expect(monthlySpend).toBeGreaterThan(0);
@@ -47,8 +48,8 @@ describe("computeHealthScore", () => {
         { type: "credit", currentBalance: 500 },
       ],
       transactions: [
-        { amount: 8000, date: daysAgo(30) },
-        { amount: -3000, date: daysAgo(20) }, // saving ~60%
+        { amount: -8000, date: daysAgo(30) }, // income (negative = money in)
+        { amount: 3000, date: daysAgo(20) },  // spend  (positive = money out) → saving ~60%
       ],
       snapshot: { netWorth: 129500, change30d: 2000 },
     });

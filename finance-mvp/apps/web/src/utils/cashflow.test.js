@@ -13,12 +13,13 @@ describe("monthlyBuckets", () => {
     expect(b.every((m) => m.income === 0 && m.spend === 0 && m.net === 0)).toBe(true);
   });
 
+  // Plaid convention: positive = money OUT (charge), negative = money IN (income).
   it("buckets income and spend by month with correct sign convention", () => {
     const b = monthlyBuckets(
       [
-        { amount: 4000, date: thisMonth(3) },
-        { amount: -1500, date: thisMonth(10) },
-        { amount: -500, date: thisMonth(20) },
+        { amount: -4000, date: thisMonth(3) },
+        { amount: 1500, date: thisMonth(10) },
+        { amount: 500, date: thisMonth(20) },
       ],
       6
     );
@@ -31,7 +32,7 @@ describe("monthlyBuckets", () => {
 
 describe("averages", () => {
   it("ignores empty months", () => {
-    const b = monthlyBuckets([{ amount: 3000, date: thisMonth(5) }, { amount: -1000, date: thisMonth(6) }], 6);
+    const b = monthlyBuckets([{ amount: -3000, date: thisMonth(5) }, { amount: 1000, date: thisMonth(6) }], 6);
     const { avgIncome, avgSpend, avgNet } = averages(b);
     expect(avgIncome).toBe(3000);
     expect(avgSpend).toBe(1000);

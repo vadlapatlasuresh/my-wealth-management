@@ -1,8 +1,10 @@
 // Pure financial-health-score helpers (no React) so the scoring logic is unit-testable
 // in isolation. Side-effect free. Feature key: individual.healthScore.
 //
-// Sign convention matches the rest of the web app (see TransactionsPage): a transaction
-// `amount >= 0` is money IN (income), `< 0` is money OUT (spend).
+// SIGN CONVENTION (Plaid, stored raw — the API does not flip it): a transaction
+// `amount > 0` is money OUT (a charge/debit), `< 0` is money IN (income/credit).
+// Verified against the data (an Uber ride is +5.40) and the backend's own
+// RecurringBillDetector, which treats amount.signum() > 0 as a recurring charge.
 
 const clamp = (n, lo = 0, hi = 100) => Math.max(lo, Math.min(hi, n));
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
@@ -50,7 +52,7 @@ export function monthlyCashFlow(transactions = [], windowDays = 90) {
     const ts = t.date ? new Date(t.date).getTime() : NaN;
     if (Number.isNaN(ts) || ts < cutoff) continue;
     const amt = num(t.amount);
-    if (amt >= 0) income += amt; else spend += -amt;
+    if (amt > 0) spend += amt; else income += -amt;
     if (ts < earliest) earliest = ts;
     count++;
   }
