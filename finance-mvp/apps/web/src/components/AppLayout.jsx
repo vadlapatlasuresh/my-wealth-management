@@ -23,6 +23,7 @@ const RecurringPage   = MODULE_REGISTRY.recurring.component;
 const HealthScorePage = MODULE_REGISTRY.healthscore.component;
 const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
 const AlertsPage      = MODULE_REGISTRY.alerts.component;
+const SpendingPage    = MODULE_REGISTRY.spending.component;
 const HomePage        = MODULE_REGISTRY.home.component;
 const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
@@ -62,6 +63,7 @@ const navLabels = {
   '/recurring': 'Recurring',
   '/health-score': 'Health Score',
   '/cash-flow': 'Cash Flow',
+  '/spending': 'Spending',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
@@ -442,6 +444,7 @@ export default function AppLayout(props) {
               <Route path="/recurring" element={<RecurringPage />} />
               <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
               <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
+              <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
               <Route path="/" element={
                 <HomePage
                   snapshot={snapshot}

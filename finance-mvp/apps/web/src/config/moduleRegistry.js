@@ -16,6 +16,7 @@ const RecurringPage   = React.lazy(() => import('../pages/RecurringPage'));
 const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
 const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
 const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
+const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -123,6 +124,12 @@ export const MODULE_REGISTRY = {
     id: 'recurring', title: 'Recurring', icon: 'ti ti-repeat',
     route: '/recurring', section: SECTION_MONEY, defaultOrder: 6,
     component: RecurringPage, inNavByDefault: true,
+  },
+  // Spending insights: category breakdown + movers (Phase 2). feature_key: individual.spendInsights.
+  spending: {
+    id: 'spending', title: 'Spending', icon: 'ti ti-chart-donut',
+    route: '/spending', section: SECTION_MONEY, defaultOrder: 8,
+    component: SpendingPage, inNavByDefault: true,
   },
   // Cash-flow view: money in vs out + safe-to-spend (Phase 2). feature_key: individual.cashflow.
   cashflow: {
@@ -268,7 +275,7 @@ export const MODULE_REGISTRY = {
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
-  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow'],
+  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending'],
   [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
