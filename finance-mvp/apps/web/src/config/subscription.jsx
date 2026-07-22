@@ -37,7 +37,9 @@ export function SubscriptionProvider({ children }) {
     try {
       const [sub, ent] = await Promise.all([
         api.getMySubscription().catch(() => EMPTY.subscription),
-        api.getEntitlements().catch(() => EMPTY.entitlements),
+        // failOpen marks "entitlements couldn't be loaded" so gating never locks anyone
+        // out on a backend hiccup — distinct from a successful empty/free response.
+        api.getEntitlements().catch(() => ({ status: 'ERROR', entitled: false, features: {}, failOpen: true })),
       ]);
       setState({
         subscription: sub || EMPTY.subscription,
@@ -55,15 +57,17 @@ export function SubscriptionProvider({ children }) {
   const { subscription, entitlements } = state;
   const status = subscription?.status || 'NONE';
 
-  // Never-engaged users are ungated; otherwise a feature is granted only if the plan
-  // grants it (plan_feature enabled) AND the subscription is live.
+  // Gating reads the resolved feature set from the backend: a live subscription grants its
+  // plan's features; everyone else (never subscribed, expired, canceled) gets the Free floor.
+  // The only ungate-everything case is a genuine load failure (failOpen), so a backend hiccup
+  // can't lock anyone out of the app.
   const hasFeature = useCallback(
     (key) => {
       if (!key) return true;
-      if (status === 'NONE') return true;
+      if (entitlements?.failOpen) return true;
       return Boolean(entitlements?.features?.[key]);
     },
-    [status, entitlements]
+    [entitlements]
   );
 
   const value = {
