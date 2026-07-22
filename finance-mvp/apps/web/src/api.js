@@ -921,6 +921,17 @@ export const api = {
     request(`/api/v1/household/members/${userId}`, { method: "DELETE" }),
   leaveHousehold: () => request("/api/v1/household/leave", { method: "POST" }),
 
+  // ---- Opt-in sharing of personal accounts with the household (Phase 3c) ----
+  // The registry returns ids + labels only; balances still come from the owning service.
+  getHouseholdShares: () => request("/api/v1/household/shares?resourceType=ACCOUNT"),
+  shareAccountWithHousehold: (resourceId, label) =>
+    request("/api/v1/household/shares", {
+      method: "POST",
+      body: JSON.stringify({ resourceType: "ACCOUNT", resourceId: String(resourceId), label }),
+    }),
+  unshareFromHousehold: (shareId) =>
+    request(`/api/v1/household/shares/${shareId}`, { method: "DELETE" }),
+
   // ---- Household-owned goals & bills (Phase 3b) ----
   getHouseholdGoals: () => request("/api/v1/household/goals"),
   createHouseholdGoal: (name, targetAmount, targetDate) =>

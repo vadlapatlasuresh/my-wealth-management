@@ -52,17 +52,151 @@ biggest thing that stops a demo from becoming a feature list.
 
 ## 1.3 Why the existing tools don't fit
 
-| Tool | Built for | Where it fails Maria |
+**Competitor list pricing verified July 2026.** Re-check before any call — this moves. QuickBooks
+raised prices on 1 August 2026.
+
+| Tool | Price (list) | What it gives her | What's still missing |
+|---|---|---|---|
+| **Monarch Money** | $14.99/mo · $99.99/yr · **Plus $199/yr** | Budgeting, net worth; Plus adds business & rental *income tracking* | Income tracking only — no P&L, no invoicing, no AR aging, no depreciation or QBI |
+| **Copilot Money** | $13/mo · $95/yr | Polished personal budgeting and investment tracking | No business entity, no property, no tax modelling. No Android. |
+| **Empower** | Dashboard free · 0.89% AUM advisory | Net worth and portfolio analysis, free | Built to sell wealth management. No business books, no rental accounting. |
+| **QuickBooks Online** | $20 Solopreneur · $38 Simple Start · $75 Essentials · $115 Plus | Full business accounting, invoicing, P&L | No personal net worth, no investments, no property equity |
+| **Stessa** | Free · Manage $12/mo · Pro $28/mo (annual) | Rental income, expenses, Schedule E reporting | Property only — no business entity, no personal wealth |
+| **Baselane** | Free · Smart $20/mo ($240/yr) | Landlord banking, rent collection, bookkeeping | Property only. Charges per lease ($10), e-sign ($5), screening ($24.99). |
+
+### ⚠️ Monarch Plus — know this before you pitch
+
+**Monarch launched a $199/yr "Plus" tier that explicitly adds "business and rental income
+tracking."** The old line *"Monarch has no concept of a business"* is **no longer true**, and a
+market-aware investor will catch it. Don't say it.
+
+**The honest answer is also the stronger one:**
+> "Monarch Plus tracks business and rental *income* as a category. It doesn't give you a profit
+> and loss statement, invoicing, AR aging, multi-entity books, vendor management, or depreciation
+> and QBI inside a tax engine. It categorises the money. We run the business."
+
+Useful to volunteer with investors: *"The incumbent nearest us just shipped a premium tier aimed at
+this customer. That validates the wedge — and their version is income categorisation, which tells
+you how differently they think about it."*
+
+## 1.4 The full competitive matrix
+
+### The whole market, and what each charges *(list prices, verified July 2026)*
+
+| Product | Price | Who it's really for |
 |---|---|---|
-| **Mint, Monarch, Copilot** | Someone with a paycheck | No business entity, no P&L, no rental logic. Reads her business spending as personal overspending. |
-| **QuickBooks, Xero** | A bookkeeper doing the books | No personal net worth, no investments, no property equity. Answers "how did the business do?" — never "how am I doing?" |
-| **Stessa, Baselane** | A landlord, only | Property alone. No business, no personal wealth. |
-| **Spreadsheets** | Nobody, badly | Manual, always stale, and unsafe to share. |
+| **Monarch Money** | $14.99/mo · $99.99/yr · Plus $199/yr | Households with a paycheck |
+| **Copilot Money** | $13/mo · $95/yr | Design-led personal budgeting (no Android) |
+| **Empower** | Free dashboard · 0.89% AUM | Lead-gen for wealth management |
+| **YNAB** | $14.99/mo · $109/yr | Zero-based budgeting discipline |
+| **Quicken Simplifi** | $47.88/yr promo · $71.88 standard | Low-cost personal budgeting |
+| **QuickBooks Online** | $20 · $38 · $75 · $115/mo | A bookkeeper doing the books |
+| **Quicken Business & Personal** | $71.88/yr intro → **$119.88 renewal** | **Closest overlap** — personal + business + rental |
+| **Stessa** | Free · Manage $12/mo · Pro $28/mo | Landlords, property only |
+| **Baselane** | Free · Smart $20/mo | Landlord banking + rent collection |
+| **Hurdlr / Keeper** | $10–$20/mo · Keeper $199/yr | Gig-worker mileage, deductions, filing |
+| **TerraVest** | **$9.99 Individual · $29.99 Business** | **Self-employed with a business AND property** |
+
+### Capability matrix — personal & business
+
+● full · ◐ partial or workaround · — not offered
+
+| Capability | Monarch | Copilot | QuickBooks | Stessa | Quicken B&P | **TerraVest** |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Personal net worth, all accounts | ● | ● | — | — | ● | **●** |
+| Budgets + debt payoff strategy lab | ◐ | ◐ | — | — | ● | **●** |
+| Multi-entity business books, isolated | — | — | ◐ | — | ◐ | **●** |
+| P&L, balance sheet, cash flow | — | — | ● | ◐ | ● | **●** |
+| Invoicing + customer payment page | — | — | ● | — | ● | **●** |
+| AR aging + one-click bulk collections | — | — | ◐ | — | ◐ | **●** |
+| 90-day cash forecast + shortfall alert | — | — | ◐ | — | ◐ | **●** |
+| Vendor spend + contract renewal alerts | — | — | ◐ | — | ◐ | **●** |
+
+### Capability matrix — property, tax & beyond
+
+| Capability | Monarch | Copilot | QuickBooks | Stessa | Quicken B&P | **TerraVest** |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|
+| Property value, equity, cap rate | ◐ | ◐ | — | ● | ● | **●** |
+| Per-property expense tracking | ◐ | — | ◐ | ● | ● | **●** |
+| Rental depreciation + suspended losses | — | — | ◐ | ◐ | ◐ | **●** |
+| **QBI + proactive tax guidance engine** | — | — | — | — | — | **●** |
+| **Secure CPA share: expiry, passcode, log** | — | — | ◐ | ◐ | — | **●** |
+| AI assistant grounded in your own data | ● | ◐ | ◐ | — | — | **●** |
+| **Real-estate deal + co-investment market** | — | — | — | — | — | **●** |
+| Web + iOS + Android | ● | ◐ | ● | ● | ● | **●** |
+
+**Four rows nobody else fills:** depreciation with suspended losses · a QBI guidance engine · an
+auditable CPA share link · a deal marketplace.
+
+> "Every one of these companies is good. But look at these four rows. Depreciation with
+> carried-forward losses. A tax engine that tells her about QBI before April. A share link to her
+> accountant that expires and logs who opened it. And a deal marketplace. Nobody else fills a
+> single one of them."
+
+**Be accurate on the partials.** Stessa and Quicken get ◐ on depreciation because they produce
+Schedule E reporting — they *record* it; they don't model or advise on it. Say that if pressed. An
+all-green column against all-blank competitors reads as marketing and invites someone to test it.
+
+### ⚠️ Quicken Business & Personal — the one that genuinely overlaps
+
+**Take this one seriously.** It is the only product that does personal + business + rental in one
+subscription, with Schedule C/E reporting, invoicing, and rental tracking — at roughly **$120/yr on
+renewal, cheaper than TerraVest Business.** Do not pretend it doesn't exist.
+
+**The honest, stronger answer:**
+> "Quicken is the closest overlap and I take it seriously. But it's a register with business
+> categories and Schedule C/E reporting — it records what already happened. We forecast what's
+> coming, isolate books per entity, chase receivables, and advise on QBI and depreciation before
+> April instead of reporting them after."
+
+Where the difference is real and defensible:
+- **Isolated multi-entity books** — Quicken is one file with categories, not separate businesses
+- **AR aging as an analytic** and one-click bulk collections
+- **A genuine forward cash forecast** with shortfall detection, not a register balance
+- **Proactive tax guidance** (QBI, suspended losses) rather than after-the-fact Schedule E output
+- **Auditable CPA sharing** with expiry, passcode and access log
+- **An AI assistant** grounded in the user's own numbers
+
+## 1.5 What she pays today — the stack we replace
+
+To cover all three domains today she buys three disconnected tools:
+
+**Monarch Core $14.99 + QuickBooks Simple Start $38 + Stessa Pro $35 ≈ $88/month**
+— three logins, three data silos, zero connection between them.
+*(On annual billing the same stack is ≈ $74/month.)*
+
+**TerraVest Business is $29.99/month with a 7-day free trial** — about a third of the cost, and the
+only one where the three actually talk to each other.
+
+> "Today she pays about eighty-eight dollars a month across three tools that don't talk to each
+> other. We're thirty — and we're the only one where the three connect."
+
+Don't oversell the saving. **The connection is the argument; the price is the bonus.**
 
 **The turn:**
 > "Nobody serves the person who has all three. That's who we built for."
 
-## 1.4 Why it matters
+## 1.6 What TerraVest provides — precisely
+
+**Personal** — consolidated net worth from linked accounts · contributor breakdown · budgets with
+50/30/20 presets · Avalanche/Snowball/Hybrid debt lab with extra-payment modelling · goals with
+required-monthly math · bill pay with duplicate protection and cancellation.
+
+**Business** *(the part nobody else builds)* — isolated books per entity plus a consolidated view ·
+business health score · 90-day cash forecast with shortfall detection · AR aging · invoicing with a
+public payment page and automatic transaction reconciliation · one-click chase of every overdue
+invoice · P&L, balance sheet and cash flow · budgets vs variance · cash-reserve and tax set-aside
+goals · vendor spend with renewal alerts · recurring-charge detection · QuickBooks import.
+
+**Property & tax** *(the wedge)* — portfolio with value, equity and cap rate · per-property dated
+expense tracking · portfolio-wide tax export · rental depreciation via cost basis and land value ·
+prior-year suspended loss carryforward · 20% QBI guidance · quarterly estimates · secure CPA sharing
+that is view-only, expiring, passcode-protected and access-logged.
+
+**Platform** — AI assistant grounded in the user's real numbers · tamper-evident audit chain ·
+encrypted identity data · export and delete · 9 languages · web, iOS and Android from one codebase.
+
+## 1.7 Why it matters
 
 Three costs of the gap — use whichever lands with the room:
 
@@ -73,7 +207,7 @@ Three costs of the gap — use whichever lands with the room:
    ones a consumer app never surfaces.
 3. **The accountant tax.** She pays professional rates for data assembly software should do.
 
-## 1.5 What we've built
+## 1.8 What we've built
 
 | | |
 |---|---|
@@ -84,7 +218,7 @@ Three costs of the gap — use whichever lands with the room:
 | **Revenue model** | Individual $9.99/mo · Business $29.99/mo · 7-day free trial · ~2 months free annually — built, running, with feature gating live |
 | **Languages** | 9, including right-to-left Arabic |
 
-## 1.6 The trajectory
+## 1.9 The trajectory
 
 > "Today it's a trusted dashboard. Next is advice — an assistant built for this specific customer.
 > After that, a financial product: lending or advisory, sold to people whose complete financial
@@ -973,15 +1107,23 @@ Return to **Home**. Ending where you started closes the loop visually.
 
 ## 3.7 Anticipated questions
 
-**"Isn't this just Mint or Monarch?"**
-> "Those are excellent products for someone with a paycheck, and I'd lose that fight — it's a
-> crowded market. I'm not in it. They have no concept of a business entity, a P&L, an invoice, or
-> rental depreciation. My user has all four."
+**"Isn't this just Monarch?"**
+> "Monarch's excellent for someone with a paycheck. Their new $199/yr Plus tier does add business
+> and rental income tracking — but that's categorising income. No P&L, no invoicing, no AR aging,
+> no multi-entity books, no depreciation or QBI. It watches the money. We run the business."
+
+⚠️ **Do not say "Monarch has no concept of a business"** — see §1.3. It's no longer true.
 
 **"What about QuickBooks? They own small business."**
 > "QuickBooks answers 'how is the business doing?' It has no idea what its user is *worth* — no
-> personal accounts, no investments, no property equity. For someone whose personal and business
-> finances are the same finances, that's half an answer. We integrate with it rather than fight it."
+> personal accounts, no investments, no property equity. And it's $38 to $115 a month for the tiers
+> this customer needs. We integrate with it rather than fight it."
+
+**"What about Quicken Business & Personal?"**
+> "The closest overlap, and I take it seriously — personal, business and rental in one, about
+> $120/yr on renewal. But it's a register with business categories and Schedule C/E reporting. It
+> records what already happened. We forecast what's coming, isolate books per entity, chase
+> receivables, and advise on QBI and depreciation before April."
 
 **"How big is the market?"**
 > Give the shape — tens of millions of self-employed Americans, a large share owning rental

@@ -4,6 +4,18 @@
 > partner has their own login, copyable invite link). **3a backend is implemented.**
 > **Phase:** 3 (reach/moat layer)
 
+**Implementation notes (3c, shipped):**
+- `household_share` registry (`V17`): "user X shares resource R with household H". **No existing
+  query was modified** — every service still answers `WHERE user_id = :me`; shared resources are
+  resolved through a separate, additive path, so a bug here can at worst fail to reveal shared
+  data rather than widen an existing query.
+- The registry stores **ids and labels only, never balances** — financial values stay in their
+  owning service and are fetched from there.
+- Guarantees under test (10): joining shares nothing by default; a resource is visible only after
+  its owner shares it; revoking removes visibility immediately; shares never cross household
+  boundaries; only the owner may revoke; a share is always recorded against the caller; sharing
+  twice is a no-op.
+
 **Implementation notes (3a, backend):**
 - `auth-service` `V14__household.sql` + `Household` / `HouseholdMember` / `HouseholdInvite`,
   `HouseholdService` (the single `requireActiveMember` rule) and `HouseholdController`.
@@ -138,7 +150,7 @@ of personal ones. `household_goal`, `household_bill`, `household_contribution`.
 |---|---|---|---|
 | **3a — Household & membership** | Create household, invite, accept, leave, revoke. **No data sharing at all.** | No | Low |
 | **3b — Household-owned goals & bills** (Option D) | Shared goals, shared bills, contributions, who-paid-what | No | Low |
-| **3c — Opt-in sharing of personal accounts** (Option C) | "Share this account with my household", read-only joint net worth | Additive read path only | Medium |
+| **3c — Opt-in sharing of personal accounts** (Option C) ✅ SHIPPED | "Share this account with my household" via an additive share registry | Additive read path only | Medium |
 | **3d — Joint views / roll-ups** | Combined household net worth & cash flow | Read-only fan-out | Medium |
 
 **We can stop after 3b and still have a genuinely multiplayer product.** 3c/3d are only worth

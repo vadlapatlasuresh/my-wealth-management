@@ -99,7 +99,12 @@ household-owned objects only.
 - **Members**: avatar, name/email, Owner|Member; owners get **Remove** on other members.
 - **Invite someone** (owner only): email field → **Create invite**; the single-use code is shown
   **once** in a highlighted box with **Copy code**; pending invites listed with **Revoke**.
-- Footer states plainly that accounts, transactions, properties and business data are not shared.
+- **Share an account** (Phase 3c): every linked account listed with a lock/shared icon, its
+  balance, and a **Share** / **Stop sharing** toggle. Default private — nothing is on until the
+  owner turns it on; revoking takes effect immediately.
+- **Shared with you**: accounts other members shared, showing label + "Shared by {name}".
+- Footer: only explicitly shared accounts are visible; transactions, properties and business data
+  are never shared.
 **Rules surfaced**: code is single-use, expires in 7 days, and only works for the invited email.
 
 ## Shared goals & bills (SharedMoneyPage)  ·  *NEW, Phase 3b*  ·  feature_key `individual.sharedGoals`

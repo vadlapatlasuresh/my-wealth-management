@@ -474,7 +474,7 @@ export default function AppLayout(props) {
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
               <Route path="/emergency-fund" element={<EmergencyFundPage accounts={accounts} transactions={transactions} />} />
               <Route path="/coach" element={<CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />} />
-              <Route path="/household" element={<HouseholdPage />} />
+              <Route path="/household" element={<HouseholdPage accounts={accounts} />} />
               <Route path="/shared-money" element={<SharedMoneyPage />} />
               <Route path="/" element={
                 <HomePage
