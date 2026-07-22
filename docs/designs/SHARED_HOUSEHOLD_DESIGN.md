@@ -1,7 +1,22 @@
 # Shared Household — Design Doc (for review, no code yet)
 
-> **Status:** proposal · **Phase:** 3 (reach/moat layer) · **Author:** drafted for review
-> **Decision needed before any code is written.** See §10 Open questions.
+> **Status:** APPROVED — decisions taken (phased approach, owner-pays, one household per user,
+> partner has their own login, copyable invite link). **3a backend is implemented.**
+> **Phase:** 3 (reach/moat layer)
+
+**Implementation notes (3a, backend):**
+- `auth-service` `V14__household.sql` + `Household` / `HouseholdMember` / `HouseholdInvite`,
+  `HouseholdService` (the single `requireActiveMember` rule) and `HouseholdController`.
+- Gateway `RouteLocator` entry added for `/api/v1/household/**` (without it every call 404s).
+- **11 authorization tests**, incl. the cross-household leak test, immediate revocation,
+  single-use / expiring / email-bound invites, and "raw token is never stored".
+- ⚠️ The one-household-per-user rule is enforced in **service code only**. A partial unique
+  index (`WHERE status = 'ACTIVE'`) is PostgreSQL-only and broke every `@SpringBootTest` when
+  Flyway ran it against H2 in tests. Harden later via vendor-specific Flyway locations.
+- **Owner-pays** is implemented as: *creating* a household requires `individual.household`
+  (Plus); joining and participating never do — otherwise an invited Free member couldn't see
+  the household they joined. Server-side enforcement of the create-gate is still TODO
+  (currently UI-gated), and must land before the feature flag is enabled.
 
 ---
 
