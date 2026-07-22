@@ -75,11 +75,30 @@ market-aware investor will catch it. Don't say it.
 > and loss statement, invoicing, AR aging, multi-entity books, vendor management, or depreciation
 > and QBI inside a tax engine. It categorises the money. We run the business."
 
-Useful to volunteer with investors: *"The incumbent nearest us just shipped a premium tier aimed at
-this customer. That validates the wedge — and their version is income categorisation, which tells
-you how differently they think about it."*
+This is also a useful signal to volunteer with investors: *"The incumbent nearest us just shipped a
+premium tier aimed at this customer. That validates the wedge — and their version is income
+categorisation, which tells you how differently they think about it."*
 
-## 1.4 The full competitive matrix
+## 1.4 What she pays today — the stack we replace
+
+To cover all three domains today she buys three disconnected tools:
+
+**Monarch Core $14.99 + QuickBooks Simple Start $38 + Stessa Pro $35 ≈ $88/month**
+— three logins, three data silos, zero connection between them.
+*(On annual billing the same stack is ≈ $74/month.)*
+
+**TerraVest Business is $29.99/month with a 7-day free trial** — about a third of the cost, and the
+only one where the three actually talk to each other.
+
+> "Today she pays about eighty-eight dollars a month across three tools that don't talk to each
+> other. We're thirty — and we're the only one where the three connect."
+
+Don't oversell the saving. **The connection is the argument; the price is the bonus.**
+
+**The turn:**
+> "Nobody serves the person who has all three. That's who we built for."
+
+## 1.5 The full competitive matrix
 
 ### The whole market, and what each charges *(list prices, verified July 2026)*
 
@@ -133,15 +152,11 @@ auditable CPA share link · a deal marketplace.
 > accountant that expires and logs who opened it. And a deal marketplace. Nobody else fills a
 > single one of them."
 
-**Be accurate on the partials.** Stessa and Quicken get ◐ on depreciation because they produce
-Schedule E reporting — they *record* it; they don't model or advise on it. Say that if pressed. An
-all-green column against all-blank competitors reads as marketing and invites someone to test it.
-
 ### ⚠️ Quicken Business & Personal — the one that genuinely overlaps
 
 **Take this one seriously.** It is the only product that does personal + business + rental in one
 subscription, with Schedule C/E reporting, invoicing, and rental tracking — at roughly **$120/yr on
-renewal, cheaper than TerraVest Business.** Do not pretend it doesn't exist.
+renewal**, cheaper than TerraVest Business. Do not pretend it doesn't exist.
 
 **The honest, stronger answer:**
 > "Quicken is the closest overlap and I take it seriously. But it's a register with business
@@ -156,25 +171,6 @@ Where the difference is real and defensible:
 - **Proactive tax guidance** (QBI, suspended losses) rather than after-the-fact Schedule E output
 - **Auditable CPA sharing** with expiry, passcode and access log
 - **An AI assistant** grounded in the user's own numbers
-
-## 1.5 What she pays today — the stack we replace
-
-To cover all three domains today she buys three disconnected tools:
-
-**Monarch Core $14.99 + QuickBooks Simple Start $38 + Stessa Pro $35 ≈ $88/month**
-— three logins, three data silos, zero connection between them.
-*(On annual billing the same stack is ≈ $74/month.)*
-
-**TerraVest Business is $29.99/month with a 7-day free trial** — about a third of the cost, and the
-only one where the three actually talk to each other.
-
-> "Today she pays about eighty-eight dollars a month across three tools that don't talk to each
-> other. We're thirty — and we're the only one where the three connect."
-
-Don't oversell the saving. **The connection is the argument; the price is the bonus.**
-
-**The turn:**
-> "Nobody serves the person who has all three. That's who we built for."
 
 ## 1.6 What TerraVest provides — precisely
 
@@ -1107,23 +1103,15 @@ Return to **Home**. Ending where you started closes the loop visually.
 
 ## 3.7 Anticipated questions
 
-**"Isn't this just Monarch?"**
-> "Monarch's excellent for someone with a paycheck. Their new $199/yr Plus tier does add business
-> and rental income tracking — but that's categorising income. No P&L, no invoicing, no AR aging,
-> no multi-entity books, no depreciation or QBI. It watches the money. We run the business."
-
-⚠️ **Do not say "Monarch has no concept of a business"** — see §1.3. It's no longer true.
+**"Isn't this just Mint or Monarch?"**
+> "Those are excellent products for someone with a paycheck, and I'd lose that fight — it's a
+> crowded market. I'm not in it. They have no concept of a business entity, a P&L, an invoice, or
+> rental depreciation. My user has all four."
 
 **"What about QuickBooks? They own small business."**
 > "QuickBooks answers 'how is the business doing?' It has no idea what its user is *worth* — no
-> personal accounts, no investments, no property equity. And it's $38 to $115 a month for the tiers
-> this customer needs. We integrate with it rather than fight it."
-
-**"What about Quicken Business & Personal?"**
-> "The closest overlap, and I take it seriously — personal, business and rental in one, about
-> $120/yr on renewal. But it's a register with business categories and Schedule C/E reporting. It
-> records what already happened. We forecast what's coming, isolate books per entity, chase
-> receivables, and advise on QBI and depreciation before April."
+> personal accounts, no investments, no property equity. For someone whose personal and business
+> finances are the same finances, that's half an answer. We integrate with it rather than fight it."
 
 **"How big is the market?"**
 > Give the shape — tens of millions of self-employed Americans, a large share owning rental

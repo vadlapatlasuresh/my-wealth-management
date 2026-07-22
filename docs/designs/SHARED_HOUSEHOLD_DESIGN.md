@@ -4,19 +4,35 @@
 > partner has their own login, copyable invite link). **3a backend is implemented.**
 > **Phase:** 3 (reach/moat layer)
 
+**Implementation notes (3c, shipped):**
+- `household_share` registry (`V17`): "user X shares resource R with household H". **No existing
+  query was modified** — every service still answers `WHERE user_id = :me`; shared resources are
+  resolved through a separate, additive path, so a bug here can at worst fail to reveal shared
+  data rather than widen an existing query.
+- The registry stores **ids and labels only, never balances** — financial values stay in their
+  owning service and are fetched from there.
+- Guarantees under test (10): joining shares nothing by default; a resource is visible only after
+  its owner shares it; revoking removes visibility immediately; shares never cross household
+  boundaries; only the owner may revoke; a share is always recorded against the caller; sharing
+  twice is a no-op.
+
 **Implementation notes (3a, backend):**
 - `auth-service` `V14__household.sql` + `Household` / `HouseholdMember` / `HouseholdInvite`,
   `HouseholdService` (the single `requireActiveMember` rule) and `HouseholdController`.
 - Gateway `RouteLocator` entry added for `/api/v1/household/**` (without it every call 404s).
 - **11 authorization tests**, incl. the cross-household leak test, immediate revocation,
   single-use / expiring / email-bound invites, and "raw token is never stored".
-- ⚠️ The one-household-per-user rule is enforced in **service code only**. A partial unique
-  index (`WHERE status = 'ACTIVE'`) is PostgreSQL-only and broke every `@SpringBootTest` when
-  Flyway ran it against H2 in tests. Harden later via vendor-specific Flyway locations.
-- **Owner-pays** is implemented as: *creating* a household requires `individual.household`
-  (Plus); joining and participating never do — otherwise an invited Free member couldn't see
-  the household they joined. Server-side enforcement of the create-gate is still TODO
-  (currently UI-gated), and must land before the feature flag is enabled.
+- ✅ **RESOLVED** — one-household-per-user is now enforced at the DATABASE level, cross-database.
+  `household_member.active_user_id` mirrors `user_id` only while ACTIVE and is NULL otherwise
+  (`V16`); a plain `UNIQUE` constraint then gives the guarantee on both PostgreSQL and H2, since
+  both allow many NULLs in a unique column. A JPA `@PrePersist/@PreUpdate` callback keeps it in
+  sync so it cannot drift. This avoids the PostgreSQL-only partial index that broke H2.
+- ✅ **Owner-pays enforced server-side.** `EntitlementsClient` asks payment-service for
+  `individual.household` before `create()`; joining and participating never check. It **fails
+  closed** (503 "couldn't verify your plan") rather than assuming entitlement, because a gate
+  that opens whenever payment-service hiccups is not a gate. `household.entitlement.enforce=false`
+  disables it where payment-service isn't running. Covered by two tests: creating without the
+  entitlement is refused, and joining still succeeds when the entitlement is denied.
 
 ---
 
@@ -134,7 +150,7 @@ of personal ones. `household_goal`, `household_bill`, `household_contribution`.
 |---|---|---|---|
 | **3a — Household & membership** | Create household, invite, accept, leave, revoke. **No data sharing at all.** | No | Low |
 | **3b — Household-owned goals & bills** (Option D) | Shared goals, shared bills, contributions, who-paid-what | No | Low |
-| **3c — Opt-in sharing of personal accounts** (Option C) | "Share this account with my household", read-only joint net worth | Additive read path only | Medium |
+| **3c — Opt-in sharing of personal accounts** (Option C) ✅ SHIPPED | "Share this account with my household" via an additive share registry | Additive read path only | Medium |
 | **3d — Joint views / roll-ups** | Combined household net worth & cash flow | Read-only fan-out | Medium |
 
 **We can stop after 3b and still have a genuinely multiplayer product.** 3c/3d are only worth

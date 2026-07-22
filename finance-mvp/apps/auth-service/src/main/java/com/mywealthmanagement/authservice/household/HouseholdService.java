@@ -38,9 +38,13 @@ public class HouseholdService {
     /** Invite lifetime. Short enough to limit exposure, long enough to be usable. */
     private static final int INVITE_TTL_DAYS = 7;
 
+    /** The paid entitlement required to CREATE a household (owner-pays). */
+    static final String FEATURE_HOUSEHOLD = "individual.household";
+
     private final HouseholdRepository householdRepository;
     private final HouseholdMemberRepository memberRepository;
     private final HouseholdInviteRepository inviteRepository;
+    private final EntitlementsClient entitlements;
 
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -90,9 +94,16 @@ public class HouseholdService {
 
     // ------------------------------------------------------------------ lifecycle
 
-    /** Create a household; the creator becomes its OWNER. v1: one household per user. */
+    /**
+     * Create a household; the creator becomes its OWNER. v1: one household per user.
+     *
+     * <p>This is the <b>owner-pays</b> gate: creating requires the individual.household
+     * entitlement, while joining and participating never do. Enforced here on the server —
+     * gating only in the UI left the endpoint callable by any Free user.
+     */
     @Transactional
     public Household create(Long userId, String name) {
+        entitlements.requireFeature(FEATURE_HOUSEHOLD);
         activeMembership(userId).ifPresent(m -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "You're already in a household. Leave it before creating another.");

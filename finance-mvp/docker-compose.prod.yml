@@ -156,6 +156,11 @@ services:
         condition: service_healthy
     environment:
       <<: *java-env
+      # Shared household owner-pays gate: auth-service asks payment-service whether the
+      # caller's plan grants individual.household before allowing household creation.
+      # MUST be the compose-DNS URL — the check fails CLOSED, so a wrong or unset value
+      # blocks ALL household creation with a 503 rather than silently allowing it.
+      PAYMENT_URI: http://payment-service:8080
       SECRETS_SCOPES: jwt,encryption,audit
       # Bootstrap key (like JWT_SECRET) — sourced straight from .env.prod, NOT the
       # secrets store. auth-service uses it to encrypt SSN/EIN PII at rest and reads

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../api";
+import HouseholdSharing from "../components/HouseholdSharing";
 
 /* HouseholdPage — Shared Household (Phase 3a): create, invite, members, leave.
    NO financial data is shared here: a household grants access to household-owned objects
@@ -8,7 +9,7 @@ import { api } from "../api";
    Owner-pays: creating a household is the gated action; joining and participating never are,
    otherwise an invited Free member couldn't see the household they joined. */
 
-export default function HouseholdPage() {
+export default function HouseholdPage({ accounts = [] }) {
   const [state, setState] = useState(null); // null = loading
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -184,9 +185,12 @@ export default function HouseholdPage() {
         </div>
       )}
 
+      {/* Phase 3c — opt-in sharing. Default private: nothing here is on until you turn it on. */}
+      <HouseholdSharing accounts={accounts} />
+
       <div className="page-subtitle" style={{ fontSize: 12 }}>
-        Your accounts, transactions, properties and business data are <strong>not</strong> shared with
-        household members. Shared goals and bills are coming next.
+        Only the accounts you explicitly share above are visible to household members. Your
+        transactions, properties and business data are <strong>never</strong> shared.
       </div>
     </div>
   );

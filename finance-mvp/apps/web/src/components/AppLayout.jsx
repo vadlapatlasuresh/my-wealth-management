@@ -27,6 +27,7 @@ const SpendingPage    = MODULE_REGISTRY.spending.component;
 const EmergencyFundPage = MODULE_REGISTRY.emergencyfund.component;
 const CoachPage       = MODULE_REGISTRY.coach.component;
 const HouseholdPage   = MODULE_REGISTRY.household.component;
+const SharedMoneyPage = MODULE_REGISTRY.sharedmoney.component;
 const HomePage        = MODULE_REGISTRY.home.component;
 const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
@@ -70,6 +71,7 @@ const navLabels = {
   '/emergency-fund': 'Emergency Fund',
   '/coach': 'Coach',
   '/household': 'Household',
+  '/shared-money': 'Goals & Bills',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/mybusiness': 'My Business',
@@ -472,7 +474,8 @@ export default function AppLayout(props) {
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
               <Route path="/emergency-fund" element={<EmergencyFundPage accounts={accounts} transactions={transactions} />} />
               <Route path="/coach" element={<CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />} />
-              <Route path="/household" element={<HouseholdPage />} />
+              <Route path="/household" element={<HouseholdPage accounts={accounts} />} />
+              <Route path="/shared-money" element={<SharedMoneyPage />} />
               <Route path="/" element={
                 <HomePage
                   snapshot={snapshot}

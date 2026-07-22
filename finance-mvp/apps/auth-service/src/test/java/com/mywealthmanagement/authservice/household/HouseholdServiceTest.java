@@ -2,6 +2,7 @@ package com.mywealthmanagement.authservice.household;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -12,6 +13,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,6 +30,7 @@ import static org.mockito.Mockito.when;
 class HouseholdServiceTest {
 
     private HouseholdService service;
+    private EntitlementsClient entitlements;
     private FakeHouseholds households;
     private FakeMembers members;
     private FakeInvites invites;
@@ -42,7 +45,34 @@ class HouseholdServiceTest {
         households = new FakeHouseholds();
         members = new FakeMembers();
         invites = new FakeInvites();
-        service = new HouseholdService(households.repo, members.repo, invites.repo);
+        // Permissive by default: a Mockito mock's void method does nothing, i.e. entitled.
+        entitlements = mock(EntitlementsClient.class);
+        service = new HouseholdService(households.repo, members.repo, invites.repo, entitlements);
+    }
+
+    // ---------------------------------------------------------------- owner-pays gate
+
+    @Test
+    void creatingAHouseholdRequiresThePaidEntitlement() {
+        // Server-side gate: a Free user calling the API directly must still be refused.
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "upgrade required"))
+                .when(entitlements).requireFeature(HouseholdService.FEATURE_HOUSEHOLD);
+
+        assertThatThrownBy(() -> service.create(ALICE, "Home"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("upgrade required");
+    }
+
+    @Test
+    void joiningAHouseholdNeverRequiresAnEntitlement() {
+        Household h = service.create(ALICE, "Home");
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+
+        // Owner-pays: Bob may be on the Free floor and must still be able to accept.
+        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "upgrade required"))
+                .when(entitlements).requireFeature(HouseholdService.FEATURE_HOUSEHOLD);
+
+        assertThat(service.accept(BOB, BOB_EMAIL, token).getId()).isEqualTo(h.getId());
     }
 
     // ---------------------------------------------------------------- the leak test

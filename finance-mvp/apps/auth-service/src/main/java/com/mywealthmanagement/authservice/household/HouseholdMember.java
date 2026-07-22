@@ -43,6 +43,24 @@ public class HouseholdMember {
     @Column(name = "left_at")
     private LocalDateTime leftAt;
 
+    /**
+     * Mirrors {@link #userId} while this membership is ACTIVE and is NULL otherwise. A plain
+     * UNIQUE constraint on it therefore enforces "at most one ACTIVE household per user" at the
+     * DATABASE level, because both PostgreSQL and H2 allow many NULLs in a unique column.
+     *
+     * <p>This replaces a partial unique index (`WHERE status = 'ACTIVE'`), which is
+     * PostgreSQL-only and broke every @SpringBootTest when Flyway ran it against H2.
+     * Maintained by the JPA callback below so application code cannot forget to update it.
+     */
+    @Column(name = "active_user_id")
+    private Long activeUserId;
+
+    @PrePersist
+    @PreUpdate
+    void syncActiveUserId() {
+        this.activeUserId = STATUS_ACTIVE.equals(status) ? userId : null;
+    }
+
     public boolean isActive() {
         return STATUS_ACTIVE.equals(status);
     }
