@@ -42,9 +42,9 @@ Split-screen auth: left brand panel, right form panel.
 ## Navigation structure (Phase 2 expansion)
 
 The sidebar (web) / bottom tabs (mobile) are config-driven (`moduleRegistry.js` + `platform-config-service`). Sections, in order:
-- **Today** — Today
-- **Money** — Home, Accounts, Transactions, Budgets, Make Payment, Recurring, Cash Flow
-- **Grow** — Goals, Debt Lab, Investments, Calculators, AI Assistant, Health Score
+- **Today** — Today, Alerts
+- **Money** — Home, Accounts, Transactions, Budgets, Make Payment, Recurring, Cash Flow, Spending
+- **Grow** — Goals, Debt Lab, Investments, Calculators, AI Assistant, Health Score, Emergency Fund
 - **Business & Tax** — My Business, Taxes
 - **Real Estate** — Properties, Deal Room, Fractional LLC
 - **More** — Documents, Security, Messages, Subscription, Settings, Profile
@@ -85,6 +85,42 @@ Surfacing of the existing `RecurringBillDetector` (`/api/v1/aggregation/recurrin
 - **Aha numbers** (2 KPI): monthly burn "~${x}/mo · on {n} recurring charges"; annualized "${y}/yr · cancel one you forgot…".
 - **Subscription list**: per charge — repeat icon, name, "{cadence} · seen {n}× · next {date}", median amount, and a due chip ("Due today"/"Tomorrow"/"in {n} days", red when ≤5 days).
 **States**: loading ("Scanning your transactions…"); empty ("No recurring charges yet" + Link accounts); error message inline. Footer note on median amounts + auto-drop-off.
+
+## Smart alerts (AlertsPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.smartAlerts`
+
+Anomaly detection computed client-side (`utils/alerts.js`) from accounts + transactions.
+
+**Header**: "Smart alerts" / "Unusual activity we spotted in your accounts — before it costs you".
+**Sections/cards**
+- **Count line**: "{n} alerts · {m} need attention".
+- **Alert cards**, severity-ordered (high first), each with a left accent bar, tinted icon chip, title, detail, and a chevron that deep-links: **Low balance** (red → /accounts), **Possible duplicate charge** (red → /transactions), **Unusually large charge** vs the category norm (amber → /transactions), **Price went up** on a recurring charge (amber → /recurring).
+**States**: no-data ("Link accounts to enable alerts" + CTA); all-clear ("Nothing unusual right now"). Footer note that alerts update as activity syncs.
+*Also feeds the top 2 alerts into Today's "Needs you today" list.*
+
+## Spending insights (SpendingInsightsPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.spendInsights`
+
+Category breakdown and movers computed client-side (`utils/spending.js`).
+
+**Header**: "Spending insights" / "Where your money actually goes — and what changed".
+**Tabs / controls**: range toggle **30 days / 90 days / 12 months**.
+**Sections/cards**
+- **Total spent** headline for the selected range.
+- **What changed vs last month**: biggest movers with up/down arrows — "{category} up 30% — $640 vs $492", or "is new this month". Small moves are filtered out as noise.
+- **By category**: a single proportional stacked bar + a list (color dot, category, % share, amount), top 8.
+- **Top merchants**: ranked 1–5 with charge counts, plus "All transactions" (→ /transactions).
+**States**: empty ("No spending to analyze yet" + Link accounts CTA).
+
+## Emergency fund (EmergencyFundPage)  ·  *NEW, Phase 2*  ·  feature_key `individual.emergencyFund` (Free)
+
+A cushion sized to **real** monthly expenses (`utils/emergencyFund.js`, reusing the health-score helpers).
+
+**Header**: "Emergency fund" / "A cushion sized to your real expenses — and how to get there".
+**Sections/cards**
+- **Progress card**: saved-so-far vs target amount, a progress bar, "{x.x} months covered · {Not started|Getting started|Solid cushion|Fully covered}", and "{amount} to go" (or "Target reached 🎉").
+- **Your target**: segmented **3 / 6 / 12 months**, with the derived monthly-expense figure stated.
+- **Get there in**: segmented **6 / 12 / 24 months** → a highlighted plan card, "Save ${x}/month to reach {n} months of expenses in {h} months". Hidden once the target is met.
+- **Milestones**: 1 / 3 / 6 months of expenses, each with a reached tick or "{amount} to go".
+**States**: not-computable ("We need your spending first" + Link accounts CTA) when no monthly expense figure exists — deliberately avoids showing a scary "0 months" off no data. Footer note: counts easy-access balances only.
 
 ## Financial Health Score (HealthScorePage)  ·  *NEW, Phase 2*  ·  feature_key `individual.healthScore` (Free)
 
