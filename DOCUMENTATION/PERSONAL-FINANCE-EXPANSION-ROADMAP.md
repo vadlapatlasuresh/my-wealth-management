@@ -134,7 +134,13 @@ The features that create reasons to open the app; highest retention ROI.
 - ✅ **Spending insights** — `utils/spending.js` + 8 tests: category breakdown with shares, month-over-month movers ("dining up 30%"), top merchants, 30d/90d/12mo range toggle. `SpendingInsightsPage` in Money (V12).
 - ⚠️ **Sign-convention fix (important)** — Plaid returns `amount > 0` for a **charge**, and the API does not flip it (verified against the data, `RecurringBillDetector`, and `api.js`). The health-score/cash-flow/alerts utils had assumed the opposite, so income/spend, savings rate, emergency-fund months and anomaly detection were inverted. Fixed and encoded in the test fixtures. **The same inversion existed pre-existing on `TransactionsPage` and `HomePage`** (every purchase painted green as income) — also fixed: category icon, IN/OUT filter, Money In/Out/Net tiles, amount cells, and Home's recent-transaction rows.
 
-**Still to build in Phase 2:** emergency-fund coach (dedicated screen). *(Pending mobile visual task: re-theme the legacy per-frame bottom tab bars to Today·Money·Grow·AI·More across all existing frames; and design-sync the Alerts + Spending screens into the three mockups.)*
+- ✅ **Emergency-fund coach** — target sized to **real** monthly expenses (reuses `summarizeAccounts` + `monthlyCashFlow` from `healthScore.js`, so "months of expenses" is consistent app-wide). 3/6/12-month target, 6/12/24-month horizon → required monthly saving, and 1/3/6-month milestones. `utils/emergencyFund.js` + 8 tests; nav row V13.
+- ✅ **Designs re-synced** — audited drift, then added **Alerts + Spending + Emergency Fund** to web + iOS + Android mockups and the inventory. Also fixed 3 pre-existing gaps in the web `navigate()` label map.
+
+### ✅ Phase 2 COMPLETE
+All retention-layer features shipped. 80/80 unit tests. Remaining polish (not blocking Phase 3):
+- Re-theme the legacy per-frame mobile bottom tab bars to Today·Money·Grow·AI·More (new frames already use them).
+- iOS mockup carries a 1-div imbalance that pre-dates this work.
 
 **Exit criteria:** D1/D7 open-rate measurably up; recurring radar produces a real "found $X/mo" moment on first run; health score gives a first-run "aha".
 
