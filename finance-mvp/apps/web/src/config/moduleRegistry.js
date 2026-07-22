@@ -18,6 +18,7 @@ const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
 const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
 const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage'));
 const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
+const CoachPage       = React.lazy(() => import('../pages/CoachPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -158,6 +159,12 @@ export const MODULE_REGISTRY = {
     route: '/ai-assistant', section: SECTION_GROW, defaultOrder: 5,
     component: AIAssistantPage, inNavByDefault: true,
   },
+  // Money Coach — proactive next-best-actions (Phase 3). feature_key: individual.aiProactive.
+  coach: {
+    id: 'coach', title: 'Coach', icon: 'ti ti-compass',
+    route: '/coach', section: SECTION_GROW, defaultOrder: 8,
+    component: CoachPage, inNavByDefault: true,
+  },
   // Emergency-fund coach (Phase 2). feature_key: individual.emergencyFund (Free floor).
   emergencyfund: {
     id: 'emergencyfund', title: 'Emergency Fund', icon: 'ti ti-umbrella',
@@ -283,7 +290,7 @@ export const MODULE_REGISTRY = {
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending'],
-  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund'],
+  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
   [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings'],
