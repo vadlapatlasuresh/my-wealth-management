@@ -22,6 +22,7 @@ const TodayPage       = MODULE_REGISTRY.today.component;
 const RecurringPage   = MODULE_REGISTRY.recurring.component;
 const HealthScorePage = MODULE_REGISTRY.healthscore.component;
 const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
+const AlertsPage      = MODULE_REGISTRY.alerts.component;
 const HomePage        = MODULE_REGISTRY.home.component;
 const AccountsPage    = MODULE_REGISTRY.accounts.component;
 const TransactionsPage = MODULE_REGISTRY.transactions.component;
@@ -52,6 +53,7 @@ const PlanTierPage    = MODULE_REGISTRY.plantier.component;
 
 const navLabels = {
   '/today': 'Today',
+  '/alerts': 'Alerts',
   '/': 'Home',
   '/accounts': 'Accounts',
   '/transactions': 'Transactions',
@@ -425,6 +427,7 @@ export default function AppLayout(props) {
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
             <Routes>
+              <Route path="/alerts" element={<AlertsPage accounts={accounts} transactions={transactions} />} />
               <Route path="/today" element={
                 <TodayPage
                   snapshot={snapshot}

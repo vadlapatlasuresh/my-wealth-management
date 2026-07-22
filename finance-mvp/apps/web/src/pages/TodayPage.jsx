@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { currency, currency0, greeting, formatDateTime } from "../utils/format";
 import { deriveUpcomingBills } from "../utils/netWorth";
 import { computeHealthScore } from "../utils/healthScore";
+import { detectAlerts } from "../utils/alerts";
 
 /* TodayPage — the daily-open surface (Phase 1 of the personal-finance expansion).
    Deliberately a *composition* of data the app already loads (snapshot, accounts,
@@ -92,6 +93,9 @@ export default function TodayPage({
       .slice(0, 6);
   }, [transactions]);
 
+  // Smart alerts (anomaly detection) from the same data — surfaced here and on /alerts.
+  const alerts = useMemo(() => detectAlerts({ accounts, transactions }), [accounts, transactions]);
+
   // "Needs you today" — an honest, prioritized action list built from real state.
   const needs = useMemo(() => {
     const items = [];
@@ -116,6 +120,16 @@ export default function TodayPage({
         onClick: () => navigate("/accounts"),
       });
     }
+    // Top 2 smart alerts (skip the low-balance one — already covered above).
+    alerts.filter((a) => !a.key.startsWith("low-")).slice(0, 2).forEach((a) => {
+      items.push({
+        icon: a.icon,
+        tone: a.tone,
+        text: `${a.title}: ${a.detail}`,
+        cta: "View",
+        onClick: () => navigate("/alerts"),
+      });
+    });
     // Surface up to two AI/system insights if present.
     (insights || []).slice(0, 2).forEach((ins) => {
       const text = typeof ins === "string" ? ins : ins.message || ins.title || ins.text;
@@ -130,7 +144,7 @@ export default function TodayPage({
       }
     });
     return items;
-  }, [upcomingBills, accounts.length, cash, insights, navigate]);
+  }, [upcomingBills, accounts.length, cash, insights, alerts, navigate]);
 
   const health = useMemo(
     () => computeHealthScore({ accounts, transactions, snapshot }),

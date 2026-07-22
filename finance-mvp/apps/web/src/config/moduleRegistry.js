@@ -15,6 +15,7 @@ const TodayPage       = React.lazy(() => import('../pages/TodayPage'));
 const RecurringPage   = React.lazy(() => import('../pages/RecurringPage'));
 const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
 const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
+const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
 const HomePage        = React.lazy(() => import('../pages/HomePage'));
 const AccountsPage    = React.lazy(() => import('../pages/AccountsPage'));
 const TransactionsPage = React.lazy(() => import('../pages/TransactionsPage'));
@@ -83,6 +84,12 @@ export const MODULE_REGISTRY = {
     id: 'today', title: 'Today', icon: 'ti ti-sun',
     route: '/today', section: SECTION_DAILY, defaultOrder: 1,
     component: TodayPage, inNavByDefault: true,
+  },
+  // Smart alerts / anomaly detection (Phase 2). feature_key: individual.smartAlerts.
+  alerts: {
+    id: 'alerts', title: 'Alerts', icon: 'ti ti-bell',
+    route: '/alerts', section: SECTION_DAILY, defaultOrder: 2,
+    component: AlertsPage, inNavByDefault: true,
   },
   home: {
     id: 'home', title: 'Home', icon: 'ti ti-layout-dashboard',
@@ -260,7 +267,7 @@ export const MODULE_REGISTRY = {
 /* DEFAULT_MODULES: ordered list of ids that appear in the sidebar today,
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
-  [SECTION_DAILY]:      ['today'],
+  [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow'],
   [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
