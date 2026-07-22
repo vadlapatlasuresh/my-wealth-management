@@ -169,11 +169,17 @@ async function request(path, options = {}) {
   });
 
   if (!response.ok) {
-    // A 401/403 means the stored token is missing, expired, or invalid. Clear it and
-    // signal the app so it falls back to the login screen instead of every page erroring.
+    // ONLY 401 means the stored token is missing, expired, or invalid — clear it and signal
+    // the app so it falls back to the login screen instead of every page erroring.
+    //
+    // 403 is deliberately NOT treated as an auth failure: it means "authenticated, but not
+    // permitted", which is a normal business answer — you're on the Free plan, or you asked
+    // for another household's data. Treating it as a bad token signed people out mid-action
+    // (clicking "Create household" on Free logged you straight out) and hid the real reason.
+    //
     // Ops and member sessions fail independently: an expired ops session must not sign the
     // member out of their own app, and vice-versa.
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       if (isOpsPath(path)) {
         setOpsToken(null);
         if (typeof window !== "undefined") window.dispatchEvent(new Event("ops:unauthorized"));
@@ -205,7 +211,9 @@ async function uploadRequest(path, formData) {
     body: formData
   });
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    // See request(): only 401 invalidates the session. A 403 upload is "not permitted",
+    // not "please sign in again".
+    if (response.status === 401) {
       setAuthToken(null);
       if (typeof window !== "undefined") window.dispatchEvent(new Event("auth:unauthorized"));
     }

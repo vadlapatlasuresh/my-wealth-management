@@ -68,7 +68,9 @@ public class EntitlementsClient {
         boolean granted = body != null
                 && body.path("features").path(featureKey).asBoolean(false);
         if (!granted) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            // 402 PAYMENT_REQUIRED, not 403: this is "your plan doesn't include it", which is
+            // distinct from "you're not allowed here" and lets the UI show an upgrade prompt.
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
                     "Creating a household is part of the Plus plan. Upgrade to start one — "
                             + "joining a household someone else created is always free.");
         }

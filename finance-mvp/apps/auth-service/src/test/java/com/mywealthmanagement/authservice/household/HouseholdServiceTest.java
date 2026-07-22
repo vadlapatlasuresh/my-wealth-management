@@ -55,7 +55,7 @@ class HouseholdServiceTest {
     @Test
     void creatingAHouseholdRequiresThePaidEntitlement() {
         // Server-side gate: a Free user calling the API directly must still be refused.
-        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "upgrade required"))
+        doThrow(new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "upgrade required"))
                 .when(entitlements).requireFeature(HouseholdService.FEATURE_HOUSEHOLD);
 
         assertThatThrownBy(() -> service.create(ALICE, "Home"))
@@ -69,7 +69,7 @@ class HouseholdServiceTest {
         String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
 
         // Owner-pays: Bob may be on the Free floor and must still be able to accept.
-        doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "upgrade required"))
+        doThrow(new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "upgrade required"))
                 .when(entitlements).requireFeature(HouseholdService.FEATURE_HOUSEHOLD);
 
         assertThat(service.accept(BOB, BOB_EMAIL, token).getId()).isEqualTo(h.getId());

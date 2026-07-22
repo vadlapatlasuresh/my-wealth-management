@@ -468,7 +468,7 @@ export default function AppLayout(props) {
                   formatDate={formatDate}
                 />
               } />
-              <Route path="/recurring" element={<RecurringPage />} />
+              <Route path="/recurring" element={<RecurringPage accounts={accounts} />} />
               <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
               <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
