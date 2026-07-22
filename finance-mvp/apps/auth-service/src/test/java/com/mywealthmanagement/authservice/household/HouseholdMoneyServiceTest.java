@@ -42,7 +42,7 @@ class HouseholdMoneyServiceTest {
         FakeHouseholds h = new FakeHouseholds();
         FakeMembers m = new FakeMembers();
         FakeInvites i = new FakeInvites();
-        households = new HouseholdService(h.repo, m.repo, i.repo);
+        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class));
 
         goals = new FakeGoals();
         contribs = new FakeContribs();
