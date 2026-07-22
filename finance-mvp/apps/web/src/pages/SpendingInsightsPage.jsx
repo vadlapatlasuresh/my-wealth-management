@@ -31,7 +31,7 @@ export default function SpendingInsightsPage({ transactions = [] }) {
   const hasData = byCategory.length > 0;
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Spending insights</div>
         <div className="page-subtitle">Where your money actually goes — and what changed.</div>

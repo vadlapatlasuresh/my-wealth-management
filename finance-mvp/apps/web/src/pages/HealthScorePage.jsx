@@ -70,7 +70,7 @@ export default function HealthScorePage({ accounts = [], transactions = [], snap
   );
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Financial health score</div>
         <div className="page-subtitle">One number for where you stand — and the moves that raise it.</div>

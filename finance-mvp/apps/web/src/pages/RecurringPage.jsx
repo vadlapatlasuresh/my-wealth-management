@@ -68,7 +68,7 @@ export default function RecurringPage() {
   const loading = bills === null;
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Recurring &amp; subscriptions</div>
         <div className="page-subtitle">

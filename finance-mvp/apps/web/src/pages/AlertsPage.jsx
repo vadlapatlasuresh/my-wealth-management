@@ -21,7 +21,7 @@ export default function AlertsPage({ accounts = [], transactions = [] }) {
   const highCount = alerts.filter((a) => a.severity === "high").length;
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Smart alerts</div>
         <div className="page-subtitle">Unusual activity we spotted in your accounts — before it costs you.</div>

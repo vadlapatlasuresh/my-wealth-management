@@ -154,7 +154,7 @@ export default function TodayPage({
   const noData = !accounts.length && !transactions.length;
 
   return (
-    <div className="page">
+    <div className="page active">
       {/* Header */}
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">{greeting(now)}, {name}</div>

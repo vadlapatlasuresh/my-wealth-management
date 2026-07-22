@@ -53,7 +53,7 @@ export default function CashFlowPage({ accounts = [], transactions = [], payment
   const netPositive = avgNet >= 0;
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Cash flow</div>
         <div className="page-subtitle">What's coming in, what's going out, and what's safe to spend.</div>
