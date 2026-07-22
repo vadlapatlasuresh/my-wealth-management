@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
 import { renderToString } from "react-dom/server";
 import { MemoryRouter } from "react-router-dom";
 import React from "react";
@@ -144,5 +145,29 @@ describe("empty states appear only when there is genuinely no data", () => {
   it("Health Score asks to link accounts with no data", () => {
     const html = render(<HealthScorePage accounts={[]} transactions={[]} snapshot={null} />);
     expect(html).toContain("Link accounts to see your score");
+  });
+});
+
+/*
+ * The theme ships `.page { display: none }` / `.page.active { display: block }` from the
+ * pre-router tab switcher. A page root of `className="page"` therefore renders correct
+ * markup that is invisible — the screen looks blank with no error, and every render test
+ * above still passes because SSR never applies CSS. That shipped: ten Phase 2/3 screens
+ * were blank in production while their APIs returned data. Assert the class on the source
+ * so it can't regress.
+ */
+describe("page roots are visible under the theme's .page/.page.active rule", () => {
+  const dir = new URL(".", import.meta.url).pathname;
+  const pageFiles = fs
+    .readdirSync(dir)
+    .filter((f) => f.endsWith("Page.jsx"));
+
+  it("finds page components to check", () => {
+    expect(pageFiles.length).toBeGreaterThan(10);
+  });
+
+  it.each(pageFiles)("%s never uses a bare .page root", (file) => {
+    const src = fs.readFileSync(dir + file, "utf8");
+    expect(src).not.toMatch(/className="page"/);
   });
 });

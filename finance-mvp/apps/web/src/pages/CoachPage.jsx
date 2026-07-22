@@ -35,7 +35,7 @@ export default function CoachPage({ accounts = [], transactions = [], snapshot =
   const linked = accounts.length > 0 || transactions.length > 0;
 
   return (
-    <div className="page">
+    <div className="page active">
       <div style={{ marginBottom: 18 }}>
         <div className="page-title">Your money coach</div>
         <div className="page-subtitle">

@@ -48,12 +48,12 @@ export default function SharedMoneyPage() {
   };
 
   if (goals === null) {
-    return <div className="page"><Header /><div className="card" style={{ padding: 24 }}><div className="page-subtitle">Loading…</div></div></div>;
+    return <div className="page active"><Header /><div className="card" style={{ padding: 24 }}><div className="page-subtitle">Loading…</div></div></div>;
   }
 
   if (noHousehold) {
     return (
-      <div className="page">
+      <div className="page active">
         <Header />
         <div className="card" style={{ padding: 28, textAlign: "center" }}>
           <i className="ti ti-home-heart" style={{ fontSize: 34, color: "var(--tv-forest, #2f7a5b)" }} />
@@ -70,7 +70,7 @@ export default function SharedMoneyPage() {
   }
 
   return (
-    <div className="page">
+    <div className="page active">
       <Header />
       {error && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "rgba(192,57,43,.10)", border: "1px solid var(--tv-red, #c0392b)" }}>

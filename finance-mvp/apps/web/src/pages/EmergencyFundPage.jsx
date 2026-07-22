@@ -25,7 +25,7 @@ export default function EmergencyFundPage({ accounts = [], transactions = [] }) 
 
   if (!fund.computable) {
     return (
-      <div className="page">
+      <div className="page active">
         <Header />
         <div className="card" style={{ padding: 28, textAlign: "center" }}>
           <i className="ti ti-umbrella" style={{ fontSize: 34, color: "var(--tv-forest, #2f7a5b)" }} />
@@ -42,7 +42,7 @@ export default function EmergencyFundPage({ accounts = [], transactions = [] }) 
   }
 
   return (
-    <div className="page">
+    <div className="page active">
       <Header />
 
       {/* Progress */}

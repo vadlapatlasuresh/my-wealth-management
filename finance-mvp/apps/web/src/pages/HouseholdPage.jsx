@@ -38,13 +38,13 @@ export default function HouseholdPage({ accounts = [] }) {
   };
 
   if (state === null) {
-    return <div className="page"><Header /><div className="card" style={{ padding: 24 }}><div className="page-subtitle">Loading…</div></div></div>;
+    return <div className="page active"><Header /><div className="card" style={{ padding: 24 }}><div className="page-subtitle">Loading…</div></div></div>;
   }
 
   // ---------- not in a household yet ----------
   if (!state.inHousehold) {
     return (
-      <div className="page">
+      <div className="page active">
         <Header />
         {error && <ErrorBar text={error} />}
 
@@ -91,7 +91,7 @@ export default function HouseholdPage({ accounts = [] }) {
   // ---------- in a household ----------
   const isOwner = state.role === "OWNER";
   return (
-    <div className="page">
+    <div className="page active">
       <Header />
       {error && <ErrorBar text={error} />}
 
