@@ -33,6 +33,30 @@ check() {
   fi
 }
 
+# body_has NAME PATH SUBSTRING — asserts the JSON response contains SUBSTRING.
+# Used where a 200 isn't enough: config must actually carry the new nav, and the
+# Free floor must grant the right features and withhold the paid ones.
+body_has() {
+  local name="$1" path="$2" want="$3"
+  local body; body="$(curl -s -m 20 "$GATEWAY$path" -H "Authorization: Bearer ${TOKEN:-}")"
+  if printf '%s' "$body" | grep -q -- "$want"; then
+    printf "  ✅ %-44s contains '%s'\n" "$name" "$want"; pass=$((pass+1))
+  else
+    printf "  ❌ %-44s missing '%s'\n" "$name" "$want"; fail=$((fail+1))
+  fi
+}
+
+# body_lacks NAME PATH SUBSTRING — the negative form (paid features must NOT leak to Free).
+body_lacks() {
+  local name="$1" path="$2" unwanted="$3"
+  local body; body="$(curl -s -m 20 "$GATEWAY$path" -H "Authorization: Bearer ${TOKEN:-}")"
+  if printf '%s' "$body" | grep -q -- "$unwanted"; then
+    printf "  ❌ %-44s unexpectedly contains '%s'\n" "$name" "$unwanted"; fail=$((fail+1))
+  else
+    printf "  ✅ %-44s correctly withholds '%s'\n" "$name" "$unwanted"; pass=$((pass+1))
+  fi
+}
+
 echo "TerraVest smoke test → $GATEWAY"
 echo "user: $EMAIL"
 echo
@@ -112,6 +136,44 @@ if [ -n "$DEBT_ID" ]; then
 else
   printf "  ❌ %-44s %s\n" "add debt (linked)" "no id returned"; fail=$((fail+1))
 fi
+
+echo
+echo "[4] Personal expansion + Shared Household (Phase 2/3)"
+# --- config-driven nav must actually carry the new screens ---------------------
+check "app config"              GET "/api/v1/config/app?platform=web"        200
+body_has "nav has Today"        "/api/v1/config/app?platform=web"            '"id":"today"'
+body_has "nav has Coach"        "/api/v1/config/app?platform=web"            '"id":"coach"'
+body_has "nav has Shared section" "/api/v1/config/app?platform=web"          '"id":"shared"'
+
+# --- subscription config + the Free entitlement floor --------------------------
+check "subscription plans"      GET "/api/v1/subscriptions/plans"            200
+check "entitlements"            GET "/api/v1/subscriptions/entitlements"     200
+# A brand-new user sits on the Free floor: personal features granted…
+body_has "free floor grants Today feed" "/api/v1/subscriptions/entitlements"  'individual.todayFeed'
+# …and the paid Business toolset withheld. If this fails, gating is wide open.
+body_lacks "free floor withholds business" "/api/v1/subscriptions/entitlements" 'business.multiEntity'
+
+# --- data the new screens read -------------------------------------------------
+check "recurring bills"         GET "/api/v1/aggregation/recurring-bills"    200
+
+# --- household: routes reachable (a 404 here means the GATEWAY wasn't rebuilt) --
+check "household /me"           GET "/api/v1/household/me"                   200
+check "household shares"        GET "/api/v1/household/shares"               200
+# Not in a household yet, so household-owned money is a 409, not an empty 200.
+check "household goals (409)"   GET "/api/v1/household/goals"                409
+check "household bills (409)"   GET "/api/v1/household/bills"                409
+
+# --- owner-pays gate: a Free user must NOT be able to create a household -------
+# 403 = gate working. 503 = auth-service cannot reach payment-service (check PAYMENT_URI).
+# 201 = the gate is OPEN and Free users can create households — a revenue hole.
+HH=$(curl -s -m 20 -o /dev/null -w "%{http_code}" -X POST "$GATEWAY/api/v1/household" \
+  -H "Authorization: Bearer ${TOKEN:-}" -H 'Content-Type: application/json' -d '{"name":"Smoke Household"}')
+case "$HH" in
+  403) printf "  ✅ %-44s %s (owner-pays enforced)\n" "create household blocked on Free" "$HH"; pass=$((pass+1));;
+  503) printf "  ❌ %-44s %s — auth-service can't reach payment-service (PAYMENT_URI)\n" "create household" "$HH"; fail=$((fail+1));;
+  201|200) printf "  ❌ %-44s %s — GATE IS OPEN, Free users can create households\n" "create household" "$HH"; fail=$((fail+1));;
+  *) printf "  ❌ %-44s %s (unexpected)\n" "create household" "$HH"; fail=$((fail+1));;
+esac
 
 echo
 echo "-------------------------------------------"
