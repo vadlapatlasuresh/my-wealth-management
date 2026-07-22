@@ -42,6 +42,14 @@ public class SubscriptionService {
 
     private static final Logger log = LoggerFactory.getLogger(SubscriptionService.class);
 
+    /**
+     * The implicit "free floor" plan key. Its plan_feature rows are the entitlements every
+     * signed-in user gets when they have no LIVE subscription (never subscribed, expired,
+     * canceled, past-due). It is deliberately kept inactive in the plan catalog (V6) so it
+     * is NOT a purchasable/$0-checkout plan — it exists only as an entitlement floor.
+     */
+    private static final String FREE_PLAN_KEY = "free";
+
     private final SubscriptionPlanRepository planRepository;
     private final PlanFeatureRepository featureRepository;
     private final UserSubscriptionRepository subscriptionRepository;
@@ -129,28 +137,42 @@ public class SubscriptionService {
         return toSubscriptionDto(sub);
     }
 
-    /** Resolved entitlements for feature gating (plan features ∩ enabled), NONE => empty. */
+    /**
+     * Resolved entitlements for feature gating (plan features ∩ enabled).
+     *
+     * A LIVE subscription (TRIALING / ACTIVE) grants its own plan's features. Everyone else —
+     * never subscribed (NONE), or lapsed (EXPIRED / CANCELED / PAST_DUE) — falls back to the
+     * FREE floor's features, so a free user has a real, bounded feature set rather than either
+     * "everything" or "nothing". Paid plans seed the free feature keys too (V6), so upgrading
+     * is strictly additive.
+     */
     @Transactional
     public EntitlementsDto getEntitlements() {
         EntitlementsDto dto = new EntitlementsDto();
         Map<String, Boolean> features = new LinkedHashMap<>();
-        Optional<UserSubscription> found = subscriptionRepository.findByUserId(currentUserId());
-        if (found.isEmpty()) {
-            dto.setStatus("NONE");
+
+        UserSubscription sub = subscriptionRepository.findByUserId(currentUserId())
+                .map(this::expireIfElapsed)
+                .orElse(null);
+        boolean live = sub != null && SubscriptionStatus.isLive(sub.getStatus());
+
+        String featurePlanKey;
+        if (live) {
+            dto.setStatus(sub.getStatus());
+            dto.setPlanKey(sub.getPlanKey());
+            dto.setEntitled(true);
+            featurePlanKey = sub.getPlanKey();
+        } else {
+            // Free floor: status reflects reality (NONE / EXPIRED / …) but the granted
+            // features are the free set. entitled=false signals "no paid/live plan".
+            dto.setStatus(sub != null ? sub.getStatus() : "NONE");
+            dto.setPlanKey(FREE_PLAN_KEY);
             dto.setEntitled(false);
-            dto.setFeatures(features);
-            return dto;
+            featurePlanKey = FREE_PLAN_KEY;
         }
-        UserSubscription sub = expireIfElapsed(found.get());
-        dto.setStatus(sub.getStatus());
-        dto.setPlanKey(sub.getPlanKey());
-        boolean entitled = SubscriptionStatus.isLive(sub.getStatus());
-        dto.setEntitled(entitled);
-        // Only a live subscription grants features; a lapsed/canceled one grants nothing.
-        if (entitled) {
-            for (PlanFeature f : featureRepository.findByPlanKeyAndEnabledTrueOrderBySortOrderAsc(sub.getPlanKey())) {
-                features.put(f.getFeatureKey(), true);
-            }
+
+        for (PlanFeature f : featureRepository.findByPlanKeyAndEnabledTrueOrderBySortOrderAsc(featurePlanKey)) {
+            features.put(f.getFeatureKey(), true);
         }
         dto.setFeatures(features);
         return dto;
