@@ -921,6 +921,28 @@ export const api = {
     request(`/api/v1/household/members/${userId}`, { method: "DELETE" }),
   leaveHousehold: () => request("/api/v1/household/leave", { method: "POST" }),
 
+  // ---- Household-owned goals & bills (Phase 3b) ----
+  getHouseholdGoals: () => request("/api/v1/household/goals"),
+  createHouseholdGoal: (name, targetAmount, targetDate) =>
+    request("/api/v1/household/goals", {
+      method: "POST", body: JSON.stringify({ name, targetAmount, targetDate }),
+    }),
+  deleteHouseholdGoal: (id) => request(`/api/v1/household/goals/${id}`, { method: "DELETE" }),
+  contributeToHouseholdGoal: (id, amount, note) =>
+    request(`/api/v1/household/goals/${id}/contributions`, {
+      method: "POST", body: JSON.stringify({ amount, note }),
+    }),
+  getHouseholdBills: () => request("/api/v1/household/bills"),
+  createHouseholdBill: (name, amount, cadence, dueDay) =>
+    request("/api/v1/household/bills", {
+      method: "POST", body: JSON.stringify({ name, amount, cadence, dueDay }),
+    }),
+  deleteHouseholdBill: (id) => request(`/api/v1/household/bills/${id}`, { method: "DELETE" }),
+  payHouseholdBill: (id, amount, paidOn) =>
+    request(`/api/v1/household/bills/${id}/payments`, {
+      method: "POST", body: JSON.stringify({ amount, paidOn }),
+    }),
+
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
   chatWithAssistant: (message, history = [], model = "auto") =>
