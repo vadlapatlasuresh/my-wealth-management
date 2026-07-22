@@ -499,15 +499,18 @@ export default function HomePage({
           </div>
           {transactions.slice(0, 4).map(tx => (
             <div className="list-item" key={tx.id}>
-              <div className={`item-icon ${tx.amount >= 0 ? 'icon-green' : 'icon-red'}`}>
-                <i className={tx.amount >= 0 ? 'ti ti-building-bank' : 'ti ti-shopping-bag'}></i>
+              {/* Plaid convention: negative = money IN, positive = a charge. */}
+              <div className={`item-icon ${tx.amount < 0 ? 'icon-green' : 'icon-red'}`}>
+                <i className={tx.amount < 0 ? 'ti ti-building-bank' : 'ti ti-shopping-bag'}></i>
               </div>
               <div className="item-main">
                 <div className="item-name">{tx.description}</div>
                 <div className="item-sub">{formatDate(tx.date)} · {tx.category}</div>
               </div>
               <div className="item-right">
-                <div className={`item-amount ${tx.amount >= 0 ? 'amount-pos' : 'amount-neg'}`}>{currency(tx.amount)}</div>
+                <div className={`item-amount ${tx.amount < 0 ? 'amount-pos' : 'amount-neg'}`}>
+                  {tx.amount < 0 ? `+${currency(-tx.amount)}` : `-${currency(tx.amount)}`}
+                </div>
               </div>
             </div>
           ))}

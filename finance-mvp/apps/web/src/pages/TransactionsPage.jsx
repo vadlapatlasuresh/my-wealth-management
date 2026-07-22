@@ -42,10 +42,12 @@ function accountLabel(acc) {
   return acc.name || acc.officialName || `Account ${acc.id}`;
 }
 
-/* Pick an icon + color for a transaction based on its category / sign. */
+/* Pick an icon + color for a transaction based on its category / sign.
+   SIGN CONVENTION (Plaid, returned unflipped by the API): amount > 0 is money OUT
+   (a charge), < 0 is money IN (income/credit). */
 function txVisual(tx) {
   const cat = (tx.category || '').toLowerCase();
-  if ((tx.amount || 0) >= 0) return { icon: 'ti ti-building-bank', cls: 'icon-green' };
+  if ((tx.amount || 0) < 0) return { icon: 'ti ti-building-bank', cls: 'icon-green' };
   if (cat.includes('grocer') || cat.includes('food') || cat.includes('dining')) return { icon: 'ti ti-shopping-cart', cls: 'icon-amber' };
   if (cat.includes('rent') || cat.includes('hous') || cat.includes('mortgage')) return { icon: 'ti ti-home', cls: 'icon-forest' };
   if (cat.includes('transport') || cat.includes('travel') || cat.includes('uber') || cat.includes('gas')) return { icon: 'ti ti-car', cls: 'icon-blue' };
@@ -188,8 +190,9 @@ export default function TransactionsPage({ transactions = [], accounts = [], loa
       const name = (t.name || t.description || '').toLowerCase();
       if (q && !name.includes(q) && !(t.category || '').toLowerCase().includes(q)) return false;
       if (category !== 'ALL' && t.category !== category) return false;
-      if (direction === 'IN' && (t.amount || 0) < 0) return false;
-      if (direction === 'OUT' && (t.amount || 0) >= 0) return false;
+      // Money IN is a negative amount; money OUT (a charge) is positive.
+      if (direction === 'IN' && (t.amount || 0) >= 0) return false;
+      if (direction === 'OUT' && (t.amount || 0) < 0) return false;
       // Account / card window
       if (account !== 'ALL') {
         const accId = t.accountId != null ? String(t.accountId) : null;
@@ -274,8 +277,11 @@ export default function TransactionsPage({ transactions = [], accounts = [], loa
     let moneyOut = 0;
     filtered.forEach((t) => {
       const amt = Number(t.amount) || 0;
-      if (amt >= 0) moneyIn += amt;
-      else moneyOut += amt;
+      // Negative = money in (kept as a positive magnitude); positive = money out
+      // (accumulated negative, so `net` stays moneyIn + moneyOut and the tile
+      // renders it with Math.abs).
+      if (amt < 0) moneyIn += -amt;
+      else moneyOut -= amt;
     });
     return { moneyIn, moneyOut, net: moneyIn + moneyOut };
   }, [filtered]);
@@ -522,8 +528,9 @@ export default function TransactionsPage({ transactions = [], accounts = [], loa
                       <td><span className="badge badge-gray">{tx.category || 'Uncategorized'}</span></td>
                       <td style={{ color: 'var(--tv-text-muted)' }}>{txDate(tx.date)}</td>
                       <td style={{ textAlign: 'right' }}>
-                        <span className={`item-amount ${amt >= 0 ? 'amount-pos' : 'amount-neg'}`}>
-                          {amt >= 0 ? '+' : ''}{currency(amt)}
+                        {/* Negative amounts are money in → show green with a leading +. */}
+                        <span className={`item-amount ${amt < 0 ? 'amount-pos' : 'amount-neg'}`}>
+                          {amt < 0 ? `+${currency(-amt)}` : `-${currency(amt)}`}
                         </span>
                       </td>
                     </tr>
