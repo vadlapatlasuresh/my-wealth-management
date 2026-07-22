@@ -906,6 +906,21 @@ export const api = {
     }),
 
   // AI Insights Service (Phase 5)
+  // ---- Shared Household (Phase 3a): membership + invites only, no data sharing ----
+  getHousehold: () => request("/api/v1/household/me"),
+  createHousehold: (name) =>
+    request("/api/v1/household", { method: "POST", body: JSON.stringify({ name }) }),
+  // Returns the raw invite token ONCE; only its hash is stored server-side.
+  inviteToHousehold: (email) =>
+    request("/api/v1/household/invites", { method: "POST", body: JSON.stringify({ email }) }),
+  acceptHouseholdInvite: (token) =>
+    request("/api/v1/household/invites/accept", { method: "POST", body: JSON.stringify({ token }) }),
+  revokeHouseholdInvite: (id) =>
+    request(`/api/v1/household/invites/${id}`, { method: "DELETE" }),
+  removeHouseholdMember: (userId) =>
+    request(`/api/v1/household/members/${userId}`, { method: "DELETE" }),
+  leaveHousehold: () => request("/api/v1/household/leave", { method: "POST" }),
+
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
   chatWithAssistant: (message, history = [], model = "auto") =>
