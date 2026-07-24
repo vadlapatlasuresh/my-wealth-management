@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
+import DonutChart from "../components/viz/DonutChart"; // studio-design migration
 import { extractPdfText } from "../utils/pdfText";
 import { recognizeImage, isOcrableImage } from "../utils/ocr";
 
@@ -850,6 +851,35 @@ export default function TaxPage() {
                 <Kpi label="Effective rate" value={pct(result.effectiveRate)} />
                 <Kpi label="Marginal bracket" value={pct(result.marginalRate)} />
               </div>
+
+              {/* Where your income goes — tax vs kept donut (studio-design migration) */}
+              {Number(result.taxableIncome) > 0 && (
+                <div className="card" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: 12 }}>
+                  <DonutChart
+                    size={140}
+                    thickness={20}
+                    centerValue={`${(Number(result.effectiveRate) * 100).toFixed(0)}%`}
+                    centerLabel="eff. rate"
+                    data={[
+                      { label: "You keep", value: Math.max(0, Number(result.taxableIncome) - Number(result.totalTax)), color: "var(--tv-positive)" },
+                      { label: "Federal tax", value: Math.max(0, Number(result.totalTax)), color: "var(--tv-negative)" },
+                    ]}
+                  />
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <div className="card-title" style={{ marginBottom: 8 }}>Where your taxable income goes</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
+                      <span style={{ width: 11, height: 11, borderRadius: 3, background: "var(--tv-positive)", flex: "0 0 auto" }} />
+                      <span style={{ flex: 1, fontSize: 13 }}>You keep</span>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{usd(Math.max(0, Number(result.taxableIncome) - Number(result.totalTax)))}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+                      <span style={{ width: 11, height: 11, borderRadius: 3, background: "var(--tv-negative)", flex: "0 0 auto" }} />
+                      <span style={{ flex: 1, fontSize: 13 }}>Federal tax</span>
+                      <span style={{ fontWeight: 600, fontSize: 13 }}>{usd(Number(result.totalTax))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
               {w2s.some((w) => numOf(w.wages) > 0 || numOf(w.withholding) > 0) && (
                 <div className="card" style={{ marginBottom: 12 }}>
                   <div className="card-title"><i className="ti ti-users" style={{ color: "var(--tv-forest)" }}></i> Income by W-2</div>
