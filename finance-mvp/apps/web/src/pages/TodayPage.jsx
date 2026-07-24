@@ -4,6 +4,7 @@ import { currency, currency0, greeting, formatDateTime } from "../utils/format";
 import { deriveUpcomingBills } from "../utils/netWorth";
 import { computeHealthScore } from "../utils/healthScore";
 import { detectAlerts } from "../utils/alerts";
+import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration
 
 /* TodayPage — the daily-open surface (Phase 1 of the personal-finance expansion).
    Deliberately a *composition* of data the app already loads (snapshot, accounts,
@@ -181,11 +182,13 @@ export default function TodayPage({
               style={{ padding: 16, marginBottom: 18, display: "flex", alignItems: "center", gap: 16, cursor: "pointer" }}
               onClick={() => navigate("/health-score")}
             >
-              <div style={{ position: "relative", flex: "0 0 auto", width: 58, height: 58, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", background: `conic-gradient(${healthColor(health.score)} ${health.score * 3.6}deg, var(--tv-border, rgba(0,0,0,.10)) 0)` }}>
-                <div style={{ width: 44, height: 44, borderRadius: "50%", background: "var(--tv-card, #fff)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: 17, color: healthColor(health.score) }}>
-                  {health.score}
-                </div>
-              </div>
+              <ProgressRing
+                value={Math.max(0, Math.min(100, health.score)) / 100}
+                size={58}
+                thickness={7}
+                color={healthColor(health.score)}
+                centerText={String(health.score)}
+              />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>Financial health: {health.band}</div>
                 <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { currency } from "../utils/format";
 import LastRefreshed from "../components/LastRefreshed";
 import { api } from "../api";
+import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration
 
 /* ============================================================
    Budgeting — built around the industry-standard 50/30/20 rule:
@@ -1036,13 +1037,14 @@ export default function PlanPage({
           {/* Summary cards */}
           <div className="grid-3" style={{ marginBottom: 16 }}>
             <div className="card" style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
-                <circle cx="40" cy="40" r="30" fill="none" stroke="var(--tv-border)" strokeWidth="10" />
-                <circle cx="40" cy="40" r="30" fill="none" stroke={pctUsed > 100 ? "var(--tv-negative)" : "var(--tv-forest)"} strokeWidth="10"
-                  strokeDasharray={`${(Math.min(pctUsed, 100) / 100) * 188.5} 188.5`} strokeDashoffset="47" strokeLinecap="round" />
-                <text x="40" y="37" textAnchor="middle" fontSize="13" fontWeight="600" fill="var(--tv-text-primary)" fontFamily="var(--font-display)">{pctUsed}%</text>
-                <text x="40" y="50" textAnchor="middle" fontSize="8" fill="var(--tv-text-muted)">used</text>
-              </svg>
+              <ProgressRing
+                value={Math.min(pctUsed, 100) / 100}
+                size={80}
+                thickness={10}
+                color={pctUsed > 100 ? "var(--tv-negative)" : "var(--tv-forest)"}
+                centerText={`${pctUsed}%`}
+                label="used"
+              />
               <div>
                 <div style={{ fontSize: 12, color: "var(--tv-text-muted)", marginBottom: 4 }}>Spending vs Budget</div>
                 <div style={{ fontSize: 13.5 }}>Spent: <strong>{currency(totalSpent)}</strong></div>
