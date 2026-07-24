@@ -7,6 +7,7 @@ import com.mywealthmanagement.aiinsightsservice.entity.Insight;
 import com.mywealthmanagement.aiinsightsservice.provider.AiProvider;
 import com.mywealthmanagement.aiinsightsservice.provider.GeneratedInsight;
 import com.mywealthmanagement.aiinsightsservice.provider.ModelRouter;
+import com.mywealthmanagement.aiinsightsservice.provider.PriorityEntitlementClient;
 import com.mywealthmanagement.aiinsightsservice.repository.InsightRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class AiController {
     private final InsightRepository insightRepository;
     private final AiProvider aiProvider;
     private final ModelRouter modelRouter;
+    private final PriorityEntitlementClient priorityEntitlements;
 
     @GetMapping("/insights")
     public List<InsightDto> getInsights() {
@@ -53,11 +55,23 @@ public class AiController {
     public ChatResponse chat(@Valid @RequestBody ChatRequest request) {
         // userId is available for future personalization of the chat reply.
         currentUserId();
+        // Priority AI (Premium): the plan decides, not the client. A request asking for priority
+        // without the entitlement simply gets standard routing — and the response says which it
+        // got, so the UI can't claim a badge the turn didn't earn.
+        boolean priority = Boolean.TRUE.equals(request.getPriority()) && priorityEntitlements.hasPriority();
         // Auto Mode / manual model switching is handled by the router, which owns all three
         // chat models at once and preserves the caller's history across switches.
         ModelRouter.ChatResult result =
-                modelRouter.chat(request.getMessage(), request.getHistory(), request.getModel());
-        return new ChatResponse(result.reply(), result.model());
+                modelRouter.chat(request.getMessage(), request.getHistory(), request.getModel(), priority);
+        return new ChatResponse(result.reply(), result.model(), priority);
+    }
+
+    /** Whether this deployment offers Priority AI at all — lets the client hide a dead control. */
+    @GetMapping("/priority")
+    public java.util.Map<String, Object> priorityAvailability() {
+        return java.util.Map.of(
+                "enabled", priorityEntitlements.isEnabled(),
+                "entitled", priorityEntitlements.hasPriority());
     }
 
     private List<Insight> generateAndPersist(Long userId) {

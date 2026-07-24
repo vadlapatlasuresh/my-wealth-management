@@ -16,6 +16,29 @@
 
 
 
+## C3 decision (2026-07-24) — the three legacy mockups are KEPT, not retired
+
+The roadmap offered "refresh the 3 legacy HTML mockups **OR** retire them in favour of the
+in-app Studio". **Decision: keep and refresh them.** The Studio is the better authoring tool
+and stays the place to add a screen, but it lives inside the app bundle — it needs the app
+running and a signed-in session to look at. The three standalone files open in a browser from
+a file path, which is what actually gets used when someone wants to show a screen to a person
+who is not a developer. Retiring them would trade a real capability for tidiness.
+
+What changed in this pass:
+- **iOS + Android re-themed to Glass · Dark** (C1). Their `:root` blocks now mirror the app's
+  `html[data-theme="glass-dark"]` values, including the new semantic accent tokens. Because the
+  frames are token-driven, this re-skins every frame at once — the same mechanism the app uses.
+  The hardcoded light-theme surface tints that would have read wrong on the dark canvas
+  (progress tracks, toggles, segmented backgrounds, tinted bars) were swept to `var(--tv-chip)`
+  / `var(--tv-card)`; deliberately-light artwork (the theme-preview tiles in Settings, brand
+  marks) was left alone.
+- Bottom tabs were already Today · Money · Grow · Shared · More on every frame in both files —
+  the Phase-2 polish item is done; no per-frame legacy bars remain.
+- **Benchmarks** and **Family** were added to all three mockups + the inventory.
+- All three files parse and have balanced `<div>` tags (the iOS 1-div imbalance noted in the
+  roadmap is no longer present).
+
 **Why this doc exists:** the design files are hand-authored static HTML mockups,
 *separate* from the React app, so they drift whenever we ship a feature unless we
 update them deliberately. This caused the gap you saw (e.g. Debt Lab had far more

@@ -50,6 +50,24 @@
   --tv-chip:  rgba(17, 29, 23, .05);
   --tv-scrim: rgba(255, 255, 255, .60);
 
+  /* ---- Semantic accents (token heal, C2 guardrail) ----
+     These existed only as raw hex scattered through pages/ — the exact drift the
+     colour-literal guardrail (src/pages/colorLiterals.test.js) now blocks. Defining
+     them per theme makes those call sites theme-aware instead of frozen at their
+     glass-dark values.
+       on-accent    text/icons on a FILLED brand surface (forest/gold button, chip, pill)
+       accent-cash  the blue that means "cash / bank" in tiles + legends
+       accent-invest the purple that means "investments"
+       accent-bills the violet that means "bills / recurring"
+       warning-deep a darker amber, for the middle bucket of a 4-step aging ramp
+       score-good   the mid-"good" band of the 0-100 health score ramp */
+  --tv-on-accent:   #FFFFFF;
+  --tv-accent-cash:   #1E5FAD;
+  --tv-accent-invest: #6B46C1;
+  --tv-accent-bills:  #7A5BD6;
+  --tv-warning-deep:  #D97706;
+  --tv-score-good:    #3F8F6F;
+
   /* Typography */
   --font-display: 'Fraunces', 'DM Serif Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
@@ -1694,6 +1712,13 @@ html[data-theme="dark"] {
   --tv-text-muted:     #8AA396;
   --tv-text-inverse:   #0E1512;
 
+  /* Semantic accents lifted for a dark canvas (see :root for what each one means). */
+  --tv-accent-cash:   #5B9BE5;
+  --tv-accent-invest: #A78BFA;
+  --tv-accent-bills:  #9B87F0;
+  --tv-warning-deep:  #E8963A;
+  --tv-score-good:    #5BB98C;
+
   --shadow-sm:  0 1px 3px rgba(0,0,0,.4);
   --shadow-md:  0 4px 14px rgba(0,0,0,.45);
   --shadow-lg:  0 10px 34px rgba(0,0,0,.55);
@@ -1730,6 +1755,13 @@ html[data-theme="glass"] {
 
   --tv-sage-pale:    rgba(26,77,59,.07);
   --tv-neutral-bg:   rgba(26,77,59,.06);
+
+  /* Semantic accents deepened so they hold contrast on frosted white (see :root). */
+  --tv-accent-cash:   #1B5399;
+  --tv-accent-invest: #5B36B0;
+  --tv-accent-bills:  #6247C4;
+  --tv-warning-deep:  #B45F09;
+  --tv-score-good:    #2F7A5C;
 
   --shadow-sm:  0 2px 8px rgba(26,77,59,.10);
   --shadow-md:  0 12px 30px rgba(26,77,59,.16);
@@ -1821,6 +1853,17 @@ html[data-theme="glass-dark"] {
   --tv-chip:  rgba(255,255,255,.07);
   --tv-scrim: rgba(10,15,24,.50);
   --glass-edge: inset 0 1px 0 rgba(255,255,255,.08);
+
+  /* Semantic accents — mostly the values the pages previously hardcoded, so glass-dark
+     looks the same while the other themes now adapt (see :root). One exception:
+     accent-bills was #7A5BD6, which the contrast guardrail measured at 2.85:1 on the
+     glass-dark card — under the 3:1 AA floor for graphical objects. Lifted to #8B72E8
+     (3.76:1). That is the guardrail doing its job on its first run. */
+  --tv-accent-cash:   #5FA8F5;
+  --tv-accent-invest: #A78BFA;
+  --tv-accent-bills:  #8B72E8;
+  --tv-warning-deep:  #F0A03C;
+  --tv-score-good:    #3F8F6F;
 
   --shadow-sm:  0 2px 10px rgba(0,0,0,.35);
   --shadow-md:  0 8px 26px rgba(0,0,0,.45);

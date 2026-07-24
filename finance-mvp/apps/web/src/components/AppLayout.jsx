@@ -29,6 +29,8 @@ const YearInReviewPage = MODULE_REGISTRY.yearinreview.component;
 const BillOptimizerPage = MODULE_REGISTRY.billoptimizer.component;
 const InvestmentInsightsPage = MODULE_REGISTRY.investinsights.component;
 const CreditScorePage = MODULE_REGISTRY.creditscore.component;
+const BenchmarksPage  = MODULE_REGISTRY.benchmarks.component;
+const FamilyPage      = MODULE_REGISTRY.family.component;
 const EmergencyFundPage = MODULE_REGISTRY.emergencyfund.component;
 const CoachPage       = MODULE_REGISTRY.coach.component;
 const HouseholdPage   = MODULE_REGISTRY.household.component;
@@ -86,6 +88,8 @@ const navLabels = {
   '/investment-insights': 'Invest Insights',
   '/goal-scenarios': 'Scenarios',
   '/credit': 'Credit Score',
+  '/benchmarks': 'Benchmarks',
+  '/family': 'Family',
   '/mybusiness': 'My Business',
   '/documents': 'Documents',
   '/ai-assistant': 'AI Assistant',
@@ -471,7 +475,11 @@ export default function AppLayout(props) {
             {/* {loading && !snapshot && <p className="status">Loading TerraVest…</p>} */}
             <React.Suspense fallback={<div className="page active"><div className="empty-state"><i className="ti ti-loader spin"></i><p>Loading…</p></div></div>}>
             <Routes>
-              <Route path="/alerts" element={<AlertsPage accounts={accounts} transactions={transactions} />} />
+              <Route path="/alerts" element={
+                <FeatureGate feature="individual.smartAlerts" title="Smart alerts" plan="plus">
+                  <AlertsPage accounts={accounts} transactions={transactions} />
+                </FeatureGate>
+              } />
               <Route path="/today" element={
                 <TodayPage
                   snapshot={snapshot}
@@ -485,12 +493,24 @@ export default function AppLayout(props) {
               } />
               <Route path="/recurring" element={<RecurringPage accounts={accounts} />} />
               <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
-              <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
+              <Route path="/cash-flow" element={
+                <FeatureGate feature="individual.cashflow" title="Cash flow & safe-to-spend" plan="plus">
+                  <CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />
+                </FeatureGate>
+              } />
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
               <Route path="/year-in-review" element={<YearInReviewPage transactions={transactions} />} />
-              <Route path="/bill-timing" element={<BillOptimizerPage accounts={accounts} />} />
+              <Route path="/bill-timing" element={
+                <FeatureGate feature="individual.billOptimizer" title="Bill due-date optimizer" plan="plus">
+                  <BillOptimizerPage accounts={accounts} />
+                </FeatureGate>
+              } />
               <Route path="/emergency-fund" element={<EmergencyFundPage accounts={accounts} transactions={transactions} />} />
-              <Route path="/coach" element={<CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />} />
+              <Route path="/coach" element={
+                <FeatureGate feature="individual.aiProactive" title="The Money Coach" plan="plus">
+                  <CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />
+                </FeatureGate>
+              } />
               <Route path="/household" element={<HouseholdPage accounts={accounts} />} />
               <Route path="/shared-money" element={<SharedMoneyPage />} />
               <Route path="/" element={
@@ -560,9 +580,35 @@ export default function AppLayout(props) {
                 />
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} loadAll={loadAll} />} />
-              <Route path="/investment-insights" element={<InvestmentInsightsPage snapshot={snapshot} />} />
-              <Route path="/goal-scenarios" element={<GoalScenariosPage />} />
-              <Route path="/credit" element={<CreditScorePage user={user} />} />
+              <Route path="/investment-insights" element={
+                <FeatureGate feature="individual.investInsights" title="Investment insights" plan="plus">
+                  <InvestmentInsightsPage snapshot={snapshot} />
+                </FeatureGate>
+              } />
+              <Route path="/goal-scenarios" element={
+                <FeatureGate feature="individual.goalScenarios" title="Goal scenarios" plan="premium">
+                  <GoalScenariosPage />
+                </FeatureGate>
+              } />
+              <Route path="/credit" element={
+                <FeatureGate feature="individual.creditScore" title="Credit monitoring" plan="plus">
+                  <CreditScorePage user={user} />
+                </FeatureGate>
+              } />
+              <Route path="/benchmarks" element={
+                <FeatureGate feature="individual.benchmarks" title="Benchmarking" plan="plus">
+                  <BenchmarksPage accounts={accounts} transactions={transactions} snapshot={snapshot} />
+                </FeatureGate>
+              } />
+              {/* Family mode is Premium. Note the contrast with /household and /shared-money
+                  below, which are deliberately NOT gated: joining a household someone else pays
+                  for must stay free, or an invited Free member is locked out of the thing they
+                  were invited to. The server enforces the same split (owner-pays on create). */}
+              <Route path="/family" element={
+                <FeatureGate feature="individual.family" title="Family mode" plan="premium">
+                  <FamilyPage />
+                </FeatureGate>
+              } />
               <Route path="/mybusiness" element={
                 <FeatureGate feature="business.multiEntity" title="Multi-business dashboards">
                   <MyBusinessPage user={user} formatDate={formatDate} accounts={accounts} transactions={transactions} loadAll={loadAll} />

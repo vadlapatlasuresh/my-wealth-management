@@ -194,14 +194,14 @@ export default function AccountsPage({ accounts = [], loadAll }) {
         </div>
         <div className="kpi-card">
           <div className="kpi-label">
-            <i className="ti ti-building-bank" style={{ fontSize: '13px', color: '#1E5FAD' }}></i> Cash
+            <i className="ti ti-building-bank" style={{ fontSize: '13px', color: 'var(--tv-accent-cash, #1E5FAD)' }}></i> Cash
             <InfoTip text="Balances held in checking and savings accounts." />
           </div>
           <div className="kpi-value">{currency(totals.cash)}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">
-            <i className="ti ti-chart-line" style={{ fontSize: '13px', color: '#6B46C1' }}></i> Investments
+            <i className="ti ti-chart-line" style={{ fontSize: '13px', color: 'var(--tv-accent-invest, #6B46C1)' }}></i> Investments
             <InfoTip text="Balances in brokerage and retirement accounts." />
           </div>
           <div className="kpi-value">{currency(totals.investments)}</div>

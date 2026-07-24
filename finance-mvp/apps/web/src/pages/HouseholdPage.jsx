@@ -115,7 +115,7 @@ export default function HouseholdPage({ accounts = [] }) {
         <div className="page-title" style={{ fontSize: 16, marginBottom: 10 }}>Members</div>
         {(state.members || []).map((m, i, arr) => (
           <div key={m.userId} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--tv-border, rgba(0,0,0,.06))" : "none" }}>
-            <span style={{ display: "inline-flex", width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: "50%", background: "var(--tv-forest, #2f7a5b)", color: "#fff", fontWeight: 700, fontSize: 13, flex: "0 0 auto" }}>
+            <span style={{ display: "inline-flex", width: 34, height: 34, alignItems: "center", justifyContent: "center", borderRadius: "50%", background: "var(--tv-forest, #2f7a5b)", color: "var(--tv-on-accent, #fff)", fontWeight: 700, fontSize: 13, flex: "0 0 auto" }}>
               {(m.name || m.email || "?").slice(0, 1).toUpperCase()}
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>

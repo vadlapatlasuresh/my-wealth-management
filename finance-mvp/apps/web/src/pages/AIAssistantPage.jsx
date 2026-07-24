@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { api, getCurrentUserId } from '../api';
 import LastRefreshed from "../components/LastRefreshed";
 import Disclaimer from "../components/Disclaimer";
+import { useSubscription } from "../config/subscription";
+import { isFlagEnabled, FLAGS } from "../config/featureFlags";
 
 /* Portfolio scopes the user can toggle — tells the assistant which slice of
    their finances to weigh. We send the labels in a directive prefix. */
@@ -144,6 +146,12 @@ export default function AIAssistantPage({ user }) {
 
   const [responseStyle, setResponseStyle] = useState(() => localStorage.getItem('tv_ai_style') || 'Balanced');
   const [selectedModel, setSelectedModel] = useState(() => localStorage.getItem('tv_ai_model') || 'auto');
+  // Priority AI (Premium, individual.priorityAi). The toggle is only OFFERED when the runtime
+  // flag is on and the plan grants it; the server enforces the entitlement regardless.
+  const { hasFeature } = useSubscription();
+  const priorityOffered = isFlagEnabled(FLAGS.PRIORITY_AI) && hasFeature('individual.priorityAi');
+  const [priorityWanted, setPriorityWanted] = useState(() => localStorage.getItem('tv_ai_priority') === '1');
+  const priorityOn = priorityOffered && priorityWanted;
   const [selectedScopes, setSelectedScopes] = useState(() => new Set(SCOPES.map((s) => s.key)));
 
   const selectedLabels = SCOPES.filter((s) => selectedScopes.has(s.key)).map((s) => s.label);
@@ -158,6 +166,7 @@ export default function AIAssistantPage({ user }) {
   useEffect(() => { localStorage.setItem(chatKey, JSON.stringify(messages.slice(-50))); }, [messages, chatKey]);
   useEffect(() => { localStorage.setItem('tv_ai_style', responseStyle); }, [responseStyle]);
   useEffect(() => { localStorage.setItem('tv_ai_model', selectedModel); }, [selectedModel]);
+  useEffect(() => { localStorage.setItem('tv_ai_priority', priorityWanted ? '1' : '0'); }, [priorityWanted]);
 
   const toggleScope = (key) => setSelectedScopes((prev) => {
     const next = new Set(prev); next.has(key) ? next.delete(key) : next.add(key); return next;
@@ -208,10 +217,14 @@ export default function AIAssistantPage({ user }) {
 
     setSending(true);
     try {
-      const res = await api.chatWithAssistant(directive, history, selectedModel);
+      const res = await api.chatWithAssistant(directive, history, selectedModel, priorityOn);
       const reply = (res && res.reply) || 'No response.';
       const model = (res && res.model) || null;
-      setMessages((prev) => [...prev, { role: 'assistant', text: reply, model, ts: Date.now() }]);
+      // The SERVER decides whether the turn was actually prioritized (it re-checks the plan and
+      // falls back to standard routing if billing is unreachable). Badge what happened, not what
+      // was asked for — otherwise the badge is a claim we can't back.
+      const priority = Boolean(res && res.priority);
+      setMessages((prev) => [...prev, { role: 'assistant', text: reply, model, priority, ts: Date.now() }]);
     } catch (err) {
       setChatError(err.message || 'The assistant could not respond. Please try again.');
     } finally { setSending(false); }
@@ -373,6 +386,18 @@ export default function AIAssistantPage({ user }) {
                   {MODELS.map((m) => (<option key={m.key} value={m.key}>{m.menu}</option>))}
                 </select>
               </label>
+              {/* Priority AI — Premium. Always routes to the strongest model instead of the
+                  cheapest one that can plausibly answer. Same prompts, same guardrails. */}
+              {priorityOffered && (
+                <button
+                  className={`seg-btn ${priorityWanted ? 'active' : ''}`}
+                  onClick={() => setPriorityWanted((p) => !p)}
+                  title="Priority AI: send every question to the strongest available model."
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, height: 32 }}
+                >
+                  <i className="ti ti-bolt" style={{ fontSize: 13 }}></i> Priority
+                </button>
+              )}
               {/* Response style */}
               <div className="seg-control">
                 {STYLES.map((s) => (
@@ -426,6 +451,12 @@ export default function AIAssistantPage({ user }) {
                           <span className="badge badge-forest" style={{ fontSize: 10, padding: '1px 6px' }}
                             title="Model that answered this message">
                             <i className="ti ti-cpu" style={{ fontSize: 10, marginRight: 3 }}></i>{m.model}
+                          </span>
+                        )}
+                        {m.priority && (
+                          <span className="badge badge-gold" style={{ fontSize: 10, padding: '1px 6px' }}
+                            title="Answered with Priority AI — routed to the strongest available model">
+                            <i className="ti ti-bolt" style={{ fontSize: 10, marginRight: 3 }}></i>Priority
                           </span>
                         )}
                         <button className="icon-btn" style={{ width: 24, height: 24, marginLeft: 2 }} title="Copy" onClick={() => copyMessage(m.text, i)}>

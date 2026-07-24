@@ -47,6 +47,33 @@ class ModelRouterTest {
         assertThat(result.model()).isEqualTo("Assistant");
     }
 
+    /**
+     * Priority routing (Premium — individual.priorityAi) must change WHICH model is preferred,
+     * never the guardrails or the fallback contract. With nothing configured, a priority turn
+     * still degrades to the offline assistant and still carries the disclaimer — Premium never
+     * means "different rules", only "stronger engine when one is available".
+     */
+    @Test
+    void priorityTurn_keepsTheSameGuardrailsAndFallback() {
+        ModelRouter router = unconfiguredRouter();
+
+        ModelRouter.ChatResult standard = router.chat("Should I refinance?", List.of(), "auto", false);
+        ModelRouter.ChatResult priority = router.chat("Should I refinance?", List.of(), "auto", true);
+
+        assertThat(priority.reply()).contains("Educational information, not personalized financial advice.");
+        assertThat(priority.model()).isEqualTo("Assistant");
+        // Same question, same answer surface: priority only reorders the model candidates.
+        assertThat(priority.reply()).isEqualTo(standard.reply());
+    }
+
+    @Test
+    void threeArgChat_isStillStandardRouting() {
+        // The pre-existing 3-arg signature must keep working unchanged for every caller.
+        ModelRouter router = unconfiguredRouter();
+        assertThat(router.chat("Hello", List.of(), "auto").reply())
+                .isEqualTo(router.chat("Hello", List.of(), "auto", false).reply());
+    }
+
     @Test
     void unknownModel_isTreatedAsAuto() {
         ModelRouter router = unconfiguredRouter();

@@ -10,11 +10,19 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
 <style>
 :root{
-  --tv-forest:#1A4D3B; --tv-forest-mid:#2D6B52; --tv-forest-light:#3D8A68; --tv-sage:#8AB89A; --tv-sage-pale:#EAF3EE;
-  --tv-gold:#C9973A; --tv-gold-light:#F0C878; --tv-gold-pale:#FDF5E4;
-  --tv-positive:#1E7B4B; --tv-positive-bg:#E6F4EC; --tv-negative:#C0392B; --tv-negative-bg:#FDECEA; --tv-warning:#B07D1C; --tv-warning-bg:#FEF6E0;
-  --tv-bg:#F4F6F5; --tv-card:#FFFFFF; --tv-border:#DDE5E1; --tv-border-light:#EEF3F0;
-  --tv-text-primary:#111D17; --tv-text-secondary:#4A5E54; --tv-text-muted:#7A9086;
+  /* GLASS · DARK — mirrors finance-mvp/apps/web/src/styles/terravest-theme.css
+     html[data-theme="glass-dark"], which is the app's universal default theme.
+     Every frame below is token-driven (.screen uses var(--tv-bg), cards use
+     var(--tv-card)), so retuning these variables re-skins all frames at once —
+     the same mechanism the real app uses. Keep this block in sync with the app. */
+  --tv-forest:#2E7D5B; --tv-forest-mid:#3D8A68; --tv-forest-light:#5BB98C; --tv-sage:#6E9683; --tv-sage-pale:rgba(90,185,140,.14);
+  --tv-gold:#E6B455; --tv-gold-light:#F4CE7E; --tv-gold-pale:rgba(230,180,85,.14);
+  --tv-positive:#3DDC97; --tv-positive-bg:rgba(61,220,151,.15); --tv-negative:#F0776B; --tv-negative-bg:rgba(240,119,107,.15); --tv-warning:#E9C46A; --tv-warning-bg:rgba(233,196,106,.15);
+  --tv-bg:#151D29; --tv-card:#26334799; --tv-border:rgba(255,255,255,.14); --tv-border-light:rgba(255,255,255,.08);
+  --tv-text-primary:#F6F9FC; --tv-text-secondary:#CFDAE6; --tv-text-muted:#A2B2C4;
+  /* Semantic accents added by the C2 token heal (see the web theme for what each means). */
+  --tv-on-accent:#FFFFFF; --tv-accent-cash:#5FA8F5; --tv-accent-invest:#A78BFA; --tv-accent-bills:#8B72E8;
+  --tv-warning-deep:#F0A03C; --tv-score-good:#3F8F6F; --tv-chip:rgba(255,255,255,.07);
   --display:'DM Serif Display', Georgia, serif;
   --body:'DM Sans', system-ui, sans-serif;
 }
@@ -95,7 +103,7 @@ body{
   height:58px; padding:0 8px 0 18px; display:flex; align-items:center; gap:6px;
   flex-shrink:0; background:var(--tv-card); position:relative; z-index:40;
 }
-.app-bar.tinted{background:#EEF4F0;}
+.app-bar.tinted{background:var(--tv-card);}
 .app-bar .ab-title{font-size:21px; font-weight:600; letter-spacing:.1px; flex:1;}
 .app-bar .ab-icon{
   width:42px; height:42px; border-radius:50%; display:flex; align-items:center; justify-content:center;
@@ -114,7 +122,7 @@ body{
 
 /* bottom nav */
 .bottom-nav{
-  height:78px; background:#EEF4F0; border-top:1px solid var(--tv-border-light);
+  height:78px; background:var(--tv-card); border-top:1px solid var(--tv-border-light);
   display:flex; align-items:flex-start; justify-content:space-around; padding:10px 6px 0;
   flex-shrink:0; position:relative; z-index:40;
 }
@@ -126,7 +134,7 @@ body{
 .nav-dest.active .nav-pill{background:var(--tv-sage); color:var(--tv-forest);}
 .nav-dest.active .nav-label{color:var(--tv-text-primary); font-weight:700;}
 .nav-label{font-size:11.5px; color:var(--tv-text-secondary); font-weight:500;}
-.gesture-bar{height:22px; background:#EEF4F0; display:flex; align-items:center; justify-content:center; flex-shrink:0;}
+.gesture-bar{height:22px; background:var(--tv-card); display:flex; align-items:center; justify-content:center; flex-shrink:0;}
 .gesture-bar::after{content:""; width:128px; height:4px; border-radius:3px; background:#1b2a22; opacity:.8;}
 
 /* ---------- Material components ---------- */
@@ -267,7 +275,7 @@ body{
 .alert-banner{background:var(--tv-negative-bg); border:1px solid #f5cbc4; border-radius:16px; padding:14px; display:flex; gap:11px;}
 .alert-banner .ai{color:var(--tv-negative); font-size:22px; flex-shrink:0;}
 .alert-banner .at1{font-weight:700; color:var(--tv-negative); font-size:14px;}
-.alert-banner .at2{font-size:12.5px; color:#8c3024; margin-top:3px; line-height:1.4;}
+.alert-banner .at2{font-size:12.5px; color:var(--tv-negative); margin-top:3px; line-height:1.4;}
 
 /* tabs underline */
 .m-tabs{display:flex; background:var(--tv-card); border-bottom:1px solid var(--tv-border);}
@@ -787,7 +795,7 @@ svg{display:block;}
       <div class="section-title">Share an account</div>
       <div class="m-card" style="padding:6px 16px;">
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-users-group"></i></div><div class="grow"><div class="t1">Joint Checking</div><div class="t2">Shared · $12,480</div></div><button class="btn-pay">Stop</button></div>
-        <div class="lrow"><div class="cat-icon" style="background:#eef2f0; color:#9aa8a1;"><i class="ti ti-lock"></i></div><div class="grow"><div class="t1">Personal Savings</div><div class="t2">Private · $43,200</div></div><button class="btn-pay">Share</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:#9aa8a1;"><i class="ti ti-lock"></i></div><div class="grow"><div class="t1">Personal Savings</div><div class="t2">Private · $43,200</div></div><button class="btn-pay">Share</button></div>
       </div>
       <div class="section-title">Shared with you</div>
       <div class="m-card" style="padding:6px 16px;">
@@ -817,7 +825,7 @@ svg{display:block;}
       <div class="segmented sm" style="margin-bottom:14px;"><div class="seg sel"><i class="ti ti-check"></i> Goals</div><div class="seg">Bills</div></div>
       <div class="m-card elev">
         <div style="display:flex;justify-content:space-between;"><div class="t1">House deposit</div><div class="tiny secondary">$18,400 / $40,000</div></div>
-        <div style="height:10px;border-radius:6px;background:#e2e8e4;overflow:hidden;margin:10px 0 8px;"><div style="width:46%;height:100%;background:var(--tv-gold);"></div></div>
+        <div style="height:10px;border-radius:6px;background:var(--tv-chip);overflow:hidden;margin:10px 0 8px;"><div style="width:46%;height:100%;background:var(--tv-gold);"></div></div>
         <div class="tiny secondary"><strong>Alex</strong> $11,200 · <strong>Jordan</strong> $7,200</div>
       </div>
       <div class="section-title">Rent · monthly</div>
@@ -955,7 +963,7 @@ svg{display:block;}
           <div><div class="lbl">Saved so far</div><div class="big-val" style="margin:4px 0 0;">$12,480</div></div>
           <div style="text-align:right;"><div class="lbl">Target · 6 mo</div><div class="t1">$32,580</div></div>
         </div>
-        <div style="height:10px;border-radius:6px;background:#e2e8e4;overflow:hidden;margin:14px 0 8px;"><div style="width:38%;height:100%;background:var(--tv-gold);"></div></div>
+        <div style="height:10px;border-radius:6px;background:var(--tv-chip);overflow:hidden;margin:14px 0 8px;"><div style="width:38%;height:100%;background:var(--tv-gold);"></div></div>
         <div style="display:flex;justify-content:space-between;">
           <span class="tiny" style="font-weight:700;color:var(--tv-gold);">2.3 months covered</span>
           <span class="tiny secondary">$20,100 to go</span>
@@ -970,8 +978,8 @@ svg{display:block;}
       <div class="section-title">Milestones</div>
       <div class="m-card" style="padding:6px 16px;">
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-check"></i></div><div class="grow"><div class="t1">1 month of expenses</div><div class="t2">Reached</div></div><span class="t1">$5,430</span></div>
-        <div class="lrow"><div class="cat-icon" style="background:#eef2f0; color:#9aa8a1;"><i class="ti ti-circle"></i></div><div class="grow"><div class="t1">3 months of expenses</div><div class="t2">$3,810 to go</div></div><span class="t1">$16,290</span></div>
-        <div class="lrow"><div class="cat-icon" style="background:#eef2f0; color:#9aa8a1;"><i class="ti ti-circle"></i></div><div class="grow"><div class="t1">6 months of expenses</div><div class="t2">$20,100 to go</div></div><span class="t1">$32,580</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:#9aa8a1;"><i class="ti ti-circle"></i></div><div class="grow"><div class="t1">3 months of expenses</div><div class="t2">$3,810 to go</div></div><span class="t1">$16,290</span></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:#9aa8a1;"><i class="ti ti-circle"></i></div><div class="grow"><div class="t1">6 months of expenses</div><div class="t2">$20,100 to go</div></div><span class="t1">$32,580</span></div>
       </div>
     </div>
     </div>
@@ -1016,6 +1024,109 @@ svg{display:block;}
     <div class="gesture-bar"></div>
   </div></div>
   <div class="caption-chip"><span class="num">R</span>Recurring radar</div>
+</div>
+
+<!-- ============ BENCHMARKS (Phase 4 / B1) ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><span class="ab-title">Benchmarks</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="m-card elev">
+        <div class="lbl">Compare me to people like me</div>
+        <span class="tiny secondary">Aggregate and anonymized, opt-in. Turning this on does not add your data to anyone else's comparison.</span>
+        <div style="margin-top:12px;"><button class="btn-fill">Turn on</button></div>
+      </div>
+      <div class="section-title">Cohort</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="grow"><div class="t1">35&ndash;44 &middot; $100k&ndash;$200k</div><div class="t2">US &middot; West</div></div><i class="ti ti-chevron-right"></i></div>
+      </div>
+      <div class="section-title">Net worth</div>
+      <div class="m-card">
+        <div class="big-val" style="margin:2px 0 6px;">$123,000</div>
+        <span class="tiny secondary">62nd percentile &middot; above the middle &middot; median $91,300</span>
+        <div style="height:10px;border-radius:6px;background:var(--tv-chip,rgba(255,255,255,.08));overflow:hidden;margin:12px 0 8px;"><div style="width:62%;height:100%;background:var(--tv-forest-light);"></div></div>
+        <span class="tiny secondary">Federal Reserve, Survey of Consumer Finances &middot; 1,340 people</span>
+      </div>
+      <div class="section-title">Savings rate</div>
+      <div class="m-card">
+        <div class="big-val" style="margin:2px 0 6px;">50%</div>
+        <span class="tiny secondary">The dataset doesn't cover this cohort yet.</span>
+      </div>
+      <div class="section-title">Emergency fund</div>
+      <div class="m-card">
+        <div class="big-val" style="margin:2px 0 6px;">7.2 mo</div>
+        <span class="tiny secondary">The dataset doesn't cover this cohort yet.</span>
+      </div>
+      <div class="m-card" style="margin-top:14px;">
+        <span class="tiny secondary">No peer dataset is connected yet, so there is nothing honest to compare against. We'd rather show you nothing than invent a number.</span>
+      </div>
+    </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-sun"></i></div><span class="nav-label">Today</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-wallet"></i></div><span class="nav-label">Money</span></div>
+      <div class="nav-dest active"><div class="nav-pill"><i class="ti ti-trending-up"></i></div><span class="nav-label">Grow</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-users-group"></i></div><span class="nav-label">Shared</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-dots"></i></div><span class="nav-label">More</span></div>
+    </div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">B</span>Benchmarks</div>
+</div>
+
+<!-- ============ FAMILY / KIDS MODE (Phase 5 / B3) ============ -->
+<div class="frame-wrap">
+  <div class="pixel"><div class="screen"><div class="punch-hole"></div>
+    <div class="status-bar"><span class="clock">9:41</span><span class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-antenna-bars-5"></i><i class="ti ti-battery-3"></i></span></div>
+    <div class="app-bar tinted"><span class="ab-title">Family</span></div>
+    <div class="body-scroll"><div class="body-pad" style="padding-top:14px;">
+      <div class="kpi-grid">
+        <div class="kpi"><div class="k-lbl">Children</div><div class="k-val">2</div></div>
+        <div class="kpi"><div class="k-lbl">Held for them</div><div class="k-val">$184</div></div>
+      </div>
+      <div class="m-card elev" style="margin-top:14px;">
+        <div class="lrow" style="border:none;padding-top:0;">
+          <div class="cat-icon" style="background:var(--tv-forest); color:var(--tv-on-accent,#fff);">R</div>
+          <div class="grow"><div class="t1">Robin</div><div class="t2">11 &middot; $10.00 weekly &middot; next Sat 4 Jul</div></div>
+          <button class="btn-sm">Pay</button>
+        </div>
+        <div class="kpi-grid" style="margin-top:10px;">
+          <div class="kpi"><div class="k-lbl">Spend</div><div class="k-val">$42.50</div></div>
+          <div class="kpi"><div class="k-lbl">Save</div><div class="k-val">$66.00</div></div>
+        </div>
+        <span class="tiny secondary">Give $14.00 &middot; total $122.50 &middot; saving reaches $222 in a year</span>
+      </div>
+      <div class="section-title">Robin's chores</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-gold-pale); color:var(--tv-gold);"><i class="ti ti-circle"></i></div><div class="grow"><div class="t1">Dishes</div><div class="t2">$2.50</div></div><button class="btn-sm">Done</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-circle-check"></i></div><div class="grow"><div class="t1">Homework</div><div class="t2">$5.00 &middot; paid</div></div></div>
+      </div>
+      <div class="section-title">Ledger</div>
+      <div class="m-card" style="padding:6px 16px;">
+        <div class="lrow"><div class="grow"><div class="t1">Weekly allowance &middot; SAVE</div><div class="t2">Jul 4</div></div><div class="t1" style="color:var(--tv-positive);">+$3.00</div></div>
+        <div class="lrow"><div class="grow"><div class="t1">Chore: Homework &middot; SPEND</div><div class="t2">Jul 2</div></div><div class="t1" style="color:var(--tv-positive);">+$5.00</div></div>
+        <div class="lrow"><div class="grow"><div class="t1">Comics &middot; SPEND</div><div class="t2">Jun 29</div></div><div class="t1" style="color:var(--tv-negative);">&minus;$6.00</div></div>
+      </div>
+      <div class="m-card" style="margin-top:14px;">
+        <div class="lrow" style="border:none;padding-top:0;">
+          <div class="cat-icon" style="background:var(--tv-forest); color:var(--tv-on-accent,#fff);">S</div>
+          <div class="grow"><div class="t1">Sam</div><div class="t2">14 &middot; $40.00 monthly &middot; next 15 Jul &middot; $61.60</div></div>
+          <button class="btn-sm">Pay</button>
+        </div>
+      </div>
+    </div>
+    </div>
+    <div class="bottom-nav">
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-sun"></i></div><span class="nav-label">Today</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-wallet"></i></div><span class="nav-label">Money</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-trending-up"></i></div><span class="nav-label">Grow</span></div>
+      <div class="nav-dest active"><div class="nav-pill"><i class="ti ti-users-group"></i></div><span class="nav-label">Shared</span></div>
+      <div class="nav-dest"><div class="nav-pill"><i class="ti ti-dots"></i></div><span class="nav-label">More</span></div>
+    </div>
+    <div class="gesture-bar"></div>
+  </div></div>
+  <div class="caption-chip"><span class="num">F</span>Family &middot; kids mode</div>
 </div>
 
 <!-- ============ CASH FLOW ============ -->
@@ -1425,7 +1536,7 @@ svg{display:block;}
       <div class="m-card" style="padding:6px 16px;">
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-arrow-down-left"></i></div><div class="grow"><div class="t1"><span class="chip green chip-round" style="height:20px; font-size:10px;">Buy</span> AAPL</div><div class="t2">Apple Inc · 15 sh · Jun 24</div></div><div style="font-weight:700;">$3,222</div></div>
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-negative-bg); color:var(--tv-negative);"><i class="ti ti-arrow-up-right"></i></div><div class="grow"><div class="t1"><span class="chip red-emph chip-round" style="height:20px; font-size:10px;">Sell</span> VTI</div><div class="t2">Total Stock Mkt · 10 sh · Jun 21</div></div><div style="font-weight:700;">$2,684</div></div>
-        <div class="lrow"><div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-cash"></i></div><div class="grow"><div class="t1"><span class="chip chip-round" style="height:20px; font-size:10px;">Dividend</span> SCHD</div><div class="t2">US Dividend Equity · Jun 18</div></div><div style="font-weight:700;">$182.40</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:#6f857a;"><i class="ti ti-cash"></i></div><div class="grow"><div class="t1"><span class="chip chip-round" style="height:20px; font-size:10px;">Dividend</span> SCHD</div><div class="t2">US Dividend Equity · Jun 18</div></div><div style="font-weight:700;">$182.40</div></div>
       </div>
     </div></div>
     <div class="bottom-nav">
@@ -1644,18 +1755,18 @@ svg{display:block;}
         </div>
         <!-- unselected -->
         <div class="lrow">
-          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="cat-icon" style="background:var(--tv-chip); color:#6f857a;"><i class="ti ti-square"></i></div>
           <div class="grow"><div class="t1">Uber Trip</div><div class="t2">Amex Business · Travel · May 18</div></div>
           <div style="font-weight:700;">$24.80</div>
         </div>
         <!-- already linked → disabled -->
         <div class="lrow" style="opacity:.5;">
-          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="cat-icon" style="background:var(--tv-chip); color:#6f857a;"><i class="ti ti-square"></i></div>
           <div class="grow"><div class="t1">AWS</div><div class="t2"><span class="chip chip-round" style="height:18px; font-size:10px;">Already linked</span> Software · May 31</div></div>
           <div style="font-weight:700;">$1,430.00</div>
         </div>
         <div class="lrow">
-          <div class="cat-icon" style="background:#eef1ef; color:#6f857a;"><i class="ti ti-square"></i></div>
+          <div class="cat-icon" style="background:var(--tv-chip); color:#6f857a;"><i class="ti ti-square"></i></div>
           <div class="grow"><div class="t1">Staples</div><div class="t2">Business Checking · Office · May 14</div></div>
           <div style="font-weight:700;">$96.20</div>
         </div>
@@ -1813,9 +1924,9 @@ svg{display:block;}
       </div>
       <!-- expense rows -->
       <div class="m-card elev" style="padding:6px 12px;">
-        <div class="lrow"><div class="cat-icon" style="background:#eef1ef; color:var(--tv-forest);"><i class="ti ti-tool"></i></div><div class="grow"><div class="t1">Repairs · Ace Hardware</div><div class="t2">Feb 11 · RCPT-1017 · incl. $135 labor</div></div><div style="font-weight:700;">$182.60</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:var(--tv-forest);"><i class="ti ti-tool"></i></div><div class="grow"><div class="t1">Repairs · Ace Hardware</div><div class="t2">Feb 11 · RCPT-1017 · incl. $135 labor</div></div><div style="font-weight:700;">$182.60</div></div>
         <div class="lrow" style="box-shadow:inset 3px 0 0 var(--tv-gold,#C9973A);"><div class="cat-icon" style="background:var(--tv-gold-pale,#FDF5E4); color:var(--tv-gold,#C9973A);"><i class="ti ti-shopping-bag"></i></div><div class="grow"><div class="t1">Supplies · Home Depot</div><div class="t2" style="color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:11px;"></i> Missing receipt</div></div><div style="font-weight:700;">$34.18</div></div>
-        <div class="lrow"><div class="cat-icon" style="background:#eef1ef; color:var(--tv-forest);"><i class="ti ti-briefcase"></i></div><div class="grow"><div class="t1">Property Management · Summit PM</div><div class="t2">Jan 09 · RCPT-1004</div></div><div style="font-weight:700;">$140.00</div></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:var(--tv-forest);"><i class="ti ti-briefcase"></i></div><div class="grow"><div class="t1">Property Management · Summit PM</div><div class="t2">Jan 09 · RCPT-1004</div></div><div style="font-weight:700;">$140.00</div></div>
       </div>
       <!-- breakdown -->
       <div class="m-card elev" style="padding:6px 12px; margin-top:14px;">
@@ -2310,7 +2421,7 @@ svg{display:block;}
       <div class="section-title">Active sessions</div>
       <div class="m-card" style="padding:4px 16px;">
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-device-mobile"></i></div><div class="grow"><div class="t1">This Pixel</div><div class="t2">San Francisco · Now</div></div><span class="chip green chip-round tiny" style="height:24px;">Current</span></div>
-        <div class="lrow"><div class="cat-icon" style="background:#EEF1EF; color:var(--tv-text-secondary);"><i class="ti ti-device-desktop"></i></div><div class="grow"><div class="t1">Chrome · macOS</div><div class="t2">Austin, TX · 2h ago</div></div><button class="btn-text" style="padding:4px;">Sign out</button></div>
+        <div class="lrow"><div class="cat-icon" style="background:var(--tv-chip); color:var(--tv-text-secondary);"><i class="ti ti-device-desktop"></i></div><div class="grow"><div class="t1">Chrome · macOS</div><div class="t2">Austin, TX · 2h ago</div></div><button class="btn-text" style="padding:4px;">Sign out</button></div>
       </div>
       <div class="section-title">Login history</div>
       <div class="m-card" style="padding:6px 16px;">

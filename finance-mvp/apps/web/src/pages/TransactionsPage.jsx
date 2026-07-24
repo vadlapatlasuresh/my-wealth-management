@@ -558,7 +558,7 @@ function chipStyle(active) {
     cursor: 'pointer',
     border: `1px solid ${active ? 'var(--tv-forest, #1A4D3B)' : 'var(--tv-border, #e3e3e0)'}`,
     background: active ? 'var(--tv-forest, #1A4D3B)' : 'var(--tv-surface, #fff)',
-    color: active ? '#fff' : 'var(--tv-text-primary, #1a1a1a)',
+    color: active ? 'var(--tv-on-accent, #fff)' : 'var(--tv-text-primary, #1a1a1a)',
     transition: 'all .15s ease',
   };
 }

@@ -1,6 +1,5 @@
 package com.mywealthmanagement.accountaggregationservice.credit;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -12,15 +11,20 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- * Credit monitoring — STUB provider (Phase 4). Behind the same config-flag + mock-fallback
- * pattern every integration in this codebase uses:
+ * Credit monitoring — the DEMO profile generator (Phase 4).
  *
- *   • credit.provider.enabled = false (default) → return a DETERMINISTIC demo profile so the
- *     endpoint is useful without a real bureau. The payload is stable per user (seeded by the
- *     user id) and clearly marked provider="demo", so the web client keeps its "demo" banner
- *     even when the client-side live flag is on.
- *   • credit.provider.enabled = true → where a real bureau integration would slot in. Until one
- *     is wired we still return the demo profile (never a fabricated "live" score).
+ * <p>This is the mock half of the app-wide "config flag + mock fallback" integration pattern. It
+ * is reached through {@link DemoCreditBureauProvider}, and {@link CreditBureauRouter} decides
+ * whether it or a real bureau answers, from {@code credit.provider}:
+ *
+ * <pre>
+ *   credit.provider=demo   (default) → this class. Stable per user (seeded by user id) and
+ *                                      clearly marked provider="demo", so the web client keeps
+ *                                      its "Demo" banner even with the client-side live flag on.
+ *   credit.provider=http             → HttpCreditBureauProvider (a real, contracted bureau).
+ *                                      Any failure there falls back here — never to a
+ *                                      fabricated "live" score.
+ * </pre>
  *
  * Response shape matches what the web client's normalizeLiveProfile() expects: it can either
  * take our factors directly or derive them from the raw metrics we include (onTimePct, etc.).
@@ -32,9 +36,6 @@ public class CreditService {
     private static final int SCALE_MIN = 300;
     private static final int SCALE_MAX = 850;
     private static final String[] MONTHS = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
-
-    @Value("${credit.provider.enabled:false}")
-    private boolean providerEnabled; // reserved for a real bureau; demo fallback otherwise
 
     /** Deterministic demo credit profile for a user. Stable across calls (seeded by userId). */
     public Map<String, Object> profileFor(long userId) {
@@ -105,8 +106,6 @@ public class CreditService {
         out.put("changes", changes);
         return out;
     }
-
-    public boolean isProviderEnabled() { return providerEnabled; }
 
     private static Map<String, Object> change(String type, String dir, String title, String detail, LocalDate date) {
         Map<String, Object> c = new LinkedHashMap<>();

@@ -533,16 +533,16 @@ export default function TaxPage() {
       {/* Find a CPA — prominent entry at the top of the Taxes section */}
       <div className="card" style={{
         marginBottom: 16, display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap",
-        background: "var(--tv-forest)", borderColor: "var(--tv-forest)", color: "#fff",
+        background: "var(--tv-forest)", borderColor: "var(--tv-forest)", color: "var(--tv-on-accent, #fff)",
       }}>
         <i className="ti ti-user-check" style={{ fontSize: 28, color: "var(--tv-gold)" }}></i>
         <div style={{ flex: 1, minWidth: 180 }}>
-          <div className="item-name" style={{ color: "#fff", fontSize: 16 }}>Work with a verified CPA</div>
+          <div className="item-name" style={{ color: "var(--tv-on-accent, #fff)", fontSize: 16 }}>Work with a verified CPA</div>
           <div style={{ color: "rgba(255,255,255,0.85)", fontSize: 13 }}>
             Browse vetted tax professionals, read verified reviews, and connect — right from your taxes.
           </div>
         </div>
-        <button className="btn" style={{ background: "#fff", color: "var(--tv-forest)", fontWeight: 600 }}
+        <button className="btn" style={{ background: "var(--tv-on-accent, #fff)", color: "var(--tv-forest)", fontWeight: 600 }}
           onClick={() => navigate("/cpa")}>
           <i className="ti ti-arrow-right"></i> Find a CPA
         </button>
@@ -631,7 +631,7 @@ export default function TaxPage() {
                         <i className={d.status === "unreadable" ? "ti ti-alert-triangle" : d.status === "needs_input" ? "ti ti-pencil" : "ti ti-file-text"} style={{ color: d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "var(--tv-gold)" : "var(--tv-forest)" }}></i>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div className="item-name" style={{ fontSize: 12.5 }}>{d.fileName} <span className="badge badge-gray">{DOC_LABELS[d.docType] || d.docType}</span></div>
-                          <div className="item-sub" style={{ fontSize: 11.5, color: d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "#B7791F" : undefined }}>{docSummary(d)}</div>
+                          <div className="item-sub" style={{ fontSize: 11.5, color: d.status === "unreadable" ? "var(--tv-negative)" : d.status === "needs_input" ? "var(--tv-warning-deep, #B7791F)" : undefined }}>{docSummary(d)}</div>
                         </div>
                         <select className="form-select" style={{ maxWidth: 104, fontSize: 12, padding: "4px 8px" }} value={d.filerId} onChange={(e) => retagDoc(d.id, e.target.value)}>
                           {filers.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}

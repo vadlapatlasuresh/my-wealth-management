@@ -42,7 +42,7 @@ function txLabel(t) {
 
 function healthColor(score) {
   if (score >= 80) return "var(--tv-forest, #2f7a5b)";
-  if (score >= 60) return "#3f8f6f";
+  if (score >= 60) return "var(--tv-score-good, #3f8f6f)";
   if (score >= 40) return "var(--tv-gold, #c9973a)";
   return "var(--tv-red, #c0392b)";
 }
@@ -203,7 +203,7 @@ export default function TodayPage({
           <div className="kpi-grid" style={{ display: "grid", gap: 12, gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginBottom: 18 }}>
             <StatTile icon="ti ti-scale" accent="var(--tv-forest, #2f7a5b)" label="Net worth" value={currency0(netWorth)} onClick={() => navigate("/")} />
             <StatTile icon="ti ti-wallet" accent="var(--tv-gold, #c9973a)" label="Available cash" value={currency0(cash)} onClick={() => navigate("/accounts")} />
-            <StatTile icon="ti ti-receipt" accent="#7a5bd6" label="Bills due soon" value={currency0(billsTotal)} sub={`${upcomingBills.length} scheduled`} onClick={() => navigate("/make-payment")} />
+            <StatTile icon="ti ti-receipt" accent="var(--tv-accent-bills, #7a5bd6)" label="Bills due soon" value={currency0(billsTotal)} sub={`${upcomingBills.length} scheduled`} onClick={() => navigate("/make-payment")} />
           </div>
 
           {/* Needs you today */}
@@ -263,7 +263,7 @@ function StatTile({ icon, accent, label, value, sub, onClick }) {
   return (
     <div className="kpi-card kpi-clickable" style={{ "--kpi-accent": accent, cursor: "pointer" }} onClick={onClick}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-        <span style={{ display: "inline-flex", width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: 8, background: accent, color: "#fff" }}>
+        <span style={{ display: "inline-flex", width: 30, height: 30, alignItems: "center", justifyContent: "center", borderRadius: 8, background: accent, color: "var(--tv-on-accent, #fff)" }}>
           <i className={icon} style={{ fontSize: 16 }} />
         </span>
         <span className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>{label}</span>

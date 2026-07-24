@@ -79,13 +79,32 @@ public class ModelRouter {
      * @return the reply text plus the label of the model that actually answered
      */
     public ChatResult chat(String message, List<String> history, String requested) {
+        return chat(message, history, requested, false);
+    }
+
+    /**
+     * Answer one chat turn, optionally with PRIORITY routing (Premium — {@code individual.priorityAi}).
+     *
+     * <p>Priority does one specific thing: it stops trading reasoning strength for cost and speed.
+     * A standard turn scores models on a complexity-weighted blend of reasoning, cheapness and
+     * speed, so an easy-looking question goes to the cheap model. A priority turn ranks purely on
+     * reasoning, so every question gets the strongest configured model first.
+     *
+     * <p>What priority explicitly does NOT change: the system prompt, the guardrails, or the
+     * financial snapshot the model sees. Premium buys a better engine, not different rules —
+     * and never a different set of facts, since the money figures are computed by our own math
+     * either way.
+     *
+     * @param priority true when the caller's plan includes Priority AI
+     */
+    public ChatResult chat(String message, List<String> history, String requested, boolean priority) {
         String choice = normalize(requested);
         String summary = summaryClient.fetchSummaryText();
         String system = SystemPrompts.chat(summary);
         String userMessage = buildUserMessage(message, history);
 
         // Build the ordered list of models to try.
-        List<Model> order = plan(choice, message);
+        List<Model> order = plan(choice, message, priority);
 
         for (Model m : order) {
             try {
@@ -108,8 +127,8 @@ public class ModelRouter {
         return new ChatResult(fallback.chat(message, history), "Assistant");
     }
 
-    /** Decide which models to attempt, in priority order, for this turn. */
-    private List<Model> plan(String choice, String message) {
+    /** Decide which models to attempt, in preference order, for this turn. */
+    private List<Model> plan(String choice, String message, boolean priority) {
         List<Model> candidates = new ArrayList<>();
 
         // A manual pick goes first if it is configured (even if it is in cooldown — the user
@@ -124,7 +143,12 @@ public class ModelRouter {
         // Rank the remaining configured models best-first. score() already demotes a model that
         // is in its post-failure cooldown, so healthy models naturally sort ahead of unhealthy
         // ones and the latter remain only as last-resort fallbacks.
-        double complexity = estimateComplexity(message);
+        //
+        // PRIORITY turns pin complexity at 1.0, which makes score() weight reasoning strength
+        // alone — the strongest model always leads, even for a question that looks easy. The
+        // cooldown demotion still applies, so priority never routes into a model we just saw
+        // fail; it prefers the best model, it does not insist on a broken one.
+        double complexity = priority ? 1.0 : estimateComplexity(message);
         models.stream()
                 .filter(m -> m.configured.get())
                 .filter(m -> !candidates.contains(m))

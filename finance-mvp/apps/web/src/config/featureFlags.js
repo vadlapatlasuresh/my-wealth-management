@@ -32,4 +32,19 @@ export const FLAGS = {
   CREDIT_MONITORING: "credit_monitoring",
   // Use a REAL bureau provider instead of the built-in demo data. Off ⇒ mock fallback.
   CREDIT_MONITORING_LIVE: "credit_monitoring_live",
+
+  // Show the Benchmarks feature (nav + route content). Off by default.
+  BENCHMARKS: "benchmarks",
+  // Fetch PEER percentiles from the backend. Off ⇒ the page shows the user's own real figures
+  // only. NOTE: unlike the credit flags, "off" here does NOT mean "show sample data" — there is
+  // no demo peer dataset anywhere in the app, deliberately. See utils/benchmarks.js.
+  BENCHMARKS_LIVE: "benchmarks_live",
+
+  // Show Family / kids mode (nav + route content). Off by default until the guardian data
+  // model has been exercised in staging.
+  FAMILY_MODE: "family_mode",
+
+  // Offer the Premium "Priority AI" toggle in the assistant. The entitlement is still what
+  // grants it — this flag only controls whether the control is surfaced at all.
+  PRIORITY_AI: "priority_ai",
 };

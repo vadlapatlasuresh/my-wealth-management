@@ -16,18 +16,33 @@ import java.util.Map;
  * Credit monitoring endpoint (Phase 4). Hosted under /api/v1/aggregation/** so it reuses the
  * existing gateway route (no RouteLocator change needed). Authenticated like every other
  * aggregation route (SecurityConfig: anyRequest().authenticated()); the caller is the subject.
- * Returns the stub/demo profile from CreditService — see that class for the provider-toggle.
+ *
+ * <p>The profile comes from {@link CreditBureauRouter}, which serves either a contracted bureau
+ * ({@code credit.provider=http}) or the deterministic demo profile ({@code credit.provider=demo},
+ * the default) and falls back to demo on any provider failure. The {@code provider} field in the
+ * response tells the client which it got, so the UI's "Demo" banner is always truthful.
  */
 @RestController
 @RequestMapping("/api/v1/aggregation/credit")
 @RequiredArgsConstructor
 public class CreditController {
 
-    private final CreditService creditService;
+    private final CreditBureauRouter bureau;
 
     @GetMapping("/me")
     public ResponseEntity<Map<String, Object>> me() {
-        return ResponseEntity.ok(creditService.profileFor(currentUserId()));
+        return ResponseEntity.ok(bureau.profileFor(currentUserId()));
+    }
+
+    /**
+     * Which provider is wired, without exposing any of the user's credit data. The client reads
+     * this to decide whether to offer the feature as real monitoring or as a labeled preview.
+     */
+    @GetMapping("/provider")
+    public ResponseEntity<Map<String, Object>> provider() {
+        return ResponseEntity.ok(Map.of(
+                "provider", bureau.activeProviderName(),
+                "live", bureau.isLive()));
     }
 
     private long currentUserId() {

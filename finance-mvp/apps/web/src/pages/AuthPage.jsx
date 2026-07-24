@@ -299,6 +299,9 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
     <div className="auth-screen">
       {/* Left brand panel (unchanged — keep it elegant) */}
       <div className="auth-brand-panel">
+        {/* theme-guard-allow-start: the brand mark is a FIXED logo, not themed UI. Its gradient
+            stops must stay identical in every theme (and in exported/printed assets), so
+            these are literals by design rather than token drift. */}
         <div className="auth-brand-logo">
           <svg width="44" height="44" viewBox="0 0 96 96" xmlns="http://www.w3.org/2000/svg" aria-label="TerraVest" style={{ borderRadius: 12, flexShrink: 0 }}>
             <defs>
@@ -315,6 +318,7 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
                   fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             <circle cx="74" cy="30" r="6.5" fill="url(#authGold)"/>
           </svg>
+          {/* theme-guard-allow-end */}
           <div>
             <div style={{ fontFamily: "var(--font-display)", fontSize: 22 }}>TerraVest</div>
             <div style={{ fontSize: 11, letterSpacing: ".1em", textTransform: "uppercase", color: "var(--tv-sage-light)" }}>

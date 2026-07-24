@@ -158,7 +158,7 @@ function accountVisual(t) {
     case 'savings': return { icon: 'ti-pig-money', tone: 'icon-green', accent: 'var(--tv-positive)' };
     case 'credit': return { icon: 'ti-credit-card', tone: 'icon-amber', accent: 'var(--tv-warning)' };
     case 'loan': return { icon: 'ti-file-dollar', tone: 'icon-red', accent: 'var(--tv-negative)' };
-    case 'investment': return { icon: 'ti-chart-line', tone: 'icon-purple', accent: '#6B46C1' };
+    case 'investment': return { icon: 'ti-chart-line', tone: 'icon-purple', accent: 'var(--tv-accent-invest, #6B46C1)' };
     default: return { icon: 'ti-wallet', tone: 'icon-blue', accent: 'var(--tv-forest-light)' };
   }
 }
@@ -3003,7 +3003,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       style={{ display: 'inline-flex', alignItems: 'center', gap: 6, borderRadius: 999, padding: '7px 14px',
                         border: `1px solid ${c.active ? 'var(--tv-forest)' : 'var(--tv-border)'}`,
                         background: c.active ? 'var(--tv-forest)' : 'var(--tv-surface)',
-                        color: c.active ? '#fff' : 'var(--tv-text-primary)', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>
+                        color: c.active ? 'var(--tv-on-accent, #fff)' : 'var(--tv-text-primary)', cursor: 'pointer', fontWeight: 500, fontSize: 13 }}>
                       <i className={`ti ${c.icon}`}></i> {c.label}
                     </button>
                   ))}
@@ -4602,6 +4602,9 @@ function statementToHtml(stmt, bizName) {
     + `<table>${secs}<tr class="grand"><td>${escapeHtml(stmt.grandTotal.label)}</td><td class="amt">${stmtMoney(stmt.grandTotal.amount)}</td></tr></table>`
     + `<div class="foot">Cash-basis statement · generated ${escapeHtml(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }))}</div></section>`;
 }
+// theme-guard-allow-start: this builds a STANDALONE printable document in a new window. It has no
+// access to the app's stylesheet, so its palette cannot be tokens — and print output should be
+// ink-on-white regardless of the theme the user happens to be viewing the app in.
 function printHtmlDocument(title, bodyHtml) {
   const w = window.open('', '_blank', 'width=820,height=1000');
   if (!w) { window.alert('Please allow pop-ups for this site to download the PDF.'); return; }
@@ -4623,6 +4626,7 @@ function printHtmlDocument(title, bodyHtml) {
   </style></head><body onload="window.focus();window.print()">${bodyHtml}</body></html>`);
   w.document.close();
 }
+// theme-guard-allow-end
 
 /* ------------------------------------------------------------------ */
 /* Financial-statement card — renders one statement + export buttons.  */
@@ -4762,7 +4766,7 @@ function ForecastChart({ forecast }) {
         {/* shortfall marker */}
         {negative && (
           <g>
-            <circle cx={x(forecast.shortfallDay)} cy={zeroY} r="4.5" fill="var(--tv-negative)" stroke="#fff" strokeWidth="1.5" />
+            <circle cx={x(forecast.shortfallDay)} cy={zeroY} r="4.5" fill="var(--tv-negative)" stroke="var(--tv-on-accent, #fff)" strokeWidth="1.5" />
             <text x={clamp(x(forecast.shortfallDay), 30, width - 60)} y={padTop + 10} textAnchor="middle" fontSize="10" fontWeight="600" fill="var(--tv-negative)">Runs out ~{forecast.shortfallDay}d</text>
           </g>
         )}
@@ -4779,7 +4783,7 @@ function AgingBars({ aging, onEmail, busy }) {
     { key: 'current', label: 'Current', color: 'var(--tv-positive)' },
     { key: 'd1_30', label: '1–30 days', color: 'var(--tv-gold)' },
     { key: 'd31_60', label: '31–60 days', color: 'var(--tv-warning)' },
-    { key: 'd61_90', label: '61–90 days', color: '#D97706' },
+    { key: 'd61_90', label: '61–90 days', color: 'var(--tv-warning-deep, #D97706)' },
     { key: 'd90', label: '90+ days', color: 'var(--tv-negative)' },
   ];
   const total = aging.total || 1;

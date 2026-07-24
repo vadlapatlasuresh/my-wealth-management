@@ -12,17 +12,17 @@ import ScoreGauge from "../components/viz/ScoreGauge";
 // Score → accent color (traffic-light, but on-brand).
 function scoreColor(score) {
   if (score >= 80) return "var(--tv-forest, #2f7a5b)";
-  if (score >= 60) return "#3f8f6f";
+  if (score >= 60) return "var(--tv-score-good, #3f8f6f)";
   if (score >= 40) return "var(--tv-gold, #c9973a)";
   return "var(--tv-red, #c0392b)";
 }
 
 // 0–100 bands for the shared ScoreGauge (parallels the credit gauge's FICO bands).
 const HEALTH_BANDS = [
-  { min: 0, max: 39, color: "#F0776B", label: "Needs work" },
-  { min: 40, max: 59, color: "#E6B455", label: "Fair" },
-  { min: 60, max: 79, color: "#5BB98C", label: "Good" },
-  { min: 80, max: 100, color: "#3DDC97", label: "Excellent" },
+  { min: 0, max: 39, color: "var(--tv-negative, #F0776B)", label: "Needs work" },
+  { min: 40, max: 59, color: "var(--tv-warning, #E6B455)", label: "Fair" },
+  { min: 60, max: 79, color: "var(--tv-forest-light, #5BB98C)", label: "Good" },
+  { min: 80, max: 100, color: "var(--tv-positive, #3DDC97)", label: "Excellent" },
 ];
 
 function FactorRow({ f, last }) {

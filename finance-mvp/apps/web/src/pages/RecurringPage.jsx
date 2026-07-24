@@ -106,7 +106,7 @@ export default function RecurringPage({ accounts = [] }) {
               across {items.length} charge{items.length === 1 ? "" : "s"}
             </div>
           </div>
-          <div className="kpi-card" style={{ "--kpi-accent": "#7a5bd6" }}>
+          <div className="kpi-card" style={{ "--kpi-accent": "var(--tv-accent-bills, #7a5bd6)" }}>
             <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>That's</div>
             <div style={{ fontSize: 28, fontWeight: 800 }}>{currency0(perMonth * 12)}<span style={{ fontSize: 15, fontWeight: 500 }}>/yr</span></div>
             <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>Cancel one you forgot and it adds up fast.</div>

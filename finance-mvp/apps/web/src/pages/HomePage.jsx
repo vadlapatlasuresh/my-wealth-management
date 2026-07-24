@@ -260,13 +260,13 @@ export default function HomePage({
           title="View accounts" onClick={() => navigate('/accounts')}
         />
         <KpiCard
-          icon="ti ti-wallet" accent="#1E5FAD"
+          icon="ti ti-wallet" accent="var(--tv-accent-cash, #1E5FAD)"
           label="Cash" value={snapshot?.components?.cash ?? 0}
           change={snapshot?.components?.cash_change_30d ?? 0}
           title="View accounts" onClick={() => navigate('/accounts')}
         />
         <KpiCard
-          icon="ti ti-chart-line" accent="#6B46C1"
+          icon="ti ti-chart-line" accent="var(--tv-accent-invest, #6B46C1)"
           label="Investments" value={snapshot?.components?.investments ?? 0}
           change={snapshot?.components?.investments_change_30d ?? 0}
           title="View investments" onClick={() => navigate('/invest')}
@@ -323,7 +323,7 @@ export default function HomePage({
                         border: 'none',
                         borderRight: i < CHART_TYPES.length - 1 ? '1px solid var(--tv-border)' : 'none',
                         background: on ? 'var(--tv-forest)' : 'transparent',
-                        color: on ? '#fff' : 'var(--tv-text-secondary)',
+                        color: on ? 'var(--tv-on-accent, #fff)' : 'var(--tv-text-secondary)',
                       }}
                     >
                       <i className={c.icon} style={{ fontSize: 14 }}></i>

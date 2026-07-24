@@ -22,6 +22,8 @@ const YearInReviewPage = React.lazy(() => import('../pages/YearInReviewPage'));
 const BillOptimizerPage = React.lazy(() => import('../pages/BillOptimizerPage'));
 const InvestmentInsightsPage = React.lazy(() => import('../pages/InvestmentInsightsPage'));
 const CreditScorePage = React.lazy(() => import('../pages/CreditScorePage'));
+const BenchmarksPage  = React.lazy(() => import('../pages/BenchmarksPage'));
+const FamilyPage      = React.lazy(() => import('../pages/FamilyPage'));
 const VisualizationStudioPage = React.lazy(() => import('../pages/VisualizationStudioPage'));
 const GoalScenariosPage = React.lazy(() => import('../pages/GoalScenariosPage'));
 const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
@@ -192,6 +194,22 @@ export const MODULE_REGISTRY = {
     route: '/credit', section: SECTION_GROW, defaultOrder: 10,
     component: CreditScorePage, inNavByDefault: isFlagEnabled(FLAGS.CREDIT_MONITORING),
   },
+  // Benchmarking — "vs people like you" (Phase 4, backlog B1). Hidden by default: the server
+  // feature_flag 'benchmarks' controls nav visibility on every platform at once, and this
+  // bundled default mirrors it for the offline/fallback nav. Route stays registered so a
+  // direct visit works for preview/QA. feature_key: individual.benchmarks.
+  benchmarks: {
+    id: 'benchmarks', title: 'Benchmarks', icon: 'ti ti-users-plus',
+    route: '/benchmarks', section: SECTION_GROW, defaultOrder: 12,
+    component: BenchmarksPage, inNavByDefault: isFlagEnabled(FLAGS.BENCHMARKS),
+  },
+  // Family / kids mode (Phase 5, backlog B3). Same shape as Benchmarks: server flag
+  // 'family_mode' drives cross-platform visibility. feature_key: individual.family (Premium).
+  family: {
+    id: 'family', title: 'Family', icon: 'ti ti-users-group',
+    route: '/family', section: SECTION_SHARED, defaultOrder: 3,
+    component: FamilyPage, inNavByDefault: isFlagEnabled(FLAGS.FAMILY_MODE),
+  },
   mybusiness: {
     id: 'mybusiness', title: 'My Business', icon: 'ti ti-briefcase',
     route: '/mybusiness', section: SECTION_BUSINESS, defaultOrder: 1,
@@ -354,8 +372,10 @@ export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending', 'yearinreview', 'billoptimizer'],
   [SECTION_GROW]:       ['goals', 'goalscenarios', 'debt', 'invest', 'investinsights', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach',
-                          ...(isFlagEnabled(FLAGS.CREDIT_MONITORING) ? ['creditscore'] : [])],
-  [SECTION_SHARED]:     ['household', 'sharedmoney'],
+                          ...(isFlagEnabled(FLAGS.CREDIT_MONITORING) ? ['creditscore'] : []),
+                          ...(isFlagEnabled(FLAGS.BENCHMARKS) ? ['benchmarks'] : [])],
+  [SECTION_SHARED]:     ['household', 'sharedmoney',
+                          ...(isFlagEnabled(FLAGS.FAMILY_MODE) ? ['family'] : [])],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
   [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings', 'flowmap', 'visualization'],

@@ -208,7 +208,46 @@ Allocation, concentration, fees, drift from REAL holdings (`utils/investmentInsi
 Credit monitoring (`utils/creditMonitoring.js`). Off by default; nav appears only when the
 flag is on; route `/credit` always works for preview. Live bureau via `api.getCreditProfile()`
 when `credit_monitoring_live` is on, else a deterministic per-user **demo** profile (clearly labeled).
+Server side, `CreditBureauRouter` picks the provider from `credit.provider` (`demo` default / `http` for a
+contracted bureau) and degrades to the demo profile on any failure — the response's `provider` field is
+what drives the "Demo" badge, so the badge is always truthful.
 **Hero**: banded 300–850 **ScoreGauge** + delta + band legend; **utilization ring**. **Score history** 12-month area chart. **Impact-first factor breakdown** (payment history/utilization/age/mix/inquiries with weight, status, impact, bar). **Recent changes** timeline. Demo banner + "not a credit decision" disclaimer.
+
+## Benchmarks (BenchmarksPage)  ·  *NEW, Phase 4 / backlog B1*  ·  feature_key `individual.benchmarks` (Plus)  ·  behind server flag `benchmarks`
+
+"How you compare." Two halves, and the split IS the design.
+**Consent card (first thing on the page)**: explains that turning it on shows aggregate percentile
+curves, that it does **not** add your data to anyone else's comparison, and that nothing is sold;
+Turn on / Turn off; once on, three coarse cohort selects (Age / Income / Region — deliberately wide,
+finer bands identify people).
+**Metric cards** (Net worth · Savings rate · Emergency fund): your own REAL figure always shown
+(`utils/benchmarks.js` → `computeOwnMetrics`, reusing healthScore's `summarizeAccounts`/`monthlyCashFlow`);
+when a real cohort answered, a percentile pill + neutral reading ("Above the middle"), a percentile
+strip with published ticks and your marker, the median, and the dataset attribution + sample size.
+**States**: "no peer dataset connected" (the default), "not enough people in this cohort to compare
+anonymously", "we need a bit more of your data".
+**The rule**: there is NO demo/sample peer curve anywhere in the app. Peer data comes only from a real
+aggregate dataset behind `benchmarks.provider` (financial-core `BenchmarkService`), after opt-in, and
+above the k-anonymity floor. Absent that, the page shows your own numbers and says so.
+
+## Family (FamilyPage)  ·  *NEW, Phase 5 / backlog B3*  ·  feature_key `individual.family` (Premium)  ·  behind server flag `family_mode`
+
+Guardian view for allowance, chores, and spend/save/give jars. Children are **household-owned records,
+not user accounts** (auth-service V18), so both guardians in a household see the same children and the
+same ledger, and no existing `user_id` scoping rule changes.
+**Summary row**: Children · Held for them · Allowance/year.
+**Add / edit child**: name, birth year (optional), allowance amount, cadence (weekly / every 2 weeks /
+monthly), pay day, and the spend/save/give split — with a LIVE preview of exactly how the next payment
+lands, matching the server's rounding to the cent (`utils/family.js` → `splitAmounts`), plus the
+annualized cost. A split that doesn't total 100% is refused, not normalized.
+**Per-child card**: initial avatar, age + cadence + next payout date, three bucket balances + total,
+one-year savings projection (contributions only — no invented growth rate), Pay allowance / Edit /
+Archive.
+**Expandable**: chores (add with reward, "Mark done" pays exactly once) and the append-only ledger
+(date · note · bucket · signed amount). Balances are always DERIVED from the ledger, never stored.
+**States**: "Family lives in a household" (→ /household), "No children yet".
+**Engagement**: `AllowanceReminderJob` (auth-service, off by default) notifies guardians on a payday;
+push inherits the existing `comms.provider.push` toggle and the user's own opt-in.
 
 ## Home / Dashboard (HomePage)
 
@@ -430,6 +469,17 @@ Multi-step wizard (5 steps): **Payee → Amount → Funding → Review → Done*
 
 ---
 
+### Priority AI (*NEW, Phase 5 / backlog B4*  ·  feature_key `individual.priorityAi`, Premium  ·  behind `FLAGS.PRIORITY_AI`)
+
+A **Priority** toggle beside the model picker, offered only when the flag is on *and* the plan grants it.
+A priority turn ranks models on reasoning strength alone instead of the usual complexity-weighted blend
+of reasoning/cost/speed, so the strongest configured model always answers. Prompts, guardrails and the
+financial snapshot are **identical** — Premium buys a better engine, never different rules or different
+facts. The server re-checks the entitlement and reports whether the turn was *actually* prioritized; the
+gold **Priority** badge renders from that, so it can never claim something the turn didn't get. The
+entitlement check fails **open to standard routing**, so billing trouble degrades the answer rather than
+breaking the assistant.
+
 ## Calculators (CalculatorsPage)
 
 **Header**: "Calculators" + "Model interest, growth, and what an extra mortgage payment really saves you."
@@ -622,6 +672,6 @@ Multi-step wizard (5 steps): **Payee → Amount → Funding → Review → Done*
 
 ## Coverage summary
 
-**24 screens documented** (all requested screens covered): Home/Dashboard, Accounts, Cash, Transactions, Budget (PlanPage tab), Debt Lab (PlanPage tab), Pay Bills, Investments, My Business, AI Assistant, Calculators, Goals, Properties, Deal Room, Fractional LLC, Security, Messages, Settings, Profile, Admin · Analytics, Customer Care, Sign in / Sign up — plus shared chart/Plaid/disclaimer component notes.
+**26 screens documented** (all requested screens covered): Home/Dashboard, Accounts, Cash, Transactions, Budget (PlanPage tab), Debt Lab (PlanPage tab), Pay Bills, Investments, My Business, AI Assistant, Calculators, Goals, Properties, Deal Room, Fractional LLC, Security, Messages, Settings, Profile, Admin · Analytics, Customer Care, Sign in / Sign up, Benchmarks, Family — plus shared chart/Plaid/disclaimer component notes.
 
 **Largest / most feature-rich screens** (read in full): **Deal Room** (~56 KB; deepest — 5 tabs + 3 sub-views, deal form, leads, docs, track record, investor interest), **PlanPage** (~49 KB; powers both Budget and the rich Debt Lab), **InvestPage** (~43 KB; 4 tabs incl. config-driven broker connect), **MyBusinessPage** (~42 KB; multi-business + QuickBooks + invoices/expenses/activity), **HomePage** (~28 KB; 6 KPIs, multi-type net-worth chart with custom ranges + downfall alert), **AuthPage** (~27 KB; individual/business signup with SMS OTP, SSN/EIN), **TransactionsPage** (~26 KB; deep filtering, sorting, card chips), **AIAssistantPage** (~24 KB; scoped chat + insights). Notable honest-empty/demo areas to reflect in mockups: Investments Marketplace, Fractional LLC ("Example offerings — not live"), broker OAuth ("Demo mode"), 2FA setup ("mocked"), and Security active sessions (start empty).

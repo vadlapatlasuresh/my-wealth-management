@@ -99,13 +99,17 @@ export function useSubscription() {
 
 /* FeatureGate: renders children only when the plan grants `feature`. Otherwise it shows an
    upgrade prompt (or a caller-supplied fallback). While entitlements load it renders nothing
-   to avoid a flash of the wrong state. */
-export function FeatureGate({ feature, children, fallback, title }) {
+   to avoid a flash of the wrong state.
+
+   `plan` names the tier that includes the feature ('plus' | 'premium' | 'business', default
+   'business'). It only changes the copy, but getting it wrong is worse than it sounds: telling
+   a user to buy Business for a $9.99 Plus feature is both a bad experience and lost revenue. */
+export function FeatureGate({ feature, children, fallback, title, plan }) {
   const { hasFeature, loading } = useSubscription();
   if (loading) return null;
   if (hasFeature(feature)) return children;
   if (fallback !== undefined) return fallback;
-  return <UpgradePrompt title={title} />;
+  return <UpgradePrompt title={title} plan={plan} />;
 }
 
 /* TrialBanner: an app-wide strip that surfaces time-sensitive subscription states —
@@ -252,7 +256,28 @@ export function TrialOnboardingModal() {
   );
 }
 
-export function UpgradePrompt({ title }) {
+/* Per-tier upgrade copy. Each entry names the plan the way the pricing page does and lists what
+   else comes with it, so the prompt reads as an offer rather than a wall. */
+const PLAN_COPY = {
+  plus: {
+    name: 'Plus',
+    heading: 'A Plus feature',
+    blurb: 'Cash flow, smart alerts, a shared household and the proactive Money Coach.',
+  },
+  premium: {
+    name: 'Premium',
+    heading: 'A Premium feature',
+    blurb: 'Goal scenarios, family mode, benchmarking and Priority AI — everything in Plus, plus the planning tools.',
+  },
+  business: {
+    name: 'Business',
+    heading: 'A Business-plan feature',
+    blurb: 'Multi-business dashboards, invoicing, the Deal Room and more.',
+  },
+};
+
+export function UpgradePrompt({ title, plan }) {
+  const copy = PLAN_COPY[plan] || PLAN_COPY.business;
   return (
     <div className="page active">
       <div className="card" style={{ maxWidth: 560, margin: '32px auto', textAlign: 'center' }}>
@@ -262,10 +287,9 @@ export function UpgradePrompt({ title }) {
         >
           <i className="ti ti-crown"></i>
         </div>
-        <h2 style={{ margin: '0 0 6px' }}>{title || 'A Business-plan feature'}</h2>
+        <h2 style={{ margin: '0 0 6px' }}>{title || copy.heading}</h2>
         <p style={{ color: 'var(--tv-text-muted)', margin: '0 0 18px' }}>
-          This is included with the <strong>Business</strong> plan. Upgrade to unlock
-          multi-business dashboards, invoicing, the Deal Room and more.
+          This is included with the <strong>{copy.name}</strong> plan. Upgrade to unlock {copy.blurb}
         </p>
         <NavLink to="/subscription" className="btn btn-primary" style={{ textDecoration: 'none' }}>
           <i className="ti ti-crown"></i> View plans &amp; upgrade

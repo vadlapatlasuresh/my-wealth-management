@@ -228,7 +228,7 @@ export default function GuidePage() {
       </div>
 
       {/* Quick-start banner */}
-      <div className="card" style={{ marginBottom: 20, background: 'linear-gradient(135deg, var(--tv-forest) 0%, var(--tv-forest-mid) 100%)', color: '#fff', border: 'none' }}>
+      <div className="card" style={{ marginBottom: 20, background: 'linear-gradient(135deg, var(--tv-forest) 0%, var(--tv-forest-mid) 100%)', color: 'var(--tv-on-accent, #fff)', border: 'none' }}>
         <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
           <div style={{ fontSize: 26, lineHeight: 1 }}><i className="ti ti-rocket" style={{ color: 'var(--tv-gold-light)' }}></i></div>
           <div>

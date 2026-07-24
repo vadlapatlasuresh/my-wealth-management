@@ -361,6 +361,9 @@ export const api = {
   // Credit monitoring (Phase 4) — only called when FLAGS.CREDIT_MONITORING_LIVE is on; the
   // client falls back to a deterministic demo profile otherwise (utils/creditMonitoring.js).
   getCreditProfile: () => request("/api/v1/aggregation/credit/me"),
+  // Which credit provider the backend actually has wired ({ provider, live }). Carries no
+  // credit data — used by ops/QA to confirm a bureau is live without pulling a profile.
+  getCreditProviderInfo: () => request("/api/v1/aggregation/credit/provider"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Pull-based transaction sync (linked accounts also auto-sync on a schedule + via webhook).
   syncTransactions: () =>
@@ -965,10 +968,41 @@ export const api = {
       method: "POST", body: JSON.stringify({ amount, paidOn }),
     }),
 
+  // ---- Benchmarking (Phase 4, backlog B1) — opt-in, aggregate + anonymized only ----
+  // Returns consent state, the chosen cohort, and peer percentile curves ONLY when a real
+  // dataset answered for a cohort above the k-anonymity floor. Never sample data.
+  getBenchmarks: () => request("/api/v1/me/benchmarks"),
+  optInToBenchmarks: (cohort = {}) =>
+    request("/api/v1/me/benchmarks/opt-in", { method: "POST", body: JSON.stringify(cohort) }),
+  optOutOfBenchmarks: () => request("/api/v1/me/benchmarks/opt-in", { method: "DELETE" }),
+
+  // ---- Family / kids mode (Phase 5, backlog B3) ----
+  // Guardian-scoped: every route resolves the caller's guardianship before returning anything.
+  getFamily: () => request("/api/v1/household/family"),
+  addFamilyMember: (payload) =>
+    request("/api/v1/household/family/members", { method: "POST", body: JSON.stringify(payload) }),
+  updateFamilyMember: (id, payload) =>
+    request(`/api/v1/household/family/members/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  removeFamilyMember: (id) =>
+    request(`/api/v1/household/family/members/${id}`, { method: "DELETE" }),
+  recordAllowancePayout: (id, payload) =>
+    request(`/api/v1/household/family/members/${id}/ledger`, { method: "POST", body: JSON.stringify(payload) }),
+  getFamilyLedger: (id) => request(`/api/v1/household/family/members/${id}/ledger`),
+  getFamilyChores: (id) => request(`/api/v1/household/family/members/${id}/chores`),
+  addFamilyChore: (id, payload) =>
+    request(`/api/v1/household/family/members/${id}/chores`, { method: "POST", body: JSON.stringify(payload) }),
+  completeFamilyChore: (id, choreId) =>
+    request(`/api/v1/household/family/members/${id}/chores/${choreId}/complete`, { method: "POST" }),
+
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),
-  chatWithAssistant: (message, history = [], model = "auto") =>
-    request("/api/v1/ai/chat", { method: "POST", body: JSON.stringify({ message, history, model }) }),
+  // `priority` asks for Priority AI (Premium, individual.priorityAi). The server re-checks the
+  // entitlement and reports back whether the turn was ACTUALLY prioritized, so the UI badges
+  // what happened rather than what was requested.
+  chatWithAssistant: (message, history = [], model = "auto", priority = false) =>
+    request("/api/v1/ai/chat", { method: "POST", body: JSON.stringify({ message, history, model, priority }) }),
+  // Whether this deployment offers Priority AI at all ({ enabled, entitled }).
+  getPriorityAiStatus: () => request("/api/v1/ai/priority"),
 
   // Payment Service (Phase 6)
   getPaymentIntents: () => request("/api/v1/payments/bill-pay-intents"),

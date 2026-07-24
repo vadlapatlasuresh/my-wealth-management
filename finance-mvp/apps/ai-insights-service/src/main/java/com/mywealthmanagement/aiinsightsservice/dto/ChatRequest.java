@@ -23,4 +23,10 @@ public class ChatRequest {
      * when that model is configured. Unknown values fall back to auto.
      */
     private String model;
+
+    /**
+     * Ask for PRIORITY routing on this turn (Premium — {@code individual.priorityAi}). The
+     * server verifies the entitlement itself; setting this without the plan is simply ignored.
+     */
+    private Boolean priority;
 }
