@@ -96,7 +96,7 @@ export default function HouseholdPage({ accounts = [] }) {
       {error && <ErrorBar text={error} />}
 
       <div className="card" style={{ padding: 20, marginBottom: 16, display: "flex", alignItems: "center", gap: 14 }}>
-        <span style={{ display: "inline-flex", width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 12, background: "rgba(47,122,91,.10)", color: "var(--tv-forest, #2f7a5b)", flex: "0 0 auto" }}>
+        <span style={{ display: "inline-flex", width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 12, background: "var(--tv-positive-bg)", color: "var(--tv-forest, #2f7a5b)", flex: "0 0 auto" }}>
           <i className="ti ti-home-heart" style={{ fontSize: 22 }} />
         </span>
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -157,7 +157,7 @@ export default function HouseholdPage({ accounts = [] }) {
           </div>
 
           {inviteLink && (
-            <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: "rgba(201,151,58,.12)", border: "1px solid var(--tv-gold, #c9973a)" }}>
+            <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: "var(--tv-gold-pale)", border: "1px solid var(--tv-gold, #c9973a)" }}>
               <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Share this code — it's shown once</div>
               <div style={{ fontSize: 12.5, wordBreak: "break-all", fontFamily: "monospace", marginBottom: 8 }}>{inviteLink}</div>
               <button className="btn btn-secondary btn-sm"
@@ -207,7 +207,7 @@ function Header() {
 
 function ErrorBar({ text }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "rgba(192,57,43,.10)", border: "1px solid var(--tv-red, #c0392b)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "var(--tv-negative-bg)", border: "1px solid var(--tv-red, #c0392b)" }}>
       <i className="ti ti-alert-circle" style={{ color: "var(--tv-red, #c0392b)" }} />
       <span style={{ fontSize: 13.5 }}>{text}</span>
     </div>

@@ -308,7 +308,7 @@ function DocRow({ d, selectMode, checked, onToggleSelect, onOpen, onShare, onEdi
           </button>
           <span className="badge">{docTypeLabel(d.docType)}</span>
           {d.sourceService && <span className="badge" style={{ background: "var(--tv-forest-tint, rgba(45,90,61,.12))", color: "var(--tv-forest)" }}>{SOURCE_LABEL[d.sourceService] || d.sourceService}</span>}
-          {d.shared && <span className="badge" style={{ background: "rgba(198,160,74,.18)", color: "var(--tv-gold, #b8860b)" }}><i className="ti ti-users"></i> Shared</span>}
+          {d.shared && <span className="badge" style={{ background: "var(--tv-gold-pale)", color: "var(--tv-gold, #b8860b)" }}><i className="ti ti-users"></i> Shared</span>}
         </div>
         <div style={{ fontSize: 12, color: "var(--tv-text-muted)", marginTop: 2 }}>
           {d.isFile ? (d.originalFilename || "File") : "Link"}
