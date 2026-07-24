@@ -19,9 +19,9 @@ function toneColor(tone) {
     : "var(--tv-forest, #2f7a5b)";
 }
 function toneBg(tone) {
-  return tone === "red" ? "rgba(192,57,43,.10)"
-    : tone === "amber" ? "rgba(201,151,58,.12)"
-    : "rgba(47,122,91,.10)";
+  return tone === "red" ? "var(--tv-negative-bg)"
+    : tone === "amber" ? "var(--tv-gold-pale)"
+    : "var(--tv-positive-bg)";
 }
 
 export default function CoachPage({ accounts = [], transactions = [], snapshot = null, insights = [] }) {
@@ -58,7 +58,7 @@ export default function CoachPage({ accounts = [], transactions = [], snapshot =
 
       {linked && (
         <div className="card" style={{ padding: 16, marginBottom: 18, display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ display: "inline-flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 12, background: urgentCount ? "rgba(192,57,43,.10)" : "rgba(47,122,91,.10)", color: urgentCount ? "var(--tv-red, #c0392b)" : "var(--tv-forest, #2f7a5b)", flex: "0 0 auto" }}>
+          <span style={{ display: "inline-flex", width: 42, height: 42, alignItems: "center", justifyContent: "center", borderRadius: 12, background: urgentCount ? "var(--tv-negative-bg)" : "var(--tv-positive-bg)", color: urgentCount ? "var(--tv-red, #c0392b)" : "var(--tv-forest, #2f7a5b)", flex: "0 0 auto" }}>
             <i className={urgentCount ? "ti ti-urgent" : "ti ti-circle-check"} style={{ fontSize: 21 }} />
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -95,7 +95,7 @@ export default function CoachPage({ accounts = [], transactions = [], snapshot =
                     <div style={{ fontSize: 14.5, fontWeight: 600, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                       {r.title}
                       {r.source === "ai" && (
-                        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", padding: "2px 6px", borderRadius: 5, background: "rgba(201,151,58,.16)", color: "var(--tv-gold, #c9973a)" }}>
+                        <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: ".04em", textTransform: "uppercase", padding: "2px 6px", borderRadius: 5, background: "var(--tv-gold-pale)", color: "var(--tv-gold, #c9973a)" }}>
                           AI
                         </span>
                       )}

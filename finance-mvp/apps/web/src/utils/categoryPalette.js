@@ -11,23 +11,26 @@
 // wheel so adjacent slices in a donut stay distinguishable.
 
 // Canonical buckets → color. Order also defines a pleasing default rotation.
+// Tuned to be HARMONIOUS ON GLASS: slightly deeper/less neon than pure library hues so
+// slices read as intentional on frosted surfaces (in both Glass · Dark and Glass · Light)
+// while staying distinct from each other. Same category = same color, everywhere.
 const CANONICAL = {
-  housing:        "#F25FA8", // magenta-pink  (Housing / Rent / Mortgage)
-  shopping:       "#4EA8F0", // blue
-  food:           "#F5C445", // gold-yellow   (Food & Dining / Restaurants)
-  groceries:      "#4FBE83", // green
-  auto:           "#F0803C", // orange        (Auto & Transport / Fuel)
-  utilities:      "#7A6FF0", // violet        (Utility & Bill Payments)
-  medical:        "#E5675A", // coral-red     (Medical / Health)
-  entertainment:  "#2CC4C4", // teal          (Entertainment / Streaming)
-  travel:         "#8ED14F", // lime          (Travel & Hospitality)
-  education:      "#5B8DEF", // indigo
-  personal:       "#C77DD6", // orchid        (Personal Care)
-  subscriptions:  "#B06FE0", // purple
-  income:         "#3DDC97", // mint (positive / inflow)
-  transfer:       "#6FB1D6", // steel-blue
-  fees:           "#D98C5F", // clay
-  misc:           "#9AAEA4", // muted sage    (Miscellaneous / Other)
+  housing:        "#E85C9E", // rose-magenta  (Housing / Rent / Mortgage)
+  shopping:       "#3E97E8", // azure
+  food:           "#E7B23C", // amber-gold    (Food & Dining / Restaurants)
+  groceries:      "#3FB577", // green
+  auto:           "#EE7A38", // orange        (Auto & Transport / Fuel)
+  utilities:      "#7A6FEA", // violet        (Utility & Bill Payments)
+  medical:        "#E0655C", // coral         (Medical / Health)
+  entertainment:  "#25B6B6", // teal          (Entertainment / Streaming)
+  travel:         "#7FBE45", // olive-lime    (Travel & Hospitality)
+  education:      "#5385E0", // indigo
+  personal:       "#C077D0", // orchid        (Personal Care)
+  subscriptions:  "#A76FE0", // purple
+  income:         "#26C983", // emerald (positive / inflow)
+  transfer:       "#5FA8D0", // steel-blue
+  fees:           "#CE8352", // clay
+  misc:           "#8FA0AE", // slate-sage    (Miscellaneous / Other)
   uncategorized:  "#7E8C97", // slate
 };
 

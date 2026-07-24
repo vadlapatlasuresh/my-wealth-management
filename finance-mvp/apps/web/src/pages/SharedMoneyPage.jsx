@@ -73,7 +73,7 @@ export default function SharedMoneyPage() {
     <div className="page active">
       <Header />
       {error && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "rgba(192,57,43,.10)", border: "1px solid var(--tv-red, #c0392b)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "var(--tv-negative-bg)", border: "1px solid var(--tv-red, #c0392b)" }}>
           <i className="ti ti-alert-circle" style={{ color: "var(--tv-red, #c0392b)" }} />
           <span style={{ fontSize: 13.5 }}>{error}</span>
         </div>

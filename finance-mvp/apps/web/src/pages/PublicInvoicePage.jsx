@@ -71,7 +71,7 @@ export default function PublicInvoicePage() {
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{inv.businessName || "—"}</div>
               </div>
               <span className="badge" style={{
-                background: paid ? "rgba(45,90,61,.14)" : "rgba(198,160,74,.18)",
+                background: paid ? "rgba(45,90,61,.14)" : "var(--tv-gold-pale)",
                 color: paid ? "var(--tv-forest)" : "var(--tv-gold, #b8860b)", fontWeight: 600,
               }}>{paid ? "Paid" : "Due"}</span>
             </div>

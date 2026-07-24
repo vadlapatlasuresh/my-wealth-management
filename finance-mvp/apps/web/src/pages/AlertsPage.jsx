@@ -10,7 +10,7 @@ function toneColor(tone) {
   return tone === "red" ? "var(--tv-red, #c0392b)" : tone === "amber" ? "var(--tv-gold, #c9973a)" : "var(--tv-forest, #2f7a5b)";
 }
 function toneBg(tone) {
-  return tone === "red" ? "rgba(192,57,43,.10)" : tone === "amber" ? "rgba(201,151,58,.12)" : "rgba(47,122,91,.10)";
+  return tone === "red" ? "var(--tv-negative-bg)" : tone === "amber" ? "var(--tv-gold-pale)" : "var(--tv-positive-bg)";
 }
 
 export default function AlertsPage({ accounts = [], transactions = [] }) {
