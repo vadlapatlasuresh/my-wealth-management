@@ -84,10 +84,9 @@ export default function SettingsPage() {
     document.body.classList.toggle('tv-compact', compactMode);
     return () => document.body.classList.remove('tv-compact');
   }, [compactMode]);
-  // Apply the theme app-wide whenever the mode toggle changes (persisted by applyTheme).
-  // Dark maps to the lightened glass-dark default; Light maps to the light theme.
+  // Both variants are Glass; the toggle switches Glass · Dark (default) and Glass · Light.
   useEffect(() => {
-    applyTheme(darkMode ? 'glass-dark' : 'light');
+    applyTheme(darkMode ? 'glass-dark' : 'glass');
   }, [darkMode]);
   // Apply the background canvas whenever the palette changes (persisted by applyBg).
   useEffect(() => { applyBg(bg); }, [bg]);
@@ -359,8 +358,8 @@ export default function SettingsPage() {
           {/* Theme mode — mirrors the global floating Theme control (same theme.js axis). */}
           <div className="setting-row" style={{ alignItems: 'flex-start' }}>
             <div>
-              <div className="setting-label">Theme</div>
-              <div className="setting-help">Dark uses the balanced glass-dark default</div>
+              <div className="setting-label">Glass theme</div>
+              <div className="setting-help">Both variants are frosted glass — pick Dark or Light</div>
             </div>
             <div className="theme-mode" style={{ width: 168 }}>
               <button className={darkMode ? 'on' : ''} onClick={() => setDarkMode(true)} aria-pressed={darkMode}>

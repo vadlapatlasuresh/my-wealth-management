@@ -13,14 +13,15 @@
    Splitting mode from background is what lets the global Theme control offer a Dark/Light
    toggle AND a 6-colour background picker without a combinatorial explosion. */
 
-export const THEMES = ["glass-dark", "light", "dark", "glass"];
+// Glass is now the ONLY theme family — a Dark variant (glass-dark, the default) and a Light
+// variant (glass). Legacy values ("light"/"dark") are no longer valid, so getTheme() migrates
+// those users onto the Glass default on next load.
+export const THEMES = ["glass-dark", "glass"];
 export const DEFAULT_THEME = "glass-dark";
 
 export const THEME_META = {
-  "glass-dark": { label: "Glass Dark", icon: "ti ti-diamond" },
-  light: { label: "Light", icon: "ti ti-sun" },
-  dark: { label: "Dark", icon: "ti ti-moon" },
-  glass: { label: "Glass", icon: "ti ti-sparkles" },
+  "glass-dark": { label: "Glass · Dark", icon: "ti ti-moon" },
+  glass: { label: "Glass · Light", icon: "ti ti-sun" },
 };
 
 /* Background palettes. `swatch` is the colour shown in the picker (its dark-mode canvas),
@@ -36,7 +37,7 @@ export const BACKGROUNDS = [
 ];
 export const DEFAULT_BG = "slate";
 
-const isLightMode = (theme) => theme === "light";
+const isLightMode = (theme) => theme === "glass"; // Glass · Light is the light variant
 
 export function getTheme() {
   const t = localStorage.getItem("tv_theme");

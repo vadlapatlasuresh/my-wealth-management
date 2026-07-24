@@ -29,7 +29,7 @@ function FactorRow({ f, last }) {
   const color = scoreColor(f.score);
   return (
     <div style={{ display: "flex", gap: 12, padding: "14px 0", borderBottom: last ? "none" : "1px solid var(--tv-border, rgba(0,0,0,.06))" }}>
-      <span style={{ display: "inline-flex", width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, background: "rgba(0,0,0,.04)", color, flex: "0 0 auto" }}>
+      <span style={{ display: "inline-flex", width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, background: "var(--tv-chip)", color, flex: "0 0 auto" }}>
         <i className={f.icon} style={{ fontSize: 18 }} />
       </span>
       <div style={{ flex: 1, minWidth: 0 }}>

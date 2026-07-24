@@ -14,7 +14,8 @@ export default function ThemeControl() {
   const [bg, setBg] = useState(getBg());
   const ref = useRef(null);
 
-  const isLightMode = theme === "light" || theme === "glass";
+  // Both variants are Glass; "light" here means the Glass · Light variant.
+  const isLightMode = theme === "glass";
 
   // Close on outside-click / Escape (accessible + expected for a popover).
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function ThemeControl() {
   }, [open]);
 
   const setMode = (light) => {
-    const next = light ? "light" : "glass-dark";
+    const next = light ? "glass" : "glass-dark"; // Glass · Light / Glass · Dark
     setTheme(applyTheme(next));
   };
   const setBackground = (id) => setBg(applyBg(id));
@@ -47,7 +48,7 @@ export default function ThemeControl() {
 
       {open && (
         <div className="theme-pop" role="dialog" aria-label="Theme settings">
-          <h4>Mode</h4>
+          <h4>Glass mode</h4>
           <div className="theme-mode">
             <button className={isLightMode ? "" : "on"} onClick={() => setMode(false)} aria-pressed={!isLightMode}>
               <i className="ti ti-moon" /> Dark

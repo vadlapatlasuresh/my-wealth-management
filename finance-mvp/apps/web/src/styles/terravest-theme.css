@@ -38,6 +38,18 @@
   --tv-text-muted:     #7A9086;
   --tv-text-inverse:   #FFFFFF;
 
+  /* ---- Compatibility aliases + adaptive surface tokens (theme heal) ----
+     Pages historically referenced `var(--tv-red)` and `var(--tv-muted)`, which were
+     never defined — so they silently fell back to hardcoded LIGHT-theme hex and read
+     wrong on dark/glass. Aliasing them to real semantic tokens makes those ~30
+     references resolve to the correct per-theme color with no page edits.
+     `--tv-chip`/`--tv-scrim` are the adaptive replacements for the hardcoded
+     rgba(0,0,0,.04) chip backgrounds and text scrims; each theme overrides them. */
+  --tv-red:   var(--tv-negative);
+  --tv-muted: var(--tv-text-muted);
+  --tv-chip:  rgba(17, 29, 23, .05);
+  --tv-scrim: rgba(255, 255, 255, .60);
+
   /* Typography */
   --font-display: 'Fraunces', 'DM Serif Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
@@ -1696,38 +1708,77 @@ html[data-theme="dark"] .topbar-search input { background: #0E1512; color: var(-
 html[data-theme="dark"] .btn-secondary { background: #1E2A24; color: var(--tv-text-primary); }
 html[data-theme="dark"] .btn-secondary:hover { background: #25332B; }
 
-/* ---- GLASS ---- (light, frosted) */
+/* ============================================================================
+   GLASS · LIGHT — the light variant of the Glass theme (re-engineered).
+   The old glass was illegible (62% fill, no depth). The premium recipe = FOUR
+   cues: fill opacity ≥ 78%, a real hairline border, a bright inner top-edge, and
+   a soft lift — plus near-black ink so text holds AA contrast over any tint.
+   ============================================================================ */
 html[data-theme="glass"] {
-  --tv-bg:           #E7F0EA;
-  --tv-card:         rgba(255,255,255,.62);
-  --tv-white:        rgba(255,255,255,.62);
-  --tv-border:       rgba(26,77,59,.14);
-  --tv-border-light: rgba(26,77,59,.08);
-  --shadow-sm:  0 2px 10px rgba(26,77,59,.10);
-  --shadow-md:  0 6px 22px rgba(26,77,59,.14);
-  --shadow-lg:  0 14px 40px rgba(26,77,59,.18);
+  --tv-bg:           #E4EDE7;
+  --tv-card:         rgba(255,255,255,.80);   /* was .62 → now legible */
+  --tv-white:        rgba(255,255,255,.92);
+  --tv-border:       rgba(26,77,59,.18);
+  --tv-border-light: rgba(26,77,59,.10);
+  --tv-chip:         rgba(26,77,59,.06);
+  --tv-scrim:        rgba(255,255,255,.72);
+
+  /* Near-black ink for max contrast on frosted white */
+  --tv-text-primary:   #0E1A14;
+  --tv-text-secondary: #33463C;
+  --tv-text-muted:     #52655B;
+
+  --tv-sage-pale:    rgba(26,77,59,.07);
+  --tv-neutral-bg:   rgba(26,77,59,.06);
+
+  --shadow-sm:  0 2px 8px rgba(26,77,59,.10);
+  --shadow-md:  0 12px 30px rgba(26,77,59,.16);
+  --shadow-lg:  0 26px 56px rgba(26,77,59,.20);
+  --glass-edge: inset 0 1px 0 rgba(255,255,255,.85);
 }
 html[data-theme="glass"] body {
-  background: linear-gradient(135deg, #D7E8DF 0%, #EAF3EE 38%, #F3ECDD 72%, #E4EEF6 100%);
+  background:
+    radial-gradient(1200px 800px at 0% 0%, #D9E9E0 0%, transparent 55%),
+    radial-gradient(1000px 700px at 100% 8%, #F1E9D8 0%, transparent 55%),
+    radial-gradient(1000px 900px at 60% 120%, #DCE8F4 0%, transparent 55%),
+    linear-gradient(160deg, #E8F1EB 0%, #EEF2E7 50%, #E6EEF6 100%);
   background-attachment: fixed;
+  color: var(--tv-text-primary);
 }
 html[data-theme="glass"] .card,
 html[data-theme="glass"] .kpi-card,
 html[data-theme="glass"] .topbar,
-html[data-theme="glass"] .stat-tile {
+html[data-theme="glass"] .stat-tile,
+html[data-theme="glass"] .expense-kpi,
+html[data-theme="glass"] .expense-modal,
+html[data-theme="glass"] .expense-drawer-head,
+html[data-theme="glass"] .payee-row {
   background: var(--tv-card);
-  backdrop-filter: blur(16px) saturate(150%);
-  -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid rgba(255,255,255,.55);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border: 1px solid var(--tv-border);
+  box-shadow: var(--shadow-md), var(--glass-edge);
 }
+html[data-theme="glass"] .card:hover,
+html[data-theme="glass"] .kpi-card:hover { border-color: rgba(26,77,59,.28); }
 html[data-theme="glass"] .sidebar {
-  background: linear-gradient(180deg, rgba(26,77,59,.88), rgba(20,60,46,.92));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  background: linear-gradient(180deg, rgba(26,77,59,.90), rgba(20,60,46,.94));
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-right: 1px solid rgba(255,255,255,.14);
 }
+html[data-theme="glass"] .topbar { border-bottom: 1px solid var(--tv-border-light); }
 html[data-theme="glass"] .form-input,
 html[data-theme="glass"] .form-select,
-html[data-theme="glass"] .topbar-search input { background: rgba(255,255,255,.6); }
+html[data-theme="glass"] .topbar-search input {
+  background: rgba(255,255,255,.7); border-color: var(--tv-border); color: var(--tv-text-primary);
+}
+html[data-theme="glass"] .btn-secondary,
+html[data-theme="glass"] .btn-ghost { background: rgba(255,255,255,.55); color: var(--tv-text-primary); border: 1px solid var(--tv-border-light); }
+html[data-theme="glass"] .btn-secondary:hover,
+html[data-theme="glass"] .btn-ghost:hover { background: rgba(255,255,255,.8); }
+html[data-theme="glass"] .tv-table td { border-color: var(--tv-border-light); }
+html[data-theme="glass"] .tv-table tbody tr:hover { background: rgba(26,77,59,.04); }
+html[data-theme="glass"] .expense-drawer { border: 1px solid var(--tv-border); }
 
 /* ---- GLASS-DARK ---- (dark frosted glassmorphism — the product default)
    Deep multi-hue gradient canvas + translucent, blurred cards, white text and
@@ -1767,6 +1818,10 @@ html[data-theme="glass-dark"] {
   --tv-text-muted:     #8B9AAB;
   --tv-text-inverse:   #0A0F1A;
 
+  --tv-chip:  rgba(255,255,255,.07);
+  --tv-scrim: rgba(10,15,24,.50);
+  --glass-edge: inset 0 1px 0 rgba(255,255,255,.08);
+
   --shadow-sm:  0 2px 10px rgba(0,0,0,.35);
   --shadow-md:  0 8px 26px rgba(0,0,0,.45);
   --shadow-lg:  0 18px 50px rgba(0,0,0,.55);
@@ -1789,10 +1844,10 @@ html[data-theme="glass-dark"] .expense-modal,
 html[data-theme="glass-dark"] .expense-drawer-head,
 html[data-theme="glass-dark"] .payee-row {
   background: var(--tv-card);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid rgba(255,255,255,.10);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,.06);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  border: 1px solid var(--tv-border);
+  box-shadow: var(--shadow-md), var(--glass-edge);
 }
 html[data-theme="glass-dark"] .card:hover,
 html[data-theme="glass-dark"] .kpi-card:hover { border-color: rgba(255,255,255,.20); }
@@ -2156,7 +2211,7 @@ html[dir="rtl"] .btn i { margin-left: 6px; margin-right: 0; }
    The prior values read as "too dark"; these lift surfaces + text so content pops. */
 html[data-theme="glass-dark"] {
   --tv-bg:            #151D29;            /* was ~#0A0F1A — noticeably lighter */
-  --tv-card:          rgba(40,53,72,.60); /* lighter, still frosted */
+  --tv-card:          rgba(38,51,71,.72); /* frosted but opaque enough to read cleanly */
   --tv-border:        rgba(255,255,255,.14);
   --tv-border-light:  rgba(255,255,255,.08);
   --tv-text-primary:  #F6F9FC;
@@ -2224,6 +2279,15 @@ html[data-theme="light"][data-bg="cream"], html[data-theme="glass"][data-bg="cre
 }
 html[data-theme="light"][data-bg="mist"], html[data-theme="glass"][data-bg="mist"] {
   --tv-bg:#F4F7FA; --tv-canvas: linear-gradient(160deg,#FBFCFE 0%,#EEF2F6 100%);
+}
+/* Glass · Light — signature frosted multi-hue canvas on the default palette so the
+   frost has real color depth to refract (a flat gradient reads as plain white). */
+html[data-theme="glass"][data-bg="slate"] {
+  --tv-canvas:
+    radial-gradient(1200px 800px at 0% 0%, #D9E9E0 0%, transparent 55%),
+    radial-gradient(1000px 700px at 100% 8%, #F1E9D8 0%, transparent 55%),
+    radial-gradient(1000px 900px at 60% 120%, #DCE8F4 0%, transparent 55%),
+    linear-gradient(160deg, #E8F1EB 0%, #EEF2E7 50%, #E6EEF6 100%);
 }
 
 /* ---- MODERN BARS — flatter, rounder, softer shadows; adapts to both themes ---- */
