@@ -10,6 +10,35 @@
 
 ---
 
+## ★ CURRENT STATUS & GO-LIVE PLAN — updated 2026-07-24
+
+> Single source of truth for "what's done / what's pending / what's next", phase-wise.
+> New requirements will be added below this block once the pending backlog clears.
+
+### ✅ Shipped & merged to `main` (deploy-ready — head `0742727`)
+- **Design system:** Glass is the universal default theme with polished **Glass · Dark** + **Glass · Light** variants; token layer healed (adaptive `--tv-chip/--tv-scrim`, aliases); hardcoded literals swept; category/viz palette harmonized. 202 web tests green, build clean.
+- **Phase 4 features:** Year-in-Review ("Wrapped"), Bill Timing (due-date optimizer), Investment Insights, Credit Monitoring (behind `FLAGS.CREDIT_MONITORING`, off by default; demo/stub provider).
+- **Phase 5:** Goal Scenarios (retirement "Monte-Carlo-lite" bands).
+- **Design tooling:** in-app Visualization Studio at `/flowmap` + `/visualization` (single-source-of-truth, live-editable) + standalone `assets/terravest-design-studio.html`.
+- **Viz migration:** shared Donut/Ring/Gauge/StackedBar adopted across Home, Today, Budget, Health Score, Goals, Emergency Fund, Investments, Properties, Tax (My Business + Admin already token-based).
+
+### 🔜 Pending, in priority order
+
+| # | Phase | Item | Status | Blocker / needs |
+|---|---|---|---|---|
+| **A** | **Go-live of current work** | Deploy merged PRs to VM → **rebuild SPA (`deploy.sh`)** → **bust PWA service-worker cache** → smoke-test Glass default + new screens | 🟨 in progress (user deploying) | none — just the deploy runbook |
+| **B1** | Phase 4 close-out | **Net-worth benchmarking** ("vs people like you", opt-in, anonymized) | ⬜ | Real anonymized **peer dataset/backend** — do NOT fabricate peer numbers |
+| **B2** | Phase 4 integration | **Credit monitoring — LIVE bureau** (stub endpoint `/api/v1/aggregation/credit/me` exists behind `credit_monitoring_live`) | ⬜ | A real **bureau provider** integration (config-gated, mock fallback pattern) |
+| **B3** | Phase 5 | **Family / kids mode** (allowance, teen accounts, guardian view) | ⬜ | New **multi-account/guardian data model + service**; auth scoping |
+| **B4** | Phase 5 | **Priority AI** (faster/deeper assistant for Premium) | ⬜ | Backend **model routing + entitlement gate** |
+| **C1** | Cross-cutting | **Mobile parity** — re-theme iOS/Android frames to Glass; bottom-tab re-skin | ⬜ | Rendering job (config already cross-platform) |
+| **C2** | Guardrails | Per-theme **contrast check** + **lint rule** failing on raw color literals in `pages/` | ⬜ | Small CI/test addition (prevents design drift) |
+| **C3** | Design sync | Refresh the 3 legacy HTML mockups OR retire them in favor of the in-app Studio | ⬜ | Decision + edit (Studio already supersedes) |
+
+**Recommended next after go-live:** B2 (credit live bureau — smallest, the stub is already wired) → C2 (guardrail so the design can't regress) → then B1/B3/B4 as backend capacity allows. Each B-item ships behind a **config flag + mock fallback** so it never blocks the app.
+
+---
+
 ## 0. Ground truth — what we're building on
 
 The app already has the mechanism this expansion needs; we are **wiring features to
@@ -158,23 +187,23 @@ Doubles TAM and builds the defensible differentiator.
 
 ---
 
-## Phase 4 — Depth + monetization pull — ⬜
+## Phase 4 — Depth + monetization pull — 🟨 (4 of 5 shipped)
 
-- ⬜ **Credit score + monitoring** — bureau partner integration (config-gated provider toggle; mock fallback per existing pattern).
-- ⬜ **Bill due-date optimizer** — reorder due dates to smooth cash flow.
-- ⬜ **Investment insights** — allocation, fees you're paying, drift alerts (not advice).
-- ⬜ **Savings/net-worth benchmarking** — "vs. people like you," anonymized + opt-in. *(Guardrail: aggregate/anonymized insight only — never a data-broker model; see GTM notes.)*
-- ⬜ **Year-in-review** — shareable "wrapped"; seasonal viral loop.
+- 🟨 **Credit score + monitoring** — SHIPPED client + stub backend (`CreditScorePage`, `utils/creditMonitoring.js`, `/api/v1/aggregation/credit/me`), behind `FLAGS.CREDIT_MONITORING` (off by default) with a deterministic demo provider. Remaining: wire a **real bureau** provider on the `credit_monitoring_live` flag. *(Backlog B2.)*
+- ✅ **Bill due-date optimizer** — `utils/billOptimizer.js` + `BillOptimizerPage` at `/bill-timing`.
+- ✅ **Investment insights** — `utils/investmentInsights.js` + `InvestmentInsightsPage` (allocation/concentration/fees/drift).
+- ⬜ **Savings/net-worth benchmarking** — needs a real anonymized peer dataset; NOT faked. *(Backlog B1. Guardrail: aggregate/anonymized only — never a data-broker model.)*
+- ✅ **Year-in-review** — `utils/yearInReview.js` + `YearInReviewPage` ("Wrapped").
 
 **Exit criteria:** Plus→Premium upgrade rate hits target; at least one differentiator (benchmarks or year-in-review) drives organic acquisition.
 
 ---
 
-## Phase 5 — Premium power features — ⬜
+## Phase 5 — Premium power features — 🟨 (1 of 3 shipped)
 
-- ⬜ **Goal scenarios** — retire-at-60-vs-65 sliders, Monte-Carlo-lite.
-- ⬜ **Family / kids mode** — allowance, teen accounts, guardian view.
-- ⬜ **Priority AI** — faster/deeper assistant for Premium.
+- ✅ **Goal scenarios** — `utils/goalScenarios.js` + `GoalScenariosPage` at `/goal-scenarios` (retire-at-X sliders, Monte-Carlo-lite bands, 4% income). *(Shipped #232.)*
+- ⬜ **Family / kids mode** — allowance, teen accounts, guardian view. *(Backlog B3 — needs multi-account/guardian model + service.)*
+- ⬜ **Priority AI** — faster/deeper assistant for Premium. *(Backlog B4 — needs backend routing + entitlement gate.)*
 
 **Exit criteria:** Premium tier justifies its price; churn on Premium below target.
 
