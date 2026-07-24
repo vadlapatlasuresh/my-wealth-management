@@ -129,7 +129,7 @@ export default function SpendingInsightsPage({ transactions = [] }) {
             </div>
             {merchants.map((m, i) => (
               <div key={m.name} style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 0", borderBottom: i < merchants.length - 1 ? "1px solid var(--tv-border, rgba(0,0,0,.06))" : "none" }}>
-                <span style={{ display: "inline-flex", width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 8, background: "rgba(0,0,0,.04)", color: "var(--tv-muted, #7a8a83)", fontSize: 12, fontWeight: 700, flex: "0 0 auto" }}>
+                <span style={{ display: "inline-flex", width: 32, height: 32, alignItems: "center", justifyContent: "center", borderRadius: 8, background: "var(--tv-chip)", color: "var(--tv-text-secondary)", fontSize: 12, fontWeight: 700, flex: "0 0 auto" }}>
                   {i + 1}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
