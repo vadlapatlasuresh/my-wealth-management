@@ -4,6 +4,7 @@ import { api } from "../api";
 import AddressAutocomplete from "../components/AddressAutocomplete";
 import LastRefreshed from "../components/LastRefreshed";
 import Disclaimer from "../components/Disclaimer";
+import DonutChart from "../components/viz/DonutChart"; // studio-design migration
 import PropertyExpensesDrawer from "../components/PropertyExpensesDrawer";
 import PortfolioExpenseDrawer from "../components/PortfolioExpenseDrawer";
 
@@ -580,6 +581,35 @@ export default function RealEstatePage({ properties = [] }) {
           </div>
         </div>
       </div>
+
+      {/* Portfolio composition — equity vs mortgage donut (studio-design migration) */}
+      {totalValue > 0 && (
+        <div className="card" style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap", marginBottom: 16 }}>
+          <DonutChart
+            size={150}
+            thickness={22}
+            centerValue={`${Math.round((totalEquity / totalValue) * 100)}%`}
+            centerLabel="equity"
+            data={[
+              { label: "Equity", value: Math.max(0, totalEquity), color: "var(--tv-forest)" },
+              { label: "Mortgage", value: Math.max(0, totalMortgage), color: "var(--tv-gold)" },
+            ]}
+          />
+          <div style={{ flex: 1, minWidth: 180 }}>
+            <div className="section-title" style={{ marginBottom: 10 }}>Portfolio composition</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
+              <span style={{ width: 11, height: 11, borderRadius: 3, background: "var(--tv-forest)", flex: "0 0 auto" }} />
+              <span style={{ flex: 1, fontSize: 13 }}>Equity</span>
+              <span className="num" style={{ fontWeight: 600, fontSize: 13 }}>{currency(totalEquity)}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 0" }}>
+              <span style={{ width: 11, height: 11, borderRadius: 3, background: "var(--tv-gold)", flex: "0 0 auto" }} />
+              <span style={{ flex: 1, fontSize: 13 }}>Mortgage owed</span>
+              <span className="num" style={{ fontWeight: 600, fontSize: 13 }}>{currency(totalMortgage)}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid-2">
         {loading && props.length === 0 ? (
