@@ -5,6 +5,7 @@ import NetWorthChart from "../components/NetWorthChart";
 import { currency, currency0, greeting, formatDateTime } from "../utils/format"; // formatDate is now passed as a prop
 import { computeDownfall, computeContributors, deriveUpcomingBills } from "../utils/netWorth";
 import LastRefreshed from "../components/LastRefreshed";
+import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration
 import { api } from "../api";
 
 /* Dashboard greeting + live clock. Self-contained so its per-minute tick re-renders
@@ -436,13 +437,14 @@ export default function HomePage({
         <div className="card">
           <div className="section-title">Credit utilization</div>
           <div className="donut-wrap">
-            <svg width="120" height="120" viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
-              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--tv-border)" strokeWidth="14" />
-              <circle cx="60" cy="60" r="46" fill="none" stroke="var(--tv-forest)" strokeWidth="14"
-                strokeDasharray={`${Math.min(totalUtil * 290, 290)} 290`} strokeDashoffset="70" strokeLinecap="round" />
-              <text x="60" y="56" textAnchor="middle" fontSize="18" fontWeight="600" fill="var(--tv-text-primary)" fontFamily="var(--font-display)">{Math.round(totalUtil * 100)}%</text>
-              <text x="60" y="72" textAnchor="middle" fontSize="10" fill="var(--tv-text-muted)" fontFamily="var(--font-body)">Good</text>
-            </svg>
+            <ProgressRing
+              value={Math.min(totalUtil, 1)}
+              size={120}
+              thickness={14}
+              color={totalUtil > 0.5 ? "var(--tv-negative)" : totalUtil > 0.3 ? "var(--tv-gold)" : "var(--tv-forest)"}
+              centerText={`${Math.round(totalUtil * 100)}%`}
+              label={totalUtil > 0.5 ? "high" : totalUtil > 0.3 ? "fair" : "good"}
+            />
             <div className="donut-labels">
               <div style={{ fontSize: '22px', fontFamily: 'var(--font-display)', color: 'var(--tv-text-primary)', marginBottom: '4px' }}>{currency(creditCards.reduce((sum, c) => sum + (c.balance || 0), 0))}</div>
               <div style={{ fontSize: '12px', color: 'var(--tv-text-muted)', marginBottom: '12px' }}>of {currency(creditCards.reduce((sum, c) => sum + (c.creditLimit || c.balance || 0), 0))} limit used</div>
