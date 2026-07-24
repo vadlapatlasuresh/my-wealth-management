@@ -74,7 +74,7 @@ export default function CashFlowPage({ accounts = [], transactions = [], payment
         <>
           {/* Safe-to-spend headline */}
           <div className="card" style={{ padding: 18, marginBottom: 18, display: "flex", alignItems: "center", gap: 16 }}>
-            <span style={{ display: "inline-flex", width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 12, background: sts >= 0 ? "rgba(47,122,91,.12)" : "rgba(192,57,43,.12)", color: sts >= 0 ? "var(--tv-forest, #2f7a5b)" : "var(--tv-red, #c0392b)", flex: "0 0 auto" }}>
+            <span style={{ display: "inline-flex", width: 46, height: 46, alignItems: "center", justifyContent: "center", borderRadius: 12, background: sts >= 0 ? "var(--tv-positive-bg)" : "var(--tv-negative-bg)", color: sts >= 0 ? "var(--tv-forest, #2f7a5b)" : "var(--tv-red, #c0392b)", flex: "0 0 auto" }}>
               <i className="ti ti-wallet" style={{ fontSize: 22 }} />
             </span>
             <div style={{ flex: 1, minWidth: 0 }}>

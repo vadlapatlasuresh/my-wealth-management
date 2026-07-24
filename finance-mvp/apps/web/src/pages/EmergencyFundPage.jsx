@@ -108,7 +108,7 @@ export default function EmergencyFundPage({ accounts = [], transactions = [] }) 
                 </button>
               ))}
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, background: "rgba(201,151,58,.12)", border: "1px solid var(--tv-gold, #c9973a)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, padding: 14, borderRadius: 10, background: "var(--tv-gold-pale)", border: "1px solid var(--tv-gold, #c9973a)" }}>
               <i className="ti ti-target-arrow" style={{ fontSize: 22, color: "var(--tv-gold, #c9973a)" }} />
               <div>
                 <div style={{ fontSize: 15, fontWeight: 700 }}>Save {currency0(perMonth)}/month</div>

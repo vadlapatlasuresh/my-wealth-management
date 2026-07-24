@@ -91,7 +91,7 @@ export default function RecurringPage({ accounts = [] }) {
       <Header />
 
       {error && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "rgba(192,57,43,.10)", border: "1px solid var(--tv-red, #c0392b)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 14, borderRadius: 10, background: "var(--tv-negative-bg)", border: "1px solid var(--tv-red, #c0392b)" }}>
           <i className="ti ti-alert-circle" style={{ color: "var(--tv-red, #c0392b)" }} />
           <span style={{ fontSize: 13.5 }}>{error}</span>
         </div>
@@ -153,7 +153,7 @@ export default function RecurringPage({ accounts = [] }) {
             return (
               <div key={`${b.source}-${b.name}-${i}`}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 16px", borderBottom: i < items.length - 1 ? "1px solid var(--tv-border, rgba(0,0,0,.06))" : "none" }}>
-                <span style={{ display: "inline-flex", width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, background: fromAccount ? "rgba(47,122,91,.12)" : "rgba(201,151,58,.14)", color: fromAccount ? "var(--tv-forest, #2f7a5b)" : "var(--tv-gold, #c9973a)", flex: "0 0 auto" }}>
+                <span style={{ display: "inline-flex", width: 38, height: 38, alignItems: "center", justifyContent: "center", borderRadius: 10, background: fromAccount ? "var(--tv-positive-bg)" : "var(--tv-gold-pale)", color: fromAccount ? "var(--tv-forest, #2f7a5b)" : "var(--tv-gold, #c9973a)", flex: "0 0 auto" }}>
                   <i className={fromAccount ? "ti ti-credit-card" : "ti ti-repeat"} style={{ fontSize: 18 }} />
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
