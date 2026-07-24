@@ -3,6 +3,7 @@ import { currency } from '../utils/format';
 import { api } from '../api';
 import Sparkline from '../components/Sparkline';
 import LastRefreshed from '../components/LastRefreshed';
+import DonutChart from '../components/viz/DonutChart';
 import PlaidLinkButton from '../components/PlaidLinkButton';
 
 /* ------------------------------------------------------------------ *
@@ -400,29 +401,34 @@ export default function InvestPage({ snapshot, accounts = [], loadAll }) {
           </div>
 
           <div className="grid-2" style={{ marginBottom: 24 }}>
-            {/* Allocation */}
+            {/* Allocation — donut + legend (studio-design migration) */}
             <div className="card">
               <div className="card-title">Allocation</div>
-              {allocation.length === 0 && (
+              {allocation.length === 0 ? (
                 <div className="empty-state" style={{ padding: '18px 0' }}>
                   <i className="ti ti-chart-pie"></i>
                   <p>No allocation yet. Link a broker or add holdings to see your mix.</p>
                 </div>
-              )}
-              {allocation.map((a) => (
-                <div key={a.label} style={{ marginBottom: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                      <span className="dot-indicator" style={{ background: a.color }}></span>
-                      {a.label}
-                    </span>
-                    <span className="num" style={{ fontWeight: 600, fontSize: 13 }}>{a.pct}%</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${a.pct}%`, background: a.color }}></div>
+              ) : (
+                <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <DonutChart
+                    size={168}
+                    thickness={22}
+                    centerValue={`${allocation.length}`}
+                    centerLabel={allocation.length === 1 ? 'class' : 'classes'}
+                    data={allocation.map((a) => ({ label: a.label, value: a.value, color: a.color }))}
+                  />
+                  <div style={{ flex: 1, minWidth: 150 }}>
+                    {allocation.map((a) => (
+                      <div key={a.label} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: '1px solid var(--tv-border-light)' }}>
+                        <span className="dot-indicator" style={{ background: a.color, flex: '0 0 auto' }}></span>
+                        <span style={{ flex: 1, minWidth: 0, fontSize: 13 }}>{a.label}</span>
+                        <span className="num" style={{ fontWeight: 600, fontSize: 13 }}>{a.pct}%</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
 
             {/* Quick stats */}

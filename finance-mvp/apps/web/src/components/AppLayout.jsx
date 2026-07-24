@@ -46,6 +46,7 @@ const DealRoomPage    = MODULE_REGISTRY.dealroom.component;
 const StyleGuidePage  = MODULE_REGISTRY.styleguide.component;
 const UIFlowMapPage   = MODULE_REGISTRY.flowmap.component; // now the Visualization Studio
 const VisualizationStudioPage = MODULE_REGISTRY.visualization.component;
+const GoalScenariosPage = MODULE_REGISTRY.goalscenarios.component;
 const GuidePage       = MODULE_REGISTRY.guide.component;
 const MyBusinessPage  = MODULE_REGISTRY.mybusiness.component;
 const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
@@ -83,6 +84,7 @@ const navLabels = {
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
   '/investment-insights': 'Invest Insights',
+  '/goal-scenarios': 'Scenarios',
   '/credit': 'Credit Score',
   '/mybusiness': 'My Business',
   '/documents': 'Documents',
@@ -559,6 +561,7 @@ export default function AppLayout(props) {
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} loadAll={loadAll} />} />
               <Route path="/investment-insights" element={<InvestmentInsightsPage snapshot={snapshot} />} />
+              <Route path="/goal-scenarios" element={<GoalScenariosPage />} />
               <Route path="/credit" element={<CreditScorePage user={user} />} />
               <Route path="/mybusiness" element={
                 <FeatureGate feature="business.multiEntity" title="Multi-business dashboards">
