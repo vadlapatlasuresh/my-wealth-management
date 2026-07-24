@@ -6,7 +6,7 @@ import "./styles/terravest-theme.css"; // Import the new theme
 import "./i18n"; // Initialize i18n (auto-detects language) before first render
 import { registerSW } from "virtual:pwa-register";
 import { showReloadBanner } from "./swUpdateBanner";
-import { applyTheme, getTheme } from "./theme";
+import { applyTheme, getTheme, applyBg, getBg } from "./theme";
 import { loadRemoteConfig } from "./config/remoteConfig";
 
 // Service worker: register it for the WEB/PWA only. Inside the native Capacitor
@@ -51,8 +51,9 @@ if (isNative) {
   });
 }
 
-// Apply the saved theme (light/dark/glass) before first paint.
+// Apply the saved theme (mode + background canvas) before first paint so there's no flash.
 applyTheme(getTheme());
+applyBg(getBg());
 
 // Warm the remote config cache early (non-blocking). loadRemoteConfig never
 // throws; on failure it leaves the cache/DEFAULT in place so the app keeps

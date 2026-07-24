@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api, setAuthToken, getStoredEmail, getStoredName } from '../api';
-import { getTheme, applyTheme } from '../theme';
+import { getTheme, applyTheme, getBg, applyBg, BACKGROUNDS, isLight } from '../theme';
 import { getSessionTimeoutMinutes, setSessionTimeoutMinutes } from '../hooks/useIdleLogout';
 import { enablePushOnThisDevice, disablePushOnThisDevice } from '../pushClient';
 import LegalDoc from '../components/LegalDoc';
@@ -65,9 +65,12 @@ export default function SettingsPage() {
   // Local-only appearance/regional preferences, persisted in localStorage so
   // selections survive a reload (lazy-initialised to avoid a flash of defaults).
   const [compactMode, setCompactMode] = useState(() => lsGet('tv-compact', false));
-  // Dark mode is backed by the shared theme module (same `tv_theme` key the topbar
-  // switcher uses), so the two stay in sync. We track a local mirror for the toggle.
-  const [darkMode, setDarkMode] = useState(() => getTheme() === 'dark');
+  // Theme is two axes, both backed by the shared theme module (same keys the global floating
+  // Theme control + topbar switcher use) so all three stay in sync:
+  //   • darkMode  → the light/dark MODE (dark = the lightened glass-dark default)
+  //   • bg        → the BACKGROUND canvas colour (6 palettes)
+  const [darkMode, setDarkMode] = useState(() => !isLight());
+  const [bg, setBg] = useState(() => getBg());
   const [currency, setCurrency] = useState(() => lsGet('tv-currency', 'USD'));
   const [language, setLanguage] = useState(() => lsGet('tv-language', 'en'));
   const [timezone, setTimezone] = useState(() => lsGet('tv-timezone', 'America/New_York'));
@@ -81,11 +84,13 @@ export default function SettingsPage() {
     document.body.classList.toggle('tv-compact', compactMode);
     return () => document.body.classList.remove('tv-compact');
   }, [compactMode]);
-  // Apply the theme app-wide whenever the toggle changes (persisted by applyTheme).
-  // Preserves a non-dark custom theme (e.g. "glass") by only switching the dark axis.
+  // Apply the theme app-wide whenever the mode toggle changes (persisted by applyTheme).
+  // Dark maps to the lightened glass-dark default; Light maps to the light theme.
   useEffect(() => {
-    applyTheme(darkMode ? 'dark' : (getTheme() === 'dark' ? 'light' : getTheme()));
+    applyTheme(darkMode ? 'glass-dark' : 'light');
   }, [darkMode]);
+  // Apply the background canvas whenever the palette changes (persisted by applyBg).
+  useEffect(() => { applyBg(bg); }, [bg]);
 
   // Data & privacy UI state.
   const [legalDoc, setLegalDoc] = useState(null); // "terms-of-service" | "privacy-policy"
@@ -351,18 +356,43 @@ export default function SettingsPage() {
             ></div>
           </div>
 
-          <div className="setting-row">
+          {/* Theme mode — mirrors the global floating Theme control (same theme.js axis). */}
+          <div className="setting-row" style={{ alignItems: 'flex-start' }}>
             <div>
-              <div className="setting-label">Dark mode</div>
-              <div className="setting-help">Use a darker color theme across the app</div>
+              <div className="setting-label">Theme</div>
+              <div className="setting-help">Dark uses the balanced glass-dark default</div>
             </div>
-            <div
-              className={`toggle ${darkMode ? 'on' : ''}`}
-              role="switch"
-              aria-checked={darkMode}
-              aria-label="Dark mode"
-              onClick={() => setDarkMode((v) => !v)}
-            ></div>
+            <div className="theme-mode" style={{ width: 168 }}>
+              <button className={darkMode ? 'on' : ''} onClick={() => setDarkMode(true)} aria-pressed={darkMode}>
+                <i className="ti ti-moon" /> Dark
+              </button>
+              <button className={darkMode ? '' : 'on'} onClick={() => setDarkMode(false)} aria-pressed={!darkMode}>
+                <i className="ti ti-sun" /> Light
+              </button>
+            </div>
+          </div>
+
+          {/* Background palette — same 6 swatches as the floating control. */}
+          <div className="setting-row" style={{ alignItems: 'flex-start' }}>
+            <div>
+              <div className="setting-label">Background</div>
+              <div className="setting-help">Canvas colour, applied app-wide</div>
+            </div>
+            <div style={{ width: 168 }}>
+              <div className="theme-swatches">
+                {BACKGROUNDS.map((b) => (
+                  <button
+                    key={b.id}
+                    className={`theme-swatch ${bg === b.id ? 'on' : ''}`}
+                    style={{ background: darkMode ? b.swatch : b.light }}
+                    onClick={() => setBg(b.id)}
+                    aria-label={b.label}
+                    aria-pressed={bg === b.id}
+                    title={b.label}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
 
           <div className="divider" />

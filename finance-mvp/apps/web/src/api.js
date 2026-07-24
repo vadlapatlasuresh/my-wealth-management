@@ -358,6 +358,9 @@ export const api = {
   // Re-pull holdings + investment activity from the brokers; returns refreshed holdings.
   refreshHoldings: () => request("/api/v1/aggregation/holdings/refresh", { method: "POST" }),
   getInvestmentTransactions: () => request("/api/v1/aggregation/investment-transactions"),
+  // Credit monitoring (Phase 4) — only called when FLAGS.CREDIT_MONITORING_LIVE is on; the
+  // client falls back to a deterministic demo profile otherwise (utils/creditMonitoring.js).
+  getCreditProfile: () => request("/api/v1/aggregation/credit/me"),
   getTransactions: () => request("/api/v1/aggregation/transactions"), // Updated to use new service
   // Pull-based transaction sync (linked accounts also auto-sync on a schedule + via webhook).
   syncTransactions: () =>

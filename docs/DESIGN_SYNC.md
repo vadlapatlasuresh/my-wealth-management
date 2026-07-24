@@ -1,5 +1,21 @@
 # Keeping the design mockups in sync with the app
 
+> **2026-07 modernization — `assets/terravest-design-studio.html`.** The drift problem
+> below is now solved structurally by the **Design Sync Studio**: one standalone,
+> self-contained HTML tool where a single `SCREENS` model (one source of truth) drives
+> synced **Web / iOS / Android** previews at once, with a live in-place code editor
+> (edit a screen's spec → all three panels update in real time) and a grouped, labelled
+> section navigator + breadcrumb for instant identifiability. Because all three platforms
+> render from the *same* data, they can no longer disagree. It carries the glass-dark
+> redesign and includes the Phase-4 screens (Year in Review, Bill Timing, Invest Insights,
+> Credit Score). Open it directly in any browser — no build, no external deps.
+>
+> The three legacy static mockups (below) are **kept as-is** (nothing removed). Prefer the
+> Studio for new work; add a screen there by adding one entry to `SCREENS`. Verified via
+> HTML-parse + div-balance + a Node VM smoke test of the store/renderers (9 assertions).
+
+
+
 **Why this doc exists:** the design files are hand-authored static HTML mockups,
 *separate* from the React app, so they drift whenever we ship a feature unless we
 update them deliberately. This caused the gap you saw (e.g. Debt Lab had far more

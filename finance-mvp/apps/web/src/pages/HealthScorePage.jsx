@@ -1,11 +1,13 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { computeHealthScore } from "../utils/healthScore";
+import ScoreGauge from "../components/viz/ScoreGauge";
 
 /* HealthScorePage — a single 0-100 financial health score with an action-first breakdown
    (Phase 2). Computed client-side from linked accounts + recent transactions + the net-worth
    snapshot (see utils/healthScore.js). feature_key: individual.healthScore. Action-oriented by
-   design: every factor tells the user what to do next, not just a number. */
+   design: every factor tells the user what to do next, not just a number.
+   Uses the shared banded ScoreGauge (studio-design migration) for a consistent gauge app-wide. */
 
 // Score → accent color (traffic-light, but on-brand).
 function scoreColor(score) {
@@ -15,29 +17,13 @@ function scoreColor(score) {
   return "var(--tv-red, #c0392b)";
 }
 
-// A semicircular gauge from 0..100.
-function Gauge({ score }) {
-  const R = 90, CX = 110, CY = 110, STROKE = 16;
-  const circ = Math.PI * R; // half circumference
-  const pct = Math.max(0, Math.min(100, score)) / 100;
-  const color = scoreColor(score);
-  const describe = (fraction) => {
-    const angle = Math.PI * (1 - fraction); // 180deg -> 0deg
-    return { x: CX + R * Math.cos(angle), y: CY - R * Math.sin(angle) };
-  };
-  const start = describe(0), end = describe(pct);
-  const largeArc = pct > 0.5 ? 1 : 0;
-  const track = `M ${describe(0).x} ${describe(0).y} A ${R} ${R} 0 1 1 ${describe(1).x} ${describe(1).y}`;
-  const value = `M ${start.x} ${start.y} A ${R} ${R} 0 ${largeArc} 1 ${end.x} ${end.y}`;
-  return (
-    <svg viewBox="0 0 220 130" width="100%" style={{ maxWidth: 320 }} role="img" aria-label={`Health score ${score} out of 100`}>
-      <path d={track} fill="none" stroke="var(--tv-border, rgba(0,0,0,.10))" strokeWidth={STROKE} strokeLinecap="round" />
-      {pct > 0 && <path d={value} fill="none" stroke={color} strokeWidth={STROKE} strokeLinecap="round" />}
-      <text x={CX} y={CY - 8} textAnchor="middle" style={{ fontSize: 44, fontWeight: 800, fill: color }}>{score}</text>
-      <text x={CX} y={CY + 16} textAnchor="middle" style={{ fontSize: 13, fill: "var(--tv-muted, #7a8a83)" }}>out of 100</text>
-    </svg>
-  );
-}
+// 0–100 bands for the shared ScoreGauge (parallels the credit gauge's FICO bands).
+const HEALTH_BANDS = [
+  { min: 0, max: 39, color: "#F0776B", label: "Needs work" },
+  { min: 40, max: 59, color: "#E6B455", label: "Fair" },
+  { min: 60, max: 79, color: "#5BB98C", label: "Good" },
+  { min: 80, max: 100, color: "#3DDC97", label: "Excellent" },
+];
 
 function FactorRow({ f, last }) {
   const color = scoreColor(f.score);
@@ -90,10 +76,16 @@ export default function HealthScorePage({ accounts = [], transactions = [], snap
       ) : (
         <>
           <div className="card" style={{ padding: 20, display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 18 }}>
-            <Gauge score={result.score} />
-            <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(result.score), marginTop: 4 }}>{result.band}</div>
+            <ScoreGauge
+              score={result.score}
+              min={0}
+              max={100}
+              bands={HEALTH_BANDS}
+              band={{ label: result.band, color: scoreColor(result.score) }}
+              size={300}
+            />
             <div className="page-subtitle" style={{ textAlign: "center", marginTop: 4 }}>
-              Based on {result.factors.length} factor{result.factors.length === 1 ? "" : "s"} from your linked accounts.
+              Based on {result.factors.length} factor{result.factors.length === 1 ? "" : "s"} from your linked accounts · out of 100.
             </div>
           </div>
 

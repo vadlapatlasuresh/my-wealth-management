@@ -187,6 +187,29 @@ A single 0–100 score with an action-first breakdown. Computed client-side (`ut
 
 ---
 
+## Year in Review (YearInReviewPage)  ·  *NEW, Phase 4*  ·  feature_key `individual.yearInReview`
+
+"Wrapped for your money." Client-computed (`utils/yearInReview.js`), design per IMG_1678.
+**Header**: "Your year in money" + year selector. **Hero**: you-spent / you-earned big numbers + green net.
+**Tabs**: Spending / Income / Cash Flow. **Sections**: stacked-bar spend-by-month (canonical category colors) + top-categories legend; "Where it went" donut; top merchants; fun-facts row (avg/mo, biggest month, biggest purchase, top category). **States**: honest empty ("No recap yet for {year}").
+
+## Bill Timing (BillOptimizerPage)  ·  *NEW, Phase 4*  ·  feature_key `individual.billOptimizer`
+
+Bill due-date optimizer. Reuses the recurring-bill sources (`utils/billOptimizer.js`).
+**Verdict** card (balanced vs "{n}% lopsided"); **before/after** outflow split (1st–15th vs 16th–end); **suggested moves** (shift smallest bills off the heavy half — suggests only, never moves money). **States**: "Not enough bills to optimize yet."
+
+## Investment Insights (InvestmentInsightsPage)  ·  *NEW, Phase 4*  ·  feature_key `individual.investInsights`
+
+Allocation, concentration, fees, drift from REAL holdings (`utils/investmentInsights.js`).
+**KPIs**: Total invested, Positions (+ effective holdings), Est. fees/yr, Top position. **Mix vs target** donut + drift bars with target ticks. **"What to look at"** ranked alerts (concentration/diversification/fees/cash-drag/drift). **Top positions** weight bars. **Fees** estimated only for recognized funds (public expense ratios) with an honest coverage %. **States**: "No holdings to analyze yet."
+
+## Credit Score (CreditScorePage)  ·  *NEW, Phase 4*  ·  feature_key `individual.creditMonitoring`  ·  behind `FLAGS.CREDIT_MONITORING`
+
+Credit monitoring (`utils/creditMonitoring.js`). Off by default; nav appears only when the
+flag is on; route `/credit` always works for preview. Live bureau via `api.getCreditProfile()`
+when `credit_monitoring_live` is on, else a deterministic per-user **demo** profile (clearly labeled).
+**Hero**: banded 300–850 **ScoreGauge** + delta + band legend; **utilization ring**. **Score history** 12-month area chart. **Impact-first factor breakdown** (payment history/utilization/age/mix/inquiries with weight, status, impact, bar). **Recent changes** timeline. Demo banner + "not a credit decision" disclaimer.
+
 ## Home / Dashboard (HomePage)
 
 **Header**: live greeting "{Good morning/…}, {name}" with date · time clock (ticks each minute); actions: Last-refreshed indicator, **Export** (downloads transactions CSV), **Add Account** (→ /accounts).

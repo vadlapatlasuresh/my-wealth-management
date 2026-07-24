@@ -14,6 +14,7 @@ import { getTheme, applyTheme, nextTheme, THEME_META } from "../theme";
 import { useRemoteConfig, resolveNav } from "../config/remoteConfig";
 import { MODULE_REGISTRY } from "../config/moduleRegistry";
 import { SubscriptionProvider, FeatureGate, TrialBanner, TrialOnboardingModal } from "../config/subscription";
+import ThemeControl from "./ThemeControl";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { setupAutoTranslate } from "../i18n/domTranslator";
 
@@ -24,6 +25,10 @@ const HealthScorePage = MODULE_REGISTRY.healthscore.component;
 const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
 const AlertsPage      = MODULE_REGISTRY.alerts.component;
 const SpendingPage    = MODULE_REGISTRY.spending.component;
+const YearInReviewPage = MODULE_REGISTRY.yearinreview.component;
+const BillOptimizerPage = MODULE_REGISTRY.billoptimizer.component;
+const InvestmentInsightsPage = MODULE_REGISTRY.investinsights.component;
+const CreditScorePage = MODULE_REGISTRY.creditscore.component;
 const EmergencyFundPage = MODULE_REGISTRY.emergencyfund.component;
 const CoachPage       = MODULE_REGISTRY.coach.component;
 const HouseholdPage   = MODULE_REGISTRY.household.component;
@@ -39,7 +44,8 @@ const ProfilePage     = MODULE_REGISTRY.profile.component;
 const RealEstatePage  = MODULE_REGISTRY.realestate.component;
 const DealRoomPage    = MODULE_REGISTRY.dealroom.component;
 const StyleGuidePage  = MODULE_REGISTRY.styleguide.component;
-const UIFlowMapPage   = MODULE_REGISTRY.flowmap.component;
+const UIFlowMapPage   = MODULE_REGISTRY.flowmap.component; // now the Visualization Studio
+const VisualizationStudioPage = MODULE_REGISTRY.visualization.component;
 const GuidePage       = MODULE_REGISTRY.guide.component;
 const MyBusinessPage  = MODULE_REGISTRY.mybusiness.component;
 const AIAssistantPage = MODULE_REGISTRY['ai-assistant'].component;
@@ -68,12 +74,16 @@ const navLabels = {
   '/health-score': 'Health Score',
   '/cash-flow': 'Cash Flow',
   '/spending': 'Spending',
+  '/year-in-review': 'Year in Review',
+  '/bill-timing': 'Bill Timing',
   '/emergency-fund': 'Emergency Fund',
   '/coach': 'Coach',
   '/household': 'Household',
   '/shared-money': 'Goals & Bills',
   '/debt': 'Debt Lab',
   '/invest': 'Investments',
+  '/investment-insights': 'Invest Insights',
+  '/credit': 'Credit Score',
   '/mybusiness': 'My Business',
   '/documents': 'Documents',
   '/ai-assistant': 'AI Assistant',
@@ -91,6 +101,7 @@ const navLabels = {
   '/styleguide': 'Style Guide',
   '/flowmap': 'UI Flow Map',
   '/guide': 'How to use',
+  '/visualization': 'Visualization',
   '/profile': 'Profile',
   '/admin': 'Admin · Analytics',
 };
@@ -105,7 +116,7 @@ const PATH_TO_NAVID = {
   '/realestate': 'realestate', '/dealroom': 'dealroom', '/fractional': 'fractional',
   '/documents': 'documents', '/subscription': 'subscription',
   '/security': 'security', '/messages': 'messages', '/settings': 'settings',
-  '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/guide': 'guide',
+  '/styleguide': 'styleguide', '/flowmap': 'flowmap', '/visualization': 'visualization', '/guide': 'guide',
   '/profile': 'profile', '/learn': 'learn',
 };
 
@@ -416,6 +427,8 @@ export default function AppLayout(props) {
   const memberShell = (
     <SubscriptionProvider>
       <TrialOnboardingModal />
+      {/* Globally-accessible theme + background switcher (floating, every screen). */}
+      <ThemeControl />
       <div className={`app-shell ${collapsed ? 'sidebar-collapsed' : ''} ${mobileNavOpen ? 'mobile-nav-open' : ''}`}>
         <div className="mobile-nav-backdrop" onClick={closeMobileNav} aria-hidden="true"></div>
         <Sidebar user={user} handleLogout={handleLogout} paymentIntents={paymentIntents} navSections={navSections} onNavigate={closeMobileNav} />
@@ -472,6 +485,8 @@ export default function AppLayout(props) {
               <Route path="/health-score" element={<HealthScorePage accounts={accounts} transactions={transactions} snapshot={snapshot} />} />
               <Route path="/cash-flow" element={<CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
+              <Route path="/year-in-review" element={<YearInReviewPage transactions={transactions} />} />
+              <Route path="/bill-timing" element={<BillOptimizerPage accounts={accounts} />} />
               <Route path="/emergency-fund" element={<EmergencyFundPage accounts={accounts} transactions={transactions} />} />
               <Route path="/coach" element={<CoachPage accounts={accounts} transactions={transactions} snapshot={snapshot} insights={insights} />} />
               <Route path="/household" element={<HouseholdPage accounts={accounts} />} />
@@ -543,6 +558,8 @@ export default function AppLayout(props) {
                 />
               } />
               <Route path="/invest" element={<InvestPage snapshot={snapshot} accounts={accounts} loadAll={loadAll} />} />
+              <Route path="/investment-insights" element={<InvestmentInsightsPage snapshot={snapshot} />} />
+              <Route path="/credit" element={<CreditScorePage user={user} />} />
               <Route path="/mybusiness" element={
                 <FeatureGate feature="business.multiEntity" title="Multi-business dashboards">
                   <MyBusinessPage user={user} formatDate={formatDate} accounts={accounts} transactions={transactions} loadAll={loadAll} />
@@ -578,6 +595,7 @@ export default function AppLayout(props) {
               <Route path="/guide" element={<GuidePage />} />
               <Route path="/styleguide" element={<StyleGuidePage />} />
               <Route path="/flowmap" element={<UIFlowMapPage />} />
+              <Route path="/visualization" element={<VisualizationStudioPage />} />
             </Routes>
             </React.Suspense>
           </div>
