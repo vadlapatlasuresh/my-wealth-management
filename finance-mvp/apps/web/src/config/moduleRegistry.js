@@ -23,6 +23,7 @@ const BillOptimizerPage = React.lazy(() => import('../pages/BillOptimizerPage'))
 const InvestmentInsightsPage = React.lazy(() => import('../pages/InvestmentInsightsPage'));
 const CreditScorePage = React.lazy(() => import('../pages/CreditScorePage'));
 const VisualizationStudioPage = React.lazy(() => import('../pages/VisualizationStudioPage'));
+const GoalScenariosPage = React.lazy(() => import('../pages/GoalScenariosPage'));
 const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
 const CoachPage       = React.lazy(() => import('../pages/CoachPage'));
 const HouseholdPage   = React.lazy(() => import('../pages/HouseholdPage'));
@@ -176,6 +177,12 @@ export const MODULE_REGISTRY = {
     id: 'investinsights', title: 'Invest Insights', icon: 'ti ti-chart-pie',
     route: '/investment-insights', section: SECTION_GROW, defaultOrder: 9,
     component: InvestmentInsightsPage, inNavByDefault: true,
+  },
+  // Goal scenarios — retirement projection w/ return bands (Phase 5). feature_key: individual.goalScenarios.
+  goalscenarios: {
+    id: 'goalscenarios', title: 'Scenarios', icon: 'ti ti-chart-histogram',
+    route: '/goal-scenarios', section: SECTION_GROW, defaultOrder: 11,
+    component: GoalScenariosPage, inNavByDefault: true,
   },
   // Credit monitoring (Phase 4) — behind FLAGS.CREDIT_MONITORING (off by default; added to the
   // default Grow nav only when the flag is enabled). Route is always registered so a direct
@@ -346,7 +353,7 @@ export const MODULE_REGISTRY = {
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
   [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending', 'yearinreview', 'billoptimizer'],
-  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'investinsights', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach',
+  [SECTION_GROW]:       ['goals', 'goalscenarios', 'debt', 'invest', 'investinsights', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach',
                           ...(isFlagEnabled(FLAGS.CREDIT_MONITORING) ? ['creditscore'] : [])],
   [SECTION_SHARED]:     ['household', 'sharedmoney'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],

@@ -108,6 +108,13 @@ export const SCREENS = {
       { label: "Emergency fund", weight: 25, status: "Fair", pct: 58, tone: "warn" },
       { label: "Debt load", weight: 25, status: "Excellent", pct: 88, tone: "good" }] },
   ] },
+  goalscenarios: { section: "grow", name: "Goal Scenarios", isNew: true, blocks: [
+    { type: "header", title: "Goal scenarios", subtitle: "Retire-at-X · Monte-Carlo-lite" },
+    { type: "kpis", items: [{ l: "Projected at 65", v: "$1.24M" }, { l: "Monthly income", v: "$4,120", d: "4% rule", up: true }, { l: "You contribute", v: "$339k" }] },
+    { type: "bars", title: "Projected balance to age 65", series: [
+      { label: "35", value: 12, color: C.income }, { label: "42", value: 26, color: C.income }, { label: "49", value: 44, color: C.income },
+      { label: "56", value: 68, color: C.income }, { label: "63", value: 92, color: C.income }, { label: "65", value: 100, color: C.income }] },
+  ] },
   sharedmoney: { section: "shared", name: "Goals & Bills", blocks: [
     { type: "header", title: "Shared goals & bills", subtitle: "What you save for together" },
     { type: "list", title: "Shared goals", rows: [
