@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { currency0 } from "../utils/format";
 import { computeEmergencyFund, monthlyContributionFor, coverageLabel } from "../utils/emergencyFund";
+import ProgressRing from "../components/viz/ProgressRing";
 
 /* EmergencyFundPage — the emergency-fund coach (Phase 2). Target is N months of your REAL
    expenses (not a guessed number), with the monthly saving needed to close the gap.
@@ -45,30 +46,41 @@ export default function EmergencyFundPage({ accounts = [], transactions = [] }) 
     <div className="page active">
       <Header />
 
-      {/* Progress */}
-      <div className="card" style={{ padding: 20, marginBottom: 18 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
-          <div>
-            <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>Saved so far</div>
-            <div style={{ fontSize: 30, fontWeight: 800 }}>{currency0(fund.liquidCash)}</div>
+      {/* Progress — circular ring (IMG_1683) + the numbers */}
+      <div className="card" style={{ padding: 20, marginBottom: 18, display: "flex", alignItems: "center", gap: 22, flexWrap: "wrap" }}>
+        <ProgressRing
+          value={fund.pct}
+          size={128}
+          thickness={13}
+          color={accent}
+          icon={done ? undefined : "ti ti-umbrella"}
+          centerText={done ? "100%" : `${Math.round(fund.pct * 100)}%`}
+          label="funded"
+        />
+        <div style={{ flex: 1, minWidth: 220 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8 }}>
+            <div>
+              <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>Saved so far</div>
+              <div style={{ fontSize: 30, fontWeight: 800 }}>{currency0(fund.liquidCash)}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>Target · {targetMonths} months</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{currency0(fund.targetAmount)}</div>
+            </div>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>Target · {targetMonths} months</div>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{currency0(fund.targetAmount)}</div>
+
+          <div style={{ height: 12, borderRadius: 8, background: "var(--tv-border, rgba(0,0,0,.08))", overflow: "hidden", margin: "14px 0 8px" }}>
+            <div style={{ width: `${fund.pct * 100}%`, height: "100%", background: accent, transition: "width .3s" }} />
           </div>
-        </div>
 
-        <div style={{ height: 12, borderRadius: 8, background: "var(--tv-border, rgba(0,0,0,.08))", overflow: "hidden", margin: "14px 0 8px" }}>
-          <div style={{ width: `${fund.pct * 100}%`, height: "100%", background: accent, transition: "width .3s" }} />
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, color: accent }}>
-            {fund.monthsCovered.toFixed(1)} months covered · {coverageLabel(fund.monthsCovered)}
-          </span>
-          <span className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>
-            {done ? "Target reached 🎉" : `${currency0(fund.gap)} to go`}
-          </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 13.5, fontWeight: 600, color: accent }}>
+              {fund.monthsCovered.toFixed(1)} months covered · {coverageLabel(fund.monthsCovered)}
+            </span>
+            <span className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>
+              {done ? "Target reached 🎉" : `${currency0(fund.gap)} to go`}
+            </span>
+          </div>
         </div>
       </div>
 

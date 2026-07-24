@@ -2,21 +2,19 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { currency, currency0 } from "../utils/format";
 import { totalSpend, spendByCategory, topMerchants, monthOverMonth } from "../utils/spending";
+import { categoryColor } from "../utils/categoryPalette";
+import DonutChart from "../components/viz/DonutChart";
 
 /* SpendingInsightsPage — where the money actually goes (Phase 2).
    Category breakdown, biggest movers vs last month, and top merchants — all computed
-   client-side from transactions (utils/spending.js). feature_key: individual.spendInsights. */
+   client-side from transactions (utils/spending.js). feature_key: individual.spendInsights.
+   Category colors come from the app-wide canonical palette (categoryPalette.js) so the
+   same category is the same color here, on the donut, and everywhere else. */
 
 const RANGES = [
   { days: 30, label: "30 days" },
   { days: 90, label: "90 days" },
   { days: 365, label: "12 months" },
-];
-
-// A stable, on-brand color per category slice.
-const PALETTE = [
-  "var(--tv-forest, #2f7a5b)", "var(--tv-gold, #c9973a)", "#7a5bd6",
-  "#1E5FAD", "#c0392b", "#3f8f6f", "#b4713a", "#5b8fd6",
 ];
 
 export default function SpendingInsightsPage({ transactions = [] }) {
@@ -95,25 +93,31 @@ export default function SpendingInsightsPage({ transactions = [] }) {
             </div>
           )}
 
-          {/* Category breakdown */}
+          {/* Category breakdown — donut + list (icici.png layout) */}
           <div className="card" style={{ padding: 18, marginBottom: 18 }}>
             <div className="page-title" style={{ fontSize: 16, marginBottom: 12 }}>By category</div>
-            {/* Single stacked bar for proportion at a glance */}
-            <div style={{ display: "flex", height: 12, borderRadius: 6, overflow: "hidden", marginBottom: 14 }}>
-              {byCategory.map((c, i) => (
-                <div key={c.category} title={`${c.category} ${Math.round(c.share * 100)}%`}
-                     style={{ width: `${c.share * 100}%`, background: PALETTE[i % PALETTE.length] }} />
-              ))}
-            </div>
-            <div style={{ display: "flex", flexDirection: "column" }}>
-              {byCategory.slice(0, 8).map((c, i) => (
-                <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: i < Math.min(byCategory.length, 8) - 1 ? "1px solid var(--tv-border, rgba(0,0,0,.06))" : "none" }}>
-                  <span style={{ width: 10, height: 10, borderRadius: 3, background: PALETTE[i % PALETTE.length], flex: "0 0 auto" }} />
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.category}</span>
-                  <span className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>{Math.round(c.share * 100)}%</span>
-                  <span style={{ fontWeight: 700, fontSize: 14, minWidth: 78, textAlign: "right" }}>{currency0(c.total)}</span>
-                </div>
-              ))}
+            <div style={{ display: "flex", gap: 20, alignItems: "center", flexWrap: "wrap" }}>
+              {/* Donut with the total in the middle */}
+              <div style={{ flex: "0 0 auto", display: "flex", justifyContent: "center" }}>
+                <DonutChart
+                  size={200}
+                  thickness={26}
+                  centerValue={currency0(total)}
+                  centerLabel="Total spent"
+                  data={byCategory.map((c) => ({ label: c.category, value: c.total, color: categoryColor(c.category) }))}
+                />
+              </div>
+              {/* Categorized list with color dots + % + amount */}
+              <div style={{ flex: "1 1 260px", minWidth: 240, display: "flex", flexDirection: "column" }}>
+                {byCategory.slice(0, 8).map((c, i) => (
+                  <div key={c.category} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < Math.min(byCategory.length, 8) - 1 ? "1px solid var(--tv-border-light, rgba(255,255,255,.06))" : "none" }}>
+                    <span style={{ width: 11, height: 11, borderRadius: 3, background: categoryColor(c.category), flex: "0 0 auto" }} />
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 13.5, textTransform: "capitalize", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{c.category}</span>
+                    <span className="page-subtitle" style={{ margin: 0, fontSize: 12.5 }}>{Math.round(c.share * 100)}%</span>
+                    <span style={{ fontWeight: 700, fontSize: 14, minWidth: 78, textAlign: "right" }}>{currency0(c.total)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { isFlagEnabled, FLAGS } from './featureFlags';
 
 /* moduleRegistry.js
    Single source of truth mapping each module `id` -> React page component +
@@ -17,6 +18,11 @@ const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
 const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
 const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
 const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage'));
+const YearInReviewPage = React.lazy(() => import('../pages/YearInReviewPage'));
+const BillOptimizerPage = React.lazy(() => import('../pages/BillOptimizerPage'));
+const InvestmentInsightsPage = React.lazy(() => import('../pages/InvestmentInsightsPage'));
+const CreditScorePage = React.lazy(() => import('../pages/CreditScorePage'));
+const VisualizationStudioPage = React.lazy(() => import('../pages/VisualizationStudioPage'));
 const EmergencyFundPage = React.lazy(() => import('../pages/EmergencyFundPage'));
 const CoachPage       = React.lazy(() => import('../pages/CoachPage'));
 const HouseholdPage   = React.lazy(() => import('../pages/HouseholdPage'));
@@ -143,6 +149,18 @@ export const MODULE_REGISTRY = {
     route: '/cash-flow', section: SECTION_MONEY, defaultOrder: 7,
     component: CashFlowPage, inNavByDefault: true,
   },
+  // Year-in-Review — "Wrapped for your money" (Phase 4). feature_key: individual.yearInReview.
+  yearinreview: {
+    id: 'yearinreview', title: 'Year in Review', icon: 'ti ti-confetti',
+    route: '/year-in-review', section: SECTION_MONEY, defaultOrder: 9,
+    component: YearInReviewPage, inNavByDefault: true,
+  },
+  // Bill due-date optimizer (Phase 4). feature_key: individual.billOptimizer.
+  billoptimizer: {
+    id: 'billoptimizer', title: 'Bill Timing', icon: 'ti ti-calendar-stats',
+    route: '/bill-timing', section: SECTION_MONEY, defaultOrder: 10,
+    component: BillOptimizerPage, inNavByDefault: true,
+  },
   debt: {
     id: 'debt', title: 'Debt Lab', icon: 'ti ti-trending-down',
     route: '/debt', section: SECTION_GROW, defaultOrder: 2,
@@ -152,6 +170,20 @@ export const MODULE_REGISTRY = {
     id: 'invest', title: 'Investments', icon: 'ti ti-chart-line',
     route: '/invest', section: SECTION_GROW, defaultOrder: 3,
     component: InvestPage, inNavByDefault: true,
+  },
+  // Investment insights: allocation, concentration, fees, drift (Phase 4). feature_key: individual.investInsights.
+  investinsights: {
+    id: 'investinsights', title: 'Invest Insights', icon: 'ti ti-chart-pie',
+    route: '/investment-insights', section: SECTION_GROW, defaultOrder: 9,
+    component: InvestmentInsightsPage, inNavByDefault: true,
+  },
+  // Credit monitoring (Phase 4) — behind FLAGS.CREDIT_MONITORING (off by default; added to the
+  // default Grow nav only when the flag is enabled). Route is always registered so a direct
+  // visit works for preview/QA. feature_key: individual.creditMonitoring.
+  creditscore: {
+    id: 'creditscore', title: 'Credit Score', icon: 'ti ti-gauge',
+    route: '/credit', section: SECTION_GROW, defaultOrder: 10,
+    component: CreditScorePage, inNavByDefault: isFlagEnabled(FLAGS.CREDIT_MONITORING),
   },
   mybusiness: {
     id: 'mybusiness', title: 'My Business', icon: 'ti ti-briefcase',
@@ -281,10 +313,18 @@ export const MODULE_REGISTRY = {
     route: '/styleguide', section: null, defaultOrder: 0,
     component: StyleGuidePage, inNavByDefault: false,
   },
+  // Visualization Studio — the in-app design/mockup studio (ported from the standalone
+  // assets/terravest-design-studio.html). Reachable at BOTH /flowmap and /visualization;
+  // both show the same live in-app view (not an iframe) and appear in the More nav.
   flowmap: {
     id: 'flowmap', title: 'UI Flow Map', icon: 'ti ti-git-merge',
-    route: '/flowmap', section: null, defaultOrder: 0,
-    component: UIFlowMapPage, inNavByDefault: false,
+    route: '/flowmap', section: SECTION_SETTINGS, defaultOrder: 6,
+    component: VisualizationStudioPage, inNavByDefault: true,
+  },
+  visualization: {
+    id: 'visualization', title: 'Visualization', icon: 'ti ti-layout-dashboard',
+    route: '/visualization', section: SECTION_SETTINGS, defaultOrder: 7,
+    component: VisualizationStudioPage, inNavByDefault: true,
   },
   profile: {
     id: 'profile', title: 'Profile', icon: 'ti ti-user',
@@ -305,12 +345,13 @@ export const MODULE_REGISTRY = {
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
-  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending'],
-  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach'],
+  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending', 'yearinreview', 'billoptimizer'],
+  [SECTION_GROW]:       ['goals', 'debt', 'invest', 'investinsights', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach',
+                          ...(isFlagEnabled(FLAGS.CREDIT_MONITORING) ? ['creditscore'] : [])],
   [SECTION_SHARED]:     ['household', 'sharedmoney'],
   [SECTION_BUSINESS]:   ['mybusiness', 'tax'],
   [SECTION_REALESTATE]: ['realestate', 'dealroom', 'fractional'],
-  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings'],
+  [SECTION_SETTINGS]:   ['documents', 'security', 'messages', 'subscription', 'settings', 'flowmap', 'visualization'],
 };
 
 /* Flat ordered list of every default-nav module id, in sidebar order. */

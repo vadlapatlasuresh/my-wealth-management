@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { currency } from "../utils/format";
 import { requiredMonthlyContribution, payoffDateLabel, mortgagePayoff, extraPaymentImpact } from "../utils/calculators";
 import { api } from "../api";
+import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration: goal progress rings
 
 const GOAL_TYPES = [
   { id: "SAVINGS", label: "Savings", icon: "ti ti-pig-money", rate: 4 },
@@ -464,7 +465,14 @@ function GoalCard({ g, accounts, onAddContribution, onLink, onUnlink, onSetMode,
   return (
     <div className="card">
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div className="item-icon icon-forest"><i className={meta.icon}></i></div>
+        {/* Progress ring with the goal's icon in the center — communicates % at a glance. */}
+        <ProgressRing
+          value={progress}
+          size={46}
+          thickness={5}
+          color={done ? "var(--tv-positive)" : "var(--tv-forest-light)"}
+          icon={meta.icon}
+        />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>{g.name}</div>
           <div className="item-sub">{meta.label}{g.targetDate ? ` · by ${new Date(g.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}</div>
