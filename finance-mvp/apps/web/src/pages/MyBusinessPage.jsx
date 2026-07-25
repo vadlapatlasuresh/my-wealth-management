@@ -4,6 +4,7 @@ import { api } from '../api';
 import LastRefreshed from '../components/LastRefreshed';
 import PlaidLinkButton from '../components/PlaidLinkButton';
 import ExpensesTab from '../components/business/ExpensesTab';
+import CustomerManagerDrawer from '../components/business/CustomerManagerDrawer';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -315,7 +316,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   });
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+  const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+  const [customers, setCustomers] = useState([]);
+  const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
   const [payInv, setPayInv] = useState(null);     // invoice being reconciled (record payment)
   const [reminding, setReminding] = useState(false); // bulk overdue-reminder run in progress
@@ -479,27 +482,39 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const loadBusinessDetail = useCallback(async (businessId) => {
     if (!businessId) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setAssignedLinkedIds(new Set());
       return;
     }
-    const [acc, tx, inv, linked, docs] = await Promise.allSettled([
+    const [acc, tx, inv, linked, docs, cust] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
       api.getBusinessLinkedAccounts(businessId),
       api.getBusinessDocuments(businessId),
+      api.getBusinessCustomers(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
     setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
+    setCustomers(cust.status === 'fulfilled' && Array.isArray(cust.value) ? cust.value : []);
     const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
     setAssignedLinkedIds(new Set(linkedIds));
   }, []);
 
+  /* Reload just the saved customers for the selected business (after drawer edits). */
+  const reloadCustomers = useCallback(async () => {
+    if (!selectedId || selectedId === 'ALL') return;
+    try {
+      const list = await api.getBusinessCustomers(selectedId);
+      setCustomers(Array.isArray(list) ? list : []);
+    } catch { /* non-fatal */ }
+  }, [selectedId]);
+
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
   const loadAllBusinessesDetail = useCallback(async (list) => {
     const biz = Array.isArray(list) ? list : [];
+    setCustomers([]); // customer management is single-business only
     if (!biz.length) {
       setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
@@ -1018,12 +1033,13 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     if (!customer || !amount) return;
     try {
       const created = await api.createManualInvoice(selectedBusiness.id, {
+        customerId: invForm.customerId || null,
         customer, amount, status: invForm.status, dueDate: invForm.dueDate || null,
         customerEmail: invForm.customerEmail || null, customerPhone: invForm.customerPhone || null,
         payInstructions: invForm.payInstructions || null, notes: invForm.notes || null,
       });
       setManualInvoices((prev) => [created, ...prev]);
-      setInvForm({ customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+      setInvForm({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
       setShowAddInvoice(false);
       flash(`Invoice for ${currency(amount)} to ${customer} created.`);
     } catch (err) { setError(err?.message || 'Could not create invoice.'); }
@@ -3723,10 +3739,32 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
                 {showAddInvoice && (
                   <form onSubmit={handleAddInvoice} style={{ marginBottom: 14 }}>
+                    {customers.length > 0 && (
+                      <div className="form-group">
+                        <label className="form-label">Saved customer</label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <select className="form-select" value={invForm.customerId}
+                            onChange={(e) => {
+                              const c = customers.find((x) => String(x.id) === e.target.value);
+                              setInvForm((p) => c
+                                ? { ...p, customerId: String(c.id), customer: c.displayName, customerEmail: c.email || '', customerPhone: c.mobile || c.phone || '' }
+                                : { ...p, customerId: '' });
+                            }}>
+                            <option value="">New / one-off customer…</option>
+                            {customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').map((c) => (
+                              <option key={c.id} value={c.id}>{c.displayName}</option>
+                            ))}
+                          </select>
+                          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowCustomerDrawer(true)} title="Manage customers">
+                            <i className="ti ti-users"></i> Manage
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Customer *</label>
-                        <input className="form-input" value={invForm.customer} onChange={(e) => setInvForm({ ...invForm, customer: e.target.value })} placeholder="e.g. Acme Corp" autoFocus />
+                        <input className="form-input" value={invForm.customer} onChange={(e) => setInvForm({ ...invForm, customer: e.target.value, customerId: '' })} placeholder="e.g. Acme Corp" autoFocus />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Amount *</label>
@@ -3815,7 +3853,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
                   <div className="section-title"><i className="ti ti-users" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Customers</div>
-                  <span className="badge badge-gray">{customerInsights.length}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="badge badge-gray">{customerInsights.length}</span>
+                    {selectedBusiness && (
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowCustomerDrawer(true)} title="Add, edit and save reusable customer details">
+                        <i className="ti ti-address-book"></i> Manage{customers.length > 0 ? ` (${customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').length})` : ''}
+                      </button>
+                    )}
+                  </span>
                 </div>
                 {customerInsights.length === 0 ? (
                   <div className="empty-state"><i className="ti ti-users"></i><p>No customers yet. Create an invoice to start tracking who pays on time.</p></div>
@@ -4093,6 +4138,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         <BizDocShareModal doc={shareBizDoc}
           onClose={() => setShareBizDoc(null)}
           onFlash={flash} />
+      )}
+      {showCustomerDrawer && selectedBusiness && (
+        <CustomerManagerDrawer businessId={selectedBusiness.id} customers={customers}
+          onChanged={reloadCustomers}
+          onClose={() => setShowCustomerDrawer(false)} />
       )}
     </div>
   );

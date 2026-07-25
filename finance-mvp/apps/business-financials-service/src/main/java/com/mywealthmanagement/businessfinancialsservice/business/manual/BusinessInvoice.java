@@ -31,6 +31,15 @@ public class BusinessInvoice {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
+    /**
+     * Optional link to a saved {@link BusinessCustomer}. Nullable: legacy and one-off
+     * ad-hoc invoices carry only the inline snapshot below. The {@code customer} /
+     * {@code customerEmail} / {@code customerPhone} fields remain the source of truth for
+     * rendering so the public view is stable even if the customer is edited or archived.
+     */
+    @Column(name = "customer_id")
+    private Long customerId;
+
     @Column(nullable = false)
     private String customer;
 

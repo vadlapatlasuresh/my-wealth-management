@@ -750,6 +750,22 @@ export const api = {
     request(`/api/v1/business/manual/expenses/categories`),
 
   // Trackable business invoices (create / send / track + pending payments).
+  // Customers / contacts — reusable billing parties per business (order-to-cash).
+  getBusinessCustomers: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/customers`),
+  createBusinessCustomer: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/customers`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessCustomer: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessCustomer: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
+
   getManualInvoices: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/invoices`),
   createManualInvoice: (businessId, payload) =>
