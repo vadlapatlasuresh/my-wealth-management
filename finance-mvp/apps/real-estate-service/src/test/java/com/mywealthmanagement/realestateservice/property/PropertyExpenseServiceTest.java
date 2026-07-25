@@ -98,16 +98,29 @@ class PropertyExpenseServiceTest {
     }
 
     @Test
-    void create_rejectsUnknownCategory() {
+    void create_allowsCustomCategory() {
+        authenticateAs("1");
+        lenient().when(propertyRepository.findById(7L)).thenReturn(Optional.of(propertyOwnedBy(1L)));
+        when(expenseRepository.save(any(PropertyExpense.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        PropertyExpenseDto dto = validDto();
+        dto.setCategory("Pool Service"); // not in the suggested list — custom categories are allowed
+
+        PropertyExpenseDto created = service.create(7L, dto);
+        assertThat(created.getCategory()).isEqualTo("Pool Service");
+    }
+
+    @Test
+    void create_rejectsBlankCategory() {
         authenticateAs("1");
         lenient().when(propertyRepository.findById(7L)).thenReturn(Optional.of(propertyOwnedBy(1L)));
 
         PropertyExpenseDto dto = validDto();
-        dto.setCategory("Bribes");
+        dto.setCategory("   ");
 
         assertThatThrownBy(() -> service.create(7L, dto))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Unknown expense category");
+                .hasMessageContaining("Invalid expense category");
     }
 
     @Test
@@ -156,6 +169,31 @@ class PropertyExpenseServiceTest {
         assertThat(s.getExpenseCount()).isEqualTo(3);
         assertThat(s.getByCategory().get(0).getCategory()).isEqualTo("Repairs"); // sorted desc
         assertThat(s.getByCategory().get(0).getTotal()).isEqualByComparingTo("280.00");
+    }
+
+    @Test
+    void summary_splitsIncomeFromExpensesAndComputesNet() {
+        authenticateAs("1");
+        lenient().when(propertyRepository.findById(7L)).thenReturn(Optional.of(propertyOwnedBy(1L)));
+
+        int year = LocalDate.now().getYear();
+        PropertyExpense rent = expense(year, "Rental Income", "1500.00", "DEP-1", null, null);
+        PropertyExpense repair = expense(year, "Repairs", "400.00", "RCPT-9", null, null);
+        when(expenseRepository.findByPropertyIdAndExpenseDateBetweenOrderByExpenseDateDescIdDesc(
+                eq(7L), any(), any())).thenReturn(List.of(rent, repair));
+
+        PropertyExpenseSummaryDto s = service.summary(7L, year);
+
+        // Income is separated out; expenses/breakdown/receipts exclude it.
+        assertThat(s.getTotalIncome()).isEqualByComparingTo("1500.00");
+        assertThat(s.getGrandTotal()).isEqualByComparingTo("400.00");
+        assertThat(s.getNetIncomeLoss()).isEqualByComparingTo("1100.00"); // 1500 - 400
+        assertThat(s.getByCategory()).hasSize(1); // income excluded from breakdown
+        assertThat(s.getByCategory().get(0).getCategory()).isEqualTo("Repairs");
+        // Monthly series has 12 rows; January (index 0) carries both figures.
+        assertThat(s.getMonthly()).hasSize(12);
+        assertThat(s.getMonthly().get(0).getIncome()).isEqualByComparingTo("1500.00");
+        assertThat(s.getMonthly().get(0).getExpense()).isEqualByComparingTo("400.00");
     }
 
     private PropertyExpense expense(int year, String category, String amount,

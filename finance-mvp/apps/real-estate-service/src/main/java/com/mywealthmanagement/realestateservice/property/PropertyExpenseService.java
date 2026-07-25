@@ -73,19 +73,34 @@ public class PropertyExpenseService {
         LocalDate today = LocalDate.now();
         boolean currentYear = (y == today.getYear());
 
-        BigDecimal grandTotal = BigDecimal.ZERO;
-        BigDecimal ytd = BigDecimal.ZERO;
-        BigDecimal thisMonth = BigDecimal.ZERO;
+        BigDecimal grandTotal = BigDecimal.ZERO;  // expenses only
+        BigDecimal totalIncome = BigDecimal.ZERO; // income only
+        BigDecimal ytd = BigDecimal.ZERO;         // expense YTD
+        BigDecimal thisMonth = BigDecimal.ZERO;   // expense this month
         long missing = 0;
-        // Preserve category order from the canonical list for a stable, readable breakdown.
+        // Preserve category order from the canonical EXPENSE list for a stable breakdown.
         Map<String, BigDecimal> byCat = new LinkedHashMap<>();
-        for (String c : ExpenseCategories.ALL) {
+        for (String c : ExpenseCategories.EXPENSE) {
             byCat.put(c, BigDecimal.ZERO);
+        }
+        // 12-month income/expense series (index 0 = January) for the dashboard charts.
+        BigDecimal[] monthlyIncome = new BigDecimal[12];
+        BigDecimal[] monthlyExpense = new BigDecimal[12];
+        for (int i = 0; i < 12; i++) {
+            monthlyIncome[i] = BigDecimal.ZERO;
+            monthlyExpense[i] = BigDecimal.ZERO;
         }
 
         for (PropertyExpense e : rows) {
             BigDecimal total = totalCost(e);
+            int mIdx = e.getExpenseDate().getMonthValue() - 1;
+            if (ExpenseCategories.isIncome(e.getCategory())) {
+                totalIncome = totalIncome.add(total);
+                monthlyIncome[mIdx] = monthlyIncome[mIdx].add(total);
+                continue; // income rows don't count toward expense totals / breakdown / receipts
+            }
             grandTotal = grandTotal.add(total);
+            monthlyExpense[mIdx] = monthlyExpense[mIdx].add(total);
             byCat.merge(e.getCategory(), total, BigDecimal::add);
             if (e.getReceiptRef() == null || e.getReceiptRef().isBlank()) {
                 missing++;
@@ -99,7 +114,7 @@ public class PropertyExpenseService {
                 }
             }
         }
-        // For a past year, YTD is simply the full-year total; this-month is not meaningful.
+        // For a past year, YTD is simply the full-year expense total; this-month is not meaningful.
         if (!currentYear) {
             ytd = grandTotal;
         }
@@ -110,9 +125,15 @@ public class PropertyExpenseService {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (a, b) -> a, LinkedHashMap::new));
 
+        List<PropertyExpenseSummaryDto.MonthTotal> monthly = new java.util.ArrayList<>(12);
+        for (int i = 0; i < 12; i++) {
+            monthly.add(new PropertyExpenseSummaryDto.MonthTotal(i + 1, monthlyIncome[i], monthlyExpense[i]));
+        }
+
         return new PropertyExpenseSummaryDto(
                 propertyId, y, grandTotal, ytd, thisMonth, missing, rows.size(),
-                PropertyExpenseSummaryDto.fromMap(nonZero));
+                PropertyExpenseSummaryDto.fromMap(nonZero),
+                totalIncome, totalIncome.subtract(grandTotal), monthly);
     }
 
     // ---- helpers ----
@@ -130,10 +151,12 @@ public class PropertyExpenseService {
         e.setNotes(dto.getNotes());
     }
 
+    // Custom categories are allowed (the user may add their own) — we only reject a
+    // blank or over-long label. Income vs expense is decided by name (ExpenseCategories.isIncome).
     private void validateCategory(String category) {
         if (!ExpenseCategories.isValid(category)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Unknown expense category: " + category);
+                    "Invalid expense category: " + category);
         }
     }
 

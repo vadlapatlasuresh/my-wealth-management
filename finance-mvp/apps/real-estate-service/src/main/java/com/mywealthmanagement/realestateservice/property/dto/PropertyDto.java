@@ -26,6 +26,11 @@ public class PropertyDto {
 
     @PositiveOrZero(message = "purchasePrice must be zero or positive")
     private BigDecimal purchasePrice;
+
+    // Non-depreciable land portion of the purchase price (drives depreciation).
+    @PositiveOrZero(message = "landValue must be zero or positive")
+    private BigDecimal landValue;
+
     private LocalDate purchaseDate;
 
     @PositiveOrZero(message = "currentValue must be zero or positive")
@@ -67,4 +72,9 @@ public class PropertyDto {
 
     @PositiveOrZero(message = "monthlyPmi must be zero or positive")
     private BigDecimal monthlyPmi;
+
+    // Computed, read-only. Straight-line residential depreciation over 27.5 years:
+    // annual = (purchasePrice - landValue) / 27.5; monthly = annual / 12.
+    private BigDecimal annualDepreciation;
+    private BigDecimal monthlyDepreciation;
 }

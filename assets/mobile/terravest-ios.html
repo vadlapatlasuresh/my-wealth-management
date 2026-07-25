@@ -2187,7 +2187,12 @@ body{
               <span><i class="ti ti-cash" style="color:var(--tv-forest);"></i> Rent <b>$2,100/mo</b></span>
               <span title="unlevered yield, before the mortgage payment">Cap rate <b>5.8%</b></span>
             </div>
-            <!-- Expenses YTD — taps into the per-property expense tracker -->
+            <!-- Depreciation — auto straight-line over 27.5 yr -->
+            <div style="display:flex;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--tv-border);font-size:12.5px;">
+              <span><i class="ti ti-building-bank" style="color:var(--tv-forest);"></i> Depreciation <span class="muted">(27.5 yr)</span></span>
+              <span><b>$5,091</b>/yr · $424/mo</span>
+            </div>
+            <!-- Income & expenses YTD — taps into the per-property tracker -->
             <div style="display:flex;align-items:center;justify-content:space-between;margin-top:8px;padding-top:10px;border-top:1px solid var(--tv-border);font-size:12.5px;">
               <span><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Expenses YTD <b>$3,240</b></span>
               <span style="display:flex;align-items:center;gap:6px;"><span class="badge" style="background:var(--tv-gold-pale,#FDF5E4);color:var(--tv-gold,#C9973A);font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span><i class="ti ti-chevron-right chev"></i></span>
@@ -2219,34 +2224,67 @@ body{
     <div class="statusbar"><span class="time">9:41</span><span class="indicators"><i class="ti ti-antenna-bars-5"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-3"></i></span></div>
     <div class="content">
       <div class="nav-large" style="display:flex;align-items:center;justify-content:space-between;">
-        <div><div class="muted" style="font-size:12px;"><i class="ti ti-chevron-left"></i> 88 Riverside</div><h1 style="font-size:26px;">Expenses</h1></div>
-        <button class="btn-sm ghost" style="align-self:flex-end;"><i class="ti ti-plus"></i> Add</button>
+        <div><div class="muted" style="font-size:12px;"><i class="ti ti-chevron-left"></i> 88 Riverside</div><h1 style="font-size:26px;">Income &amp; expenses</h1></div>
+        <div style="display:flex;gap:6px;align-self:flex-end;">
+          <button class="btn-sm ghost"><i class="ti ti-cash"></i> Income</button>
+          <button class="btn-sm" style="background:var(--tv-forest);color:#fff;border:none;border-radius:10px;padding:8px 11px;"><i class="ti ti-plus"></i> Expense</button>
+        </div>
       </div>
       <div class="scroll" style="padding-top:4px;">
-        <!-- year + KPIs -->
+        <!-- Income / Expenses / Net KPIs -->
         <div style="display:flex;gap:8px;margin-bottom:12px;">
-          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Total 2026</div><div style="font-weight:700;font-size:17px;">$3,240</div></div>
-          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">This month</div><div style="font-weight:700;font-size:17px;">$410</div></div>
-          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Missing</div><div style="font-weight:700;font-size:17px;color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:13px;"></i> 2</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Income 2026</div><div style="font-weight:700;font-size:16px;color:var(--tv-positive);">$25,200</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Expenses</div><div style="font-weight:700;font-size:16px;">$3,240</div></div>
+          <div class="prop" style="flex:1;padding:12px;"><div class="muted" style="font-size:11px;">Net cash flow</div><div style="font-weight:700;font-size:16px;color:var(--tv-positive);">+$21,960</div></div>
         </div>
-        <!-- expense rows -->
+
+        <!-- Monthly income vs expense chart + Bar/Trend toggle -->
+        <div class="prop" style="padding:14px;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <div style="font-weight:700;font-size:13px;">Monthly income vs. expenses</div>
+            <div style="display:inline-flex;background:var(--tv-chip);border-radius:9px;padding:2px;font-size:11px;">
+              <span style="padding:4px 9px;border-radius:7px;background:var(--tv-forest);color:#fff;font-weight:600;">Bar</span>
+              <span style="padding:4px 9px;color:var(--tv-text-secondary,#6b7a72);">Trend</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:9px;height:96px;">
+            <!-- each month: income (green) + expense (red) paired bars -->
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:11px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">Jan</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:22px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">Feb</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:14px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">Mar</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:9px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">Apr</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:30px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">May</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="display:flex;gap:2px;align-items:flex-end;height:82px;"><div style="width:7px;height:70px;background:var(--tv-positive);border-radius:3px;"></div><div style="width:7px;height:13px;background:var(--tv-negative);border-radius:3px;"></div></div><span class="muted" style="font-size:9px;">Jun</span></div>
+          </div>
+          <div style="display:flex;gap:14px;margin-top:8px;font-size:10.5px;" class="muted">
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--tv-positive);"></span> Income</span>
+            <span><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--tv-negative);"></span> Expenses</span>
+            <span><span style="display:inline-block;width:12px;height:2px;background:var(--tv-text-primary,#1c2b24);vertical-align:middle;"></span> Net</span>
+          </div>
+        </div>
+
+        <!-- transaction rows (income tinted green) -->
         <div class="group">
+          <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-arrow-down-left"></i></div><div class="body"><div class="t">Rental Income · Unit 3B tenant</div><div class="s">Feb 01 · DEP-2202</div></div><div class="val"><div class="v" style="color:var(--tv-positive);">+$2,100.00</div></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-tool"></i></div><div class="body"><div class="t">Repairs · Ace Hardware</div><div class="s">Feb 11 · RCPT-1017 · incl. $135 labor</div></div><div class="val"><div class="v">$182.60</div></div></div>
           <div class="row" style="box-shadow:inset 3px 0 0 var(--tv-gold,#C9973A);"><div class="lead-ic" style="background:#8a9a91;"><i class="ti ti-shopping-bag"></i></div><div class="body"><div class="t">Supplies · Home Depot</div><div class="s" style="color:var(--tv-gold,#C9973A);"><i class="ti ti-alert-triangle" style="font-size:11px;"></i> Missing receipt</div></div><div class="val"><div class="v">$34.18</div></div></div>
-          <div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-briefcase"></i></div><div class="body"><div class="t">Property Management · Summit PM</div><div class="s">Jan 09 · RCPT-1004</div></div><div class="val"><div class="v">$140.00</div></div></div>
         </div>
-        <!-- category breakdown -->
+
+        <!-- year-end summary: income − expenses = net, less depreciation = taxable net -->
         <div class="group" style="margin-top:14px;">
-          <div class="row"><div class="body"><div class="t">Repairs</div></div><div class="val"><div class="v">$182.60</div></div></div>
-          <div class="row"><div class="body"><div class="t">Property Management Fees</div></div><div class="val"><div class="v">$140.00</div></div></div>
-          <div class="row"><div class="body"><div class="t" style="font-weight:700;">Grand total</div></div><div class="val"><div class="v" style="font-weight:700;">$3,240</div></div></div>
+          <div class="row"><div class="body"><div class="t" style="color:var(--tv-positive);">Rental income</div></div><div class="val"><div class="v" style="color:var(--tv-positive);">$25,200</div></div></div>
+          <div class="row"><div class="body"><div class="t">Repairs</div></div><div class="val"><div class="v">−$182.60</div></div></div>
+          <div class="row"><div class="body"><div class="t">Property Management Fees</div></div><div class="val"><div class="v">−$140.00</div></div></div>
+          <div class="row"><div class="body"><div class="t" style="font-weight:700;">Net cash flow</div></div><div class="val"><div class="v" style="font-weight:700;color:var(--tv-positive);">+$21,960</div></div></div>
+          <div class="row"><div class="body"><div class="t muted">Less depreciation (non-cash)</div></div><div class="val"><div class="v muted">−$5,091</div></div></div>
+          <div class="row"><div class="body"><div class="t" style="font-weight:700;">Taxable net</div></div><div class="val"><div class="v" style="font-weight:700;">$16,869</div></div></div>
         </div>
         <!-- export -->
         <div style="display:flex;gap:8px;margin-top:16px;">
-          <button class="btn-sm ghost" style="flex:1;"><i class="ti ti-download"></i> Download CSV</button>
+          <button class="btn-sm ghost" style="flex:1;"><i class="ti ti-download"></i> Download summary</button>
           <button class="btn-sm" style="flex:1;background:var(--tv-forest);color:#fff;border:none;border-radius:10px;padding:9px;"><i class="ti ti-folder"></i> Save to Documents</button>
         </div>
-        <div class="muted" style="font-size:11px;text-align:center;margin-top:8px;">Accountant-ready · Schedule E · share with your CPA from Documents</div>
+        <div class="muted" style="font-size:11px;text-align:center;margin-top:8px;">Tax-ready · Schedule E · share with your CPA from Documents</div>
       </div>
     </div>
     <div class="tabbar">
@@ -2258,7 +2296,7 @@ body{
     </div>
     <div class="home-indicator"></div>
   </div></div>
-  <div class="caption-chip"><span class="num">14b</span> Property Expenses</div>
+  <div class="caption-chip"><span class="num">14b</span> Income &amp; Expenses</div>
 </div>
 
 <!-- ===================== 15. CALCULATORS ===================== -->

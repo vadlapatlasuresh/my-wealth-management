@@ -31,6 +31,11 @@ public class Property {
     @Column(name = "purchase_price", nullable = false)
     private BigDecimal purchasePrice;
 
+    // Non-depreciable land portion of the purchase price. Depreciation basis =
+    // purchasePrice - landValue (see PropertyService.depreciation).
+    @Column(name = "land_value")
+    private BigDecimal landValue;
+
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
 

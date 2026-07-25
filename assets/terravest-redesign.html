@@ -3653,6 +3653,8 @@ a { text-decoration: none; color: inherit; }
             <div class="form-group" style="margin-bottom:0;grid-column:span 2;"><label class="form-label">Address (only the address is required)</label><input class="form-input" placeholder="Start typing an address…"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Type</label><select class="form-select"><option>Primary residence</option><option>Rental property</option><option>Land</option></select></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Purchase price</label><input class="form-input" placeholder="$0"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Purchase date</label><input class="form-input" type="date"></div>
+            <div class="form-group" style="margin-bottom:0;"><label class="form-label">Land value <span style="font-weight:400;color:var(--tv-text-muted);">(non-depreciable)</span></label><input class="form-input" placeholder="$0"><div style="font-size:11.5px;color:var(--tv-text-muted);margin-top:4px;"><i class="ti ti-building-bank"></i> Depreciation ≈ $5,091/yr · $424/mo <span style="opacity:.7;">(÷ 27.5 yr)</span></div></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Current value (auto if blank)</label><input class="form-input" placeholder="$0"></div>
             <div class="form-group" style="margin-bottom:0;"><label class="form-label">Mortgage balance</label><input class="form-input" placeholder="$0"></div>
           </div>
@@ -3718,9 +3720,14 @@ a { text-decoration: none; color: inherit; }
                 <span>Cash flow <strong style="color:var(--tv-positive);">+$370/mo</strong></span>
               </div>
             </div>
-            <!-- Expenses YTD line — opens the per-property expense tracker -->
+            <!-- Depreciation — auto straight-line over 27.5 years -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 18px 10px;padding:8px 12px;background:var(--tv-bg);border-radius:var(--radius-md);font-size:12.5px;">
+              <span style="color:var(--tv-text-secondary);"><i class="ti ti-building-bank" style="color:var(--tv-forest);margin-right:5px;"></i>Depreciation <span style="color:var(--tv-text-muted);">(27.5 yr)</span></span>
+              <span title="Straight-line: (purchase price − land value) ÷ 27.5"><strong>$5,091</strong>/yr · $424/mo</span>
+            </div>
+            <!-- Income & expenses YTD line — opens the per-property tracker -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 18px 16px;padding:8px 12px;background:var(--tv-bg);border-radius:var(--radius-md);font-size:12.5px;cursor:pointer;">
-              <span style="color:var(--tv-text-secondary);"><i class="ti ti-receipt-2" style="color:var(--tv-forest);margin-right:5px;"></i>Expenses YTD <strong style="color:var(--tv-text-primary);">$3,240</strong></span>
+              <span style="color:var(--tv-text-secondary);"><i class="ti ti-receipt-2" style="color:var(--tv-forest);margin-right:5px;"></i>Net YTD <strong style="color:var(--tv-positive);">+$21,960</strong></span>
               <span style="display:flex;align-items:center;gap:8px;"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span><i class="ti ti-chevron-right" style="color:var(--tv-text-muted);"></i></span>
             </div>
           </div>
@@ -3731,12 +3738,12 @@ a { text-decoration: none; color: inherit; }
              PropertyExpensesDrawer component). Static mockup; shown inline here.
              ============================================================ -->
         <div style="margin-top:24px;">
-          <div class="section-title" style="margin-bottom:10px;"><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Expense tracker &mdash; slide-over (per property)</div>
+          <div class="section-title" style="margin-bottom:10px;"><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Income &amp; expenses &mdash; slide-over (per property)</div>
           <div style="max-width:640px;border:1px solid var(--tv-border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-md);">
             <!-- head -->
             <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:18px 22px;background:var(--tv-card);border-bottom:1px solid var(--tv-border);">
               <div>
-                <div style="font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--tv-text-primary);"><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Expenses</div>
+                <div style="font-family:var(--font-display);font-size:18px;font-weight:600;color:var(--tv-text-primary);"><i class="ti ti-receipt-2" style="color:var(--tv-forest);"></i> Income &amp; expenses</div>
                 <div style="font-size:12.5px;color:var(--tv-text-muted);margin-top:2px;">903 Ridge View Ln, Round Rock TX</div>
               </div>
               <button class="icon-btn"><i class="ti ti-x"></i></button>
@@ -3746,13 +3753,40 @@ a { text-decoration: none; color: inherit; }
               <!-- controls -->
               <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
                 <div><div style="font-size:11px;color:var(--tv-text-muted);margin-bottom:3px;">Tax year</div><select class="form-select" style="width:120px;"><option>2026</option><option>2025</option></select></div>
-                <button class="btn btn-primary btn-sm" style="margin-left:auto;"><i class="ti ti-plus"></i> Add expense</button>
+                <div style="margin-left:auto;display:flex;gap:8px;">
+                  <button class="btn btn-secondary btn-sm"><i class="ti ti-cash"></i> Add income</button>
+                  <button class="btn btn-primary btn-sm"><i class="ti ti-plus"></i> Add expense</button>
+                </div>
               </div>
-              <!-- KPIs -->
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
-                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Total 2026</div><div style="font-family:var(--font-display);font-size:18px;">$3,240</div></div>
-                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">This month</div><div style="font-family:var(--font-display);font-size:18px;">$410</div></div>
+              <!-- KPIs: income / expenses / net / missing -->
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Income 2026</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-positive);">$25,200</div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Expenses 2026</div><div style="font-family:var(--font-display);font-size:18px;">$3,240</div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Net cash flow</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-positive);">+$21,960</div></div>
                 <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Missing receipts</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-gold);"><i class="ti ti-alert-triangle"></i> 2</div></div>
+              </div>
+              <!-- Monthly income vs expense chart + Bar/Trend toggle -->
+              <div class="card" style="margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                  <div class="section-title" style="margin:0;font-size:13px;">Monthly income vs. expenses · 2026</div>
+                  <div style="display:inline-flex;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:9px;padding:2px;font-size:12px;">
+                    <span style="padding:4px 11px;border-radius:7px;background:var(--tv-forest);color:#fff;font-weight:600;"><i class="ti ti-chart-bar"></i> Bar</span>
+                    <span style="padding:4px 11px;color:var(--tv-text-secondary);"><i class="ti ti-chart-line"></i> Trend</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:flex-end;gap:14px;height:130px;padding:0 4px;">
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:16px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">Jan</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:30px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">Feb</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:20px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">Mar</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:12px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">Apr</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:42px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">May</span></div>
+                  <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="display:flex;gap:3px;align-items:flex-end;height:108px;"><div style="width:12px;height:96px;background:var(--tv-positive);border-radius:4px 4px 0 0;"></div><div style="width:12px;height:18px;background:var(--tv-negative);border-radius:4px 4px 0 0;"></div></div><span style="font-size:10px;color:var(--tv-text-muted);">Jun</span></div>
+                </div>
+                <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--tv-text-muted);">
+                  <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--tv-positive);margin-right:5px;"></span>Income</span>
+                  <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--tv-negative);margin-right:5px;"></span>Expenses</span>
+                  <span><span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:var(--tv-text-primary);margin-right:5px;vertical-align:middle;"></span>Net</span>
+                </div>
               </div>
               <!-- table -->
               <table style="width:100%;border-collapse:collapse;font-size:13px;">
@@ -3764,26 +3798,51 @@ a { text-decoration: none; color: inherit; }
                   <th style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Receipt</th>
                 </tr></thead>
                 <tbody>
+                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Feb 01</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><i class="ti ti-arrow-down-left" style="color:var(--tv-positive);margin-right:4px;"></i>Rental Income</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);color:var(--tv-text-secondary);">Unit 3B tenant</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">+$2,100.00</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;">Income</span></td></tr>
                   <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Feb 11</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Repairs</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);color:var(--tv-text-secondary);">Ace Hardware</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$182.60</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;"><i class="ti ti-check"></i> RCPT-1017</span></td></tr>
                   <tr style="box-shadow:inset 3px 0 0 var(--tv-gold);"><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Jan 12</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Supplies</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);color:var(--tv-text-secondary);">Home Depot</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$34.18</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> Missing</span></td></tr>
                   <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Jan 09</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">Property Management Fees</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);color:var(--tv-text-secondary);">Summit PM</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$140.00</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;"><i class="ti ti-check"></i> RCPT-1004</span></td></tr>
                 </tbody>
               </table>
-              <!-- breakdown -->
+              <!-- expense breakdown donut + legend (toggle Donut/Bar) -->
               <div class="card" style="margin-top:16px;">
-                <div class="section-title" style="font-size:13px;"><i class="ti ti-chevron-down"></i> Category breakdown · 2026</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                  <div class="section-title" style="margin:0;font-size:13px;">Expense breakdown · 2026</div>
+                  <div style="display:inline-flex;background:var(--tv-bg);border:1px solid var(--tv-border);border-radius:9px;padding:2px;font-size:12px;">
+                    <span style="padding:4px 11px;border-radius:7px;background:var(--tv-forest);color:#fff;font-weight:600;"><i class="ti ti-chart-donut"></i> Donut</span>
+                    <span style="padding:4px 11px;color:var(--tv-text-secondary);"><i class="ti ti-chart-bar"></i> Bar</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;">
+                  <div style="width:150px;height:150px;border-radius:50%;flex:0 0 auto;background:conic-gradient(#E85C9E 0 62%, #EE7A38 62% 83%, #7A6FEA 83% 100%);display:flex;align-items:center;justify-content:center;">
+                    <div style="width:100px;height:100px;border-radius:50%;background:var(--tv-card);display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-family:var(--font-display);font-size:16px;">$3,240</div><div style="font-size:10.5px;color:var(--tv-text-muted);">expenses</div></div>
+                  </div>
+                  <div style="flex:1;min-width:180px;">
+                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--tv-border-light);"><span style="width:11px;height:11px;border-radius:3px;background:#E85C9E;"></span><span style="flex:1;">Repairs</span><span>$2,010</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;border-bottom:1px solid var(--tv-border-light);"><span style="width:11px;height:11px;border-radius:3px;background:#EE7A38;"></span><span style="flex:1;">Property Management Fees</span><span>$690</span></div>
+                    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:12.5px;"><span style="width:11px;height:11px;border-radius:3px;background:#7A6FEA;"></span><span style="flex:1;">Supplies</span><span>$540</span></div>
+                  </div>
+                </div>
+              </div>
+              <!-- year-end summary: income − expenses = net, less depreciation = taxable net -->
+              <div class="card" style="margin-top:16px;">
+                <div class="section-title" style="font-size:13px;"><i class="ti ti-chevron-down"></i> Year-end summary · 2026</div>
                 <div style="margin-top:10px;">
-                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-text-secondary);">Repairs</span><span>$182.60</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-text-secondary);">Property Management Fees</span><span>$140.00</span></div>
-                  <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-weight:600;"><span>Grand total</span><span>$3,240.00</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-positive);">Rental income</span><span style="color:var(--tv-positive);">$25,200</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-text-secondary);">Repairs</span><span>−$2,010</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-text-secondary);">Property Management Fees</span><span>−$690</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;border-bottom:1px solid var(--tv-border);"><span style="color:var(--tv-text-secondary);">Total operating expenses</span><span>−$3,240</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:8px 0 2px;font-weight:600;"><span>Net cash flow (income − expenses)</span><span style="color:var(--tv-positive);">+$21,960</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:5px 0;font-size:13px;color:var(--tv-text-muted);"><span>Less depreciation (non-cash)</span><span>−$5,091</span></div>
+                  <div style="display:flex;justify-content:space-between;padding:6px 0 2px;font-weight:600;"><span>Taxable net</span><span>$16,869</span></div>
                 </div>
               </div>
             </div>
             <!-- foot -->
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:var(--tv-card);border-top:1px solid var(--tv-border);">
-              <div style="font-size:11.5px;color:var(--tv-text-muted);">Accountant-ready · Schedule E</div>
+              <div style="font-size:11.5px;color:var(--tv-text-muted);">Tax-ready · Schedule E</div>
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download CSV</button>
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download summary</button>
                 <button class="btn btn-primary btn-sm"><i class="ti ti-folder"></i> Save to Documents</button>
               </div>
             </div>
@@ -3805,31 +3864,33 @@ a { text-decoration: none; color: inherit; }
               <button class="icon-btn"><i class="ti ti-x"></i></button>
             </div>
             <div style="padding:18px 22px;background:var(--tv-bg);">
-              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;">
-                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Total 2026</div><div style="font-family:var(--font-display);font-size:18px;">$9,180</div></div>
-                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Properties</div><div style="font-family:var(--font-display);font-size:18px;">3 <span style="font-size:12px;color:var(--tv-text-muted);">/ 3</span></div></div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Income 2026</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-positive);">$63,900</div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Expenses 2026</div><div style="font-family:var(--font-display);font-size:18px;">$9,180</div></div>
+                <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Net cash flow</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-positive);">+$54,720</div></div>
                 <div style="background:var(--tv-card);border:1px solid var(--tv-border);border-radius:var(--radius-md);padding:12px 14px;"><div style="font-size:11px;color:var(--tv-text-muted);font-weight:500;margin-bottom:3px;">Missing receipts</div><div style="font-family:var(--font-display);font-size:18px;color:var(--tv-gold);"><i class="ti ti-alert-triangle"></i> 4</div></div>
               </div>
               <div class="section-title" style="font-size:13px;margin-bottom:8px;">By property</div>
               <table style="width:100%;border-collapse:collapse;font-size:13px;">
                 <thead><tr>
                   <th style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Property</th>
+                  <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Income</th>
                   <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Expenses</th>
-                  <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Total</th>
+                  <th style="text-align:right;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Net</th>
                   <th style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--tv-text-muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--tv-border);">Receipts</th>
                 </tr></thead>
                 <tbody>
-                  <tr style="box-shadow:inset 3px 0 0 var(--tv-gold);"><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">123 Maple St</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">9</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,240</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
-                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">456 Oak Ave</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">7</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,910</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
-                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">789 Pine Rd</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">6</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$2,030</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;"><i class="ti ti-check"></i> Complete</span></td></tr>
-                  <tr><td style="padding:9px 10px;font-weight:700;">Grand total</td><td style="padding:9px 10px;text-align:right;font-weight:700;">22</td><td style="padding:9px 10px;text-align:right;font-weight:700;">$9,180</td><td></td></tr>
+                  <tr style="box-shadow:inset 3px 0 0 var(--tv-gold);"><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">123 Maple St</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">$25,200</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,240</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">+$21,960</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
+                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">456 Oak Ave</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">$21,600</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$3,910</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">+$17,690</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-gold" style="font-size:10.5px;"><i class="ti ti-alert-triangle"></i> 2 missing</span></td></tr>
+                  <tr><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);">789 Pine Rd</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">$17,100</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;">$2,030</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);text-align:right;color:var(--tv-positive);">+$15,070</td><td style="padding:9px 10px;border-bottom:1px solid var(--tv-border-light);"><span class="badge badge-green" style="font-size:10.5px;"><i class="ti ti-check"></i> Complete</span></td></tr>
+                  <tr><td style="padding:9px 10px;font-weight:700;">Grand total</td><td style="padding:9px 10px;text-align:right;font-weight:700;color:var(--tv-positive);">$63,900</td><td style="padding:9px 10px;text-align:right;font-weight:700;">$9,180</td><td style="padding:9px 10px;text-align:right;font-weight:700;color:var(--tv-positive);">+$54,720</td><td></td></tr>
                 </tbody>
               </table>
             </div>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 22px;background:var(--tv-card);border-top:1px solid var(--tv-border);">
               <div style="font-size:11.5px;color:var(--tv-text-muted);">One file &middot; all properties &middot; Schedule E</div>
               <div style="display:flex;gap:8px;">
-                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download CSV</button>
+                <button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Download summary</button>
                 <button class="btn btn-primary btn-sm"><i class="ti ti-folder"></i> Save to Documents</button>
               </div>
             </div>

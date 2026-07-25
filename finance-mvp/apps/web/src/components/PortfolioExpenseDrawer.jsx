@@ -10,6 +10,11 @@ function csvCell(v) {
 
 const num = (v) => (v == null || v === "" ? 0 : Number(v) || 0);
 
+// Income categories — mirror ExpenseCategories.INCOME on the server so income rows are
+// excluded from expense totals (and tallied separately) in the combined export.
+const INCOME_CATEGORIES = new Set(["rental income", "other income"]);
+const isIncome = (cat) => !!cat && INCOME_CATEGORIES.has(String(cat).trim().toLowerCase());
+
 /**
  * Portfolio-wide expense export: ONE combined, accountant-ready file covering every
  * property's expenses for a tax year — grouped under each property with per-property
@@ -73,31 +78,40 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
   // Aggregates across all properties for the selected year.
   const agg = useMemo(() => {
     let grandTotal = 0;
+    let totalIncome = 0;
     let missing = 0;
     let expenseCount = 0;
     const perProperty = [];
     const catTotals = new Map();
     byProperty.forEach((p) => {
       let pTotal = 0;
+      let pIncome = 0;
       let pMissing = 0;
+      let pExpenseCount = 0;
       p.rows.forEach((e) => {
         const t = num(e.totalCost);
+        if (isIncome(e.category)) {
+          pIncome += t;
+          totalIncome += t;
+          return; // income doesn't count toward expense totals / breakdown / receipts
+        }
         pTotal += t;
         grandTotal += t;
         expenseCount += 1;
+        pExpenseCount += 1;
         if (!e.receiptRef) {
           pMissing += 1;
           missing += 1;
         }
         catTotals.set(e.category, (catTotals.get(e.category) || 0) + t);
       });
-      perProperty.push({ id: p.id, address: p.address, count: p.rows.length, total: pTotal, missing: pMissing });
+      perProperty.push({ id: p.id, address: p.address, count: pExpenseCount, total: pTotal, income: pIncome, net: pIncome - pTotal, missing: pMissing });
     });
     const byCategory = [...catTotals.entries()]
       .map(([category, total]) => ({ category, total }))
       .sort((a, b) => b.total - a.total);
-    const propertiesWithExpenses = perProperty.filter((p) => p.count > 0).length;
-    return { grandTotal, missing, expenseCount, perProperty, byCategory, propertiesWithExpenses };
+    const propertiesWithExpenses = perProperty.filter((p) => p.count > 0 || p.income > 0).length;
+    return { grandTotal, totalIncome, net: totalIncome - grandTotal, missing, expenseCount, perProperty, byCategory, propertiesWithExpenses };
   }, [byProperty]);
 
   // ---- Combined CSV: header, per-property sections w/ subtotals, then summaries ----
@@ -110,41 +124,45 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
     lines.push("");
 
     const header = [
-      "Property", "Date", "Category", "Vendor/Payee", "Description", "Amount",
+      "Property", "Date", "Type", "Category", "Vendor/Payee", "Description", "Amount",
       "Payment Method", "Receipt Ref #", "Hours", "Hourly Rate",
-      "Labor Cost", "Total Cost", "Notes",
+      "Labor Cost", "Total", "Notes",
     ];
     lines.push(header.map(csvCell).join(","));
 
     byProperty.forEach((p) => {
       if (!p.rows.length) return;
-      let sub = 0;
+      let subExp = 0;
+      let subInc = 0;
       p.rows.forEach((e) => {
-        sub += num(e.totalCost);
+        const inc = isIncome(e.category);
+        if (inc) subInc += num(e.totalCost); else subExp += num(e.totalCost);
         lines.push([
-          p.address, e.expenseDate, e.category, e.vendor, e.description, e.amount,
+          p.address, e.expenseDate, inc ? "Income" : "Expense", e.category, e.vendor, e.description, e.amount,
           e.paymentMethod, e.receiptRef, e.hours, e.hourlyRate,
           e.laborCost, e.totalCost, e.notes,
         ].map(csvCell).join(","));
       });
-      lines.push([`Subtotal — ${p.address}`, "", "", "", "", "", "", "", "", "", "", sub, ""].map(csvCell).join(","));
+      lines.push([`Subtotal — ${p.address}`, "", "", "", "", "", "", "", "", "", "", "", `income ${subInc} / expenses ${subExp} / net ${subInc - subExp}`, ""].map(csvCell).join(","));
       lines.push("");
     });
 
     lines.push(csvCell(`Summary by property (${year})`));
-    lines.push(["Property", "Expenses", "Missing receipts", "Total"].map(csvCell).join(","));
+    lines.push(["Property", "Expenses #", "Missing receipts", "Income", "Expenses", "Net"].map(csvCell).join(","));
     agg.perProperty.forEach((p) => {
-      lines.push([p.address, p.count, p.missing, p.total].map(csvCell).join(","));
+      lines.push([p.address, p.count, p.missing, p.income, p.total, p.net].map(csvCell).join(","));
     });
-    lines.push(["GRAND TOTAL", agg.expenseCount, agg.missing, agg.grandTotal].map(csvCell).join(","));
+    lines.push(["GRAND TOTAL", agg.expenseCount, agg.missing, agg.totalIncome, agg.grandTotal, agg.net].map(csvCell).join(","));
     lines.push("");
 
     lines.push(csvCell(`Summary by category — all properties (${year}) — Schedule E`));
     lines.push(["Category", "Total"].map(csvCell).join(","));
+    lines.push(["Rental income", agg.totalIncome].map(csvCell).join(","));
     agg.byCategory.forEach((c) => {
       lines.push([c.category, c.total].map(csvCell).join(","));
     });
-    lines.push(["GRAND TOTAL", agg.grandTotal].map(csvCell).join(","));
+    lines.push(["TOTAL EXPENSES", agg.grandTotal].map(csvCell).join(","));
+    lines.push(["NET (income − expenses)", agg.net].map(csvCell).join(","));
     return lines.join("\n");
   };
 
@@ -180,7 +198,7 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
     }
   };
 
-  const hasData = agg.expenseCount > 0;
+  const hasData = agg.expenseCount > 0 || agg.totalIncome > 0;
 
   return (
     <div
@@ -231,12 +249,18 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
           {/* Portfolio KPIs */}
           <div className="expense-kpi-row">
             <div className="expense-kpi">
-              <div className="expense-kpi-label">Total {year}</div>
+              <div className="expense-kpi-label">Income {year}</div>
+              <div className="expense-kpi-value" style={{ color: "var(--tv-positive)" }}>{currency(agg.totalIncome)}</div>
+            </div>
+            <div className="expense-kpi">
+              <div className="expense-kpi-label">Expenses {year}</div>
               <div className="expense-kpi-value">{currency(agg.grandTotal)}</div>
             </div>
             <div className="expense-kpi">
-              <div className="expense-kpi-label">Properties</div>
-              <div className="expense-kpi-value">{agg.propertiesWithExpenses}<span style={{ fontSize: 12, color: "var(--tv-text-muted)" }}> / {properties.length}</span></div>
+              <div className="expense-kpi-label">{agg.net < 0 ? "Net loss" : "Net cash flow"}</div>
+              <div className="expense-kpi-value" style={{ color: agg.net < 0 ? "var(--tv-negative)" : "var(--tv-positive)" }}>
+                {agg.net < 0 ? "−" : "+"}{currency(Math.abs(agg.net))}
+              </div>
             </div>
             <div className="expense-kpi">
               <div className="expense-kpi-label">Missing receipts</div>
@@ -250,7 +274,7 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
           {!hasData ? (
             <div className="empty-state">
               <i className="ti ti-receipt-off"></i>
-              <p>No expenses logged across your properties for {year}.</p>
+              <p>No income or expenses logged across your properties for {year}.</p>
             </div>
           ) : (
             <>
@@ -260,8 +284,9 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
                   <thead>
                     <tr>
                       <th>Property</th>
+                      <th style={{ textAlign: "right" }}>Income</th>
                       <th style={{ textAlign: "right" }}>Expenses</th>
-                      <th style={{ textAlign: "right" }}>Total</th>
+                      <th style={{ textAlign: "right" }}>Net</th>
                       <th>Receipts</th>
                     </tr>
                   </thead>
@@ -269,8 +294,11 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
                     {agg.perProperty.map((p) => (
                       <tr key={p.id} className={p.missing > 0 ? "expense-row-flag" : ""}>
                         <td>{p.address}</td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{p.count}</td>
+                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: "var(--tv-positive)" }}>{currency(p.income)}</td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{currency(p.total)}</td>
+                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: p.net < 0 ? "var(--tv-negative)" : "var(--tv-positive)" }}>
+                          {p.net < 0 ? "−" : "+"}{currency(Math.abs(p.net))}
+                        </td>
                         <td>
                           {p.missing > 0
                             ? <span className="badge badge-gold" title="Expenses missing a receipt"><i className="ti ti-alert-triangle"></i> {p.missing} missing</span>
@@ -280,8 +308,11 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
                     ))}
                     <tr>
                       <td style={{ fontWeight: 700 }}>Grand total</td>
-                      <td style={{ textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{agg.expenseCount}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: "var(--tv-positive)" }}>{currency(agg.totalIncome)}</td>
                       <td style={{ textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{currency(agg.grandTotal)}</td>
+                      <td style={{ textAlign: "right", fontWeight: 700, fontVariantNumeric: "tabular-nums", color: agg.net < 0 ? "var(--tv-negative)" : "var(--tv-positive)" }}>
+                        {agg.net < 0 ? "−" : "+"}{currency(Math.abs(agg.net))}
+                      </td>
                       <td></td>
                     </tr>
                   </tbody>
@@ -290,17 +321,27 @@ export default function PortfolioExpenseDrawer({ properties = [], onClose }) {
 
               {/* Portfolio category breakdown */}
               <div className="card" style={{ marginTop: 16 }}>
-                <div className="section-title" style={{ fontSize: 13 }}>By category · all properties · {year}</div>
+                <div className="section-title" style={{ fontSize: 13 }}>Income &amp; expenses · all properties · {year}</div>
                 <div style={{ marginTop: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--tv-border)" }}>
+                    <span style={{ color: "var(--tv-positive)" }}>Rental income</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", color: "var(--tv-positive)" }}>{currency(agg.totalIncome)}</span>
+                  </div>
                   {agg.byCategory.map((c) => (
                     <div key={c.category} style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--tv-border)" }}>
                       <span style={{ color: "var(--tv-text-secondary)" }}>{c.category}</span>
-                      <span style={{ fontVariantNumeric: "tabular-nums" }}>{currency(c.total)}</span>
+                      <span style={{ fontVariantNumeric: "tabular-nums" }}>−{currency(c.total)}</span>
                     </div>
                   ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0", fontSize: 13, borderBottom: "1px solid var(--tv-border)" }}>
+                    <span style={{ color: "var(--tv-text-secondary)" }}>Total expenses</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }}>−{currency(agg.grandTotal)}</span>
+                  </div>
                   <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 2px", fontWeight: 600 }}>
-                    <span>Grand total</span>
-                    <span style={{ fontVariantNumeric: "tabular-nums" }}>{currency(agg.grandTotal)}</span>
+                    <span>{agg.net < 0 ? "Net loss" : "Net cash flow"}</span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", color: agg.net < 0 ? "var(--tv-negative)" : "var(--tv-positive)" }}>
+                      {agg.net < 0 ? "−" : "+"}{currency(Math.abs(agg.net))}
+                    </span>
                   </div>
                 </div>
               </div>

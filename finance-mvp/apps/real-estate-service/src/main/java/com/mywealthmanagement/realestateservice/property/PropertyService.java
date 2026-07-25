@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -91,6 +92,14 @@ public class PropertyService {
         // Purchase price defaults to the current value when unknown (NOT NULL column).
         property.setPurchasePrice(firstNonNull(dto.getPurchasePrice(), property.getPurchasePrice(), currentValue));
 
+        // Land value (non-depreciable). Only overwrite when supplied so a partial update
+        // doesn't wipe it. Clamp to the purchase price — land can't exceed the basis.
+        if (dto.getLandValue() != null) {
+            BigDecimal land = dto.getLandValue();
+            BigDecimal price = property.getPurchasePrice();
+            property.setLandValue(price != null && land.compareTo(price) > 0 ? price : land);
+        }
+
         property.setPurchaseDate(dto.getPurchaseDate());
         property.setMortgageBalance(dto.getMortgageBalance());
         property.setLastValuedAt(dto.getLastValuedAt());
@@ -149,11 +158,14 @@ public class PropertyService {
         BigDecimal currentValue = property.getCurrentValue() == null ? BigDecimal.ZERO : property.getCurrentValue();
         BigDecimal mortgageBalance = property.getMortgageBalance() == null ? BigDecimal.ZERO : property.getMortgageBalance();
         BigDecimal equity = currentValue.subtract(mortgageBalance);
+        BigDecimal annualDep = annualDepreciation(property.getPurchasePrice(), property.getLandValue());
+        BigDecimal monthlyDep = annualDep.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);
         return new PropertyDto(
                 property.getId(),
                 property.getAddress(),
                 property.getPropertyType(),
                 property.getPurchasePrice(),
+                property.getLandValue(),
                 property.getPurchaseDate(),
                 property.getCurrentValue(),
                 property.getMortgageBalance(),
@@ -169,8 +181,22 @@ public class PropertyService {
                 property.getMonthlyTax(),
                 property.getMonthlyInsurance(),
                 property.getMonthlyHoa(),
-                property.getMonthlyPmi()
+                property.getMonthlyPmi(),
+                annualDep,
+                monthlyDep
         );
+    }
+
+    /**
+     * Straight-line residential depreciation: (purchasePrice - landValue) / 27.5 years.
+     * Returns 0 when the basis is unknown or non-positive (land ≥ price).
+     */
+    static BigDecimal annualDepreciation(BigDecimal purchasePrice, BigDecimal landValue) {
+        if (purchasePrice == null) return BigDecimal.ZERO;
+        BigDecimal land = landValue != null ? landValue : BigDecimal.ZERO;
+        BigDecimal basis = purchasePrice.subtract(land);
+        if (basis.signum() <= 0) return BigDecimal.ZERO;
+        return basis.divide(BigDecimal.valueOf(27.5), 2, RoundingMode.HALF_UP);
     }
 
     public PropertyEstimate lookup(String address) {

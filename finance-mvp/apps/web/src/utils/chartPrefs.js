@@ -27,6 +27,10 @@ export const CHART_SECTIONS = {
   spending: { default: "donut", allowed: ["donut", "bar"] },
   income: { default: "bar", allowed: ["bar", "donut", "line"] },
   networth: { default: "line", allowed: ["line", "bar"] },
+  // Per-property rental tracker: monthly income-vs-expense cash flow, and the expense
+  // category breakdown. Each surface has its own toggle so the user can switch views.
+  reCashflow: { default: "bar", allowed: ["bar", "line"] },
+  reBreakdown: { default: "donut", allowed: ["donut", "bar"] },
 };
 
 const STORAGE_KEY = "tv_chart_prefs";
