@@ -49,6 +49,13 @@
   --tv-muted: var(--tv-text-muted);
   --tv-chip:  rgba(17, 29, 23, .05);
   --tv-scrim: rgba(255, 255, 255, .60);
+  /* `--tv-surface`/`--tv-surface-2` were referenced by several pages (Transactions account
+     chips, Customer-care list, My Business toggle, Family spending) but NEVER defined — so they
+     fell back to hardcoded #fff/#f3f4f1 and rendered white-on-white in dark/glass (the account
+     chips regression). Aliasing to real, per-theme-overridden surfaces heals every call site at
+     once: surface = a raised card, surface-2 = a subtler chip tint. */
+  --tv-surface:   var(--tv-card);
+  --tv-surface-2: var(--tv-chip);
 
   /* ---- Semantic accents (token heal, C2 guardrail) ----
      These existed only as raw hex scattered through pages/ — the exact drift the
@@ -936,7 +943,7 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
   width: 18px; height: 18px;
   border-radius: 4px;
   border: 1.5px solid var(--tv-border);
-  background: white;
+  background: var(--tv-white); /* themed: white in light, dark surface in dark (was hardcoded white → bright box in dark mode) */
   display: flex; align-items: center; justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
@@ -1471,7 +1478,7 @@ button, a, .card, .stat-tile, .nav-item, .kpi-card {
 .ops-topbar .btn-secondary:hover { background: rgba(255,255,255,.18); }
 
 .ops-body { flex: 1; display: flex; overflow: hidden; }
-.ops-nav { width: 210px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--tv-border); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; }
+.ops-nav { width: 210px; flex-shrink: 0; background: var(--tv-card); border-right: 1px solid var(--tv-border); padding: 12px 8px; display: flex; flex-direction: column; gap: 2px; } /* themed: was hardcoded #fff → light-text-on-white (invisible) in the ops dark theme */
 .ops-nav-item { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; background: none; border: none; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--tv-text-secondary); }
 .ops-nav-item:hover { background: var(--tv-bg); color: var(--tv-text-primary); }
 .ops-nav-item.active { background: var(--tv-sage-pale); color: var(--tv-forest); font-weight: 600; }
@@ -2465,6 +2472,13 @@ html[data-theme="glass-dark"] .nav-item.active {
 .viz-legend span { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--tv-text-secondary); }
 .viz-legend i { width: 9px; height: 9px; border-radius: 2px; }
 .viz-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10.5px; font-weight: 700; }
+/* Studio: chart-type switch mini-bar, Sankey preview + goal cards (mirror the app components) */
+.viz-chartbar { display: inline-flex; gap: 3px; padding: 3px; border-radius: 10px; background: var(--tv-border-light); border: 1px solid var(--tv-border); margin-bottom: 4px; }
+.viz-chartbar span { padding: 4px 10px; border-radius: 7px; font-size: 11px; font-weight: 700; color: var(--tv-text-secondary); }
+.viz-chartbar span.on { background: var(--tv-forest); color: var(--tv-on-accent); }
+.viz-goal { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--tv-border-light); }
+.viz-goal:last-child { border-bottom: none; }
+.viz-goal-thumb { width: 34px; height: 34px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; background: linear-gradient(135deg, var(--tv-forest-light), var(--tv-forest)); flex: 0 0 auto; }
 
 .viz-editor { position: sticky; top: 12px; overflow: hidden; padding: 0; }
 .viz-ehead { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--tv-border-light); }
@@ -2479,3 +2493,81 @@ html[data-theme="light"] .viz-code, html[data-theme="glass"] .viz-code { backgro
 
 /* Visually-hidden but screen-reader-available (used for the editor's label). */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* =============================================
+   SHARED CHART SYSTEM — selector, toggles, summary, P&L
+   Used by the ChartSelector / SankeyChart / ComboBarChart family and every chart surface.
+   All colours are tokens so both Glass variants stay legible (no black-on-black regressions).
+   ============================================= */
+.chart-selector { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+/* Segmented chart-type switch. Active pill carries the brand accent (filled) with the
+   inverse label colour, matching .btn-primary — the "accent-colored active indicator". */
+.chart-switch { display: inline-flex; gap: 3px; padding: 3px; border-radius: 12px; background: var(--tv-border-light); border: 1px solid var(--tv-border); }
+.chart-switch-pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: none;
+  border-radius: 9px; background: transparent; color: var(--tv-text-secondary);
+  font-size: 13px; font-weight: 600; cursor: pointer; transition: background .16s ease, color .16s ease;
+}
+.chart-switch-pill:hover { color: var(--tv-text-primary); }
+.chart-switch-pill.active { background: var(--tv-forest); color: var(--tv-on-accent); box-shadow: 0 2px 8px rgba(0,0,0,.18); }
+.chart-selector.compact .chart-switch-pill { padding: 5px 10px; font-size: 12.5px; }
+.chart-selector.compact .chart-switch-pill span { display: inline; }
+@media (max-width: 520px) { .chart-switch-pill span { display: none; } .chart-switch-pill { padding: 7px 10px; } }
+
+/* Pill/label + iOS-style toggle switch (Split by business / Include bills). */
+.chart-toggle { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--tv-text-secondary); cursor: pointer; }
+.switch { position: relative; width: 42px; height: 24px; border-radius: 999px; border: none; padding: 0; background: var(--tv-border); cursor: pointer; transition: background .18s ease; flex: 0 0 auto; }
+.switch .knob { position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--tv-card); box-shadow: 0 1px 3px rgba(0,0,0,.35); transition: transform .18s ease; }
+.switch.on { background: var(--tv-forest-light); }
+.switch.on .knob { transform: translateX(18px); }
+
+/* "Display by" dropdown (Category / Merchant / Group). */
+.chart-displayby { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--tv-text-muted); }
+.chart-displayby select {
+  height: 34px; border-radius: 10px; border: 1px solid var(--tv-border); background: var(--tv-card);
+  color: var(--tv-text-primary); font-size: 13px; font-weight: 600; padding: 0 10px;
+}
+
+/* Cash-flow summary row — income (green) / expenses (red) / savings. */
+.cf-summary { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.cf-summary-item { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 16px; background: var(--tv-card); border: 1px solid var(--tv-border-light); }
+.cf-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.cf-summary-label { flex: 1; min-width: 0; font-size: 14px; color: var(--tv-text-secondary); font-weight: 600; }
+.cf-summary-val { font-family: var(--font-display); font-size: 19px; font-weight: 700; }
+
+/* Profit & Loss table view. */
+.pnl-table { font-size: 13.5px; }
+.pnl-head { font-weight: 700; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--tv-text-muted); margin-bottom: 6px; }
+.pnl-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--tv-border-light); }
+.pnl-name { color: var(--tv-text-secondary); text-transform: capitalize; }
+.pnl-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.pnl-total { display: flex; justify-content: space-between; padding: 8px 0 2px; font-weight: 700; }
+.pnl-net { margin-top: 8px; padding-top: 10px; border-top: 2px solid var(--tv-border); font-family: var(--font-display); font-size: 15px; }
+
+/* =============================================
+   STATUS TAGS (Goals: On track / At risk / Completed / Past due)
+   ============================================= */
+.status-tag { display: inline-flex; align-items: center; gap: 4px; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .01em; white-space: nowrap; flex: 0 0 auto; }
+.status-tag.tone-green { background: var(--tv-positive-bg); color: var(--tv-positive); }
+.status-tag.tone-amber { background: var(--tv-warning-bg); color: var(--tv-warning); }
+.status-tag.tone-red   { background: var(--tv-negative-bg); color: var(--tv-negative); }
+
+/* Goal thumbnail — gradient + emoji, renders identically in both themes. */
+.goal-thumb { display: inline-flex; align-items: center; justify-content: center; border-radius: 14px; flex: 0 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,.22); line-height: 1; }
+
+/* =============================================
+   REPORTS — sub-tab navigation (Cash Flow / Spending / Income)
+   Selected tab = filled dark surface + light label (consistent tab styling everywhere).
+   ============================================= */
+.report-tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 14px; background: var(--tv-border-light); border: 1px solid var(--tv-border); max-width: 100%; overflow-x: auto; }
+.report-tab {
+  display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px; border: none;
+  border-radius: 10px; background: transparent; color: var(--tv-text-secondary);
+  font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background .16s ease, color .16s ease;
+}
+.report-tab:hover { color: var(--tv-text-primary); }
+.report-tab.active { background: var(--tv-forest); color: var(--tv-on-accent); box-shadow: 0 2px 10px rgba(0,0,0,.2); }
+@media (max-width: 480px) { .report-tab { padding: 9px 13px; font-size: 13px; } }
+

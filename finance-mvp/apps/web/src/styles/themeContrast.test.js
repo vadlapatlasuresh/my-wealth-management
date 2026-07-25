@@ -118,6 +118,7 @@ function contrast(a, b) {
 const PAIRS = [
   ["--tv-text-primary", "--tv-card", 4.5, "body text on a card"],
   ["--tv-text-primary", "--tv-bg", 4.5, "body text on the page canvas"],
+  ["--tv-text-primary", "--tv-surface", 4.5, "text on a raised surface (chips/toggles)"],
   ["--tv-text-secondary", "--tv-card", 4.5, "secondary text on a card"],
   ["--tv-text-muted", "--tv-card", 3.0, "muted labels on a card (large/secondary text)"],
   ["--tv-on-accent", "--tv-forest", 4.5, "button label on the filled brand surface"],

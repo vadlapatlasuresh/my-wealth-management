@@ -58,7 +58,8 @@ const EMPTY_ENTRY = { direction: 'CONTRIBUTION', category: 'INITIAL', amount: ''
 
 const inputStyle = {
   width: '100%', padding: '9px 11px', border: '1px solid var(--tv-border)',
-  borderRadius: 'var(--radius-md)', fontSize: '13.5px', background: 'white',
+  borderRadius: 'var(--radius-md)', fontSize: '13.5px',
+  background: 'var(--tv-card)', color: 'var(--tv-text-primary)',
 };
 const fieldLabel = { fontSize: '11.5px', color: 'var(--tv-text-muted)', fontWeight: 600, marginBottom: '4px', display: 'block' };
 
@@ -296,7 +297,7 @@ function K1View() {
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <ShareWithCpaButton k1s={all.filter((k) => k.taxYear === year)} taxYear={year} onShare={setSharing} />
           <select
-            style={{ padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'white' }}
+            style={{ padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'var(--tv-card)', color: 'var(--tv-text-primary)' }}
             value={year || ''} onChange={(e) => load(Number(e.target.value))}>
             {(years.length ? years : [data.taxYear]).map((y) => (
               <option key={y} value={y}>Tax year {y}</option>

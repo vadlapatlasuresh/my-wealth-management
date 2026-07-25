@@ -2,7 +2,28 @@ import { useState, useEffect, useMemo } from "react";
 import { currency } from "../utils/format";
 import { requiredMonthlyContribution, payoffDateLabel, mortgagePayoff, extraPaymentImpact } from "../utils/calculators";
 import { api } from "../api";
-import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration: goal progress rings
+import { goalVisual, goalGradient, goalStatus } from "../utils/goalVisuals";
+
+// Goal thumbnail: gradient + thematic emoji, legible in both themes (reference IMG_1697/1719).
+// The two gradient stops are fixed brand-art colours (not themeable surfaces), so they live in
+// utils/goalVisuals and are applied via an inline style built there — no raw literal in-page.
+function GoalThumb({ goal, size = 46 }) {
+  const v = goalVisual(goal);
+  return (
+    <div
+      className="goal-thumb"
+      style={{ width: size, height: size, background: goalGradient(goal), fontSize: size * 0.46 }}
+      aria-hidden="true"
+    >
+      {v.emoji}
+    </div>
+  );
+}
+
+// Status pill: On track / At risk / Completed / Past due, colour-coded (reference IMG_1697).
+function StatusTag({ status }) {
+  return <span className={`status-tag tone-${status.tone}`}>{status.label}</span>;
+}
 
 const GOAL_TYPES = [
   { id: "SAVINGS", label: "Savings", icon: "ti ti-pig-money", rate: 4 },
@@ -374,10 +395,13 @@ function PayoffCard({ g, onSetExtra, onRemove }) {
 
   return (
     <div className="card">
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        <div className="item-icon icon-forest"><i className="ti ti-home-dollar"></i></div>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+        <GoalThumb goal={{ ...g, goalType: "DEBT_PAYOFF" }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>{g.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 17, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
+            {done && <span className="status-tag tone-green">Completed</span>}
+          </div>
           <div className="item-sub">
             Mortgage payoff · {g.payoffLabel || "mortgage"}
             {g.payoffStale && <span style={{ color: "var(--tv-text-muted)" }}> · offline</span>}
@@ -461,20 +485,19 @@ function GoalCard({ g, accounts, onAddContribution, onLink, onUnlink, onSetMode,
   const linkedIds = new Set(links.map((l) => String(l.accountId)));
   const linkable = accounts.filter((a) => !linkedIds.has(String(a.id)));
   const modeLabel = TRACKING_MODES.find((m) => m.id === g.trackingMode)?.label || "Manual only";
+  const status = goalStatus(g);
+  const barColor = done ? "var(--tv-positive)" : status.tone === "amber" ? "var(--tv-warning)" : status.tone === "red" ? "var(--tv-negative)" : "var(--tv-forest-light)";
 
   return (
     <div className="card">
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-        {/* Progress ring with the goal's icon in the center — communicates % at a glance. */}
-        <ProgressRing
-          value={progress}
-          size={46}
-          thickness={5}
-          color={done ? "var(--tv-positive)" : "var(--tv-forest-light)"}
-          icon={meta.icon}
-        />
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+        {/* Representative thumbnail (reference IMG_1697): gradient + thematic emoji, both themes. */}
+        <GoalThumb goal={g} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: 17 }}>{g.name}</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontSize: 17, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{g.name}</div>
+            <StatusTag status={status} />
+          </div>
           <div className="item-sub">{meta.label}{g.targetDate ? ` · by ${new Date(g.targetDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}` : ""}</div>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -489,7 +512,7 @@ function GoalCard({ g, accounts, onAddContribution, onLink, onUnlink, onSetMode,
         <span style={{ color: "var(--tv-text-muted)" }}>of {currency(g.targetAmount)} · {Math.round(progress * 100)}%</span>
       </div>
       <div style={{ height: 8, background: "var(--tv-border-light)", borderRadius: 999, overflow: "hidden" }}>
-        <div style={{ width: `${progress * 100}%`, height: "100%", background: done ? "var(--tv-positive)" : "var(--tv-forest-light)", transition: "width .3s ease" }} />
+        <div style={{ width: `${progress * 100}%`, height: "100%", background: barColor, transition: "width .3s ease" }} />
       </div>
       {overfunded && <div style={{ fontSize: 12, color: "var(--tv-positive)", marginTop: 6 }}>
         <i className="ti ti-confetti"></i> {currency(saved - Number(g.targetAmount))} over target</div>}

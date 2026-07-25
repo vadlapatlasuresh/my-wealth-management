@@ -533,7 +533,7 @@ export default function HomePage({
                 <p>No insights yet. Link accounts and we'll surface personalized insights here.</p>
               </div>
             ) : aiInsights.map((insight, index) => (
-              <div key={index} style={{ background: 'white', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
+              <div key={index} style={{ background: 'var(--tv-card)', color: 'var(--tv-text-primary)', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', padding: '14px' }}>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                   <div className={`item-icon ${insight.type === 'positive' ? 'icon-green' : 'icon-red'}`} style={{ flexShrink: 0 }}>
                     <i className={insight.type === 'positive' ? 'ti ti-trending-up' : 'ti ti-credit-card'}></i>

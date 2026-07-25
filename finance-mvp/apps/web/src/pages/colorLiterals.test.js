@@ -40,6 +40,17 @@ const FILE_WAIVERS = {
 // rare in real CSS and would flag copy like the invoice placeholder "e.g. Invoice #1042".
 const HEX = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})(?![0-9a-fA-F])/g;
 
+// KEYWORD literals — the exact bug behind the dark-mode "white-on-white" report: a theme-
+// invariant `background: 'white'` (or 'black'/opaque-white) that stays light while the theme's
+// text token goes light. Matched ONLY as a CSS *value* — a style property followed by the
+// quoted keyword — so prose like "Whole Foods" or "white-glove" never trips it. Genuinely
+// fixed colours (a badge over a photo) go in a theme-guard-allow region like any other literal.
+const STYLE_PROP = "(?:background|backgroundColor|color|borderColor|border|fill|stroke|outlineColor)";
+const KEYWORD = new RegExp(
+  `${STYLE_PROP}\\s*:\\s*['\"](?:white|black|rgb\\(\\s*255\\s*,\\s*255\\s*,\\s*255\\s*\\)|rgba\\(\\s*255\\s*,\\s*255\\s*,\\s*255\\s*,\\s*1\\s*\\))['\"]`,
+  "gi"
+);
+
 // SCOPE NOTE — hex only, on purpose. rgba()/hsla() in these pages are overwhelmingly *alpha
 // effects* rather than palette choices: drop shadows, modal scrims, and hairline tints that are
 // meant to darken or lighten whatever surface they land on, and which therefore already work in
@@ -80,7 +91,8 @@ function offendersIn(file) {
   const out = [];
   lines.forEach((line, i) => {
     if (waived.has(i + 1)) return;
-    const hits = stripVarFallbacks(line).match(HEX) || [];
+    const stripped = stripVarFallbacks(line);
+    const hits = [...(stripped.match(HEX) || []), ...(stripped.match(KEYWORD) || [])];
     if (hits.length) out.push(`${file}:${i + 1}  ${hits.join(", ")}   ${line.trim().slice(0, 100)}`);
   });
   return out;

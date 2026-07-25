@@ -16,6 +16,7 @@ const TodayPage       = React.lazy(() => import('../pages/TodayPage'));
 const RecurringPage   = React.lazy(() => import('../pages/RecurringPage'));
 const HealthScorePage = React.lazy(() => import('../pages/HealthScorePage'));
 const CashFlowPage    = React.lazy(() => import('../pages/CashFlowPage'));
+const ReportsPage     = React.lazy(() => import('../pages/ReportsPage'));
 const AlertsPage      = React.lazy(() => import('../pages/AlertsPage'));
 const SpendingPage    = React.lazy(() => import('../pages/SpendingInsightsPage'));
 const YearInReviewPage = React.lazy(() => import('../pages/YearInReviewPage'));
@@ -151,6 +152,12 @@ export const MODULE_REGISTRY = {
     id: 'cashflow', title: 'Cash Flow', icon: 'ti ti-arrows-exchange',
     route: '/cash-flow', section: SECTION_MONEY, defaultOrder: 7,
     component: CashFlowPage, inNavByDefault: true,
+  },
+  // Unified Reports hub: Cash Flow / Spending / Income sub-tabs over the shared chart system.
+  reports: {
+    id: 'reports', title: 'Reports', icon: 'ti ti-chart-pie-2',
+    route: '/reports', section: SECTION_MONEY, defaultOrder: 8,
+    component: ReportsPage, inNavByDefault: true,
   },
   // Year-in-Review — "Wrapped for your money" (Phase 4). feature_key: individual.yearInReview.
   yearinreview: {
@@ -370,7 +377,7 @@ export const MODULE_REGISTRY = {
    grouped by section. Used to build the bundled fallback config. */
 export const DEFAULT_MODULES = {
   [SECTION_DAILY]:      ['today', 'alerts'],
-  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'spending', 'yearinreview', 'billoptimizer'],
+  [SECTION_MONEY]:      ['home', 'accounts', 'transactions', 'budget', 'billpay', 'recurring', 'cashflow', 'reports', 'spending', 'yearinreview', 'billoptimizer'],
   [SECTION_GROW]:       ['goals', 'goalscenarios', 'debt', 'invest', 'investinsights', 'calculators', 'ai-assistant', 'healthscore', 'emergencyfund', 'coach',
                           ...(isFlagEnabled(FLAGS.CREDIT_MONITORING) ? ['creditscore'] : []),
                           ...(isFlagEnabled(FLAGS.BENCHMARKS) ? ['benchmarks'] : [])],

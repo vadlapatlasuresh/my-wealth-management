@@ -45,6 +45,10 @@ describe("renderScreen / renderBlock — shared by all 3 device panels", () => {
     expect(renderBlock({ type: "list", title: "L", rows: [{ label: "r", val: "v" }] })).toContain("viz-row");
     expect(renderBlock({ type: "factors", rows: [{ label: "f", weight: 30, status: "Good", pct: 70, tone: "good" }] })).toContain("Good");
     expect(renderBlock({ type: "verdict", tone: "warn", title: "V", detail: "d" })).toContain("V");
+    // Shared chart system blocks
+    expect(renderBlock({ type: "chartbar", active: "Sankey", options: ["Sankey", "Bar"] })).toContain("viz-chartbar");
+    expect(renderBlock({ type: "sankey", title: "Cash flow", sources: [{ l: "Pay", v: 9, c: "#000" }], cats: [{ l: "Rent", v: 4, c: "#111" }] })).toContain("<svg");
+    expect(renderBlock({ type: "goals", title: "Goals", rows: [{ thumb: "🏡", label: "House", pct: 0.9, val: "$1", status: "at_risk" }] })).toContain("At risk");
   });
 
   it("escapes user-editable strings (no HTML injection from the code editor)", () => {

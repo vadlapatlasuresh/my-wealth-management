@@ -9,6 +9,7 @@ import AlertsPage from "./AlertsPage";
 import CashFlowPage from "./CashFlowPage";
 import HealthScorePage from "./HealthScorePage";
 import SpendingInsightsPage from "./SpendingInsightsPage";
+import ReportsPage from "./ReportsPage";
 import CoachPage from "./CoachPage";
 import EmergencyFundPage from "./EmergencyFundPage";
 
@@ -87,14 +88,31 @@ describe("new screens render real data (not empty states)", () => {
     expect(html).toContain("Emergency fund");
   });
 
-  it("Cash Flow shows safe-to-spend and monthly averages", () => {
+  it("Cash Flow shows safe-to-spend, income/expense summary and the Sankey chart", () => {
     const html = render(
       <CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={[]} />
     );
     expect(html).not.toContain("No cash flow yet");
     expect(html).toContain("Safe to spend right now");
-    expect(html).toContain("Avg money in");
-    expect(html).toContain("Last 6 months");
+    expect(html).toContain("Total income");
+    expect(html).toContain("Total expenses");
+    // Cash flow defaults to the shared Sankey visualization.
+    expect(html).toContain("Cash flow Sankey diagram");
+  });
+
+  it("Reports shows the tabs, income/expense summary and defaults to the Cash Flow Sankey", () => {
+    const html = render(
+      <ReportsPage accounts={accounts} transactions={transactions} paymentIntents={[]} />
+    );
+    expect(html).not.toContain("No reports yet");
+    expect(html).toContain("Reports");
+    // Sub-tabs
+    expect(html).toContain("Cash Flow");
+    expect(html).toContain("Spending");
+    expect(html).toContain("Income");
+    // Shared summary + default Sankey
+    expect(html).toContain("Total income");
+    expect(html).toContain("Cash flow Sankey diagram");
   });
 
   it("Spending shows category breakdown and top merchants", () => {

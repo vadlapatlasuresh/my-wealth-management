@@ -46,7 +46,8 @@ const labelFor = (list, value) => (list.find((o) => o.value === value) || {}).la
 
 const inputStyle = {
   width: '100%', padding: '9px 11px', border: '1px solid var(--tv-border)',
-  borderRadius: 'var(--radius-md)', fontSize: '13.5px', background: 'white',
+  borderRadius: 'var(--radius-md)', fontSize: '13.5px',
+  background: 'var(--tv-card)', color: 'var(--tv-text-primary)',
 };
 const fieldLabel = { fontSize: '11.5px', color: 'var(--tv-text-muted)', fontWeight: 600, marginBottom: '4px', display: 'block' };
 
@@ -603,7 +604,7 @@ function ListingCard({ deal, owner, onOpen, onEdit, onDelete }) {
 
 function DirectoryFilters({ filters, onChange }) {
   const typeOptions = PROPERTY_TYPES[filters.category] || [];
-  const sel = { padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'white' };
+  const sel = { padding: '7px 10px', border: '1px solid var(--tv-border)', borderRadius: 'var(--radius-md)', fontSize: '13px', background: 'var(--tv-card)', color: 'var(--tv-text-primary)' };
   const hasAny = filters.category || filters.subcategory;
   return (
     <div className="card" style={{ marginBottom: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -641,7 +642,10 @@ function ImagePicker({ existing, picked, onAdd, onRemoveExisting, onRemovePicked
   const removeBtn = {
     position: 'absolute', top: '4px', right: '4px', width: '22px', height: '22px',
     borderRadius: '50%', border: 'none', cursor: 'pointer', lineHeight: 1,
+    // theme-guard-allow-start: a delete "×" that sits on a dark scrim OVER a photo — the
+    // white-on-black is fixed regardless of app theme (the photo, not a themed surface, is behind).
     background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '12px',
+    // theme-guard-allow-end
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   };
 
