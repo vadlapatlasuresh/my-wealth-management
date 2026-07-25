@@ -38,12 +38,16 @@ export const SCREENS = {
       { label: "May", value: 74, color: C.stocks }, { label: "Jun", value: 82, color: C.stocks }, { label: "Jul", value: 88, color: C.stocks }] },
   ] },
   cashflow: { section: "money", name: "Cash Flow", blocks: [
-    { type: "header", title: "Cash flow", subtitle: "What's in, out, and safe to spend" },
-    { type: "kpis", items: [{ l: "Avg in", v: "$6,200", d: "/mo", up: true }, { l: "Avg out", v: "$4,850", d: "/mo" }, { l: "Avg net", v: "+$1,350", d: "/mo", up: true }] },
-    { type: "stacked", title: "Last 6 months", legend: [{ k: "In", c: C.income }, { k: "Out", c: C.auto }], periods: [
-      { label: "Feb", segs: [{ v: 62, c: C.income }, { v: 48, c: C.auto }] }, { label: "Mar", segs: [{ v: 60, c: C.income }, { v: 52, c: C.auto }] },
-      { label: "Apr", segs: [{ v: 64, c: C.income }, { v: 47, c: C.auto }] }, { label: "May", segs: [{ v: 66, c: C.income }, { v: 55, c: C.auto }] },
-      { label: "Jun", segs: [{ v: 63, c: C.income }, { v: 49, c: C.auto }] }, { label: "Jul", segs: [{ v: 68, c: C.income }, { v: 51, c: C.auto }] }] },
+    { type: "header", title: "Cash flow", subtitle: "Where money comes from, and where it goes" },
+    // Cash flow now DEFAULTS to a Sankey (shared ChartSelector · Sankey / Bar / Profit & Loss),
+    // with income green + expenses red summary. Mirrors CashFlowPage + the viz/SankeyChart component.
+    { type: "chartbar", active: "Sankey", options: ["Sankey", "Bar", "P&L"] },
+    { type: "kpis", items: [{ l: "Total income", v: "$12,000", d: "in", up: true }, { l: "Total expenses", v: "$5,003", d: "out" }, { l: "Savings", v: "$6,997", d: "net", up: true }] },
+    { type: "sankey", title: "Cash flow", sources: [
+      { l: "💰 Paychecks", v: 9000, c: C.income }, { l: "💰 Business", v: 3000, c: C.stocks }], cats: [
+      { l: "🏠 Housing", v: 2600, c: C.housing }, { l: "🍽️ Food", v: 900, c: C.food },
+      { l: "🚗 Auto", v: 700, c: C.auto }, { l: "💡 Utilities", v: 500, c: C.utilities },
+      { l: "🛍️ Shopping", v: 303, c: C.shopping }] },
   ] },
   spending: { section: "money", name: "Spending", blocks: [
     { type: "header", title: "Spending insights", subtitle: "Where your money actually goes" },
@@ -117,9 +121,12 @@ export const SCREENS = {
   ] },
   sharedmoney: { section: "shared", name: "Goals & Bills", blocks: [
     { type: "header", title: "Shared goals & bills", subtitle: "What you save for together" },
-    { type: "list", title: "Shared goals", rows: [
-      { dot: C.income, label: "House down payment", sub: "Alex $11,200 · Jordan $7,200", val: "$18,400" },
-      { dot: C.shopping, label: "Summer trip", sub: "62% funded", val: "$3,100" }] },
+    // Goal cards now carry a thumbnail (emoji) + colored progress bar + status tag
+    // (On track / At risk / Completed), matching GoalsPage + utils/goalVisuals.
+    { type: "goals", title: "Shared goals", rows: [
+      { thumb: "🏡", label: "House down payment", pct: 0.92, val: "$18,400", status: "on_track" },
+      { thumb: "🏖️", label: "Summer trip", pct: 0.62, val: "$3,100", status: "at_risk" },
+      { thumb: "🧯", label: "Emergency fund", pct: 1, val: "$15,000", status: "completed" }] },
   ] },
   mybusiness: { section: "business", name: "My Business", blocks: [
     { type: "header", title: "My Business", subtitle: "Acme LLC · Connected" },
@@ -203,9 +210,56 @@ function stackedBlock(b) {
       <div class="cl">${esc(p.label)}</div></div>`;
   }).join("")}</div>${legend}`);
 }
+// Compact 3-column Sankey (income sources → hub → expense categories) for the studio preview.
+// Ribbon widths are proportional; the full app component is components/viz/SankeyChart.jsx.
+export function sankeyMini(sources, cats, W = 320, H = 190) {
+  const inTot = sources.reduce((a, s) => a + +s.v, 0) || 1;
+  const outTot = cats.reduce((a, s) => a + +s.v, 0) || 1;
+  const scale = Math.max(inTot, outTot);
+  const padY = 8, plotH = H - padY * 2, nodeW = 9;
+  const px = plotH / scale;
+  const place = (arr, x) => {
+    let y = padY + Math.max(0, (plotH - (arr.reduce((a, s) => a + Math.max(4, +s.v * px), 0) + (arr.length - 1) * 6)) / 2);
+    return arr.map((s) => { const h = Math.max(4, +s.v * px); const r = { ...s, x, y, h }; y += h + 6; return r; });
+  };
+  const L = place(sources, 2), R = place(cats, W - nodeW - 2);
+  const hubH = Math.max(L.reduce((a, s) => a + s.h, 0) + (L.length - 1) * 6, R.reduce((a, s) => a + s.h, 0) + (R.length - 1) * 6, 24);
+  const hubY = padY + Math.max(0, (plotH - hubH) / 2), hubX = W / 2 - nodeW / 2;
+  let cf = hubY, ct = hubY;
+  const rib = (x0, y0, h0, x1, y1, h1, col) => {
+    const mx = (x0 + x1) / 2;
+    return `<path d="M ${x0} ${y0} C ${mx} ${y0} ${mx} ${y1} ${x1} ${y1} L ${x1} ${y1 + h1} C ${mx} ${y1 + h1} ${mx} ${y0 + h0} ${x0} ${y0 + h0} Z" fill="${col}" opacity=".32"/>`;
+  };
+  const ribsIn = L.map((s) => { const r = rib(s.x + nodeW, s.y, s.h, hubX, cf, s.h, s.c); cf += s.h; return r; }).join("");
+  const ribsOut = R.map((s) => { const r = rib(hubX + nodeW, ct, s.h, s.x, s.y, s.h, s.c); ct += s.h; return r; }).join("");
+  const nodes = [...L.map((s) => ({ ...s, anchor: "start", tx: s.x + nodeW + 5 })),
+    { x: hubX, y: hubY, h: hubH, c: "var(--tv-positive)", l: "Income", anchor: "start", tx: hubX + nodeW + 5 },
+    ...R.map((s) => ({ ...s, anchor: "end", tx: s.x - 5 }))];
+  const rects = nodes.map((n) => `<rect x="${n.x}" y="${n.y}" width="${nodeW}" height="${n.h}" rx="3" fill="${n.c}"/>
+    <text x="${n.tx}" y="${n.y + Math.min(n.h / 2, 9)}" text-anchor="${n.anchor}" dominant-baseline="middle" style="font-size:9px;font-weight:600;fill:var(--tv-text-primary)">${esc(n.l)}</text>`).join("");
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">${ribsIn}${ribsOut}${rects}</svg>`;
+}
+
+const STATUS_TAG = {
+  on_track: ["On track", "var(--tv-positive-bg)", "var(--tv-positive)"],
+  at_risk: ["At risk", "var(--tv-warning-bg)", "var(--tv-warning)"],
+  completed: ["Completed", "var(--tv-positive-bg)", "var(--tv-positive)"],
+  behind: ["Past due", "var(--tv-negative-bg)", "var(--tv-negative)"],
+};
+
 export function renderBlock(b) {
   switch (b.type) {
     case "header": return `<div><div class="t">${esc(b.title)}</div><div class="s">${esc(b.subtitle || "")}</div></div>`;
+    case "chartbar": return `<div class="viz-chartbar">${(b.options || []).map((o) => `<span class="${o === b.active ? "on" : ""}">${esc(o)}</span>`).join("")}</div>`;
+    case "sankey": return card(b.title, sankeyMini(b.sources || [], b.cats || []));
+    case "goals": return card(b.title, (b.rows || []).map((r) => {
+      const st = STATUS_TAG[r.status] || STATUS_TAG.on_track;
+      const barCol = r.status === "at_risk" ? "var(--tv-warning)" : r.status === "behind" ? "var(--tv-negative)" : "var(--tv-positive)";
+      return `<div class="viz-goal"><span class="viz-goal-thumb">${esc(r.thumb || "🎯")}</span><div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px"><span class="rl" style="font-weight:600">${esc(r.label)}</span><span class="viz-pill" style="background:${st[1]};color:${st[2]};margin-left:auto">${st[0]}</span></div>
+        <div style="height:6px;border-radius:4px;background:rgba(127,127,127,.16);overflow:hidden;margin-top:5px"><div style="width:${Math.round((r.pct || 0) * 100)}%;height:100%;background:${barCol}"></div></div>
+        <div class="rs" style="margin-top:3px">${esc(r.val || "")}</div></div></div>`;
+    }).join(""));
     case "kpis": return `<div class="viz-kpis">${b.items.map((k) => `<div class="viz-kpi"><div class="l">${esc(k.l)}</div><div class="v">${esc(k.v)}</div>${k.d ? `<div class="d ${k.up ? "up" : "down"}">${k.up ? "▲" : "▼"} ${esc(k.d)}</div>` : ""}</div>`).join("")}</div>`;
     case "donut": return card(b.title, `<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
       <div>${donut(b.segments, b.total)}</div>

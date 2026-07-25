@@ -1164,20 +1164,40 @@ svg{display:block;}
         <div class="big-val" style="margin:6px 0 6px;">$11,240</div>
         <span class="tiny secondary">$12,480 cash − $1,240 scheduled bills</span>
       </div>
-      <div class="kpi-grid" style="margin-top:14px;">
-        <div class="kpi"><div class="k-lbl">Avg in</div><div class="k-val" style="color:var(--tv-positive);">$7,900</div></div>
-        <div class="kpi"><div class="k-lbl">Avg out</div><div class="k-val" style="color:var(--tv-gold);">$5,430</div></div>
+      <div class="kpi-grid" style="margin-top:14px;grid-template-columns:repeat(3,1fr);">
+        <div class="kpi"><div class="k-lbl">Income</div><div class="k-val" style="color:var(--tv-positive);">$12,000</div></div>
+        <div class="kpi"><div class="k-lbl">Expenses</div><div class="k-val" style="color:var(--tv-negative);">$5,003</div></div>
+        <div class="kpi"><div class="k-lbl">Savings</div><div class="k-val">$6,997</div></div>
       </div>
-      <div class="section-title">Last 6 months</div>
-      <div class="m-card" style="padding:16px;">
-        <div style="display:flex; align-items:flex-end; gap:10px; height:120px;">
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:76px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:58px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">Feb</div></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:82px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:66px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">Mar</div></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:72px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:80px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">Apr</div></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:88px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:58px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">May</div></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:80px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:62px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">Jun</div></div>
-          <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;"><div style="display:flex;align-items:flex-end;gap:3px;height:96px;"><div style="width:9px;height:96px;border-radius:3px 3px 0 0;background:var(--tv-forest);"></div><div style="width:9px;height:52px;border-radius:3px 3px 0 0;background:var(--tv-gold);"></div></div><div class="tiny secondary">Jul</div></div>
-        </div>
+      <div class="segmented sm" style="margin:14px 0 10px;"><div class="seg sel">Sankey</div><div class="seg">Bar</div><div class="seg">P&amp;L</div></div>
+      <div class="m-card" style="padding:16px 10px;">
+        <svg viewBox="0 0 320 200" width="100%" style="display:block" aria-label="Cash flow Sankey">
+          <path d="M13 16 C81 16 81 16 150 16 L150 132 C81 132 81 132 13 132 Z" fill="#3D8A68" opacity=".34"/>
+          <path d="M13 138 C81 138 81 132 150 132 L150 184 C81 184 81 184 13 184 Z" fill="#25B6B6" opacity=".34"/>
+          <path d="M162 16 C236 16 236 16 307 16 L307 108 C236 108 236 16 162 108 Z" fill="#3FB577" opacity=".34"/>
+          <path d="M162 108 C236 108 236 114 307 114 L307 148 C236 148 236 122 162 122 Z" fill="#E85C9E" opacity=".34"/>
+          <path d="M162 122 C236 122 236 152 307 152 L307 165 C236 165 236 125 162 125 Z" fill="#E7B23C" opacity=".34"/>
+          <path d="M162 125 C236 125 236 168 307 168 L307 178 C236 178 236 127 162 127 Z" fill="#EE7A38" opacity=".34"/>
+          <path d="M162 127 C236 127 236 181 307 181 L307 184 C236 184 236 129 162 129 Z" fill="#7A6FEA" opacity=".34"/>
+          <rect x="3" y="16" width="10" height="116" rx="3" fill="#3D8A68"/>
+          <rect x="3" y="138" width="10" height="46" rx="3" fill="#25B6B6"/>
+          <rect x="150" y="16" width="12" height="168" rx="3" fill="var(--tv-positive)"/>
+          <rect x="307" y="16" width="10" height="92" rx="3" fill="#3FB577"/>
+          <rect x="307" y="114" width="10" height="34" rx="3" fill="#E85C9E"/>
+          <rect x="307" y="152" width="10" height="13" rx="3" fill="#E7B23C"/>
+          <rect x="307" y="168" width="10" height="10" rx="3" fill="#EE7A38"/>
+          <rect x="307" y="181" width="10" height="3" rx="1.5" fill="#7A6FEA"/>
+          <text x="18" y="26" style="font-size:9px;font-weight:700;fill:var(--tv-text-primary);">💰 Paychecks</text>
+          <text x="18" y="37" style="font-size:8.5px;fill:var(--tv-text-secondary);">$9,000 (75%)</text>
+          <text x="18" y="150" style="font-size:9px;font-weight:700;fill:var(--tv-text-primary);">💰 Business</text>
+          <text x="18" y="161" style="font-size:8.5px;fill:var(--tv-text-secondary);">$3,000 (25%)</text>
+          <text x="167" y="24" style="font-size:9px;font-weight:700;fill:var(--tv-text-primary);">Income</text>
+          <text x="167" y="35" style="font-size:8.5px;fill:var(--tv-text-secondary);">$12,000</text>
+          <text x="302" y="26" text-anchor="end" style="font-size:9px;font-weight:700;fill:var(--tv-text-primary);">🐷 Savings $6,997</text>
+          <text x="302" y="124" text-anchor="end" style="font-size:9px;font-weight:700;fill:var(--tv-text-primary);">🏠 Housing $2,600</text>
+          <text x="302" y="158" text-anchor="end" style="font-size:8.5px;fill:var(--tv-text-secondary);">🍽️ Food $900</text>
+          <text x="302" y="174" text-anchor="end" style="font-size:8.5px;fill:var(--tv-text-secondary);">🚗 Auto $700</text>
+        </svg>
       </div>
     </div>
     </div>
@@ -2095,9 +2115,9 @@ svg{display:block;}
         <div class="kpi"><div class="k-lbl">Target</div><div class="k-val" style="font-size:18px;">$65k</div></div>
       </div>
       <div class="m-card" style="margin-top:16px;">
-        <div class="row gap8" style="margin-bottom:8px;"><div class="cat-icon" style="background:var(--tv-sage-pale); color:var(--tv-forest);"><i class="ti ti-shield"></i></div><div class="grow"><div class="t1">Emergency Fund</div><div class="t2">Savings · by Dec 2026</div></div><div style="text-align:right;"><div class="tiny muted" style="text-transform:uppercase; letter-spacing:.4px;">Still needed</div><div style="font-weight:700; font-size:16px; color:var(--tv-forest);">$6,000</div></div></div>
-        <div class="row between tiny"><span class="secondary"><b style="color:var(--tv-text-primary);">$14,000</b> of $20,000</span><span style="font-weight:700; color:var(--tv-forest);">70%</span></div>
-        <div class="m-prog" style="margin:8px 0 10px;"><span style="width:70%;"></span></div>
+        <div class="row gap8" style="margin-bottom:8px;"><div style="width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:linear-gradient(135deg,#F97362,#C0392B);flex:0 0 auto;">🧯</div><div class="grow"><div class="row gap8" style="align-items:center;"><div class="t1">Emergency Fund</div><span class="chip green chip-round tiny" style="height:22px;">On track</span></div><div class="t2">Savings · by Dec 2026</div></div><div style="text-align:right;"><div class="tiny muted" style="text-transform:uppercase; letter-spacing:.4px;">Still needed</div><div style="font-weight:700; font-size:16px; color:var(--tv-forest);">$6,000</div></div></div>
+        <div class="row between tiny"><span class="secondary"><b style="color:var(--tv-text-primary);">$14,000</b> of $20,000</span><span style="font-weight:700; color:var(--tv-positive);">70%</span></div>
+        <div class="m-prog" style="margin:8px 0 10px;"><span style="width:70%; background:var(--tv-positive);"></span></div>
         <div class="tiny muted" style="margin-bottom:10px;">Save <b>$650/mo</b> for 9 months to hit target</div>
         <div class="chip-row"><span class="chip chip-round assist">+$100</span><span class="chip chip-round assist">+$500</span></div>
         <div class="row gap8" style="margin-top:10px;"><div class="m-field grow" style="margin-bottom:0;"><input placeholder="Log an amount…" style="height:40px;"></div><span class="chip chip-round assist"><i class="ti ti-plus" style="font-size:11px;"></i> Log</span></div>
@@ -2110,14 +2130,14 @@ svg{display:block;}
         </div>
       </div>
       <div class="m-card" style="margin-top:12px;">
-        <div class="row gap8" style="margin-bottom:8px;"><div class="cat-icon" style="background:var(--tv-gold-pale); color:var(--tv-gold);"><i class="ti ti-plane"></i></div><div class="grow"><div class="t1">Japan Trip</div><div class="t2">Custom · by Apr 2027</div></div><i class="ti ti-trash muted"></i></div>
-        <div class="row between tiny"><span class="secondary"><b style="color:var(--tv-text-primary);">$3,200</b> of $8,000</span><span style="font-weight:700; color:var(--tv-forest);">40%</span></div>
-        <div class="m-prog" style="margin:8px 0 10px;"><span style="width:40%; background:var(--tv-gold);"></span></div>
+        <div class="row gap8" style="margin-bottom:8px;"><div style="width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:linear-gradient(135deg,#F0C878,#EE7A38);flex:0 0 auto;">🏖️</div><div class="grow"><div class="row gap8" style="align-items:center;"><div class="t1">Japan Trip</div><span class="chip chip-round tiny" style="height:22px;background:var(--tv-warning-bg,#FEF6E0);color:var(--tv-warning,#B07D1C);">At risk</span></div><div class="t2">Custom · by Apr 2027</div></div><i class="ti ti-trash muted"></i></div>
+        <div class="row between tiny"><span class="secondary"><b style="color:var(--tv-text-primary);">$3,200</b> of $8,000</span><span style="font-weight:700; color:var(--tv-warning,#B07D1C);">40%</span></div>
+        <div class="m-prog" style="margin:8px 0 10px;"><span style="width:40%; background:var(--tv-warning,#B07D1C);"></span></div>
         <div class="tiny muted" style="margin-bottom:10px;">Save <b>$480/mo</b> for 10 months to hit target</div>
         <div class="chip-row"><span class="chip chip-round assist">+$100</span><span class="chip chip-round assist">+$500</span></div>
       </div>
       <div class="m-card" style="margin-top:12px;">
-        <div class="row gap8" style="margin-bottom:8px;"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-circle-check"></i></div><div class="grow"><div class="t1">New Laptop</div><div class="t2">Savings · by May 2026</div></div><span class="chip green chip-round tiny" style="height:24px;">Goal reached</span></div>
+        <div class="row gap8" style="margin-bottom:8px;"><div style="width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:19px;background:linear-gradient(135deg,#7A6FEA,#6B46C1);flex:0 0 auto;">📺</div><div class="grow"><div class="row gap8" style="align-items:center;"><div class="t1">New Laptop</div><span class="chip green chip-round tiny" style="height:22px;">Completed</span></div><div class="t2">Savings · by May 2026</div></div></div>
         <div class="row between tiny"><span class="secondary"><b style="color:var(--tv-text-primary);">$2,400</b> of $2,400</span><span style="font-weight:700; color:var(--tv-positive);">100%</span></div>
         <div class="m-prog" style="margin:8px 0 2px;"><span style="width:100%; background:var(--tv-positive);"></span></div>
       </div>

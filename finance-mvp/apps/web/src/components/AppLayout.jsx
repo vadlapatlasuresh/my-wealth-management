@@ -23,6 +23,7 @@ const TodayPage       = MODULE_REGISTRY.today.component;
 const RecurringPage   = MODULE_REGISTRY.recurring.component;
 const HealthScorePage = MODULE_REGISTRY.healthscore.component;
 const CashFlowPage    = MODULE_REGISTRY.cashflow.component;
+const ReportsPage     = MODULE_REGISTRY.reports.component;
 const AlertsPage      = MODULE_REGISTRY.alerts.component;
 const SpendingPage    = MODULE_REGISTRY.spending.component;
 const YearInReviewPage = MODULE_REGISTRY.yearinreview.component;
@@ -498,6 +499,7 @@ export default function AppLayout(props) {
                   <CashFlowPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />
                 </FeatureGate>
               } />
+              <Route path="/reports" element={<ReportsPage accounts={accounts} transactions={transactions} paymentIntents={paymentIntents} />} />
               <Route path="/spending" element={<SpendingPage transactions={transactions} />} />
               <Route path="/year-in-review" element={<YearInReviewPage transactions={transactions} />} />
               <Route path="/bill-timing" element={
