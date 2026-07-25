@@ -51,6 +51,7 @@ class CustomerContactTest {
     @Mock private BusinessExpenseRepository expenseRepo;
     @Mock private BusinessExpenseLinkRepository expenseLinkRepo;
     @Mock private BusinessCustomerRepository customerRepo;
+    @Mock private BusinessInvoiceLineItemRepository lineItemRepo;
     @Mock private BusinessSummaryService summaryService;
     @Mock private DocumentStorageService storageService;
     @Mock private NotificationClient notificationClient;

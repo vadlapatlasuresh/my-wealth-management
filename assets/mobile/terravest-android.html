@@ -1715,6 +1715,14 @@ svg{display:block;}
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-warning-bg); color:var(--tv-warning);"><i class="ti ti-file-invoice"></i></div><div class="grow"><div class="t1">Harbor Group</div><div class="t2">Manual · Due Jun 28</div></div><div style="font-weight:700;">$2,100</div></div>
         <div class="lrow"><div class="cat-icon" style="background:var(--tv-positive-bg); color:var(--tv-positive);"><i class="ti ti-file-check"></i></div><div class="grow"><div class="t1">Northwind Co.</div><div class="t2" style="color:var(--tv-positive);">Manual · Paid</div></div><div style="font-weight:700;">$6,200</div></div>
       </div>
+      <!-- Itemized invoice: line items -> subtotal/discount/tax/total -->
+      <div class="m-card" style="padding:12px 16px;">
+        <div style="font-weight:600; font-size:13px; margin-bottom:6px;">Northwind Co. · itemized</div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; padding:2px 0;"><span>Design · 40h @ $150</span><span>$6,000</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; padding:2px 0;"><span>Hosting · 1 @ $200</span><span>$200</span></div>
+        <div style="display:flex; justify-content:space-between; font-size:13px; color:var(--tv-text-muted); padding:2px 0;"><span>Subtotal · Tax 0%</span><span>$6,200</span></div>
+        <div style="display:flex; justify-content:space-between; font-weight:700; border-top:1px solid var(--tv-border); margin-top:4px; padding-top:6px;"><span>Total</span><span>$6,200</span></div>
+      </div>
       <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">Customers <span style="font-size:12px; color:var(--tv-forest); font-weight:600;"><i class="ti ti-users"></i> Manage</span></div>
       <!-- Saved contacts reused across invoices: email/SMS delivery, tax ID, preferred pay method, billing/shipping -->
       <div class="m-card" style="padding:6px 16px;">
