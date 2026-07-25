@@ -2,6 +2,7 @@ package com.mywealthmanagement.realestateservice.internal;
 
 import com.mywealthmanagement.realestateservice.deal.DealRepository;
 import com.mywealthmanagement.realestateservice.deal.DealWatchRepository;
+import com.mywealthmanagement.realestateservice.property.PropertyDocumentRepository;
 import com.mywealthmanagement.realestateservice.property.PropertyExpenseRepository;
 import com.mywealthmanagement.realestateservice.property.PropertyRepository;
 import com.mywealthmanagement.realestateservice.sponsor.SponsorProjectRepository;
@@ -24,6 +25,7 @@ public class InternalPurgeController {
     private final DealRepository dealRepository;
     private final PropertyRepository propertyRepository;
     private final PropertyExpenseRepository propertyExpenseRepository;
+    private final PropertyDocumentRepository propertyDocumentRepository;
     private final SponsorProjectRepository sponsorProjectRepository;
 
     @Value("${internal.key:${audit.ingest.key:dev-internal-audit-key}}")
@@ -39,6 +41,7 @@ public class InternalPurgeController {
         dealWatchRepository.deleteByUserId(userId);   // watches/interests first
         sponsorProjectRepository.deleteByUserId(userId);
         dealRepository.deleteByUserId(userId);
+        propertyDocumentRepository.deleteByUserId(userId); // vault links before their expenses
         propertyExpenseRepository.deleteByUserId(userId); // expenses before their properties
         propertyRepository.deleteByUserId(userId);
         return ResponseEntity.noContent().build();

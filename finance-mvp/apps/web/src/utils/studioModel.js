@@ -146,6 +146,9 @@ export const SCREENS = {
       { dot: C.income, label: "Rental Income · tenant", sub: "Feb 01 · DEP-2202", val: "+$2,100" },
       { dot: C.entertainment, label: "Repairs · Ace Hardware", sub: "Feb 11 · RCPT-1017", val: "$182.60" },
       { dot: C.alt, label: "Taxable net (after depreciation)", sub: "Schedule E · tax-ready", val: "$16,869" }] },
+    { type: "list", title: "Document vault", rows: [
+      { dot: C.other, label: "2026 Form 1098", sub: "Mortgage interest · property-level", val: "PDF" },
+      { dot: C.other, label: "Ace Hardware receipt", sub: "Receipt · Repairs · Feb 11", val: "PDF" }] },
   ] },
   settings: { section: "more", name: "Settings", blocks: [
     { type: "header", title: "Settings", subtitle: "Preferences, notifications, data" },

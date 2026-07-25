@@ -17,6 +17,19 @@ const isIncome = (cat) => !!cat && INCOME_CATEGORIES.has(cat.trim().toLowerCase(
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+// Property document-vault types — mirror DocumentTypes.ALL on the server. Value → label.
+const DOC_TYPES = [
+  ["RECEIPT", "Receipt"],
+  ["FORM_1098", "1098 (mortgage interest)"],
+  ["INSURANCE", "Insurance"],
+  ["HOA", "HOA statement"],
+  ["TAX_ASSESSMENT", "Tax assessment"],
+  ["MORTGAGE", "Mortgage statement"],
+  ["OTHER", "Other"],
+];
+const DOC_TYPE_LABEL = Object.fromEntries(DOC_TYPES);
+const docTypeLabel = (t) => DOC_TYPE_LABEL[t] || t || "Document";
+
 const emptyForm = {
   expenseDate: new Date().toISOString().slice(0, 10),
   category: "",
@@ -60,6 +73,15 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
   const [savingDoc, setSavingDoc] = useState(false);
   const [showBreakdown, setShowBreakdown] = useState(true);
 
+  // Document vault (files linked to this property / its expenses).
+  const [docs, setDocs] = useState([]);
+  const [showVault, setShowVault] = useState(true);
+  const [vaultDocType, setVaultDocType] = useState("RECEIPT");
+  const [uploadingVault, setUploadingVault] = useState(false);
+  const [pendingReceipt, setPendingReceipt] = useState(null); // File staged in the expense form
+  const vaultInputRef = React.useRef(null);
+  const receiptInputRef = React.useRef(null);
+
   const [cashflowType] = useChartPref("reCashflow");
   const [breakdownType] = useChartPref("reBreakdown");
 
@@ -79,18 +101,29 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
     try {
       setLoading(true);
       setError("");
-      const [exp, sum] = await Promise.all([
+      const [exp, sum, vault] = await Promise.all([
         api.listPropertyExpenses(propertyId, year),
         api.getPropertyExpenseSummary(propertyId, year),
+        api.listPropertyDocuments(propertyId).catch(() => []),
       ]);
       setExpenses(Array.isArray(exp) ? exp : []);
       setSummary(sum || null);
+      setDocs(Array.isArray(vault) ? vault : []);
     } catch (err) {
       setError(err?.message || "Failed to load transactions.");
     } finally {
       setLoading(false);
     }
   }, [propertyId, year]);
+
+  // Receipts/files linked to a given expense (for the paperclip + count in the table).
+  const docsByExpense = useMemo(() => {
+    const m = new Map();
+    docs.forEach((d) => {
+      if (d.expenseId != null) m.set(d.expenseId, [...(m.get(d.expenseId) || []), d]);
+    });
+    return m;
+  }, [docs]);
 
   useEffect(() => {
     load();
@@ -159,9 +192,64 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
   const taxableNet = net - annualDep; // after non-cash depreciation
   const missing = summary?.missingReceiptCount || 0;
 
+  // Upload a file to the user's Document Center, then link it to this property (and
+  // optionally to an expense). Returns the created link, or throws.
+  const uploadAndLink = async (file, { expenseId = null, docType = "OTHER", labelHint = "" } = {}) => {
+    const label = labelHint || `${address} — ${docTypeLabel(docType)}`;
+    const doc = await api.uploadDocument(file, {
+      label,
+      docType: "TAX",
+      note: `Rental document for ${address}${expenseId ? " (receipt)" : ""}.`,
+    });
+    return api.linkPropertyDocument(propertyId, {
+      documentId: doc.id,
+      documentName: doc.label || file.name,
+      docType,
+      expenseId,
+    });
+  };
+
+  const openDoc = async (documentId) => {
+    try {
+      const url = await api.openDocument(documentId);
+      window.open(url, "_blank", "noopener");
+    } catch (err) {
+      setError(err?.message || "Could not open the document.");
+    }
+  };
+
+  const unlinkDoc = async (link) => {
+    if (!window.confirm("Remove this document from the property? The file stays in your Document Center.")) return;
+    try {
+      setError("");
+      await api.unlinkPropertyDocument(propertyId, link.id);
+      await load();
+    } catch (err) {
+      setError(err?.message || "Could not remove the document.");
+    }
+  };
+
+  // Property-level vault upload (a 1098, insurance policy, HOA statement, …).
+  const uploadVaultDoc = async (file) => {
+    if (!file) return;
+    try {
+      setUploadingVault(true);
+      setError("");
+      await uploadAndLink(file, { docType: vaultDocType });
+      setNotice(`${docTypeLabel(vaultDocType)} filed and linked to ${address}.`);
+      await load();
+      onChanged?.();
+    } catch (err) {
+      setError(err?.message || "Could not upload the document. Check that file storage is configured.");
+    } finally {
+      setUploadingVault(false);
+    }
+  };
+
   const openAdd = (category) => {
     setEditingId(null);
     setForm({ ...emptyForm, category: category || expenseCats[0] || categories[0] || "" });
+    setPendingReceipt(null);
     setShowForm(true);
     setError("");
     setNotice("");
@@ -181,6 +269,7 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
       hourlyRate: ex.hourlyRate != null ? String(ex.hourlyRate) : "",
       notes: ex.notes || "",
     });
+    setPendingReceipt(null);
     setShowForm(true);
     setError("");
     setNotice("");
@@ -208,15 +297,31 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
     try {
       setSaving(true);
       setError("");
+      let savedId = editingId;
       if (editingId) {
         await api.updatePropertyExpense(propertyId, editingId, payload);
       } else {
-        await api.addPropertyExpense(propertyId, payload);
+        const created = await api.addPropertyExpense(propertyId, payload);
+        savedId = created?.id ?? null;
       }
+      // Attach a staged receipt to the saved expense (best-effort — the entry is already saved).
+      let receiptNote = "";
+      if (pendingReceipt && savedId != null) {
+        try {
+          await uploadAndLink(pendingReceipt, {
+            expenseId: savedId,
+            docType: "RECEIPT",
+            labelHint: `${address} — ${payload.category} receipt ${payload.expenseDate}`,
+          });
+        } catch {
+          receiptNote = " (but the receipt file couldn't be uploaded — check file storage)";
+        }
+      }
+      setPendingReceipt(null);
       setShowForm(false);
       setEditingId(null);
       setForm(emptyForm);
-      setNotice(editingId ? "Entry updated." : (formIsIncome ? "Income added." : "Expense added."));
+      setNotice((editingId ? "Entry updated." : (formIsIncome ? "Income added." : "Expense added.")) + receiptNote);
       await load();
       onChanged?.();
     } catch (err) {
@@ -271,10 +376,23 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
     lines.push(["NET CASH FLOW (income − expenses)", "", "", "", "", "", "", "", "", "", "", net, ""].map(csvCell).join(","));
     lines.push(["TAXABLE NET (after depreciation)", "", "", "", "", "", "", "", "", "", "", taxableNet, ""].map(csvCell).join(","));
 
-    const flagged = expenses.filter((e) => !isIncome(e.category) && !e.receiptRef).length;
+    // Supporting documents — reference every file in the vault so a preparer can see what
+    // backs each figure (the files live in the user's Document Center).
+    if (docs.length > 0) {
+      lines.push("");
+      lines.push(csvCell(`Supporting documents (${docs.length}) — filed in Document Center`));
+      lines.push(["Document", "Type", "Attached to"].map(csvCell).join(","));
+      docs.forEach((d) => {
+        const exp = d.expenseId != null ? expenses.find((e) => e.id === d.expenseId) : null;
+        const attached = exp ? `${exp.category} · ${exp.expenseDate}` : "Property-level";
+        lines.push([d.documentName || `Document ${d.documentId}`, docTypeLabel(d.docType), attached].map(csvCell).join(","));
+      });
+    }
+
+    const flagged = expenses.filter((e) => !isIncome(e.category) && !e.receiptRef && !docsByExpense.get(e.id)).length;
     if (flagged > 0) {
       lines.push("");
-      lines.push(csvCell(`Note: ${flagged} expense(s) are missing a receipt reference.`));
+      lines.push(csvCell(`Note: ${flagged} expense(s) have neither a receipt reference nor an attached file.`));
     }
     return lines.join("\n");
   };
@@ -546,6 +664,36 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
                 <label className="form-label">Notes</label>
                 <input className="form-input" value={form.notes} onChange={onField("notes")} placeholder="Optional" />
               </div>
+
+              {/* Receipt / file attach — uploaded to the Document Center and linked to this
+                  expense on save. Existing receipts (when editing) show with view/remove. */}
+              <div className="form-group">
+                <label className="form-label">Receipt / file <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(optional — image or PDF)</span></label>
+                {editingId && (docsByExpense.get(editingId) || []).map((d) => (
+                  <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 8, border: "1px solid var(--tv-border)", borderRadius: "var(--radius-md)", padding: "7px 10px", marginBottom: 6 }}>
+                    <i className="ti ti-paperclip" style={{ color: "var(--tv-forest)" }}></i>
+                    <span style={{ flex: 1, fontSize: 12.5, minWidth: 80, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.documentName || "Receipt"}</span>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => openDoc(d.documentId)}><i className="ti ti-eye"></i> View</button>
+                    <button type="button" className="icon-btn account-action" title="Remove" onClick={() => unlinkDoc(d)}><i className="ti ti-x"></i></button>
+                  </div>
+                ))}
+                {pendingReceipt ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, border: "1px dashed var(--tv-forest)", borderRadius: "var(--radius-md)", padding: "7px 10px" }}>
+                    <i className="ti ti-file-upload" style={{ color: "var(--tv-forest)" }}></i>
+                    <span style={{ flex: 1, fontSize: 12.5 }}>{pendingReceipt.name} <span style={{ color: "var(--tv-text-muted)" }}>· attaches on save</span></span>
+                    <button type="button" className="icon-btn account-action" title="Remove" onClick={() => setPendingReceipt(null)}><i className="ti ti-x"></i></button>
+                  </div>
+                ) : (
+                  <>
+                    <button type="button" className="btn btn-secondary btn-sm" onClick={() => receiptInputRef.current && receiptInputRef.current.click()}>
+                      <i className="ti ti-upload"></i> Attach receipt
+                    </button>
+                    <input ref={receiptInputRef} type="file" accept="application/pdf,image/*" style={{ display: "none" }}
+                      onChange={(e) => { setPendingReceipt(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                  </>
+                )}
+              </div>
+
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                 <div style={{ fontSize: 13, color: "var(--tv-text-secondary)" }}>
                   {formIsIncome ? "Income" : "Total cost"}: <strong style={{ color: "var(--tv-text-primary)" }}>{currency(livePreview.total)}</strong>
@@ -579,7 +727,8 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
                 <tbody>
                   {expenses.map((e) => {
                     const income = isIncome(e.category);
-                    const noReceipt = !income && !e.receiptRef;
+                    const files = docsByExpense.get(e.id) || [];
+                    const noReceipt = !income && !e.receiptRef && files.length === 0;
                     return (
                       <tr key={e.id} className={noReceipt ? "expense-row-flag" : ""}>
                         <td style={{ whiteSpace: "nowrap" }}>{formatDate(e.expenseDate)}</td>
@@ -593,11 +742,20 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
                           {e.laborCost ? <div style={{ fontSize: 10.5, color: "var(--tv-text-muted)" }}>incl. {currency(e.laborCost)} labor</div> : null}
                         </td>
                         <td>
-                          {income
-                            ? <span className="badge badge-green">Income</span>
-                            : noReceipt
-                              ? <span className="badge badge-gold" title="Missing receipt"><i className="ti ti-alert-triangle"></i> Missing</span>
-                              : <span className="badge badge-green"><i className="ti ti-check"></i> {e.receiptRef}</span>}
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            {income
+                              ? <span className="badge badge-green">Income</span>
+                              : noReceipt
+                                ? <span className="badge badge-gold" title="Missing receipt"><i className="ti ti-alert-triangle"></i> Missing</span>
+                                : e.receiptRef
+                                  ? <span className="badge badge-green"><i className="ti ti-check"></i> {e.receiptRef}</span>
+                                  : <span className="badge badge-green"><i className="ti ti-check"></i> Filed</span>}
+                            {files.length > 0 && (
+                              <button className="icon-btn" title={`${files.length} attached file${files.length > 1 ? "s" : ""} — open`} onClick={() => openDoc(files[0].documentId)} style={{ padding: 2 }}>
+                                <i className="ti ti-paperclip" style={{ color: "var(--tv-forest)" }}></i>{files.length > 1 ? files.length : ""}
+                              </button>
+                            )}
+                          </span>
                         </td>
                         <td style={{ whiteSpace: "nowrap", textAlign: "right" }}>
                           <button className="icon-btn" title="Edit" onClick={() => openEdit(e)}><i className="ti ti-pencil"></i></button>
@@ -663,6 +821,66 @@ export default function PropertyExpensesDrawer({ property, onClose, onChanged })
               )}
             </div>
           )}
+
+          {/* Document vault — every file linked to this property (1098s, insurance, HOA,
+              tax assessments) plus receipts attached to expenses. Files live in the
+              Document Center; unlinking here keeps the file there. */}
+          <div className="card" style={{ marginTop: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                className="section-title"
+                onClick={() => setShowVault((v) => !v)}
+                style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontSize: 13 }}
+              >
+                <i className={`ti ${showVault ? "ti-chevron-down" : "ti-chevron-right"}`}></i>
+                <i className="ti ti-folder" style={{ color: "var(--tv-forest)" }}></i> Document vault
+                {docs.length > 0 && <span className="badge badge-green" style={{ fontSize: 10.5 }}>{docs.length}</span>}
+              </button>
+            </div>
+            {showVault && (
+              <div style={{ marginTop: 12 }}>
+                {/* Upload a property-level document */}
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label" style={{ fontSize: 11 }}>Document type</label>
+                    <select className="form-select" style={{ width: 200 }} value={vaultDocType} onChange={(e) => setVaultDocType(e.target.value)}>
+                      {DOC_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </div>
+                  <button type="button" className="btn btn-primary btn-sm" disabled={uploadingVault} onClick={() => vaultInputRef.current && vaultInputRef.current.click()}>
+                    <i className={`ti ${uploadingVault ? "ti-loader spin" : "ti-upload"}`}></i> {uploadingVault ? "Uploading…" : "Upload document"}
+                  </button>
+                  <input ref={vaultInputRef} type="file" accept="application/pdf,image/*" style={{ display: "none" }}
+                    onChange={(e) => { uploadVaultDoc(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                </div>
+
+                {docs.length === 0 ? (
+                  <div style={{ fontSize: 12.5, color: "var(--tv-text-muted)", padding: "4px 0" }}>
+                    No documents yet. Upload a 1098, insurance policy, HOA statement or tax assessment — or attach a receipt to an expense.
+                  </div>
+                ) : (
+                  docs.map((d) => {
+                    const exp = d.expenseId != null ? expenses.find((e) => e.id === d.expenseId) : null;
+                    return (
+                      <div key={d.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid var(--tv-border-light)" }}>
+                        <i className={`ti ${d.docType === "RECEIPT" ? "ti-receipt" : "ti-file-text"}`} style={{ color: "var(--tv-forest)", fontSize: 18 }}></i>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.documentName || "Document"}</div>
+                          <div style={{ fontSize: 11, color: "var(--tv-text-muted)" }}>
+                            <span className="badge badge-gray" style={{ fontSize: 10 }}>{docTypeLabel(d.docType)}</span>
+                            {exp ? <> · receipt for {exp.category} · {formatDate(exp.expenseDate)}</> : " · property-level"}
+                          </div>
+                        </div>
+                        <button className="btn btn-secondary btn-sm" onClick={() => openDoc(d.documentId)}><i className="ti ti-eye"></i> View</button>
+                        <button className="icon-btn account-action" title="Remove from property" onClick={() => unlinkDoc(d)}><i className="ti ti-x"></i></button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer: export actions */}

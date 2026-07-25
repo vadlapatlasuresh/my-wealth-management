@@ -21,6 +21,7 @@ public class PropertyExpenseService {
 
     private final PropertyExpenseRepository expenseRepository;
     private final PropertyRepository propertyRepository;
+    private final PropertyDocumentRepository documentRepository;
 
     private Long getUserId() {
         return Long.valueOf(SecurityContextHolder.getContext().getAuthentication().getName());
@@ -60,6 +61,9 @@ public class PropertyExpenseService {
     public void delete(Long propertyId, Long expenseId) {
         requireOwnedProperty(propertyId);
         PropertyExpense e = findOwnedExpenseOrThrow(propertyId, expenseId);
+        // Drop any receipt/vault links pointing at this expense so they don't dangle.
+        // The files themselves stay in the user's Document Center.
+        documentRepository.deleteByExpenseId(expenseId);
         expenseRepository.delete(e);
     }
 

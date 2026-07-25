@@ -34,6 +34,9 @@ class PropertyExpenseServiceTest {
     @Mock
     private PropertyRepository propertyRepository;
 
+    @Mock
+    private PropertyDocumentRepository documentRepository;
+
     @InjectMocks
     private PropertyExpenseService service;
 

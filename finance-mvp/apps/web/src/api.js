@@ -552,6 +552,16 @@ export const api = {
   deletePropertyExpense: (id, expId) =>
     request(`/api/v1/real-estate/${id}/expenses/${expId}`, { method: "DELETE" }),
 
+  // Per-property document vault. The file is uploaded to the Document Center first
+  // (api.uploadDocument), then linked here by documentId (optionally to an expense).
+  listPropertyDocuments: (id, expenseId) =>
+    request(`/api/v1/real-estate/${id}/documents${expenseId != null ? `?expenseId=${expenseId}` : ""}`),
+  getPropertyDocTypes: (id) => request(`/api/v1/real-estate/${id}/documents/types`),
+  linkPropertyDocument: (id, body) =>
+    request(`/api/v1/real-estate/${id}/documents`, { method: "POST", body: JSON.stringify(body) }),
+  unlinkPropertyDocument: (id, linkId) =>
+    request(`/api/v1/real-estate/${id}/documents/${linkId}`, { method: "DELETE" }),
+
   // Deal Room — a passive property directory. Listings are descriptive only: no returns,
   // no entry price, no offering documents, and no transaction ever happens here.
   getDeals: () => request("/api/v1/deals"),
