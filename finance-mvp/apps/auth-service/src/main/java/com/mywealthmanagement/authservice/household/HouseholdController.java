@@ -88,12 +88,24 @@ public class HouseholdController {
     public ResponseEntity<Map<String, Object>> invite(@RequestBody Map<String, Object> body) {
         Long userId = currentUserId();
         Long householdId = requireOwnHouseholdId(userId);
-        String token = householdService.invite(userId, householdId, str(body, "email"));
+        HouseholdService.InviteResult res = householdService.invite(userId, householdId, str(body, "email"));
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("token", token);
+        out.put("token", res.rawToken());
+        out.put("joinUrl", res.joinUrl());
+        out.put("emailStatus", res.emailStatus());   // SENT | NO_PROVIDER | FAILED | DISABLED
         out.put("email", str(body, "email"));
         out.put("expiresInDays", 7);
         return ResponseEntity.status(HttpStatus.CREATED).body(out);
+    }
+
+    /**
+     * Public, unauthenticated preview for the {@code /join/:token} landing page. Permitted without
+     * a JWT in SecurityConfig so an invitee who isn't signed in can see who invited them before
+     * they log in or sign up. Never returns the token/hash.
+     */
+    @GetMapping("/invites/preview")
+    public ResponseEntity<Map<String, Object>> previewInvite(@RequestParam("token") String token) {
+        return ResponseEntity.ok(householdService.previewInvite(token));
     }
 
     @PostMapping("/invites/accept")

@@ -31,6 +31,8 @@ class HouseholdServiceTest {
 
     private HouseholdService service;
     private EntitlementsClient entitlements;
+    private CommsClient comms;
+    private com.mywealthmanagement.authservice.user.UserRepository users;
     private FakeHouseholds households;
     private FakeMembers members;
     private FakeInvites invites;
@@ -47,7 +49,18 @@ class HouseholdServiceTest {
         invites = new FakeInvites();
         // Permissive by default: a Mockito mock's void method does nothing, i.e. entitled.
         entitlements = mock(EntitlementsClient.class);
-        service = new HouseholdService(households.repo, members.repo, invites.repo, entitlements);
+        // Comms + user lookup are only used to compose/send the invite email; a mock keeps these
+        // authorization tests independent of notification-service. Default: "sent".
+        comms = mock(CommsClient.class);
+        when(comms.send(any(), any(), any(), any())).thenReturn("SENT");
+        users = mock(com.mywealthmanagement.authservice.user.UserRepository.class);
+        when(users.findById(any())).thenReturn(java.util.Optional.empty());
+        service = new HouseholdService(households.repo, members.repo, invites.repo, entitlements, comms, users);
+    }
+
+    /** invite() now returns an InviteResult; the raw token is what the older tests need. */
+    private String inviteToken(Long owner, Long householdId, String email) {
+        return service.invite(owner, householdId, email).rawToken();
     }
 
     // ---------------------------------------------------------------- owner-pays gate
@@ -66,7 +79,7 @@ class HouseholdServiceTest {
     @Test
     void joiningAHouseholdNeverRequiresAnEntitlement() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
 
         // Owner-pays: Bob may be on the Free floor and must still be able to accept.
         doThrow(new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED, "upgrade required"))
@@ -94,7 +107,7 @@ class HouseholdServiceTest {
     @Test
     void removedMemberLosesAccessImmediately() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
         service.accept(BOB, BOB_EMAIL, token);
         assertThat(service.requireActiveMember(BOB, h.getId())).isNotNull();
 
@@ -110,7 +123,7 @@ class HouseholdServiceTest {
     @Test
     void inviteCannotBeReplayed() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
         service.accept(BOB, BOB_EMAIL, token);
 
         service.leave(BOB); // free Bob up so the failure is about the token, not membership
@@ -122,7 +135,7 @@ class HouseholdServiceTest {
     @Test
     void inviteCannotBeRedeemedByADifferentEmail() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
 
         // A leaked link is useless to anyone it wasn't addressed to.
         assertThatThrownBy(() -> service.accept(MALLORY, MALLORY_EMAIL, token))
@@ -133,7 +146,7 @@ class HouseholdServiceTest {
     @Test
     void expiredInviteIsRejected() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
         invites.all().forEach(i -> i.setExpiresAt(LocalDateTime.now().minusDays(1)));
 
         assertThatThrownBy(() -> service.accept(BOB, BOB_EMAIL, token))
@@ -144,7 +157,7 @@ class HouseholdServiceTest {
     @Test
     void revokedInviteCannotBeAccepted() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
         Long inviteId = invites.all().get(0).getId();
         service.revokeInvite(ALICE, h.getId(), inviteId);
 
@@ -153,9 +166,47 @@ class HouseholdServiceTest {
     }
 
     @Test
+    void inviteEmailsAJoinLinkAndReportsDeliveryStatus() {
+        Household h = service.create(ALICE, "Home");
+        HouseholdService.InviteResult res = service.invite(ALICE, h.getId(), BOB_EMAIL);
+
+        // The owner gets a real, shareable link ending in the raw token (the copy-code fallback),
+        // and the recipient was emailed. The email body is best-effort but its status is surfaced.
+        assertThat(res.joinUrl()).endsWith("/join/" + res.rawToken());
+        assertThat(res.emailStatus()).isEqualTo("SENT");
+        org.mockito.Mockito.verify(comms).send(org.mockito.ArgumentMatchers.eq("EMAIL"),
+                org.mockito.ArgumentMatchers.eq(BOB_EMAIL),
+                any(), org.mockito.ArgumentMatchers.contains(res.rawToken()));
+    }
+
+    @Test
+    void previewReturnsInviterAndHouseholdButNeverTheToken() {
+        Household h = service.create(ALICE, "Alice's place");
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
+
+        java.util.Map<String, Object> preview = service.previewInvite(token);
+        assertThat(preview.get("valid")).isEqualTo(true);
+        assertThat(preview.get("householdName")).isEqualTo("Alice's place");
+        assertThat(preview.get("invitedEmail")).isEqualTo(BOB_EMAIL);
+        assertThat(preview).doesNotContainKeys("token", "tokenHash");
+    }
+
+    @Test
+    void previewOfAnUnknownOrExpiredTokenIsInvalidNotAnError() {
+        Household h = service.create(ALICE, "Home");
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
+
+        assertThat(service.previewInvite("nope").get("valid")).isEqualTo(false);
+        assertThat(service.previewInvite(null).get("valid")).isEqualTo(false);
+
+        invites.all().forEach(i -> i.setExpiresAt(LocalDateTime.now().minusDays(1)));
+        assertThat(service.previewInvite(token).get("valid")).isEqualTo(false);
+    }
+
+    @Test
     void rawInviteTokenIsNeverStored() {
         Household h = service.create(ALICE, "Home");
-        String token = service.invite(ALICE, h.getId(), BOB_EMAIL);
+        String token = service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken();
         String stored = invites.all().get(0).getTokenHash();
 
         assertThat(stored).isNotEqualTo(token);
@@ -167,7 +218,7 @@ class HouseholdServiceTest {
     @Test
     void onlyOwnerCanInviteOrRemove() {
         Household h = service.create(ALICE, "Home");
-        service.accept(BOB, BOB_EMAIL, service.invite(ALICE, h.getId(), BOB_EMAIL));
+        service.accept(BOB, BOB_EMAIL, service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken());
 
         assertThatThrownBy(() -> service.invite(BOB, h.getId(), MALLORY_EMAIL))
                 .isInstanceOf(ResponseStatusException.class)
@@ -180,7 +231,7 @@ class HouseholdServiceTest {
     void userCanOnlyBeInOneHouseholdAtATime() {
         Household alices = service.create(ALICE, "Alice's");
         Household mallorys = service.create(MALLORY, "Mallory's");
-        String token = service.invite(MALLORY, mallorys.getId(), ALICE_EMAIL);
+        String token = service.invite(MALLORY, mallorys.getId(), ALICE_EMAIL).rawToken();
 
         assertThatThrownBy(() -> service.accept(ALICE, ALICE_EMAIL, token))
                 .isInstanceOf(ResponseStatusException.class)
@@ -191,7 +242,7 @@ class HouseholdServiceTest {
     @Test
     void ownerCannotLeaveWhileOthersRemain() {
         Household h = service.create(ALICE, "Home");
-        service.accept(BOB, BOB_EMAIL, service.invite(ALICE, h.getId(), BOB_EMAIL));
+        service.accept(BOB, BOB_EMAIL, service.invite(ALICE, h.getId(), BOB_EMAIL).rawToken());
 
         assertThatThrownBy(() -> service.leave(ALICE))
                 .isInstanceOf(ResponseStatusException.class)

@@ -42,16 +42,18 @@ class HouseholdMoneyServiceTest {
         FakeHouseholds h = new FakeHouseholds();
         FakeMembers m = new FakeMembers();
         FakeInvites i = new FakeInvites();
-        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class));
+        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class),
+                mock(CommsClient.class), mock(com.mywealthmanagement.authservice.user.UserRepository.class));
 
         goals = new FakeGoals();
         contribs = new FakeContribs();
         bills = new FakeBills();
         payments = new FakePayments();
-        money = new HouseholdMoneyService(households, goals.repo, contribs.repo, bills.repo, payments.repo);
+        money = new HouseholdMoneyService(households, goals.repo, contribs.repo, bills.repo, payments.repo,
+                mock(HouseholdIncomeRepository.class));
 
         aliceHousehold = households.create(ALICE, "Alice's").getId();
-        households.accept(BOB, BOB_EMAIL, households.invite(ALICE, aliceHousehold, BOB_EMAIL));
+        households.accept(BOB, BOB_EMAIL, households.invite(ALICE, aliceHousehold, BOB_EMAIL).rawToken());
         households.create(MALLORY, "Mallory's"); // Mallory has her OWN household — used by the leak tests
     }
 

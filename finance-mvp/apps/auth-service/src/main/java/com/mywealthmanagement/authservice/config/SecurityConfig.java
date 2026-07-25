@@ -53,6 +53,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/ops/auth/login", "/api/v1/ops/auth/mfa/verify").permitAll()
                 .requestMatchers("/api/v1/support/**").authenticated()
                 .requestMatchers("/api/v1/ops/**").authenticated()
+                // Public preview of a household invite for the /join/:token landing page — an
+                // invitee who isn't signed in yet sees who invited them. Read-only, no token/hash
+                // returned; everything else under /household requires membership.
+                .requestMatchers(HttpMethod.GET, "/api/v1/household/invites/preview").permitAll()
                 .anyRequest().authenticated() // All other requests require authentication
                 .and()
                 .sessionManagement()

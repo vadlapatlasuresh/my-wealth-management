@@ -929,6 +929,10 @@ export const api = {
     request("/api/v1/household/invites", { method: "POST", body: JSON.stringify({ email }) }),
   acceptHouseholdInvite: (token) =>
     request("/api/v1/household/invites/accept", { method: "POST", body: JSON.stringify({ token }) }),
+  // Public, pre-auth preview for the /join/:token landing page: who invited you + which
+  // household. Never returns the token/hash. { valid, householdName, invitedByName, invitedEmail }.
+  getHouseholdInvitePreview: (token) =>
+    request(`/api/v1/household/invites/preview?token=${encodeURIComponent(token)}`),
   revokeHouseholdInvite: (id) =>
     request(`/api/v1/household/invites/${id}`, { method: "DELETE" }),
   removeHouseholdMember: (userId) =>
@@ -957,6 +961,14 @@ export const api = {
     request(`/api/v1/household/goals/${id}/contributions`, {
       method: "POST", body: JSON.stringify({ amount, note }),
     }),
+  // ---- Household income (Phase 3d) — recurring income per member, powers the money charts ----
+  getHouseholdIncome: () => request("/api/v1/household/income"),
+  createHouseholdIncome: (source, amount, cadence, memberUserId) =>
+    request("/api/v1/household/income", {
+      method: "POST", body: JSON.stringify({ source, amount, cadence, memberUserId }),
+    }),
+  deleteHouseholdIncome: (id) => request(`/api/v1/household/income/${id}`, { method: "DELETE" }),
+
   getHouseholdBills: () => request("/api/v1/household/bills"),
   createHouseholdBill: (name, amount, cadence, dueDay) =>
     request("/api/v1/household/bills", {
@@ -993,6 +1005,34 @@ export const api = {
     request(`/api/v1/household/family/members/${id}/chores`, { method: "POST", body: JSON.stringify(payload) }),
   completeFamilyChore: (id, choreId) =>
     request(`/api/v1/household/family/members/${id}/chores/${choreId}/complete`, { method: "POST" }),
+
+  // ---- Kids' cards, budgets & spending (Phase 5 extension) ----
+  // Cards a child uses: LINKED = one of YOUR OWN connected cards (only you can link/sync it),
+  // MANUAL = tracked by hand. Sync materializes matched spend as household-owned rows.
+  getFamilyCards: () => request("/api/v1/household/family/cards"),
+  getLinkableCards: () => request("/api/v1/household/family/cards/linkable"),
+  addFamilyManualCard: (memberId, payload) =>
+    request(`/api/v1/household/family/members/${memberId}/cards`, { method: "POST", body: JSON.stringify(payload) }),
+  linkFamilyCard: (memberId, payload) =>
+    request(`/api/v1/household/family/members/${memberId}/cards/link`, { method: "POST", body: JSON.stringify(payload) }),
+  deleteFamilyCard: (cardId) => request(`/api/v1/household/family/cards/${cardId}`, { method: "DELETE" }),
+
+  getFamilyRules: () => request("/api/v1/household/family/rules"),
+  addFamilyRule: (memberId, payload) =>
+    request(`/api/v1/household/family/members/${memberId}/rules`, { method: "POST", body: JSON.stringify(payload) }),
+  deleteFamilyRule: (ruleId) => request(`/api/v1/household/family/rules/${ruleId}`, { method: "DELETE" }),
+
+  getFamilyBudgets: () => request("/api/v1/household/family/budgets"),
+  addFamilyBudget: (payload) =>
+    request("/api/v1/household/family/budgets", { method: "POST", body: JSON.stringify(payload) }),
+  deleteFamilyBudget: (budgetId) => request(`/api/v1/household/family/budgets/${budgetId}`, { method: "DELETE" }),
+
+  getFamilyTransactions: (memberId) =>
+    request(`/api/v1/household/family/transactions${memberId ? `?memberId=${memberId}` : ""}`),
+  addFamilyTransaction: (memberId, payload) =>
+    request(`/api/v1/household/family/members/${memberId}/transactions`, { method: "POST", body: JSON.stringify(payload) }),
+  syncFamilySpending: () => request("/api/v1/household/family/sync", { method: "POST" }),
+  getFamilySpending: () => request("/api/v1/household/family/spending"),
 
   getInsights: () => request("/api/v1/ai/insights"),
   refreshInsights: () => request("/api/v1/ai/insights/refresh", { method: "POST" }),

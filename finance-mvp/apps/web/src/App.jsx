@@ -3,6 +3,7 @@ import { api, setAuthToken, getStoredEmail, getStoredName } from "./api";
 import AuthPage from "./pages/AuthPage";
 import PublicSharePage from "./pages/PublicSharePage";
 import PublicInvoicePage from "./pages/PublicInvoicePage";
+import JoinHouseholdPage from "./pages/JoinHouseholdPage";
 import AppLayout from "./components/AppLayout";
 import ProfileGate from "./components/ProfileGate";
 import useIdleLogout from "./hooks/useIdleLogout";
@@ -24,7 +25,15 @@ function isProfileComplete(p) {
   return addressOk && dobOk && identityOk;
 }
 
+// A household invite the user opened at /join/:token before signing in. JoinHouseholdPage stashes
+// it, we prefill the invited email at signup, and finish the join right after they authenticate.
+function readPendingJoin() {
+  try { return JSON.parse(sessionStorage.getItem("tv_join") || "null"); }
+  catch { return null; }
+}
+
 export default function App() {
+  const pendingJoin = readPendingJoin();
   const [page, setPage] = useState("home");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,9 +54,11 @@ export default function App() {
   const [extraPayment, setExtraPayment] = useState(300);
   const [planTab, setPlanTab] = useState("budget");
   const [billPayStep, setBillPayStep] = useState(0);
-  const [authMode, setAuthMode] = useState("login");
+  // A pending household invite opens us on the sign-up tab with the invited email prefilled, so a
+  // brand-new user signs up with the exact address the invite was issued to (the server matches it).
+  const [authMode, setAuthMode] = useState(pendingJoin?.mode === "register" ? "register" : "login");
   const [authForm, setAuthForm] = useState({
-    email: "",
+    email: pendingJoin?.email || "",
     password: "",
     name: "",
     accountType: "INDIVIDUAL",
@@ -253,6 +264,17 @@ export default function App() {
     setAuthToken(response.token, email, name);
     setUser({ email, name });
     setError("");
+    // Finish a pending household join (opened via /join/:token before signing in). Best-effort:
+    // a failed accept must never block the login they just did — they'll see the copy-code path on
+    // the Household page. On success, land them on Household instead of the default home.
+    const join = readPendingJoin();
+    if (join?.token) {
+      try {
+        await api.acceptHouseholdInvite(join.token);
+        window.history.replaceState({}, "", "/household");
+      } catch { /* wrong email / used / expired — Household page explains and offers the code path */ }
+      finally { try { sessionStorage.removeItem("tv_join"); } catch { /* ignore */ } }
+    }
     // Load the profile first so the KYC gate can decide before the dashboard paints.
     await refreshProfile();
     await loadAll();
@@ -413,6 +435,11 @@ export default function App() {
   if (typeof window !== "undefined" && window.location.pathname.startsWith("/invoice/")) {
     return <PublicInvoicePage />;
   }
+  // Public household-invite landing (/join/:token). Rendered ahead of the auth gate so an invitee
+  // can see who invited them and sign in / sign up; the join is finished in onAuthenticated.
+  if (typeof window !== "undefined" && window.location.pathname.startsWith("/join/")) {
+    return <JoinHouseholdPage />;
+  }
 
   if (!api.getToken()) {
     return (
@@ -425,6 +452,7 @@ export default function App() {
         setError={setError}
         onSubmit={submitAuth}
         onAuthenticated={onAuthenticated}
+        pendingJoin={pendingJoin}
       />
     );
   }
