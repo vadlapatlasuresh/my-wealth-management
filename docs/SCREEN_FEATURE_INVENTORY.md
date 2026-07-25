@@ -510,13 +510,17 @@ breaking the assistant.
 
 **Header**: "Properties" + "Your real estate portfolio"; Last-refreshed; **Add property** toggle.
 
-**Add-property form**: address with **AddressAutocomplete** + **Auto-fill** (estimate value & details from address); Type (Primary residence / Rental property / Land); Purchase price; Current value ("auto if blank") with inline valuation **Disclaimer**; Mortgage balance; Beds / Baths / Sq ft / Year built / Est. monthly rent; **Save property** (estimates missing fields from address). "Only the address is required."
+**Add-property form**: address with **AddressAutocomplete** + **Auto-fill** (estimate value & details from address); Type (Primary residence / Rental property / Land); Purchase price; **Purchase date**; **Land value** (non-depreciable) with a **live depreciation hint** ("≈ $X/yr · $Y/mo, ÷ 27.5 yr"); Current value ("auto if blank") with inline valuation **Disclaimer**; Mortgage balance; Beds / Baths / Sq ft / Year built; financing & carrying costs (APR, monthly payment/tax/insurance/HOA); rental-only rent income + PMI; **Save property** (estimates missing fields from address). "Only the address is required."
 
-**KPI grid** (3): **Total Value**, **Total Equity**, **Total Mortgage** (each with 30d delta + %).
+**KPI grid** (3): **Total Value**, **Total Equity**, **Total Mortgage** (each with 30d delta + %); portfolio **equity-vs-mortgage donut**.
 
-**Property cards**: 🏡 icon, address, "Purchased: {date}", type badge (Primary green / else gold), appreciation-vs-purchase badge; **Revalue** ("Revaluing…") + **delete**; stat row Current Value / Equity / Mortgage; detail row beds/baths/sqft/built; **rental analysis** box for rentals (Est. rent/mo + **Cap rate**).
+**Property cards**: 🏡 icon, address, "Purchased: {date}", type badge (Primary green / else gold), appreciation-vs-purchase badge; **Edit** / **Expenses** / **Revalue** ("Revaluing…") + **delete**; stat row Current Value / Equity / Mortgage; detail row beds/baths/sqft/built; **Expenses YTD** row (→ tracker, "N missing" receipt flag); **Depreciation** line (auto straight-line, $X/yr · $Y/mo, 27.5 yr); **rental analysis** box for rentals (rent/mo + **Cap rate** + monthly **cash flow**, labeled negative).
 
-**States**: error banner; dismissible success notice; loading; empty "No properties added yet" → **Add your first property**.
+**Tax export** (header **Tax export** → **PortfolioExpenseDrawer**): one combined file across all properties — Income / Expenses / **Net** KPIs; per-property table (Income / Expenses / Net / receipts); income & expenses by category; **Net cash flow**; download CSV or Save to Documents.
+
+**Per-property Income & Expenses** (**PropertyExpensesDrawer**): tax-year selector; **Add income** / **Add expense**; KPI row **Income / Expenses / Net** (labeled "Net loss" red when negative) + **Missing receipts**; **Monthly income-vs-expense chart** with **Bar ⇄ Trend toggle** (ComboBarChart bars + net line / net-cashflow line with zero baseline); **Expense breakdown** with **Donut ⇄ Bar toggle** (canonical category colors); auto **Depreciation** line; entry form (Date, grouped **Income/Expense category** dropdown + **custom categories**, Vendor/Source, Amount, Payment/Deposited-to, Receipt/Reference #, Description, optional labor hrs×rate, Notes); transaction table (income rows tinted green/"+", expenses flag missing receipts); collapsible **Year-end summary** (income − itemized expenses = net cash flow, less depreciation = **taxable net**); export **Download summary** / **Save to Documents** (Schedule E).
+
+**States**: error banner; dismissible success notice; loading; empty "No properties added yet" → **Add your first property**; tracker empty "No income or expenses logged for {year} yet."
 
 ---
 

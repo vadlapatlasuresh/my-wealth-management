@@ -140,7 +140,12 @@ export const SCREENS = {
     { type: "kpis", items: [{ l: "Total value", v: "$720k", d: "up", up: true }, { l: "Equity", v: "$310k" }, { l: "Mortgage", v: "$410k" }] },
     { type: "list", title: "Portfolio", rows: [
       { dot: C.entertainment, label: "123 Oak St · Primary", sub: "Equity $185k", val: "$420k" },
-      { dot: C.alt, label: "88 Pine Ave · Rental", sub: "Cap rate 6.2%", val: "$300k" }] },
+      { dot: C.alt, label: "88 Pine Ave · Rental", sub: "Cap rate 6.2% · Depr $5,091/yr", val: "$300k" }] },
+    { type: "kpis", items: [{ l: "Income 2026", v: "$25,200", d: "in", up: true }, { l: "Expenses", v: "$3,240", d: "out" }, { l: "Net cash flow", v: "$21,960", d: "net", up: true }] },
+    { type: "list", title: "88 Pine Ave · income & expenses", rows: [
+      { dot: C.income, label: "Rental Income · tenant", sub: "Feb 01 · DEP-2202", val: "+$2,100" },
+      { dot: C.entertainment, label: "Repairs · Ace Hardware", sub: "Feb 11 · RCPT-1017", val: "$182.60" },
+      { dot: C.alt, label: "Taxable net (after depreciation)", sub: "Schedule E · tax-ready", val: "$16,869" }] },
   ] },
   settings: { section: "more", name: "Settings", blocks: [
     { type: "header", title: "Settings", subtitle: "Preferences, notifications, data" },

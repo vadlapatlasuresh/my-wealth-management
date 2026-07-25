@@ -19,12 +19,18 @@ import java.util.Map;
 public class PropertyExpenseSummaryDto {
     private Long propertyId;
     private Integer year;               // the year the by-category / grandTotal covers
-    private BigDecimal grandTotal;      // total (incl. labor) for the year
-    private BigDecimal totalYtd;        // year-to-date total (incl. labor)
-    private BigDecimal totalThisMonth;  // current-month total (incl. labor)
+    private BigDecimal grandTotal;      // total EXPENSES (incl. labor) for the year
+    private BigDecimal totalYtd;        // year-to-date EXPENSE total (incl. labor)
+    private BigDecimal totalThisMonth;  // current-month EXPENSE total (incl. labor)
     private long missingReceiptCount;   // rows in the year with a blank receipt ref
     private int expenseCount;           // number of expenses in the year
-    private List<CategoryTotal> byCategory; // per-category totals for the year, desc by amount
+    private List<CategoryTotal> byCategory; // per-EXPENSE-category totals for the year, desc by amount
+
+    // Income / net position for the year. netIncomeLoss = totalIncome - grandTotal
+    // (negative = cash-flow loss). `monthly` carries 12 rows (Jan..Dec) for charts.
+    private BigDecimal totalIncome;     // sum of income-category rows for the year
+    private BigDecimal netIncomeLoss;   // totalIncome - grandTotal (negative = loss)
+    private List<MonthTotal> monthly;   // 12 rows, income & expense per month
 
     @Data
     @NoArgsConstructor
@@ -32,6 +38,15 @@ public class PropertyExpenseSummaryDto {
     public static class CategoryTotal {
         private String category;
         private BigDecimal total;
+    }
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class MonthTotal {
+        private int month;            // 1..12
+        private BigDecimal income;
+        private BigDecimal expense;
     }
 
     /** Convenience for callers that prefer a map view. */

@@ -47,6 +47,7 @@ public class PropertyDataSeeder implements CommandLineRunner {
         rental.setAddress("456 Oak Ave, Round Rock TX");
         rental.setPropertyType("RENTAL_PROPERTY");
         rental.setPurchasePrice(new BigDecimal("180000.0000"));
+        rental.setLandValue(new BigDecimal("40000.0000")); // ~$5,090/yr depreciation basis
         rental.setPurchaseDate(LocalDate.of(2020, 3, 1));
         rental.setCurrentValue(new BigDecimal("240000.0000"));
         rental.setMortgageBalance(new BigDecimal("110000.0000"));

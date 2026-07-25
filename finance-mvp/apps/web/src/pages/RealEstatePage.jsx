@@ -52,6 +52,8 @@ export default function RealEstatePage({ properties = [] }) {
     address: "",
     propertyType: "PRIMARY_RESIDENCE",
     purchasePrice: "",
+    landValue: "",
+    purchaseDate: "",
     currentValue: "",
     mortgageBalance: "",
     beds: "",
@@ -172,6 +174,8 @@ export default function RealEstatePage({ properties = [] }) {
       address: prop.address || "",
       propertyType: prop.propertyType || prop.type || "PRIMARY_RESIDENCE",
       purchasePrice: prop.purchasePrice != null ? String(prop.purchasePrice) : "",
+      landValue: prop.landValue != null ? String(prop.landValue) : "",
+      purchaseDate: prop.purchaseDate ? String(prop.purchaseDate).slice(0, 10) : "",
       currentValue: prop.currentValue != null ? String(prop.currentValue) : "",
       mortgageBalance: prop.loanBalance != null ? String(prop.loanBalance) : "",
       beds: prop.beds != null ? String(prop.beds) : "",
@@ -260,6 +264,8 @@ export default function RealEstatePage({ properties = [] }) {
         address: form.address.trim(),
         propertyType: form.propertyType,
         purchasePrice: filled.purchasePrice ?? 0,
+        landValue: form.landValue === "" ? null : Number(form.landValue),
+        purchaseDate: form.purchaseDate || null,
         currentValue: filled.currentValue ?? 0,
         mortgageBalance: Number(form.mortgageBalance) || 0,
         beds: filled.beds,
@@ -468,6 +474,28 @@ export default function RealEstatePage({ properties = [] }) {
               <div className="form-group">
                 <label className="form-label">Purchase price</label>
                 <input className="form-input" type="number" value={form.purchasePrice} onChange={onFormChange("purchasePrice")} placeholder="0" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Purchase date</label>
+                <input className="form-input" type="date" value={form.purchaseDate} onChange={onFormChange("purchaseDate")} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Land value <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(non-depreciable)</span></label>
+                <input className="form-input" type="number" value={form.landValue} onChange={onFormChange("landValue")} placeholder="0" />
+                {(() => {
+                  const price = Number(form.purchasePrice) || 0;
+                  const land = Number(form.landValue) || 0;
+                  const basis = price - land;
+                  if (basis <= 0) return null;
+                  const annual = basis / 27.5;
+                  return (
+                    <div style={{ fontSize: 11.5, color: "var(--tv-text-muted)", marginTop: 4 }}>
+                      <i className="ti ti-building-bank" style={{ marginRight: 4 }}></i>
+                      Depreciation ≈ {currency(annual)}/yr · {currency(annual / 12)}/mo
+                      <span style={{ opacity: 0.7 }}> (÷ 27.5 yr)</span>
+                    </div>
+                  );
+                })()}
               </div>
               <div className="form-group">
                 <label className="form-label">Current value <span style={{ color: "var(--tv-text-muted)", fontWeight: 400 }}>(auto if blank)</span></label>
@@ -771,6 +799,19 @@ export default function RealEstatePage({ properties = [] }) {
                     </div>
                   );
                 })()}
+
+                {/* Depreciation — auto-calculated straight-line over 27.5 years */}
+                {Number(prop.annualDepreciation) > 0 ? (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, margin: "0 18px 14px", padding: "8px 12px", background: "var(--tv-bg)", borderRadius: "var(--radius-md)", fontSize: 12.5 }}>
+                    <span style={{ color: "var(--tv-text-secondary)" }}>
+                      <i className="ti ti-building-bank" style={{ color: "var(--tv-forest)", marginRight: 5 }}></i>
+                      Depreciation <span style={{ color: "var(--tv-text-muted)" }}>(27.5 yr)</span>
+                    </span>
+                    <span style={{ fontVariantNumeric: "tabular-nums" }} title="Straight-line: (purchase price − land value) ÷ 27.5">
+                      <strong>{currency(Number(prop.annualDepreciation))}</strong>/yr · {currency(Number(prop.monthlyDepreciation || prop.annualDepreciation / 12))}/mo
+                    </span>
+                  </div>
+                ) : null}
 
                 {/* Rental analysis — net cap rate accounts for all monthly carrying costs */}
                 {prop.rentEstimate && (prop.type === "RENTAL_PROPERTY" || prop.type === "Rental") ? (() => {
