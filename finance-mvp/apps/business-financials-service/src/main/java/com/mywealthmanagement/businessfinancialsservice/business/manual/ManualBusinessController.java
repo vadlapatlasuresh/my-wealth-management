@@ -35,6 +35,7 @@ public class ManualBusinessController {
     private final BusinessVendorRepository vendorRepo;
     private final BusinessExpenseRepository expenseRepo;
     private final BusinessExpenseLinkRepository expenseLinkRepo;
+    private final BusinessCustomerRepository customerRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -91,6 +92,7 @@ public class ManualBusinessController {
         vendorRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         expenseLinkRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // links before expenses
         expenseRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -299,6 +301,104 @@ public class ManualBusinessController {
         return ResponseEntity.noContent().build();
     }
 
+    /* ---------------- Customers / Contacts ---------------- */
+
+    /** All customers for a business (active first via display-name ordering). */
+    @GetMapping("/businesses/{businessId}/customers")
+    public List<BusinessCustomer> listCustomers(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        return customerRepo.findByBusinessIdAndUserIdOrderByDisplayNameAsc(businessId, userId());
+    }
+
+    @PostMapping("/businesses/{businessId}/customers")
+    public BusinessCustomer createCustomer(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Business not found"));
+        BusinessCustomer c = new BusinessCustomer();
+        c.setUserId(userId());
+        c.setBusinessId(businessId);
+        applyCustomer(c, body);
+        if (c.getDisplayName() == null || c.getDisplayName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A customer name is required");
+        }
+        return customerRepo.save(c);
+    }
+
+    @PutMapping("/businesses/{businessId}/customers/{id}")
+    public BusinessCustomer updateCustomer(
+            @PathVariable Long businessId, @PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(id, businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+        applyCustomer(c, body);
+        return customerRepo.save(c);
+    }
+
+    @DeleteMapping("/businesses/{businessId}/customers/{id}")
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Long businessId, @PathVariable Long id) {
+        BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(id, businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found"));
+        // FK on business_invoices.customer_id is ON DELETE SET NULL, so historical
+        // invoices keep their inline customer snapshot and are never destroyed.
+        customerRepo.delete(c);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Applies the editable customer fields shared by create + update. */
+    private void applyCustomer(BusinessCustomer c, Map<String, Object> body) {
+        if (body.containsKey("displayName")) c.setDisplayName(str(body.get("displayName")));
+        if (body.containsKey("firstName")) c.setFirstName(str(body.get("firstName")));
+        if (body.containsKey("lastName")) c.setLastName(str(body.get("lastName")));
+        if (body.containsKey("company")) c.setCompany(str(body.get("company")));
+        if (body.containsKey("email")) c.setEmail(str(body.get("email")));
+        if (body.containsKey("phone")) c.setPhone(str(body.get("phone")));
+        if (body.containsKey("mobile")) c.setMobile(str(body.get("mobile")));
+        if (body.containsKey("taxId")) c.setTaxId(str(body.get("taxId")));
+        if (body.containsKey("preferredPaymentMethod")) {
+            String m = str(body.get("preferredPaymentMethod"));
+            c.setPreferredPaymentMethod(m == null ? null : m.toUpperCase());
+        }
+        if (body.containsKey("billingLine1")) c.setBillingLine1(str(body.get("billingLine1")));
+        if (body.containsKey("billingLine2")) c.setBillingLine2(str(body.get("billingLine2")));
+        if (body.containsKey("billingCity")) c.setBillingCity(str(body.get("billingCity")));
+        if (body.containsKey("billingRegion")) c.setBillingRegion(str(body.get("billingRegion")));
+        if (body.containsKey("billingPostal")) c.setBillingPostal(str(body.get("billingPostal")));
+        if (body.containsKey("billingCountry")) c.setBillingCountry(country(body.get("billingCountry")));
+        if (body.containsKey("shippingSameAsBilling")) c.setShippingSameAsBilling(bool(body.get("shippingSameAsBilling"), true));
+        if (body.containsKey("shippingLine1")) c.setShippingLine1(str(body.get("shippingLine1")));
+        if (body.containsKey("shippingLine2")) c.setShippingLine2(str(body.get("shippingLine2")));
+        if (body.containsKey("shippingCity")) c.setShippingCity(str(body.get("shippingCity")));
+        if (body.containsKey("shippingRegion")) c.setShippingRegion(str(body.get("shippingRegion")));
+        if (body.containsKey("shippingPostal")) c.setShippingPostal(str(body.get("shippingPostal")));
+        if (body.containsKey("shippingCountry")) c.setShippingCountry(country(body.get("shippingCountry")));
+        if (body.containsKey("notes")) c.setNotes(str(body.get("notes")));
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            c.setStatus(s == null ? BusinessCustomer.STATUS_ACTIVE : s.toUpperCase());
+        }
+        // Convenience: derive a display name from first/last when the client omits it.
+        if ((c.getDisplayName() == null || c.getDisplayName().isBlank())
+                && (c.getFirstName() != null || c.getLastName() != null)) {
+            c.setDisplayName(((str(c.getFirstName()) == null ? "" : c.getFirstName()) + " "
+                    + (str(c.getLastName()) == null ? "" : c.getLastName())).trim());
+        }
+    }
+
+    /** Normalises a country input to an ISO alpha-2 code (upper-cased, first 2 chars). */
+    private String country(Object o) {
+        String s = str(o);
+        if (s == null) return null;
+        s = s.trim().toUpperCase();
+        return s.length() > 2 ? s.substring(0, 2) : s;
+    }
+
+    private boolean bool(Object o, boolean dflt) {
+        if (o == null) return dflt;
+        if (o instanceof Boolean b) return b;
+        String s = String.valueOf(o).trim();
+        return s.equalsIgnoreCase("true") || s.equals("1") || s.equalsIgnoreCase("yes");
+    }
+
     /* ---------------- Invoices ---------------- */
 
     @GetMapping("/businesses/{businessId}/invoices")
@@ -321,6 +421,7 @@ public class ManualBusinessController {
         inv.setIssuedAt(date(body.getOrDefault("issuedAt", null)));
         inv.setDueDate(date(body.get("dueDate")));
         applyInvoiceContact(inv, body);
+        resolveInvoiceCustomer(inv, businessId, body);
         if (inv.getCustomer() == null || inv.getCustomer().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
         }
@@ -347,6 +448,7 @@ public class ManualBusinessController {
         if (body.containsKey("status")) inv.setStatus(str(body.get("status")));
         if (body.containsKey("dueDate")) inv.setDueDate(date(body.get("dueDate")));
         applyInvoiceContact(inv, body);
+        if (body.containsKey("customerId")) resolveInvoiceCustomer(inv, inv.getBusinessId(), body);
         BusinessInvoice saved = invoiceRepo.save(inv);
         // Notify when an invoice is newly marked paid — a positive, cash-in-the-door moment.
         if (!"PAID".equalsIgnoreCase(priorStatus) && "PAID".equalsIgnoreCase(saved.getStatus())) {
@@ -363,6 +465,35 @@ public class ManualBusinessController {
         if (body.containsKey("customerPhone")) inv.setCustomerPhone(str(body.get("customerPhone")));
         if (body.containsKey("notes")) inv.setNotes(str(body.get("notes")));
         if (body.containsKey("payInstructions")) inv.setPayInstructions(str(body.get("payInstructions")));
+    }
+
+    /**
+     * When the request carries a {@code customerId}, links the invoice to that saved
+     * customer and back-fills the inline snapshot ({@code customer} / email / phone) from
+     * it wherever the request did not supply an explicit override. The inline fields stay
+     * the render source of truth so the public invoice is stable even if the customer is
+     * later edited or archived. A {@code customerId} of null/0 detaches any existing link.
+     */
+    private void resolveInvoiceCustomer(BusinessInvoice inv, Long businessId, Map<String, Object> body) {
+        Long customerId = asLong(body.get("customerId"));
+        if (customerId == null || customerId == 0L) {
+            inv.setCustomerId(null);
+            return;
+        }
+        BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown customer"));
+        inv.setCustomerId(c.getId());
+        if (!body.containsKey("customer") || str(body.get("customer")) == null) inv.setCustomer(c.getDisplayName());
+        if (!body.containsKey("customerEmail") && inv.getCustomerEmail() == null) inv.setCustomerEmail(c.getEmail());
+        if (!body.containsKey("customerPhone") && inv.getCustomerPhone() == null) {
+            inv.setCustomerPhone(c.getMobile() != null ? c.getMobile() : c.getPhone());
+        }
+    }
+
+    private Long asLong(Object o) {
+        if (o == null) return null;
+        if (o instanceof Number n) return n.longValue();
+        try { return Long.valueOf(String.valueOf(o).trim()); } catch (RuntimeException e) { return null; }
     }
 
     /* ---------------- Invoice send + payment reconciliation ---------------- */
