@@ -32,6 +32,7 @@ public class HouseholdMoneyService {
     private final HouseholdGoalContributionRepository contributions;
     private final HouseholdBillRepository bills;
     private final HouseholdBillPaymentRepository payments;
+    private final HouseholdIncomeRepository incomes;
 
     /** The caller's household id, or 409 when they aren't in one. */
     private Long householdOf(Long userId) {
@@ -168,5 +169,50 @@ public class HouseholdMoneyService {
             default -> throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Cadence must be WEEKLY, MONTHLY or YEARLY");
         };
+    }
+
+    // ---------------------------------------------------------------- income
+
+    @Transactional(readOnly = true)
+    public List<HouseholdIncome> listIncome(Long userId) {
+        return incomes.findByHouseholdIdOrderByIdDesc(householdOf(userId));
+    }
+
+    /**
+     * Log a recurring income source for a household member. The member it's attributed to defaults
+     * to the caller (you log your own income), which keeps "who earns what" truthful the same way
+     * contributions and bill payments are always attributed to the actual caller.
+     */
+    @Transactional
+    public HouseholdIncome createIncome(Long userId, String source, BigDecimal amount, String cadence,
+                                        Long memberUserId) {
+        Long householdId = householdOf(userId);
+        if (source == null || source.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An income source name is required");
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Amount must be greater than zero");
+        }
+        // Attribute only to a real member of THIS household; default to the caller.
+        Long member = memberUserId != null ? memberUserId : userId;
+        householdService.requireActiveMember(member, householdId);
+
+        HouseholdIncome inc = new HouseholdIncome();
+        inc.setHouseholdId(householdId);
+        inc.setMemberUserId(member);
+        inc.setSource(source.trim());
+        inc.setAmount(amount);
+        inc.setCadence(normalizeCadence(cadence));
+        inc.setActive(true);
+        inc.setCreatedByUserId(userId);
+        return incomes.save(inc);
+    }
+
+    @Transactional
+    public void deleteIncome(Long userId, Long incomeId) {
+        HouseholdIncome inc = incomes.findById(incomeId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Income not found"));
+        householdService.requireActiveMember(userId, inc.getHouseholdId());
+        incomes.delete(inc);
     }
 }

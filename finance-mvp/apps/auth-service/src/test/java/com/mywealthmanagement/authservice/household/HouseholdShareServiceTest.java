@@ -36,12 +36,13 @@ class HouseholdShareServiceTest {
         FakeHouseholds h = new FakeHouseholds();
         FakeMembers m = new FakeMembers();
         FakeInvites i = new FakeInvites();
-        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class));
+        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class),
+                mock(CommsClient.class), mock(com.mywealthmanagement.authservice.user.UserRepository.class));
         shareRepo = new FakeShares();
         shares = new HouseholdShareService(households, shareRepo.repo);
 
         Long hid = households.create(ALICE, "Alice's").getId();
-        households.accept(BOB, BOB_EMAIL, households.invite(ALICE, hid, BOB_EMAIL));
+        households.accept(BOB, BOB_EMAIL, households.invite(ALICE, hid, BOB_EMAIL).rawToken());
         households.create(MALLORY, "Mallory's");
     }
 

@@ -1617,15 +1617,16 @@ a { text-decoration: none; color: inherit; }
 
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title">Invite someone</div><span class="badge badge-green"><i class="ti ti-shield-lock"></i> Single-use</span></div>
-          <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:12px;">They'll need their own TerraVest login. The code is single-use, expires in 7 days, and only works for the email you enter.</p>
+          <p style="font-size:13px;color:var(--tv-text-muted);margin-bottom:12px;">We'll email them a link to join — one click, even if they don't have an account yet. The link is single-use, expires in 7 days, and only works for the email you enter.</p>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">
             <input class="form-input" style="flex:1;min-width:200px;" placeholder="their@email.com">
-            <button class="btn btn-primary"><i class="ti ti-send"></i> Create invite</button>
+            <button class="btn btn-primary"><i class="ti ti-send"></i> Send invite</button>
           </div>
-          <div style="margin-top:14px;padding:12px;border-radius:10px;background:rgba(201,151,58,.12);border:1px solid var(--tv-gold);">
-            <div style="font-size:13px;font-weight:700;margin-bottom:6px;">Share this code — it's shown once</div>
-            <div style="font-size:12.5px;word-break:break-all;font-family:monospace;margin-bottom:8px;">yT7Qm2xK9pLd4WvBn1sZfR8cJhE0uAo6</div>
-            <button class="btn btn-secondary btn-sm"><i class="ti ti-copy"></i> Copy code</button>
+          <div style="margin-top:14px;padding:12px;border-radius:10px;background:rgba(47,122,91,.12);border:1px solid var(--tv-forest);">
+            <div style="font-size:13px;font-weight:700;margin-bottom:6px;"><i class="ti ti-mail-check"></i> Invite sent — we emailed them this link</div>
+            <div class="page-subtitle" style="margin:0 0 8px;font-size:12px;">It's also here if you'd like to send it another way. Shown once.</div>
+            <div style="font-size:12.5px;word-break:break-all;font-family:monospace;margin-bottom:8px;">https://app.terravest.app/join/yT7Qm2xK9pLd4WvBn1sZfR8cJhE0uAo6</div>
+            <button class="btn btn-secondary btn-sm"><i class="ti ti-copy"></i> Copy link</button>
           </div>
         </div>
 
@@ -1651,9 +1652,36 @@ a { text-decoration: none; color: inherit; }
           <div><div class="page-title">Shared goals &amp; bills</div><div class="page-subtitle">What you're saving for together — and who actually paid</div></div>
         </div>
 
-        <div style="display:flex;gap:6px;margin-bottom:16px;">
-          <button class="btn btn-primary btn-sm"><i class="ti ti-target"></i> Shared goals</button>
+        <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;">
+          <button class="btn btn-primary btn-sm"><i class="ti ti-chart-donut"></i> Overview</button>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-cash"></i> Income</button>
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-target"></i> Shared goals</button>
           <button class="btn btn-secondary btn-sm"><i class="ti ti-receipt"></i> Shared bills</button>
+        </div>
+
+        <!-- Overview: monthly flow (income vs bills vs left over) + who earns / who contributes -->
+        <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px;">
+          <div class="card" style="border-left:3px solid var(--tv-forest-light);"><div class="page-subtitle" style="margin:0;font-size:12px;">Income / month</div><div style="font-size:22px;font-weight:800;">$9,200</div></div>
+          <div class="card" style="border-left:3px solid var(--tv-gold);"><div class="page-subtitle" style="margin:0;font-size:12px;">Bills / month</div><div style="font-size:22px;font-weight:800;">$3,850</div></div>
+          <div class="card" style="border-left:3px solid var(--tv-forest);"><div class="page-subtitle" style="margin:0;font-size:12px;">Left over / month</div><div style="font-size:22px;font-weight:800;">$5,350</div></div>
+        </div>
+        <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:16px;">
+          <div class="card">
+            <div class="section-title" style="margin-bottom:2px;">Who earns what</div>
+            <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">Monthly income by member</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-forest);"></span><span style="flex:1;">Alex</span><strong>$5,400</strong></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-gold);"></span><span style="flex:1;">Jordan</span><strong>$3,800</strong></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-bottom:2px;">Who's contributed to goals</div>
+            <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">Total put into shared goals so far</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-forest);"></span><span style="flex:1;">Alex</span><strong>$11,200</strong></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-gold);"></span><span style="flex:1;">Jordan</span><strong>$7,200</strong></div>
+            </div>
+          </div>
         </div>
 
         <div class="card" style="margin-bottom:12px;">
@@ -1816,6 +1844,60 @@ a { text-decoration: none; color: inherit; }
             <div style="flex:1 1 120px;min-width:120px;"><div class="page-subtitle" style="margin:0;font-size:11.5px;"><i class="ti ti-heart-handshake"></i> Give</div><div style="font-size:20px;font-weight:800;">$5.60</div></div>
             <div style="flex:1 1 120px;min-width:120px;"><div class="page-subtitle" style="margin:0;font-size:11.5px;"><i class="ti ti-sum"></i> Total</div><div style="font-size:20px;font-weight:800;">$61.60</div></div>
           </div>
+        </div>
+
+        <!-- ===== Cards & spending (Phase 5 extension) ===== -->
+        <div style="display:flex;gap:6px;margin:18px 0 14px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm"><i class="ti ti-users"></i> Children</button>
+          <button class="btn btn-primary btn-sm"><i class="ti ti-credit-card"></i> Cards &amp; spending</button>
+        </div>
+
+        <div class="card" style="display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;"><div class="page-subtitle" style="margin:0;font-size:12px;">Family spending this month</div><div style="font-size:26px;font-weight:800;">$318</div></div>
+          <button class="btn btn-primary"><i class="ti ti-refresh"></i> Sync linked cards</button>
+        </div>
+
+        <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-bottom:14px;">
+          <div class="card">
+            <div class="section-title" style="margin-bottom:2px;">Who's spending</div>
+            <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">This month, by child</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-forest);"></span><span style="flex:1;">Robin</span><strong>$186</strong></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-gold);"></span><span style="flex:1;">Sam</span><strong>$132</strong></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-bottom:2px;">Where it goes</div>
+            <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">This month, by category</div>
+            <div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;">
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-forest-light);"></span><span style="flex:1;">Food</span><strong>$140</strong></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-gold);"></span><span style="flex:1;">Fun</span><strong>$96</strong></div>
+              <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:3px;background:var(--tv-sky,#6a97c4);"></span><span style="flex:1;">Transport</span><strong>$82</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="section-title">Budgets</div>
+          <div class="page-subtitle" style="margin:0 0 12px;font-size:12px;">A monthly cap per child or for the whole family.</div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--tv-gold);">83%</div><div style="font-size:13px;font-weight:700;">Food</div><div class="page-subtitle" style="margin:0;font-size:11.5px;">Robin · $50 / $60</div></div>
+            <div style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--tv-positive);">40%</div><div style="font-size:13px;font-weight:700;">Fun</div><div class="page-subtitle" style="margin:0;font-size:11.5px;">Whole family · $48 / $120</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:14px;">
+          <div class="section-header"><div class="section-title">Cards</div><span class="badge badge-green"><i class="ti ti-shield-lock"></i> Your cards only</span></div>
+          <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">Link one of your own cards to a child, or track a card by hand.</div>
+          <div class="list-item"><div class="item-icon icon-green"><i class="ti ti-credit-card"></i></div><div class="item-main"><div class="item-name">Robin's debit ····4821</div><div class="item-sub">Robin · Linked to your account</div></div><div class="item-right"><button class="btn btn-secondary btn-sm">Remove</button></div></div>
+          <div class="list-item"><div class="item-icon icon-gray"><i class="ti ti-credit-card-off"></i></div><div class="item-main"><div class="item-name">Sam's cash card</div><div class="item-sub">Sam · Manual</div></div><div class="item-right"><button class="btn btn-secondary btn-sm">Remove</button></div></div>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;"><button class="btn btn-secondary btn-sm"><i class="ti ti-link"></i> Link one of my cards</button></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Location rules</div>
+          <div class="page-subtitle" style="margin:0 0 10px;font-size:12px;">Send spending at a place to a child — even on a shared card.</div>
+          <div class="list-item"><div class="item-icon icon-gray"><i class="ti ti-map-pin"></i></div><div class="item-main"><div class="item-name">Spending matching “Bookstore” → Sam</div></div><div class="item-right"><button class="btn btn-secondary btn-sm">Remove</button></div></div>
         </div>
       </div>
 

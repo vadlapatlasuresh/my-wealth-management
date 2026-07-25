@@ -16,6 +16,7 @@ export default function HouseholdPage({ accounts = [] }) {
   const [name, setName] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteLink, setInviteLink] = useState("");
+  const [inviteStatus, setInviteStatus] = useState(""); // SENT | NO_PROVIDER | FAILED | DISABLED
   const [joinToken, setJoinToken] = useState("");
 
   const load = useCallback(async () => {
@@ -137,8 +138,8 @@ export default function HouseholdPage({ accounts = [] }) {
         <div className="card" style={{ padding: 18, marginBottom: 16 }}>
           <div className="page-title" style={{ fontSize: 16, marginBottom: 6 }}>Invite someone</div>
           <div className="page-subtitle" style={{ marginBottom: 12 }}>
-            They'll need their own TerraVest login. The code is single-use, expires in 7 days,
-            and only works for the email you enter.
+            We'll email them a link to join — one click, even if they don't have an account yet. The
+            link is single-use, expires in 7 days, and only works for the email you enter.
           </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <input
@@ -149,20 +150,30 @@ export default function HouseholdPage({ accounts = [] }) {
             <button className="btn btn-primary" disabled={busy || !inviteEmail.trim()}
               onClick={() => run(async () => {
                 const res = await api.inviteToHousehold(inviteEmail.trim());
-                setInviteLink(res?.token || "");
+                setInviteLink(res?.joinUrl || res?.token || "");
+                setInviteStatus(res?.emailStatus || "");
                 setInviteEmail("");
               })}>
-              <i className="ti ti-send" /> Create invite
+              <i className="ti ti-send" /> Send invite
             </button>
           </div>
 
           {inviteLink && (
             <div style={{ marginTop: 14, padding: 12, borderRadius: 10, background: "var(--tv-gold-pale)", border: "1px solid var(--tv-gold, #c9973a)" }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Share this code — it's shown once</div>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                {inviteStatus === "SENT"
+                  ? "Invite sent — we emailed them this link"
+                  : "Email couldn't be sent — share this link yourself"}
+              </div>
+              <div className="page-subtitle" style={{ fontSize: 12, margin: "0 0 8px" }}>
+                {inviteStatus === "SENT"
+                  ? "It's also here if you'd like to send it another way. Shown once."
+                  : "No email provider is configured right now. Copy this and send it via text or your own email — it's shown once."}
+              </div>
               <div style={{ fontSize: 12.5, wordBreak: "break-all", fontFamily: "monospace", marginBottom: 8 }}>{inviteLink}</div>
               <button className="btn btn-secondary btn-sm"
                 onClick={() => navigator.clipboard?.writeText(inviteLink)}>
-                <i className="ti ti-copy" /> Copy code
+                <i className="ti ti-copy" /> Copy link
               </button>
             </div>
           )}

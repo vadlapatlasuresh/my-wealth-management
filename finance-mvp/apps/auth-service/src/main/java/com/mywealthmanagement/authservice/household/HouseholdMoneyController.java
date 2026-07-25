@@ -107,6 +107,30 @@ public class HouseholdMoneyController {
                 .body(billJson(userId, money.requireBill(userId, billId)));
     }
 
+    // ---------------------------------------------------------------- income
+
+    @GetMapping("/income")
+    public ResponseEntity<Map<String, Object>> listIncome() {
+        Long userId = currentUserId();
+        List<Map<String, Object>> out = money.listIncome(userId).stream()
+                .map(this::incomeJson).toList();
+        return ResponseEntity.ok(Map.of("income", out));
+    }
+
+    @PostMapping("/income")
+    public ResponseEntity<Map<String, Object>> createIncome(@RequestBody Map<String, Object> body) {
+        Long userId = currentUserId();
+        HouseholdIncome inc = money.createIncome(userId, str(body, "source"), money(body, "amount"),
+                str(body, "cadence"), longOrNull(body, "memberUserId"));
+        return ResponseEntity.status(HttpStatus.CREATED).body(incomeJson(inc));
+    }
+
+    @DeleteMapping("/income/{incomeId}")
+    public ResponseEntity<Void> deleteIncome(@PathVariable Long incomeId) {
+        money.deleteIncome(currentUserId(), incomeId);
+        return ResponseEntity.noContent().build();
+    }
+
     // ---------------------------------------------------------------- shaping
 
     /** Goal + total saved + who contributed how much (the "who paid what" split). */
@@ -159,6 +183,18 @@ public class HouseholdMoneyController {
         return j;
     }
 
+    /** Income source + the member it's attributed to (the "who earns what" split). */
+    private Map<String, Object> incomeJson(HouseholdIncome inc) {
+        Map<String, Object> j = new LinkedHashMap<>();
+        j.put("id", inc.getId());
+        j.put("source", inc.getSource());
+        j.put("amount", inc.getAmount());
+        j.put("cadence", inc.getCadence());
+        j.put("memberUserId", inc.getMemberUserId());
+        j.put("memberName", displayName(inc.getMemberUserId()));
+        return j;
+    }
+
     private String displayName(Long userId) {
         return userRepository.findById(userId).map(User::getName).orElse("Member");
     }
@@ -178,6 +214,16 @@ public class HouseholdMoneyController {
             return new BigDecimal(raw);
         } catch (NumberFormatException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'" + key + "' must be a number");
+        }
+    }
+
+    private static Long longOrNull(Map<String, Object> body, String key) {
+        String raw = str(body, key);
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return Long.valueOf(raw);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "'" + key + "' must be a whole number");
         }
     }
 

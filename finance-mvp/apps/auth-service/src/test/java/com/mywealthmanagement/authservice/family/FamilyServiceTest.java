@@ -47,12 +47,14 @@ class FamilyServiceTest {
         FakeHouseholds h = new FakeHouseholds();
         FakeMembers m = new FakeMembers();
         FakeInvites i = new FakeInvites();
-        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class));
+        households = new HouseholdService(h.repo, m.repo, i.repo, mock(EntitlementsClient.class),
+                mock(com.mywealthmanagement.authservice.household.CommsClient.class),
+                mock(com.mywealthmanagement.authservice.user.UserRepository.class));
         family = new FamilyService(households, new FakeFamilyMembers().repo, new FakeLedger().repo,
                 new FakeChores().repo, mock(EntitlementsClient.class));
 
         Long aliceHousehold = households.create(ALICE, "Alice's").getId();
-        households.accept(BOB, "bob@example.com", households.invite(ALICE, aliceHousehold, "bob@example.com"));
+        households.accept(BOB, "bob@example.com", households.invite(ALICE, aliceHousehold, "bob@example.com").rawToken());
         households.create(MALLORY, "Mallory's"); // her own household — the isolation counterparty
     }
 

@@ -54,7 +54,7 @@ function maskPhone(v) {
   return "";
 }
 
-export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, setError, onSubmit, onAuthenticated }) {
+export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm, error, setError, onSubmit, onAuthenticated, pendingJoin }) {
   const isLogin = authMode === "login";
   const [showForgot, setShowForgot] = useState(false);
   const [legalDoc, setLegalDoc] = useState(null); // "terms-of-service" | "privacy-policy"
@@ -429,6 +429,18 @@ export default function AuthPage({ authMode, setAuthMode, authForm, setAuthForm,
           <div className="page-subtitle" style={{ marginBottom: 22 }}>
             {isLogin ? "Sign in to continue to your dashboard." : "Start tracking your wealth in minutes."}
           </div>
+
+          {/* You arrived from a household invite (/join/:token). Confirm the address so the
+              server's exact-email match succeeds, then we finish the join automatically. */}
+          {pendingJoin?.token && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", marginBottom: 16, borderRadius: 10, background: "var(--tv-positive-bg)", border: "1px solid var(--tv-forest, #2f7a5b)" }}>
+              <i className="ti ti-home-heart" style={{ color: "var(--tv-forest, #2f7a5b)" }} />
+              <span style={{ fontSize: 13 }}>
+                You've been invited to a household. {isLogin ? "Sign in" : "Sign up"}
+                {pendingJoin.email ? <> with <strong>{pendingJoin.email}</strong></> : null} and we'll add you automatically.
+              </span>
+            </div>
+          )}
 
           {/* Sign in / Create account toggle */}
           <div className="auth-segmented">

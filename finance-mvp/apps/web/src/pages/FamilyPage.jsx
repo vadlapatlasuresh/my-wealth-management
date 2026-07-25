@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { currency0 } from "../utils/format";
+import FamilySpending from "../components/FamilySpending";
 import {
   BUCKETS, CADENCES, ageLabel, annualizedAllowance, nextAllowanceDate,
   savingsProjection, splitAmounts, summarizeBalances, summarizeChores, validateSplit,
@@ -272,6 +273,7 @@ export default function FamilyPage() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(null); // null | 'new' | member
   const [needsHousehold, setNeedsHousehold] = useState(false);
+  const [view, setView] = useState("children"); // children | spending
 
   const load = useCallback(async () => {
     try {
@@ -369,6 +371,15 @@ export default function FamilyPage() {
     <div className="page active">
       <Header />
 
+      {/* Children (allowance/chores/jars) vs their cards & real-world spending. */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {[["children", "Children", "ti ti-users"], ["spending", "Cards & spending", "ti ti-credit-card"]].map(([id, label, icon]) => (
+          <button key={id} className={`btn btn-sm ${view === id ? "btn-primary" : "btn-ghost"}`} onClick={() => setView(id)}>
+            <i className={icon} /> {label}
+          </button>
+        ))}
+      </div>
+
       {error && (
         <div className="card" style={{ padding: 12, marginBottom: 14, borderLeft: "3px solid var(--tv-negative)" }}>
           <span className="page-subtitle" style={{ margin: 0, fontSize: 13 }}>
@@ -377,6 +388,10 @@ export default function FamilyPage() {
         </div>
       )}
 
+      {view === "spending" ? (
+        <FamilySpending members={members} />
+      ) : (
+      <>
       {members.length > 0 && (
         <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12, marginBottom: 18 }}>
           <div className="card" style={{ padding: 14 }}>
@@ -435,6 +450,8 @@ export default function FamilyPage() {
             onArchive={(member) => act(() => api.removeFamilyMember(member.id))}
           />
         ))
+      )}
+      </>
       )}
     </div>
   );

@@ -1,6 +1,9 @@
 package com.mywealthmanagement.authservice.household;
 
+import com.mywealthmanagement.authservice.user.User;
+import com.mywealthmanagement.authservice.user.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,8 +48,21 @@ public class HouseholdService {
     private final HouseholdMemberRepository memberRepository;
     private final HouseholdInviteRepository inviteRepository;
     private final EntitlementsClient entitlements;
+    private final CommsClient comms;
+    private final UserRepository userRepository;
+
+    /** Public host the join link points at; the invite email is useless without a real URL. */
+    @Value("${app.base-url:https://app.terravest.app}")
+    private String appBaseUrl;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    /**
+     * Outcome of creating an invite: the raw token (shown once, for the copy-code fallback), the
+     * ready-to-share join link, and how the emailed link fared. The owner's UI decides what to
+     * show from {@code emailStatus} — "we emailed them" vs "couldn't send, share this yourself".
+     */
+    public record InviteResult(String rawToken, String joinUrl, String emailStatus) { }
 
     // ------------------------------------------------------------------ authorization
 
@@ -123,25 +139,85 @@ public class HouseholdService {
     }
 
     /**
-     * Create a single-use invite. Returns the RAW token — the caller shows it once (as a link);
-     * only its hash is persisted, so it can never be recovered from the database.
+     * Create a single-use invite and email the recipient a link to join. Returns the RAW token
+     * (shown once, only its hash is persisted), the join URL, and the email delivery status.
+     *
+     * <p>The email is <b>best-effort</b>: the invite is already saved and the token returned before
+     * we try to send, so a mail failure degrades to the owner sharing the link themselves rather
+     * than losing the invite. This is the same primitive documents-service and invoicing use to
+     * reach people who may not have an account yet.
      */
     @Transactional
-    public String invite(Long userId, Long householdId, String email) {
+    public InviteResult invite(Long userId, Long householdId, String email) {
         requireOwner(userId, householdId);
         if (email == null || email.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An email address is required");
         }
+        String cleanEmail = email.trim().toLowerCase();
         String rawToken = newToken();
         HouseholdInvite inv = new HouseholdInvite();
         inv.setHouseholdId(householdId);
-        inv.setInvitedEmail(email.trim().toLowerCase());
+        inv.setInvitedEmail(cleanEmail);
         inv.setTokenHash(sha256(rawToken));
         inv.setInvitedByUserId(userId);
         inv.setStatus(HouseholdInvite.STATUS_PENDING);
         inv.setExpiresAt(LocalDateTime.now().plusDays(INVITE_TTL_DAYS));
         inviteRepository.save(inv);
-        return rawToken;
+
+        String joinUrl = joinUrl(rawToken);
+        String emailStatus = sendInviteEmail(cleanEmail, householdId, userId, joinUrl);
+        return new InviteResult(rawToken, joinUrl, emailStatus);
+    }
+
+    /** The full, shareable join link for a raw token. */
+    private String joinUrl(String rawToken) {
+        String base = appBaseUrl == null ? "" : appBaseUrl.replaceAll("/+$", "");
+        return base + "/join/" + rawToken;
+    }
+
+    private String sendInviteEmail(String recipient, Long householdId, Long inviterId, String joinUrl) {
+        String householdName = householdRepository.findById(householdId)
+                .map(Household::getName).orElse("their household");
+        String inviterName = userRepository.findById(inviterId)
+                .map(User::getName).filter(n -> n != null && !n.isBlank()).orElse("A TerraVest member");
+        String subject = inviterName + " invited you to their TerraVest household";
+        String body = inviterName + " invited you to join \"" + householdName + "\" on TerraVest, "
+                + "where you can share goals and bills together — your own accounts and transactions "
+                + "stay private.\n\nJoin here (the link works for " + recipient + " and expires in "
+                + INVITE_TTL_DAYS + " days):\n" + joinUrl
+                + "\n\nIf you weren't expecting this, you can ignore this email.";
+        return comms.send("EMAIL", recipient, subject, body);
+    }
+
+    /**
+     * Public, pre-auth preview of an invite for the {@code /join/:token} landing page. Returns who
+     * invited them and which household — deliberately never the token or its hash. A bad, used, or
+     * expired token yields {@code valid=false} rather than an error, so the page can render a
+     * friendly "this link is no longer valid" without leaking whether the token ever existed.
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<String, Object> previewInvite(String rawToken) {
+        java.util.Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("valid", false);
+        if (rawToken == null || rawToken.isBlank()) {
+            return out;
+        }
+        Optional<HouseholdInvite> found = inviteRepository.findByTokenHash(sha256(rawToken))
+                .filter(HouseholdInvite::isPending)
+                .filter(i -> !i.isExpired());
+        if (found.isEmpty()) {
+            return out;
+        }
+        HouseholdInvite inv = found.get();
+        String householdName = householdRepository.findById(inv.getHouseholdId())
+                .map(Household::getName).orElse("a household");
+        String inviterName = userRepository.findById(inv.getInvitedByUserId())
+                .map(User::getName).filter(n -> n != null && !n.isBlank()).orElse("A TerraVest member");
+        out.put("valid", true);
+        out.put("householdName", householdName);
+        out.put("invitedByName", inviterName);
+        out.put("invitedEmail", inv.getInvitedEmail());
+        return out;
     }
 
     /**
