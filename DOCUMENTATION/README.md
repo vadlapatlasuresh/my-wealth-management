@@ -52,6 +52,7 @@ Read in order if you're new; jump directly if you know what you need.
 | 13 | **[13-SHOWCASE-GUIDE.md](13-SHOWCASE-GUIDE.md)** | **Demo & pitch — start here.** The complete showcase guide: app overview, all 46 features with step-by-step demo instructions, presenter notes, and how to run the demo well |
 | 11 | [11-SHOWCASE-AND-DEMO-PREP.md](11-SHOWCASE-AND-DEMO-PREP.md) | *(superseded by 13)* Earlier positioning + Q&A prep |
 | 12 | [12-WALKTHROUGH-SCRIPT.md](12-WALKTHROUGH-SCRIPT.md) | *(superseded by 13)* Earlier narrative walkthrough |
+| 14 | **[14-MOBILE-CONVERSION.md](14-MOBILE-CONVERSION.md)** | Ship iOS & Android via **Capacitor** — phased plan, plugin matrix, and App Store / Play red flags |
 
 ### Feature backlogs
 
