@@ -19,6 +19,9 @@ public interface BusinessInvoiceRepository extends JpaRepository<BusinessInvoice
 
     void deleteByBusinessIdAndUserId(Long businessId, Long userId);
 
+    /** Invoices for a business due on a specific date — the dunning job's per-offset work list. */
+    List<BusinessInvoice> findByBusinessIdAndUserIdAndDueDate(Long businessId, Long userId, java.time.LocalDate dueDate);
+
     /* ---------- Outstanding-AR aggregation (point-in-time, not period-bound) ---------- */
     // "Outstanding" = still owed: any invoice not in a terminal/non-AR state
     // (excludes PAID, VOID and DRAFT), netting off partial payments. COALESCE keeps 0.

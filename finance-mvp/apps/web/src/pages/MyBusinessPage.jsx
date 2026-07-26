@@ -8,6 +8,7 @@ import CustomerManagerDrawer from '../components/business/CustomerManagerDrawer'
 import ProjectsPanel from '../components/business/ProjectsPanel';
 import TaxRatesDrawer from '../components/business/TaxRatesDrawer';
 import ShareButton from '../components/ShareButton';
+import ReminderSettingsCard from '../components/business/ReminderSettingsCard';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -4204,6 +4205,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 )}
               </div>
+
+              {/* Automated payment reminders (dunning) */}
+              {selectedBusiness && (
+                <ReminderSettingsCard businessId={selectedBusiness.id} onError={setError} onFlash={flash} />
+              )}
 
               <div className="card" id="mb-invoices" style={{ marginBottom: 16 }}>
                 <div className="section-header">
