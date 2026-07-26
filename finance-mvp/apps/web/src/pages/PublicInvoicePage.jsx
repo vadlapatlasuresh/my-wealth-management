@@ -27,17 +27,49 @@ export default function PublicInvoicePage() {
   const [inv, setInv] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [payBusy, setPayBusy] = useState(false);
+  const [payNote, setPayNote] = useState("");
 
   useEffect(() => {
     if (!token) { setError("This invoice link is not valid."); setLoading(false); return; }
     (async () => {
-      try { setInv(await api.getPublicInvoice(token)); }
-      catch (e) { setError(e?.message || "This invoice link is not valid."); }
-      finally { setLoading(false); }
+      try {
+        // If the customer is returning from checkout (?paid=<ref>), confirm + auto-reconcile.
+        const paidRef = new URLSearchParams(window.location.search).get("paid");
+        if (paidRef) {
+          setPayNote("Confirming your payment…");
+          try { await api.confirmInvoicePayment(token, paidRef); } catch { /* fall through to load */ }
+          // Clean the URL so a refresh doesn't re-confirm.
+          window.history.replaceState({}, "", window.location.pathname);
+          setPayNote("");
+        }
+        setInv(await api.getPublicInvoice(token));
+      } catch (e) {
+        setError(e?.message || "This invoice link is not valid.");
+      } finally {
+        setLoading(false);
+      }
     })();
     // Fire-and-forget "viewed" beacon so the business owner sees the invoice was opened.
     api.markInvoiceViewed(token).catch(() => {});
   }, [token]);
+
+  async function payNow(method) {
+    try {
+      setPayBusy(true);
+      setError("");
+      const res = await api.startInvoicePayment(token, method);
+      if (res?.checkoutUrl) {
+        window.location.assign(res.checkoutUrl);
+      } else {
+        setError("Could not start the payment. Please try again.");
+        setPayBusy(false);
+      }
+    } catch (e) {
+      setError(e?.message || "Could not start the payment.");
+      setPayBusy(false);
+    }
+  }
 
   const wrap = {
     minHeight: "100vh", background: "var(--tv-bg, #f5f6f4)", color: "var(--tv-text, #1a2420)",
@@ -124,6 +156,26 @@ export default function PublicInvoicePage() {
             )}
 
             {inv.notes && <p style={{ fontSize: 14, margin: "0 0 14px" }}>{inv.notes}</p>}
+
+            {!paid && (
+              <div className="card" style={{ padding: 16, margin: "0 0 14px", background: "var(--tv-forest-tint, rgba(45,90,61,.06))" }}>
+                <div style={{ fontWeight: 600, marginBottom: 8 }}><i className="ti ti-credit-card"></i> Pay now</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button className="btn btn-primary" disabled={payBusy} onClick={() => payNow("CARD")}
+                    style={{ flex: "1 1 160px", justifyContent: "center", opacity: payBusy ? 0.6 : 1 }}>
+                    <i className="ti ti-credit-card"></i> Pay {money(inv.amount)} by card
+                  </button>
+                  <button className="btn btn-secondary" disabled={payBusy} onClick={() => payNow("ACH")}
+                    style={{ flex: "1 1 160px", justifyContent: "center", opacity: payBusy ? 0.6 : 1 }}>
+                    <i className="ti ti-building-bank"></i> Bank transfer (ACH)
+                  </button>
+                </div>
+                {payNote && <div style={{ fontSize: 13, color: "var(--tv-text-muted)", marginTop: 8 }}>{payNote}</div>}
+                <div style={{ fontSize: 12, color: "var(--tv-text-muted)", marginTop: 8 }}>
+                  <i className="ti ti-lock"></i> Secure checkout. Cards &amp; US bank payments accepted.
+                </div>
+              </div>
+            )}
 
             {!paid && inv.payInstructions && (
               <div className="card" style={{ padding: 14, margin: 0, background: "var(--tv-forest-tint, rgba(45,90,61,.06))" }}>
