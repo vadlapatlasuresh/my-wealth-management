@@ -37,6 +37,8 @@ public class ManualBusinessController {
     private final BusinessExpenseLinkRepository expenseLinkRepo;
     private final BusinessCustomerRepository customerRepo;
     private final BusinessInvoiceLineItemRepository lineItemRepo;
+    private final BusinessQuoteRepository quoteRepo;
+    private final BusinessQuoteLineItemRepository quoteLineItemRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -93,7 +95,8 @@ public class ManualBusinessController {
         vendorRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         expenseLinkRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // links before expenses
         expenseRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
-        customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices (FK)
+        quoteRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // quote line items cascade at DB
+        customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
@@ -400,6 +403,211 @@ public class ManualBusinessController {
         return s.equalsIgnoreCase("true") || s.equals("1") || s.equalsIgnoreCase("yes");
     }
 
+    /* ---------------- Quotes / Estimates ---------------- */
+
+    @GetMapping("/businesses/{businessId}/quotes")
+    public List<BusinessQuote> listQuotes(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<BusinessQuote> quotes = quoteRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        if (!quotes.isEmpty()) {
+            java.util.Map<Long, java.util.List<BusinessQuoteLineItem>> byQuote =
+                    quoteLineItemRepo.findByQuoteIdInOrderByPositionAsc(quotes.stream().map(BusinessQuote::getId).toList())
+                            .stream().collect(java.util.stream.Collectors.groupingBy(BusinessQuoteLineItem::getQuoteId));
+            for (BusinessQuote q : quotes) q.setLineItems(byQuote.getOrDefault(q.getId(), java.util.List.of()));
+        }
+        return quotes;
+    }
+
+    @PostMapping("/businesses/{businessId}/quotes")
+    public BusinessQuote createQuote(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessQuote q = new BusinessQuote();
+        q.setUserId(userId());
+        q.setBusinessId(businessId);
+        applyQuoteFields(q, body, businessId);
+        if (q.getCustomer() == null || q.getCustomer().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
+        }
+        if (q.getStatus() == null) q.setStatus("DRAFT");
+        if (q.getIssuedAt() == null) q.setIssuedAt(LocalDate.now());
+        List<BusinessQuoteLineItem> parsed = applyQuoteLineItemsAndTotals(q, body);
+        BusinessQuote saved = quoteRepo.save(q);
+        persistQuoteLineItems(saved, parsed);
+        return saved;
+    }
+
+    @PutMapping("/quotes/{id}")
+    public BusinessQuote updateQuote(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessQuote q = quoteRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("CONVERTED".equalsIgnoreCase(q.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This quote was already converted to an invoice.");
+        }
+        applyQuoteFields(q, body, q.getBusinessId());
+        List<BusinessQuoteLineItem> parsed = applyQuoteLineItemsAndTotals(q, body);
+        BusinessQuote saved = quoteRepo.save(q);
+        persistQuoteLineItems(saved, parsed);
+        return saved;
+    }
+
+    @DeleteMapping("/quotes/{id}")
+    public ResponseEntity<Void> deleteQuote(@PathVariable Long id) {
+        BusinessQuote q = quoteRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        quoteRepo.delete(q); // quote_line_items FK is ON DELETE CASCADE
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * One-click convert: create a real invoice (with copied line items and money breakdown)
+     * from a quote, then stamp the quote CONVERTED and record the new invoice id. Body may
+     * carry an optional {@code dueDate}. Idempotent-ish: re-converting is refused.
+     */
+    @PostMapping("/quotes/{id}/convert")
+    @Transactional
+    public BusinessInvoice convertQuote(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        BusinessQuote q = quoteRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("CONVERTED".equalsIgnoreCase(q.getStatus()) && q.getConvertedInvoiceId() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This quote was already converted to an invoice.");
+        }
+        Map<String, Object> b = body == null ? Map.of() : body;
+
+        BusinessInvoice inv = new BusinessInvoice();
+        inv.setUserId(userId());
+        inv.setBusinessId(q.getBusinessId());
+        inv.setCustomerId(q.getCustomerId());
+        inv.setCustomer(q.getCustomer());
+        inv.setCustomerEmail(q.getCustomerEmail());
+        inv.setCustomerPhone(q.getCustomerPhone());
+        inv.setStatus("OPEN");
+        inv.setIssuedAt(LocalDate.now());
+        inv.setDueDate(date(b.get("dueDate")));
+        inv.setNotes(q.getNotes());
+        // Copy the money breakdown verbatim (amount stays the authoritative total).
+        inv.setSubtotal(q.getSubtotal());
+        inv.setDiscountType(q.getDiscountType());
+        inv.setDiscountValue(q.getDiscountValue());
+        inv.setDiscountAmount(q.getDiscountAmount());
+        inv.setTaxRate(q.getTaxRate());
+        inv.setTaxAmount(q.getTaxAmount());
+        inv.setAmount(q.getAmount() == null ? java.math.BigDecimal.ZERO : q.getAmount());
+        BusinessInvoice savedInv = invoiceRepo.save(inv);
+
+        // Copy line items over.
+        List<BusinessQuoteLineItem> qLines = quoteLineItemRepo.findByQuoteIdOrderByPositionAsc(q.getId());
+        List<BusinessInvoiceLineItem> invLines = new java.util.ArrayList<>();
+        for (BusinessQuoteLineItem ql : qLines) {
+            BusinessInvoiceLineItem li = new BusinessInvoiceLineItem();
+            li.setInvoiceId(savedInv.getId());
+            li.setUserId(userId());
+            li.setPosition(ql.getPosition());
+            li.setDescription(ql.getDescription());
+            li.setQuantity(ql.getQuantity());
+            li.setUnitPrice(ql.getUnitPrice());
+            li.setAmount(ql.getAmount());
+            invLines.add(li);
+        }
+        savedInv.setLineItems(lineItemRepo.saveAll(invLines));
+
+        q.setStatus("CONVERTED");
+        q.setConvertedInvoiceId(savedInv.getId());
+        quoteRepo.save(q);
+
+        notificationClient.notify(userId(), "BUSINESS", "Quote converted",
+                "Quote for " + usd(savedInv.getAmount()) + " to " + savedInv.getCustomer()
+                        + " is now an invoice.");
+        return savedInv;
+    }
+
+    /** Applies the editable header fields (customer, dates, number, status, notes) on a quote. */
+    private void applyQuoteFields(BusinessQuote q, Map<String, Object> body, Long businessId) {
+        if (body.containsKey("customer")) q.setCustomer(str(body.get("customer")));
+        if (body.containsKey("customerEmail")) q.setCustomerEmail(str(body.get("customerEmail")));
+        if (body.containsKey("customerPhone")) q.setCustomerPhone(str(body.get("customerPhone")));
+        if (body.containsKey("quoteNumber")) q.setQuoteNumber(str(body.get("quoteNumber")));
+        if (body.containsKey("notes")) q.setNotes(str(body.get("notes")));
+        if (body.containsKey("issuedAt")) q.setIssuedAt(date(body.get("issuedAt")));
+        if (body.containsKey("expiryDate")) q.setExpiryDate(date(body.get("expiryDate")));
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            if (s != null) q.setStatus(s.toUpperCase());
+        }
+        // Optional saved-customer link + inline snapshot back-fill (mirrors invoices).
+        if (body.containsKey("customerId")) {
+            Long customerId = asLong(body.get("customerId"));
+            if (customerId == null || customerId == 0L) {
+                q.setCustomerId(null);
+            } else {
+                BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown customer"));
+                q.setCustomerId(c.getId());
+                if (!body.containsKey("customer") || str(body.get("customer")) == null) q.setCustomer(c.getDisplayName());
+                if (!body.containsKey("customerEmail") && q.getCustomerEmail() == null) q.setCustomerEmail(c.getEmail());
+                if (!body.containsKey("customerPhone") && q.getCustomerPhone() == null) {
+                    q.setCustomerPhone(c.getMobile() != null ? c.getMobile() : c.getPhone());
+                }
+            }
+        }
+    }
+
+    /** Parses {@code lineItems} into quote lines and recomputes the quote's money breakdown. */
+    private List<BusinessQuoteLineItem> applyQuoteLineItemsAndTotals(BusinessQuote q, Map<String, Object> body) {
+        if (!body.containsKey("lineItems")) return null;
+        List<BusinessQuoteLineItem> lines = new java.util.ArrayList<>();
+        java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO;
+        if (body.get("lineItems") instanceof List<?> list) {
+            int pos = 0;
+            for (Object o : list) {
+                if (!(o instanceof Map<?, ?> m)) continue;
+                String desc = str(m.get("description"));
+                java.math.BigDecimal qty = money(m.get("quantity"));
+                java.math.BigDecimal price = money(m.get("unitPrice"));
+                if (qty == null) qty = java.math.BigDecimal.ONE;
+                if (price == null) price = java.math.BigDecimal.ZERO;
+                if ((desc == null || desc.isBlank()) && price.signum() == 0) continue;
+                if (desc == null || desc.isBlank()) desc = "Item";
+                if (desc.length() > 500) desc = desc.substring(0, 500);
+                java.math.BigDecimal amt = qty.multiply(price).setScale(2, java.math.RoundingMode.HALF_UP);
+                BusinessQuoteLineItem li = new BusinessQuoteLineItem();
+                li.setUserId(userId());
+                li.setPosition(pos++);
+                li.setDescription(desc);
+                li.setQuantity(qty);
+                li.setUnitPrice(price);
+                li.setAmount(amt);
+                lines.add(li);
+                subtotal = subtotal.add(amt);
+            }
+        }
+        String discType = body.containsKey("discountType")
+                ? (str(body.get("discountType")) == null ? null : str(body.get("discountType")).toUpperCase())
+                : q.getDiscountType();
+        java.math.BigDecimal discVal = body.containsKey("discountValue") ? money(body.get("discountValue")) : q.getDiscountValue();
+        java.math.BigDecimal taxRate = body.containsKey("taxRate") ? money(body.get("taxRate")) : q.getTaxRate();
+        InvoiceMath.Breakdown br = InvoiceMath.compute(subtotal, discType, discVal, taxRate);
+        q.setSubtotal(br.subtotal());
+        q.setDiscountType(br.discountType());
+        q.setDiscountValue(br.discountValue());
+        q.setDiscountAmount(br.discountAmount());
+        q.setTaxRate(br.taxRate());
+        q.setTaxAmount(br.taxAmount());
+        q.setAmount(br.total());
+        return lines;
+    }
+
+    private void persistQuoteLineItems(BusinessQuote q, List<BusinessQuoteLineItem> lines) {
+        if (lines == null) {
+            q.setLineItems(quoteLineItemRepo.findByQuoteIdOrderByPositionAsc(q.getId()));
+            return;
+        }
+        quoteLineItemRepo.deleteByQuoteId(q.getId());
+        for (BusinessQuoteLineItem li : lines) li.setQuoteId(q.getId());
+        q.setLineItems(quoteLineItemRepo.saveAll(lines));
+    }
+
     /* ---------------- Invoices ---------------- */
 
     @GetMapping("/businesses/{businessId}/invoices")
@@ -517,8 +725,6 @@ public class ManualBusinessController {
         try { return Long.valueOf(String.valueOf(o).trim()); } catch (RuntimeException e) { return null; }
     }
 
-    private static final java.math.BigDecimal HUNDRED = new java.math.BigDecimal("100");
-
     /**
      * When the request carries a {@code lineItems} array, parses the lines and recomputes
      * the invoice money breakdown (subtotal → discount → tax → grand total), writing the
@@ -557,37 +763,20 @@ public class ManualBusinessController {
                 subtotal = subtotal.add(amt);
             }
         }
-        subtotal = subtotal.setScale(2, java.math.RoundingMode.HALF_UP);
-
         String discType = body.containsKey("discountType")
                 ? (str(body.get("discountType")) == null ? null : str(body.get("discountType")).toUpperCase())
                 : inv.getDiscountType();
         java.math.BigDecimal discVal = body.containsKey("discountValue") ? money(body.get("discountValue")) : inv.getDiscountValue();
-        java.math.BigDecimal discAmt = java.math.BigDecimal.ZERO;
-        if ("PERCENT".equals(discType) && discVal != null) {
-            discAmt = subtotal.multiply(discVal).divide(HUNDRED, 2, java.math.RoundingMode.HALF_UP);
-        } else if ("AMOUNT".equals(discType) && discVal != null) {
-            discAmt = discVal.setScale(2, java.math.RoundingMode.HALF_UP);
-        } else {
-            discType = null; discVal = null;
-        }
-        if (discAmt.signum() < 0) discAmt = java.math.BigDecimal.ZERO;
-        if (discAmt.compareTo(subtotal) > 0) discAmt = subtotal;  // never discount below zero
-
-        java.math.BigDecimal taxable = subtotal.subtract(discAmt);
         java.math.BigDecimal taxRate = body.containsKey("taxRate") ? money(body.get("taxRate")) : inv.getTaxRate();
-        java.math.BigDecimal taxAmt = (taxRate != null && taxRate.signum() > 0)
-                ? taxable.multiply(taxRate).divide(HUNDRED, 2, java.math.RoundingMode.HALF_UP)
-                : java.math.BigDecimal.ZERO;
-        java.math.BigDecimal total = taxable.add(taxAmt).setScale(2, java.math.RoundingMode.HALF_UP);
 
-        inv.setSubtotal(subtotal);
-        inv.setDiscountType(discType);
-        inv.setDiscountValue(discVal);
-        inv.setDiscountAmount(discAmt);
-        inv.setTaxRate((taxRate != null && taxRate.signum() > 0) ? taxRate : null);
-        inv.setTaxAmount(taxAmt);
-        inv.setAmount(total);
+        InvoiceMath.Breakdown b = InvoiceMath.compute(subtotal, discType, discVal, taxRate);
+        inv.setSubtotal(b.subtotal());
+        inv.setDiscountType(b.discountType());
+        inv.setDiscountValue(b.discountValue());
+        inv.setDiscountAmount(b.discountAmount());
+        inv.setTaxRate(b.taxRate());
+        inv.setTaxAmount(b.taxAmount());
+        inv.setAmount(b.total());
         return lines;
     }
 

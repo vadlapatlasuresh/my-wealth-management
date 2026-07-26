@@ -766,6 +766,28 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // Quotes / estimates — proposals that convert to invoices (order-to-cash Phase 1.3).
+  getBusinessQuotes: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/quotes`),
+  createBusinessQuote: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/quotes`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessQuote: (id, payload) =>
+    request(`/api/v1/business/manual/quotes/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessQuote: (id) =>
+    request(`/api/v1/business/manual/quotes/${id}`, { method: "DELETE" }),
+  // One-click convert to an invoice. Optional { dueDate }. Returns the new invoice.
+  convertBusinessQuote: (id, payload) =>
+    request(`/api/v1/business/manual/quotes/${id}/convert`, {
+      method: "POST",
+      body: JSON.stringify(payload || {}),
+    }),
+
   getManualInvoices: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/invoices`),
   createManualInvoice: (businessId, payload) =>

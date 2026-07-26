@@ -434,6 +434,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
   const [customers, setCustomers] = useState([]);
   const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
+  const [quotes, setQuotes] = useState([]);
+  const [showAddQuote, setShowAddQuote] = useState(false);
+  const emptyQuoteForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', expiryDate: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
+  const [quoteForm, setQuoteForm] = useState(emptyQuoteForm);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
   const [payInv, setPayInv] = useState(null);     // invoice being reconciled (record payment)
   const [reminding, setReminding] = useState(false); // bulk overdue-reminder run in progress
@@ -597,22 +601,24 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const loadBusinessDetail = useCallback(async (businessId) => {
     if (!businessId) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setQuotes([]); setAssignedLinkedIds(new Set());
       return;
     }
-    const [acc, tx, inv, linked, docs, cust] = await Promise.allSettled([
+    const [acc, tx, inv, linked, docs, cust, qts] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
       api.getBusinessLinkedAccounts(businessId),
       api.getBusinessDocuments(businessId),
       api.getBusinessCustomers(businessId),
+      api.getBusinessQuotes(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
     setManualInvoices(inv.status === 'fulfilled' && Array.isArray(inv.value) ? inv.value : []);
     setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
     setCustomers(cust.status === 'fulfilled' && Array.isArray(cust.value) ? cust.value : []);
+    setQuotes(qts.status === 'fulfilled' && Array.isArray(qts.value) ? qts.value : []);
     const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
     setAssignedLinkedIds(new Set(linkedIds));
   }, []);
@@ -629,7 +635,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
   const loadAllBusinessesDetail = useCallback(async (list) => {
     const biz = Array.isArray(list) ? list : [];
-    setCustomers([]); // customer management is single-business only
+    setCustomers([]); setQuotes([]); // customer + quote management is single-business only
     if (!biz.length) {
       setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
@@ -1184,6 +1190,52 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setBizDocuments((prev) => prev.map((d) => (d.invoiceId === id ? { ...d, invoiceId: null } : d)));
       flash('Invoice deleted.');
     } catch (err) { setError(err?.message || 'Could not delete invoice.'); }
+  }
+
+  /* ---- Quote / estimate CRUD + convert ---- */
+  async function handleAddQuote(e) {
+    e.preventDefault();
+    if (!selectedBusiness) return;
+    const customer = quoteForm.customer.trim();
+    const totals = computeInvoiceTotals(quoteForm);
+    if (!customer || !(totals.total > 0)) return;
+    try {
+      const created = await api.createBusinessQuote(selectedBusiness.id, {
+        customerId: quoteForm.customerId || null,
+        customer,
+        customerEmail: quoteForm.customerEmail || null,
+        customerPhone: quoteForm.customerPhone || null,
+        expiryDate: quoteForm.expiryDate || null,
+        notes: quoteForm.notes || null,
+        lineItems: totals.cleanLines,
+        discountType: quoteForm.discountType || null,
+        discountValue: quoteForm.discountValue || null,
+        taxRate: quoteForm.taxRate || null,
+      });
+      setQuotes((prev) => [created, ...prev]);
+      setQuoteForm(emptyQuoteForm);
+      setShowAddQuote(false);
+      flash(`Quote for ${currency(totals.total)} to ${customer} created.`);
+    } catch (err) { setError(err?.message || 'Could not create quote.'); }
+  }
+  async function handleConvertQuote(id) {
+    const q = (quotes || []).find((x) => x.id === id);
+    if (!window.confirm(`Convert this quote${q ? ` to ${q.customer} for ${currency(Number(q.amount) || 0)}` : ''} into an invoice?`)) return;
+    try {
+      const inv = await api.convertBusinessQuote(id, {});
+      setManualInvoices((prev) => [inv, ...prev]);
+      setQuotes((prev) => prev.map((x) => (x.id === id ? { ...x, status: 'CONVERTED', convertedInvoiceId: inv.id } : x)));
+      flash('Quote converted — a new invoice is ready to send.');
+    } catch (err) { setError(err?.message || 'Could not convert quote.'); }
+  }
+  async function handleDeleteQuote(id) {
+    const q = (quotes || []).find((x) => x.id === id);
+    if (!window.confirm(`Delete this quote${q ? ` to ${q.customer}` : ''}?`)) return;
+    try {
+      await api.deleteBusinessQuote(id);
+      setQuotes((prev) => prev.filter((x) => x.id !== id));
+      flash('Quote deleted.');
+    } catch (err) { setError(err?.message || 'Could not delete quote.'); }
   }
 
   /* Bulk collections: send a payment reminder to every overdue manual invoice
@@ -3848,6 +3900,84 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </div>
                       </div>
                     ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Quotes / estimates — convert to an invoice in one click */}
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="section-header">
+                  <div className="section-title"><i className="ti ti-file-description" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Quotes &amp; estimates</div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowAddQuote((v) => !v)} disabled={!selectedBusiness}>
+                    <i className={`ti ${showAddQuote ? 'ti-x' : 'ti-plus'}`}></i>{showAddQuote ? ' Cancel' : ' New quote'}
+                  </button>
+                </div>
+
+                {showAddQuote && selectedBusiness && (
+                  <form onSubmit={handleAddQuote} style={{ marginBottom: 14 }}>
+                    {customers.length > 0 && (
+                      <div className="form-group">
+                        <label className="form-label">Saved customer</label>
+                        <select className="form-select" value={quoteForm.customerId}
+                          onChange={(e) => {
+                            const c = customers.find((x) => String(x.id) === e.target.value);
+                            setQuoteForm((p) => c
+                              ? { ...p, customerId: String(c.id), customer: c.displayName, customerEmail: c.email || '', customerPhone: c.mobile || c.phone || '' }
+                              : { ...p, customerId: '' });
+                          }}>
+                          <option value="">New / one-off customer…</option>
+                          {customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').map((c) => (
+                            <option key={c.id} value={c.id}>{c.displayName}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Customer *</label>
+                        <input className="form-input" value={quoteForm.customer} onChange={(e) => setQuoteForm({ ...quoteForm, customer: e.target.value, customerId: '' })} placeholder="e.g. Acme Corp" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Expires</label>
+                        <input className="form-input" type="date" value={quoteForm.expiryDate} onChange={(e) => setQuoteForm({ ...quoteForm, expiryDate: e.target.value })} />
+                      </div>
+                    </div>
+                    <InvoiceLineItemsEditor form={quoteForm} setForm={setQuoteForm} currency={currency} />
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!quoteForm.customer.trim() || !(computeInvoiceTotals(quoteForm).total > 0)}>
+                      <i className="ti ti-plus"></i> Create quote
+                    </button>
+                  </form>
+                )}
+
+                {quotes.length === 0 ? (
+                  <div className="empty-state"><i className="ti ti-file-description"></i><p>No quotes yet. Draft an estimate and convert it to an invoice when the customer says yes.</p></div>
+                ) : (
+                  <div className="table-scroll">
+                    <table className="tv-table">
+                      <thead><tr><th>Customer</th><th style={{ textAlign: 'right' }}>Amount</th><th>Status</th><th>Expires</th><th style={{ textAlign: 'right' }}></th></tr></thead>
+                      <tbody>
+                        {quotes.map((q) => {
+                          const converted = String(q.status).toUpperCase() === 'CONVERTED';
+                          return (
+                            <tr key={q.id}>
+                              <td style={{ fontWeight: 500 }}>{q.customer || '—'}</td>
+                              <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(Number(q.amount) || 0)}</span></td>
+                              <td><span className={`badge ${converted ? 'badge-green' : 'badge-gray'}`}>{q.status}</span></td>
+                              <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(q.expiryDate)}</td>
+                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                {!converted && (
+                                  <button className="btn btn-primary btn-sm" title="Convert to invoice" onClick={() => handleConvertQuote(q.id)}>
+                                    <i className="ti ti-file-invoice"></i> Convert
+                                  </button>
+                                )}
+                                {converted && <span className="item-sub" style={{ marginRight: 6 }}>Invoiced</span>}
+                                <button className="icon-btn" style={{ marginLeft: 4 }} title="Delete quote" onClick={() => handleDeleteQuote(q.id)}><i className="ti ti-trash"></i></button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 )}
               </div>
