@@ -90,6 +90,37 @@ export default function PublicInvoicePage() {
               </div>
             </div>
 
+            {Array.isArray(inv.lineItems) && inv.lineItems.length > 0 && (
+              <div style={{ margin: "0 0 18px" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+                  <thead>
+                    <tr style={{ color: "var(--tv-text-muted)", textAlign: "left", fontSize: 12 }}>
+                      <th style={{ padding: "4px 0" }}>Description</th>
+                      <th style={{ padding: "4px 0", textAlign: "right" }}>Qty</th>
+                      <th style={{ padding: "4px 0", textAlign: "right" }}>Unit price</th>
+                      <th style={{ padding: "4px 0", textAlign: "right" }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inv.lineItems.map((li, i) => (
+                      <tr key={i} style={{ borderTop: "1px solid var(--tv-border, rgba(0,0,0,.08))" }}>
+                        <td style={{ padding: "6px 0" }}>{li.description}</td>
+                        <td style={{ padding: "6px 0", textAlign: "right" }}>{Number(li.quantity)}</td>
+                        <td style={{ padding: "6px 0", textAlign: "right" }}>{money(li.unitPrice)}</td>
+                        <td style={{ padding: "6px 0", textAlign: "right" }}>{money(li.amount)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div style={{ marginTop: 10, marginLeft: "auto", maxWidth: 260 }}>
+                  {inv.subtotal != null && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--tv-text-muted)", padding: "2px 0" }}><span>Subtotal</span><span>{money(inv.subtotal)}</span></div>}
+                  {inv.discountAmount > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--tv-text-muted)", padding: "2px 0" }}><span>Discount</span><span>−{money(inv.discountAmount)}</span></div>}
+                  {inv.taxAmount > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--tv-text-muted)", padding: "2px 0" }}><span>Tax{inv.taxRate ? ` (${Number(inv.taxRate)}%)` : ""}</span><span>{money(inv.taxAmount)}</span></div>}
+                  <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, borderTop: "1px solid var(--tv-border, rgba(0,0,0,.12))", marginTop: 4, paddingTop: 6 }}><span>Total</span><span>{money(inv.amount)}</span></div>
+                </div>
+              </div>
+            )}
+
             {inv.notes && <p style={{ fontSize: 14, margin: "0 0 14px" }}>{inv.notes}</p>}
 
             {!paid && inv.payInstructions && (

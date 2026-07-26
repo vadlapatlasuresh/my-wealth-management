@@ -43,8 +43,48 @@ public class BusinessInvoice {
     @Column(nullable = false)
     private String customer;
 
+    /**
+     * The authoritative grand total the customer owes. Kept as the single source of truth
+     * for every AR aggregation, the public page and reconciliation. When line items exist
+     * it equals subtotal − discountAmount + taxAmount; for legacy/one-off invoices it is
+     * entered directly.
+     */
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;
+
+    /* ---- Money breakdown (Phase 1.2). All null on un-itemized legacy invoices. ---- */
+
+    /** Sum of line-item amounts, before discount and tax. */
+    @Column(precision = 18, scale = 2)
+    private BigDecimal subtotal;
+
+    /** NULL | AMOUNT | PERCENT */
+    @Column(name = "discount_type", length = 8)
+    private String discountType;
+
+    /** The entered discount number — an absolute amount or a percent, per discountType. */
+    @Column(name = "discount_value", precision = 18, scale = 4)
+    private BigDecimal discountValue;
+
+    /** The computed absolute discount applied to the subtotal. */
+    @Column(name = "discount_amount", precision = 18, scale = 2)
+    private BigDecimal discountAmount;
+
+    /** Tax rate as a percent (e.g. 8.25). Populated manually now; by the tax engine in 1.7. */
+    @Column(name = "tax_rate", precision = 7, scale = 4)
+    private BigDecimal taxRate;
+
+    /** Computed tax on (subtotal − discountAmount). */
+    @Column(name = "tax_amount", precision = 18, scale = 2)
+    private BigDecimal taxAmount;
+
+    /**
+     * Line items for this invoice. Not mapped as a JPA relationship (kept as a plain
+     * transient) so the many existing invoice endpoints keep their current fetch/serialize
+     * behavior; the controller loads and attaches these explicitly on read/create/update.
+     */
+    @Transient
+    private java.util.List<BusinessInvoiceLineItem> lineItems;
 
     @Column(nullable = false)
     private String status = "OPEN";

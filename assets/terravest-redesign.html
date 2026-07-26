@@ -4923,6 +4923,7 @@ a { text-decoration: none; color: inherit; }
           </div>
           <div class="card">
             <div class="section-header"><div class="section-title">Invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Create invoice</button></div>
+            <p class="item-sub" style="margin:-4px 0 10px;">Itemized line items with instant subtotal, discount &amp; tax — or a one-off flat amount. Pick a saved customer to auto-fill their details.</p>
             <div class="table-scroll">
               <table class="tv-table">
                 <thead><tr><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Source</th><th>Documents</th></tr></thead>
@@ -4932,6 +4933,15 @@ a { text-decoration: none; color: inherit; }
                   <tr><td>Harbor Group</td><td style="text-align:right;">$2,100</td><td><span class="badge badge-amber">Open</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> Attach</button></td></tr>
                 </tbody>
               </table>
+            </div>
+            <!-- Itemized breakdown of the selected invoice (line items -> subtotal/discount/tax/total) -->
+            <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--tv-border);">
+              <div class="item-sub" style="margin-bottom:6px;font-weight:600;color:var(--tv-text-primary);">Northwind Co. · itemized</div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;"><span>Design services · 40h @ $150</span><span>$6,000</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;padding:2px 0;"><span>Hosting · 1 @ $200</span><span>$200</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--tv-text-muted);padding:2px 0;"><span>Subtotal</span><span>$6,200</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--tv-text-muted);padding:2px 0;"><span>Tax (0%)</span><span>$0</span></div>
+              <div style="display:flex;justify-content:space-between;font-weight:600;border-top:1px solid var(--tv-border);margin-top:4px;padding-top:6px;"><span>Total</span><span>$6,200</span></div>
             </div>
           </div>
         </div>

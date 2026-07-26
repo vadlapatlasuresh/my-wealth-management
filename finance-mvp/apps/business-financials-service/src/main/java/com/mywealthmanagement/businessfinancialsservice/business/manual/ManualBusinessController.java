@@ -36,6 +36,7 @@ public class ManualBusinessController {
     private final BusinessExpenseRepository expenseRepo;
     private final BusinessExpenseLinkRepository expenseLinkRepo;
     private final BusinessCustomerRepository customerRepo;
+    private final BusinessInvoiceLineItemRepository lineItemRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -405,7 +406,20 @@ public class ManualBusinessController {
     public List<BusinessInvoice> listInvoices(@PathVariable Long businessId) {
         businessRepo.findByIdAndUserId(businessId, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return invoiceRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        List<BusinessInvoice> invoices = invoiceRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        attachLineItems(invoices);
+        return invoices;
+    }
+
+    /** Batch-loads and attaches line items to a set of invoices (single query). */
+    private void attachLineItems(List<BusinessInvoice> invoices) {
+        if (invoices.isEmpty()) return;
+        java.util.Map<Long, java.util.List<BusinessInvoiceLineItem>> byInvoice =
+                lineItemRepo.findByInvoiceIdInOrderByPositionAsc(invoices.stream().map(BusinessInvoice::getId).toList())
+                        .stream().collect(java.util.stream.Collectors.groupingBy(BusinessInvoiceLineItem::getInvoiceId));
+        for (BusinessInvoice inv : invoices) {
+            inv.setLineItems(byInvoice.getOrDefault(inv.getId(), java.util.List.of()));
+        }
     }
 
     @PostMapping("/businesses/{businessId}/invoices")
@@ -422,6 +436,8 @@ public class ManualBusinessController {
         inv.setDueDate(date(body.get("dueDate")));
         applyInvoiceContact(inv, body);
         resolveInvoiceCustomer(inv, businessId, body);
+        // Compute totals from line items when present; sets inv.amount to the grand total.
+        List<BusinessInvoiceLineItem> parsedLines = applyLineItemsAndTotals(inv, body);
         if (inv.getCustomer() == null || inv.getCustomer().isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
         }
@@ -431,6 +447,7 @@ public class ManualBusinessController {
         if (inv.getStatus() == null) inv.setStatus("OPEN");
         if (inv.getIssuedAt() == null) inv.setIssuedAt(LocalDate.now());
         BusinessInvoice saved = invoiceRepo.save(inv);
+        persistLineItems(saved, parsedLines);
         String due = saved.getDueDate() != null ? " Due " + saved.getDueDate() + "." : "";
         notificationClient.notify(userId(), "BUSINESS", "Invoice created",
                 "Invoice for " + usd(saved.getAmount()) + " to " + saved.getCustomer() + " was created." + due);
@@ -449,7 +466,11 @@ public class ManualBusinessController {
         if (body.containsKey("dueDate")) inv.setDueDate(date(body.get("dueDate")));
         applyInvoiceContact(inv, body);
         if (body.containsKey("customerId")) resolveInvoiceCustomer(inv, inv.getBusinessId(), body);
+        // Recompute totals when the request re-sends line items / discount / tax; else leave
+        // the money breakdown as-is (status-only and contact updates keep the existing total).
+        List<BusinessInvoiceLineItem> parsedLines = applyLineItemsAndTotals(inv, body);
         BusinessInvoice saved = invoiceRepo.save(inv);
+        persistLineItems(saved, parsedLines);
         // Notify when an invoice is newly marked paid — a positive, cash-in-the-door moment.
         if (!"PAID".equalsIgnoreCase(priorStatus) && "PAID".equalsIgnoreCase(saved.getStatus())) {
             notificationClient.notify(userId(), "BUSINESS", "Invoice paid",
@@ -494,6 +515,96 @@ public class ManualBusinessController {
         if (o == null) return null;
         if (o instanceof Number n) return n.longValue();
         try { return Long.valueOf(String.valueOf(o).trim()); } catch (RuntimeException e) { return null; }
+    }
+
+    private static final java.math.BigDecimal HUNDRED = new java.math.BigDecimal("100");
+
+    /**
+     * When the request carries a {@code lineItems} array, parses the lines and recomputes
+     * the invoice money breakdown (subtotal → discount → tax → grand total), writing the
+     * grand total into {@link BusinessInvoice#getAmount()}. Discount ({@code discountType}
+     * AMOUNT|PERCENT + {@code discountValue}) and {@code taxRate} default to the invoice's
+     * current values when omitted. Returns the parsed (unsaved) line items to persist, or
+     * {@code null} when the request has no {@code lineItems} key (money fields untouched —
+     * e.g. a status-only or contact update on a one-off invoice).
+     */
+    private List<BusinessInvoiceLineItem> applyLineItemsAndTotals(BusinessInvoice inv, Map<String, Object> body) {
+        if (!body.containsKey("lineItems")) return null;
+        List<BusinessInvoiceLineItem> lines = new java.util.ArrayList<>();
+        java.math.BigDecimal subtotal = java.math.BigDecimal.ZERO;
+        if (body.get("lineItems") instanceof List<?> list) {
+            int pos = 0;
+            for (Object o : list) {
+                if (!(o instanceof Map<?, ?> m)) continue;
+                String desc = str(m.get("description"));
+                java.math.BigDecimal qty = money(m.get("quantity"));
+                java.math.BigDecimal price = money(m.get("unitPrice"));
+                if (qty == null) qty = java.math.BigDecimal.ONE;
+                if (price == null) price = java.math.BigDecimal.ZERO;
+                // Skip genuinely empty rows (no description and no price).
+                if ((desc == null || desc.isBlank()) && price.signum() == 0) continue;
+                if (desc == null || desc.isBlank()) desc = "Item";
+                if (desc.length() > 500) desc = desc.substring(0, 500);
+                java.math.BigDecimal amt = qty.multiply(price).setScale(2, java.math.RoundingMode.HALF_UP);
+                BusinessInvoiceLineItem li = new BusinessInvoiceLineItem();
+                li.setUserId(userId());
+                li.setPosition(pos++);
+                li.setDescription(desc);
+                li.setQuantity(qty);
+                li.setUnitPrice(price);
+                li.setAmount(amt);
+                lines.add(li);
+                subtotal = subtotal.add(amt);
+            }
+        }
+        subtotal = subtotal.setScale(2, java.math.RoundingMode.HALF_UP);
+
+        String discType = body.containsKey("discountType")
+                ? (str(body.get("discountType")) == null ? null : str(body.get("discountType")).toUpperCase())
+                : inv.getDiscountType();
+        java.math.BigDecimal discVal = body.containsKey("discountValue") ? money(body.get("discountValue")) : inv.getDiscountValue();
+        java.math.BigDecimal discAmt = java.math.BigDecimal.ZERO;
+        if ("PERCENT".equals(discType) && discVal != null) {
+            discAmt = subtotal.multiply(discVal).divide(HUNDRED, 2, java.math.RoundingMode.HALF_UP);
+        } else if ("AMOUNT".equals(discType) && discVal != null) {
+            discAmt = discVal.setScale(2, java.math.RoundingMode.HALF_UP);
+        } else {
+            discType = null; discVal = null;
+        }
+        if (discAmt.signum() < 0) discAmt = java.math.BigDecimal.ZERO;
+        if (discAmt.compareTo(subtotal) > 0) discAmt = subtotal;  // never discount below zero
+
+        java.math.BigDecimal taxable = subtotal.subtract(discAmt);
+        java.math.BigDecimal taxRate = body.containsKey("taxRate") ? money(body.get("taxRate")) : inv.getTaxRate();
+        java.math.BigDecimal taxAmt = (taxRate != null && taxRate.signum() > 0)
+                ? taxable.multiply(taxRate).divide(HUNDRED, 2, java.math.RoundingMode.HALF_UP)
+                : java.math.BigDecimal.ZERO;
+        java.math.BigDecimal total = taxable.add(taxAmt).setScale(2, java.math.RoundingMode.HALF_UP);
+
+        inv.setSubtotal(subtotal);
+        inv.setDiscountType(discType);
+        inv.setDiscountValue(discVal);
+        inv.setDiscountAmount(discAmt);
+        inv.setTaxRate((taxRate != null && taxRate.signum() > 0) ? taxRate : null);
+        inv.setTaxAmount(taxAmt);
+        inv.setAmount(total);
+        return lines;
+    }
+
+    /**
+     * Replaces an invoice's persisted line items with {@code lines} (delete-then-insert) and
+     * attaches them to the invoice for the response. A {@code null} argument means the caller
+     * did not touch line items, so existing rows are loaded and attached unchanged.
+     */
+    private void persistLineItems(BusinessInvoice inv, List<BusinessInvoiceLineItem> lines) {
+        if (lines == null) {
+            inv.setLineItems(lineItemRepo.findByInvoiceIdOrderByPositionAsc(inv.getId()));
+            return;
+        }
+        lineItemRepo.deleteByInvoiceId(inv.getId());
+        for (BusinessInvoiceLineItem li : lines) li.setInvoiceId(inv.getId());
+        List<BusinessInvoiceLineItem> saved = lineItemRepo.saveAll(lines);
+        inv.setLineItems(saved);
     }
 
     /* ---------------- Invoice send + payment reconciliation ---------------- */
@@ -584,6 +695,13 @@ public class ManualBusinessController {
         m.put("invoiceNumber", inv.getInvoiceNumber());
         m.put("customer", inv.getCustomer());
         m.put("amount", inv.getAmount());
+        // Itemized breakdown for the public page (empty list when the invoice isn't itemized).
+        m.put("lineItems", lineItemRepo.findByInvoiceIdOrderByPositionAsc(inv.getId()));
+        m.put("subtotal", inv.getSubtotal());
+        m.put("discountType", inv.getDiscountType());
+        m.put("discountAmount", inv.getDiscountAmount());
+        m.put("taxRate", inv.getTaxRate());
+        m.put("taxAmount", inv.getTaxAmount());
         m.put("status", inv.getStatus());
         m.put("issuedAt", inv.getIssuedAt());
         m.put("dueDate", inv.getDueDate());

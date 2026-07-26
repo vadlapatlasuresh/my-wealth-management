@@ -103,6 +103,121 @@ function statusBadge(status) {
   return 'badge-amber';
 }
 
+/* Compute an invoice's money breakdown from its form (mirrors the server-side math in
+   ManualBusinessController.applyLineItemsAndTotals so the preview matches the saved total). */
+function computeInvoiceTotals(form) {
+  const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const rows = (form.lineItems || [])
+    .map((li) => ({
+      description: (li.description || '').trim(),
+      quantity: Number(li.quantity) || 0,
+      unitPrice: Number(li.unitPrice) || 0,
+    }))
+    .filter((li) => li.description || li.unitPrice);
+  const hasLines = rows.length > 0;
+  const cleanLines = rows.map((li) => ({
+    description: li.description || 'Item',
+    quantity: li.quantity || 1,
+    unitPrice: li.unitPrice,
+    amount: round2((li.quantity || 1) * li.unitPrice),
+  }));
+  const subtotal = round2(cleanLines.reduce((s, li) => s + li.amount, 0));
+  const discVal = Number(form.discountValue) || 0;
+  let discountAmount = 0;
+  if (form.discountType === 'PERCENT') discountAmount = round2((subtotal * discVal) / 100);
+  else if (form.discountType === 'AMOUNT') discountAmount = round2(discVal);
+  discountAmount = Math.max(0, Math.min(discountAmount, subtotal));
+  const taxable = round2(subtotal - discountAmount);
+  const taxRate = Number(form.taxRate) || 0;
+  const taxAmount = taxRate > 0 ? round2((taxable * taxRate) / 100) : 0;
+  const total = round2(taxable + taxAmount);
+  return { hasLines, cleanLines, subtotal, discountAmount, taxAmount, total };
+}
+
+/* Editable line-item table + discount/tax + live totals for the invoice form.
+   When no line has content, an invoice can still be a one-off flat amount. */
+function InvoiceLineItemsEditor({ form, setForm, currency }) {
+  const totals = computeInvoiceTotals(form);
+  const rows = form.lineItems || [];
+  const setRow = (i, key, val) => setForm((p) => {
+    const next = (p.lineItems || []).map((li, idx) => (idx === i ? { ...li, [key]: val } : li));
+    return { ...p, lineItems: next };
+  });
+  const addRow = () => setForm((p) => ({ ...p, lineItems: [...(p.lineItems || []), { description: '', quantity: '1', unitPrice: '' }] }));
+  const removeRow = (i) => setForm((p) => {
+    const next = (p.lineItems || []).filter((_, idx) => idx !== i);
+    return { ...p, lineItems: next.length ? next : [{ description: '', quantity: '1', unitPrice: '' }] };
+  });
+
+  return (
+    <div className="form-group">
+      <label className="form-label">Line items</label>
+      <div className="table-scroll">
+        <table className="tv-table" style={{ marginBottom: 8 }}>
+          <thead><tr>
+            <th>Description</th>
+            <th style={{ width: 70, textAlign: 'right' }}>Qty</th>
+            <th style={{ width: 110, textAlign: 'right' }}>Unit price</th>
+            <th style={{ width: 110, textAlign: 'right' }}>Amount</th>
+            <th style={{ width: 34 }}></th>
+          </tr></thead>
+          <tbody>
+            {rows.map((li, i) => {
+              const amt = (Number(li.quantity) || 0) * (Number(li.unitPrice) || 0);
+              return (
+                <tr key={i}>
+                  <td><input className="form-input" style={{ height: 'auto', padding: '5px 8px' }} value={li.description} onChange={(e) => setRow(i, 'description', e.target.value)} placeholder="e.g. Design services" /></td>
+                  <td><input className="form-input" style={{ height: 'auto', padding: '5px 8px', textAlign: 'right' }} type="number" min="0" step="any" value={li.quantity} onChange={(e) => setRow(i, 'quantity', e.target.value)} /></td>
+                  <td><input className="form-input" style={{ height: 'auto', padding: '5px 8px', textAlign: 'right' }} type="number" min="0" step="0.01" value={li.unitPrice} onChange={(e) => setRow(i, 'unitPrice', e.target.value)} placeholder="0.00" /></td>
+                  <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(amt)}</span></td>
+                  <td style={{ textAlign: 'center' }}><button type="button" className="icon-btn" title="Remove line" onClick={() => removeRow(i)}><i className="ti ti-trash"></i></button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <button type="button" className="btn btn-secondary btn-sm" onClick={addRow}><i className="ti ti-plus"></i> Add line</button>
+
+      {!totals.hasLines ? (
+        <div className="form-group" style={{ marginTop: 12, marginBottom: 0 }}>
+          <label className="form-label">Amount *</label>
+          <input className="form-input" type="number" step="0.01" min="0" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0.00" />
+          <div className="item-sub" style={{ marginTop: 4 }}>Or add line items above to itemize with discount &amp; tax.</div>
+        </div>
+      ) : (
+        <>
+          <div className="grid-2" style={{ marginTop: 12 }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Discount</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select className="form-select" style={{ maxWidth: 130 }} value={form.discountType} onChange={(e) => setForm((p) => ({ ...p, discountType: e.target.value }))}>
+                  <option value="">No discount</option>
+                  <option value="PERCENT">Percent %</option>
+                  <option value="AMOUNT">Amount $</option>
+                </select>
+                {form.discountType && (
+                  <input className="form-input" type="number" min="0" step="0.01" value={form.discountValue} onChange={(e) => setForm((p) => ({ ...p, discountValue: e.target.value }))} placeholder={form.discountType === 'PERCENT' ? '10' : '0.00'} />
+                )}
+              </div>
+            </div>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">Tax rate (%)</label>
+              <input className="form-input" type="number" min="0" step="0.0001" value={form.taxRate} onChange={(e) => setForm((p) => ({ ...p, taxRate: e.target.value }))} placeholder="e.g. 8.25" />
+            </div>
+          </div>
+          <div style={{ marginTop: 12, marginLeft: 'auto', maxWidth: 280 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--tv-text-muted)', padding: '2px 0' }}><span>Subtotal</span><span>{currency(totals.subtotal)}</span></div>
+            {totals.discountAmount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--tv-text-muted)', padding: '2px 0' }}><span>Discount</span><span>−{currency(totals.discountAmount)}</span></div>}
+            {totals.taxAmount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: 'var(--tv-text-muted)', padding: '2px 0' }}><span>Tax</span><span>{currency(totals.taxAmount)}</span></div>}
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600, borderTop: '1px solid var(--tv-border)', marginTop: 4, paddingTop: 6 }}><span>Total</span><span className="item-amount">{currency(totals.total)}</span></div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* Safe JSON read/write from localStorage (failures are non-fatal). */
 function readLS(key, fallback) {
   try {
@@ -316,7 +431,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   });
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+  const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
   const [customers, setCustomers] = useState([]);
   const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
@@ -1029,7 +1144,9 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     e.preventDefault();
     if (!selectedBusiness) return;
     const customer = invForm.customer.trim();
-    const amount = Number(invForm.amount) || 0;
+    const totals = computeInvoiceTotals(invForm);
+    // With line items the total is derived; otherwise fall back to the single amount field.
+    const amount = totals.hasLines ? totals.total : (Number(invForm.amount) || 0);
     if (!customer || !amount) return;
     try {
       const created = await api.createManualInvoice(selectedBusiness.id, {
@@ -1037,9 +1154,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         customer, amount, status: invForm.status, dueDate: invForm.dueDate || null,
         customerEmail: invForm.customerEmail || null, customerPhone: invForm.customerPhone || null,
         payInstructions: invForm.payInstructions || null, notes: invForm.notes || null,
+        ...(totals.hasLines ? {
+          lineItems: totals.cleanLines,
+          discountType: invForm.discountType || null,
+          discountValue: invForm.discountValue || null,
+          taxRate: invForm.taxRate || null,
+        } : {}),
       });
       setManualInvoices((prev) => [created, ...prev]);
-      setInvForm({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '' });
+      setInvForm({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
       setShowAddInvoice(false);
       flash(`Invoice for ${currency(amount)} to ${customer} created.`);
     } catch (err) { setError(err?.message || 'Could not create invoice.'); }
@@ -3761,16 +3884,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         </div>
                       </div>
                     )}
-                    <div className="grid-2">
-                      <div className="form-group">
-                        <label className="form-label">Customer *</label>
-                        <input className="form-input" value={invForm.customer} onChange={(e) => setInvForm({ ...invForm, customer: e.target.value, customerId: '' })} placeholder="e.g. Acme Corp" autoFocus />
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Amount *</label>
-                        <input className="form-input" type="number" step="0.01" min="0" value={invForm.amount} onChange={(e) => setInvForm({ ...invForm, amount: e.target.value })} placeholder="0.00" />
-                      </div>
+                    <div className="form-group">
+                      <label className="form-label">Customer *</label>
+                      <input className="form-input" value={invForm.customer} onChange={(e) => setInvForm({ ...invForm, customer: e.target.value, customerId: '' })} placeholder="e.g. Acme Corp" autoFocus />
                     </div>
+
+                    {/* Line items — the invoice total is derived from these. Leave them blank for a one-off flat amount. */}
+                    <InvoiceLineItemsEditor form={invForm} setForm={setInvForm} currency={currency} />
+
                     <div className="grid-2">
                       <div className="form-group">
                         <label className="form-label">Due date</label>
@@ -3797,7 +3918,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       <label className="form-label">How to pay (shown to the customer)</label>
                       <input className="form-input" value={invForm.payInstructions} onChange={(e) => setInvForm({ ...invForm, payInstructions: e.target.value })} placeholder="e.g. Zelle to pay@acme.com, or check to Acme LLC" />
                     </div>
-                    <button type="submit" className="btn btn-primary btn-sm" disabled={!invForm.customer.trim() || !(Number(invForm.amount) > 0) || !selectedBusiness}>
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!invForm.customer.trim() || !((computeInvoiceTotals(invForm).hasLines ? computeInvoiceTotals(invForm).total : Number(invForm.amount)) > 0) || !selectedBusiness}>
                       <i className="ti ti-plus"></i> Create invoice
                     </button>
                     {!selectedBusiness && <div className="item-sub" style={{ marginTop: 6 }}>Add a business first to create invoices.</div>}
