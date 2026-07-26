@@ -44,6 +44,7 @@ public class ManualBusinessController {
     private final com.mywealthmanagement.businessfinancialsservice.business.recurring.RecurringInvoiceService recurringService;
     private final BusinessProjectRepository projectRepo;
     private final BusinessProjectMilestoneRepository milestoneRepo;
+    private final BusinessTaxRateRepository taxRateRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
@@ -104,6 +105,7 @@ public class ManualBusinessController {
         quoteRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // quote line items cascade at DB
         recurringRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // recurring items cascade at DB
         projectRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // milestones cascade at DB
+        taxRateRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
@@ -411,6 +413,97 @@ public class ManualBusinessController {
         return s.equalsIgnoreCase("true") || s.equals("1") || s.equalsIgnoreCase("yes");
     }
 
+    /* ---------------- Sales-tax rates ---------------- */
+
+    @GetMapping("/businesses/{businessId}/tax-rates")
+    public List<BusinessTaxRate> listTaxRates(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return taxRateRepo.findByBusinessIdAndUserIdOrderByNameAsc(businessId, userId());
+    }
+
+    @PostMapping("/businesses/{businessId}/tax-rates")
+    public BusinessTaxRate createTaxRate(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessTaxRate t = new BusinessTaxRate();
+        t.setUserId(userId());
+        t.setBusinessId(businessId);
+        applyTaxRate(t, body);
+        if (t.getName() == null || t.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A tax name is required");
+        }
+        if (t.getRate() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A rate is required");
+        return taxRateRepo.save(t);
+    }
+
+    @PutMapping("/businesses/{businessId}/tax-rates/{id}")
+    public BusinessTaxRate updateTaxRate(@PathVariable Long businessId, @PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessTaxRate t = taxRateRepo.findByIdAndBusinessIdAndUserId(id, businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tax rate not found"));
+        applyTaxRate(t, body);
+        return taxRateRepo.save(t);
+    }
+
+    @DeleteMapping("/businesses/{businessId}/tax-rates/{id}")
+    public ResponseEntity<Void> deleteTaxRate(@PathVariable Long businessId, @PathVariable Long id) {
+        BusinessTaxRate t = taxRateRepo.findByIdAndBusinessIdAndUserId(id, businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Tax rate not found"));
+        taxRateRepo.delete(t);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Resolve the sales-tax rate that applies to a location (order-to-cash Phase 1.7). Pass a
+     * {@code customerId} (uses their billing address) or explicit country/region/postal.
+     * Returns {@code { rate, name, taxRateId }} — rate is null when nothing applies.
+     */
+    @GetMapping("/businesses/{businessId}/tax-rates/resolve")
+    public Map<String, Object> resolveTaxRate(@PathVariable Long businessId,
+                                              @RequestParam(required = false) Long customerId,
+                                              @RequestParam(required = false) String country,
+                                              @RequestParam(required = false) String region,
+                                              @RequestParam(required = false) String postal) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (customerId != null) {
+            BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId()).orElse(null);
+            if (c != null) {
+                country = c.getBillingCountry();
+                region = c.getBillingRegion();
+                postal = c.getBillingPostal();
+            }
+        }
+        BusinessTaxRate r = TaxRateResolver.resolve(
+                taxRateRepo.findByBusinessIdAndUserIdAndActiveTrue(businessId, userId()), country, region, postal);
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("rate", r != null ? r.getRate() : null);
+        out.put("name", r != null ? r.getName() : null);
+        out.put("taxRateId", r != null ? r.getId() : null);
+        return out;
+    }
+
+    private void applyTaxRate(BusinessTaxRate t, Map<String, Object> body) {
+        if (body.containsKey("name")) t.setName(str(body.get("name")));
+        if (body.containsKey("rate")) t.setRate(money(body.get("rate")));
+        if (body.containsKey("country")) t.setCountry(country(body.get("country")));
+        if (body.containsKey("region")) t.setRegion(str(body.get("region")));
+        if (body.containsKey("postal")) t.setPostal(str(body.get("postal")));
+        if (body.containsKey("isDefault")) t.setDefault(bool(body.get("isDefault"), false));
+        if (body.containsKey("active")) t.setActive(bool(body.get("active"), true));
+    }
+
+    /** The tax rate (percent) that applies to a saved customer's billing location, or null. */
+    private java.math.BigDecimal resolvedTaxRate(Long businessId, Long customerId) {
+        if (customerId == null) return null;
+        BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId()).orElse(null);
+        if (c == null) return null;
+        BusinessTaxRate r = TaxRateResolver.resolve(
+                taxRateRepo.findByBusinessIdAndUserIdAndActiveTrue(businessId, userId()),
+                c.getBillingCountry(), c.getBillingRegion(), c.getBillingPostal());
+        return r != null ? r.getRate() : null;
+    }
+
     /* ---------------- Quotes / Estimates ---------------- */
 
     @GetMapping("/businesses/{businessId}/quotes")
@@ -440,6 +533,10 @@ public class ManualBusinessController {
         }
         if (q.getStatus() == null) q.setStatus("DRAFT");
         if (q.getIssuedAt() == null) q.setIssuedAt(LocalDate.now());
+        if (!body.containsKey("taxRate") && q.getCustomerId() != null) {
+            java.math.BigDecimal auto = resolvedTaxRate(businessId, q.getCustomerId());
+            if (auto != null) q.setTaxRate(auto);
+        }
         List<BusinessQuoteLineItem> parsed = applyQuoteLineItemsAndTotals(q, body);
         BusinessQuote saved = quoteRepo.save(q);
         persistQuoteLineItems(saved, parsed);
@@ -1019,6 +1116,11 @@ public class ManualBusinessController {
         inv.setDueDate(date(body.get("dueDate")));
         applyInvoiceContact(inv, body);
         resolveInvoiceCustomer(inv, businessId, body);
+        // Sales tax: auto-apply the rate for the customer's location unless the caller set one.
+        if (!body.containsKey("taxRate") && inv.getCustomerId() != null) {
+            java.math.BigDecimal auto = resolvedTaxRate(businessId, inv.getCustomerId());
+            if (auto != null) inv.setTaxRate(auto);
+        }
         // Compute totals from line items when present; sets inv.amount to the grand total.
         List<BusinessInvoiceLineItem> parsedLines = applyLineItemsAndTotals(inv, body);
         if (inv.getCustomer() == null || inv.getCustomer().isBlank()) {

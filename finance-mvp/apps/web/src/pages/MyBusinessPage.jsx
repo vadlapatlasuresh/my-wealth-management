@@ -6,6 +6,7 @@ import PlaidLinkButton from '../components/PlaidLinkButton';
 import ExpensesTab from '../components/business/ExpensesTab';
 import CustomerManagerDrawer from '../components/business/CustomerManagerDrawer';
 import ProjectsPanel from '../components/business/ProjectsPanel';
+import TaxRatesDrawer from '../components/business/TaxRatesDrawer';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -455,6 +456,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'DRAFT', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
   const [customers, setCustomers] = useState([]);
   const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
+  const [showTaxDrawer, setShowTaxDrawer] = useState(false);
   const [quotes, setQuotes] = useState([]);
   const [showAddQuote, setShowAddQuote] = useState(false);
   const emptyQuoteForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', expiryDate: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
@@ -1170,6 +1172,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setBizTransactions((prev) => prev.filter((x) => x.id !== t.rawId));
       flash('Transaction deleted.');
     } catch (err) { setError(err?.message || 'Could not delete transaction.'); }
+  }
+
+  /* Auto-fill the tax rate for a picked customer's billing location (Phase 1.7). */
+  async function applyResolvedTax(setForm, customerId) {
+    if (!selectedBusiness || !customerId) return;
+    try {
+      const res = await api.resolveBusinessTaxRate(selectedBusiness.id, customerId);
+      if (res && res.rate != null) setForm((p) => ({ ...p, taxRate: String(res.rate) }));
+    } catch { /* non-fatal — leave the tax field as-is */ }
   }
 
   /* ---- Invoice CRUD ---- */
@@ -4014,6 +4025,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                             setQuoteForm((p) => c
                               ? { ...p, customerId: String(c.id), customer: c.displayName, customerEmail: c.email || '', customerPhone: c.mobile || c.phone || '' }
                               : { ...p, customerId: '' });
+                            if (c) applyResolvedTax(setQuoteForm, c.id);
                           }}>
                           <option value="">New / one-off customer…</option>
                           {customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').map((c) => (
@@ -4202,6 +4214,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                               setInvForm((p) => c
                                 ? { ...p, customerId: String(c.id), customer: c.displayName, customerEmail: c.email || '', customerPhone: c.mobile || c.phone || '' }
                                 : { ...p, customerId: '' });
+                              if (c) applyResolvedTax(setInvForm, c.id);
                             }}>
                             <option value="">New / one-off customer…</option>
                             {customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').map((c) => (
@@ -4326,6 +4339,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   <div className="section-title"><i className="ti ti-users" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Customers</div>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <span className="badge badge-gray">{customerInsights.length}</span>
+                    {selectedBusiness && (
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowTaxDrawer(true)} title="Manage sales-tax rates">
+                        <i className="ti ti-receipt-tax"></i> Tax rates
+                      </button>
+                    )}
                     {selectedBusiness && (
                       <button className="btn btn-secondary btn-sm" onClick={() => setShowCustomerDrawer(true)} title="Add, edit and save reusable customer details">
                         <i className="ti ti-address-book"></i> Manage{customers.length > 0 ? ` (${customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').length})` : ''}
@@ -4614,6 +4632,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         <CustomerManagerDrawer businessId={selectedBusiness.id} customers={customers}
           onChanged={reloadCustomers}
           onClose={() => setShowCustomerDrawer(false)} />
+      )}
+      {showTaxDrawer && selectedBusiness && (
+        <TaxRatesDrawer businessId={selectedBusiness.id}
+          onClose={() => setShowTaxDrawer(false)} />
       )}
     </div>
   );
