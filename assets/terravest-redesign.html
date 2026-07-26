@@ -4923,14 +4923,15 @@ a { text-decoration: none; color: inherit; }
           </div>
           <div class="card">
             <div class="section-header"><div class="section-title">Invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Create invoice</button></div>
-            <p class="item-sub" style="margin:-4px 0 10px;">Itemized line items with instant subtotal, discount &amp; tax — or a one-off flat amount. Pick a saved customer to auto-fill their details.</p>
+            <p class="item-sub" style="margin:-4px 0 10px;">Full lifecycle — Draft → Sent → Viewed → Partially paid → Paid → Overdue → Void. The eye shows when the customer opened it; partial payments net down what's owed.</p>
             <div class="table-scroll">
               <table class="tv-table">
                 <thead><tr><th>Customer</th><th style="text-align:right;">Amount</th><th>Status</th><th>Source</th><th>Documents</th></tr></thead>
                 <tbody>
                   <tr><td>Northwind Co.</td><td style="text-align:right;">$6,200</td><td><span class="badge badge-green">Paid</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> 2</button></td></tr>
-                  <tr><td>Pinecrest Studio</td><td style="text-align:right;">$3,450</td><td><span class="badge badge-red">Overdue</span></td><td><span class="badge badge-green">QuickBooks</span></td><td><span style="color:var(--tv-text-muted);">—</span></td></tr>
-                  <tr><td>Harbor Group</td><td style="text-align:right;">$2,100</td><td><span class="badge badge-amber">Open</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> Attach</button></td></tr>
+                  <tr><td>Pinecrest Studio</td><td style="text-align:right;">$3,450</td><td><span class="badge badge-red">Overdue</span> <i class="ti ti-eye" title="Viewed Jun 12" style="color:var(--tv-forest-light);"></i></td><td><span class="badge badge-green">QuickBooks</span></td><td><span style="color:var(--tv-text-muted);">—</span></td></tr>
+                  <tr><td>Harbor Group</td><td style="text-align:right;">$2,100<div class="item-sub">$900 due</div></td><td><span class="badge badge-amber">Partially paid</span></td><td><span class="badge badge-forest">Manual</span></td><td><button class="btn btn-secondary btn-sm"><i class="ti ti-paperclip"></i> Attach</button></td></tr>
+                  <tr><td>Cedar &amp; Co.</td><td style="text-align:right;">$1,800</td><td><span class="badge badge-forest">Sent</span></td><td><span class="badge badge-forest">Manual</span></td><td><span style="color:var(--tv-text-muted);">—</span></td></tr>
                 </tbody>
               </table>
             </div>

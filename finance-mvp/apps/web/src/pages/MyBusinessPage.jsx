@@ -101,8 +101,28 @@ function statusBadge(status) {
   const s = (status || '').toUpperCase();
   if (s === 'PAID') return 'badge-green';
   if (s === 'OVERDUE') return 'badge-red';
-  return 'badge-amber';
+  if (s === 'VOID') return 'badge-gray';
+  if (s === 'DRAFT') return 'badge-gray';
+  if (s === 'SENT' || s === 'DELIVERED' || s === 'VIEWED') return 'badge-forest';
+  return 'badge-amber'; // OPEN, PARTIALLY_PAID
 }
+
+/* Human label for a status (PARTIALLY_PAID -> "Partially paid"). */
+function statusLabel(status) {
+  const s = (status || '').toUpperCase();
+  if (s === 'PARTIALLY_PAID') return 'Partially paid';
+  return s.charAt(0) + s.slice(1).toLowerCase();
+}
+
+/* Amount still owed on an invoice (nets off any recorded partial payment). */
+function invoiceOutstanding(i) {
+  const amt = Number(i.amount) || 0;
+  const paid = Number(i.paidAmount) || 0;
+  return Math.max(0, amt - paid);
+}
+
+/* Statuses that no longer count as receivable. */
+const NON_AR_STATUSES = new Set(['PAID', 'VOID', 'DRAFT']);
 
 /* Compute an invoice's money breakdown from its form (mirrors the server-side math in
    ManualBusinessController.applyLineItemsAndTotals so the preview matches the saved total). */
@@ -432,7 +452,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   });
 
   const [showAddInvoice, setShowAddInvoice] = useState(false);
-  const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
+  const [invForm, setInvForm] = useState({ customerId: '', customer: '', amount: '', dueDate: '', status: 'DRAFT', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
   const [customers, setCustomers] = useState([]);
   const [showCustomerDrawer, setShowCustomerDrawer] = useState(false);
   const [quotes, setQuotes] = useState([]);
@@ -1175,7 +1195,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
         } : {}),
       });
       setManualInvoices((prev) => [created, ...prev]);
-      setInvForm({ customerId: '', customer: '', amount: '', dueDate: '', status: 'OPEN', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
+      setInvForm({ customerId: '', customer: '', amount: '', dueDate: '', status: 'DRAFT', customerEmail: '', customerPhone: '', payInstructions: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' });
       setShowAddInvoice(false);
       flash(`Invoice for ${currency(amount)} to ${customer} created.`);
     } catch (err) { setError(err?.message || 'Could not create invoice.'); }
@@ -1197,6 +1217,15 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setBizDocuments((prev) => prev.map((d) => (d.invoiceId === id ? { ...d, invoiceId: null } : d)));
       flash('Invoice deleted.');
     } catch (err) { setError(err?.message || 'Could not delete invoice.'); }
+  }
+  async function handleVoidInvoice(id) {
+    const inv = (manualInvoices || []).find((i) => i.id === id);
+    if (!window.confirm(`Void this invoice${inv ? ` to ${inv.customer}` : ''}? It stays on record but no longer counts as owed.`)) return;
+    try {
+      const updated = await api.voidManualInvoice(id);
+      setManualInvoices((prev) => prev.map((i) => (i.id === id ? updated : i)));
+      flash('Invoice voided.');
+    } catch (err) { setError(err?.message || 'Could not void the invoice.'); }
   }
 
   /* ---- Quote / estimate CRUD + convert ---- */
@@ -1578,6 +1607,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     const m = manualInvoices.map((i) => ({
       key: `m-${i.id}`, id: i.id, manual: true, businessId: i.businessId ?? null, customer: i.customer,
       amount: Number(i.amount) || 0, status: (i.status || 'OPEN').toUpperCase(), dueDate: i.dueDate,
+      paidAmount: Number(i.paidAmount) || 0, viewedAt: i.viewedAt || null,
     }));
     const q = qboInvoices.map((i) => ({
       key: `q-${i.id}`, id: i.id, manual: false, businessId: null, customer: i.customer,
@@ -1585,8 +1615,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     }));
     return [...m, ...q];
   }, [manualInvoices, qboInvoices]);
-  const pendingInvoices = useMemo(() => allInvoices.filter((i) => i.status !== 'PAID'), [allInvoices]);
-  const pendingTotal = useMemo(() => pendingInvoices.reduce((s, i) => s + i.amount, 0), [pendingInvoices]);
+  const pendingInvoices = useMemo(() => allInvoices.filter((i) => !NON_AR_STATUSES.has((i.status || '').toUpperCase())), [allInvoices]);
+  const pendingTotal = useMemo(() => pendingInvoices.reduce((s, i) => s + invoiceOutstanding(i), 0), [pendingInvoices]);
 
   /* ---- Document center ---- */
   const businessNameById = useMemo(() => {
@@ -1907,7 +1937,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     const byCustomer = new Map();
     let overdue = 0, total = 0;
     pendingInvoices.forEach((i) => {
-      const amt = Number(i.amount) || 0;
+      const amt = invoiceOutstanding(i);
       total += amt;
       const due = i.dueDate ? new Date(i.dueDate) : null;
       let key = 'current';
@@ -3942,7 +3972,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                         <div className="item-main">
                           <div className="item-name">{i.customer}</div>
                           <div className="item-sub">
-                            <span className={`badge ${statusBadge(i.status)}`}>{i.status}</span>
+                            <span className={`badge ${statusBadge(i.status)}`}>{statusLabel(i.status)}</span>
+                            {i.viewedAt && i.status !== 'VIEWED' ? <i className="ti ti-eye" title={`Viewed ${bizDate(i.viewedAt)}`} style={{ marginLeft: 6, color: 'var(--tv-forest-light)' }}></i> : null}
                             {isAllView && businessNameById.get(i.businessId) ? <span className="badge badge-forest" style={{ marginLeft: 4 }}>{businessNameById.get(i.businessId)}</span> : null}
                             {i.dueDate ? ` · Due ${bizDate(i.dueDate)}` : ''}{!i.manual ? ' · QuickBooks' : ''}
                           </div>
@@ -4199,7 +4230,13 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                       <div className="form-group">
                         <label className="form-label">Status</label>
                         <select className="form-select" value={invForm.status} onChange={(e) => setInvForm({ ...invForm, status: e.target.value })}>
-                          <option value="OPEN">Open</option><option value="OVERDUE">Overdue</option><option value="PAID">Paid</option>
+                          <option value="DRAFT">Draft</option>
+                          <option value="SENT">Sent</option>
+                          <option value="VIEWED">Viewed</option>
+                          <option value="PARTIALLY_PAID">Partially paid</option>
+                          <option value="OVERDUE">Overdue</option>
+                          <option value="PAID">Paid</option>
+                          <option value="VOID">Void</option>
                         </select>
                       </div>
                     </div>
@@ -4237,8 +4274,18 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                           <tr key={inv.key}>
                             <td style={{ fontWeight: 500 }}>{inv.customer || '—'}</td>
                             {isAllView && <td>{businessNameById.get(inv.businessId) || <span style={{ color: 'var(--tv-text-muted)' }}>—</span>}</td>}
-                            <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(inv.amount)}</span></td>
-                            <td><span className={`badge ${statusBadge(inv.status)}`}>{inv.status}</span></td>
+                            <td style={{ textAlign: 'right' }}>
+                              <span className="item-amount">{currency(inv.amount)}</span>
+                              {inv.status === 'PARTIALLY_PAID' && invoiceOutstanding(inv) > 0 && (
+                                <div className="item-sub">{currency(invoiceOutstanding(inv))} due</div>
+                              )}
+                            </td>
+                            <td>
+                              <span className={`badge ${statusBadge(inv.status)}`}>{statusLabel(inv.status)}</span>
+                              {inv.viewedAt && !['PAID', 'VOID'].includes(inv.status) && inv.status !== 'VIEWED' && (
+                                <i className="ti ti-eye" title={`Viewed ${bizDate(inv.viewedAt)}`} style={{ marginLeft: 6, color: 'var(--tv-forest-light)' }}></i>
+                              )}
+                            </td>
                             <td style={{ color: 'var(--tv-text-muted)' }}>{bizDate(inv.dueDate)}</td>
                             <td><span className={`badge ${inv.manual ? 'badge-forest' : 'badge-green'}`}>{inv.manual ? 'Manual' : 'QuickBooks'}</span></td>
                             <td style={{ whiteSpace: 'nowrap' }}>
@@ -4251,10 +4298,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                             <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                               {inv.manual && (() => {
                                 const raw = manualInvoices.find((x) => x.id === inv.id) || inv;
+                                const terminal = ['PAID', 'VOID'].includes(inv.status);
                                 return (<>
                                   <button className="btn btn-secondary btn-sm" title="Send to customer" onClick={() => setSendInv(raw)}><i className="ti ti-send"></i></button>
-                                  {inv.status !== 'PAID' && (
+                                  {!terminal && (
                                     <button className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Record payment" onClick={() => setPayInv(raw)}><i className="ti ti-cash"></i></button>
+                                  )}
+                                  {!terminal && (
+                                    <button className="icon-btn" style={{ marginLeft: 4 }} title="Void invoice" onClick={() => handleVoidInvoice(inv.id)}><i className="ti ti-ban"></i></button>
                                   )}
                                   <button className="icon-btn" style={{ marginLeft: 4 }} title="Delete invoice" onClick={() => handleDeleteInvoice(inv.id)}><i className="ti ti-trash"></i></button>
                                 </>);

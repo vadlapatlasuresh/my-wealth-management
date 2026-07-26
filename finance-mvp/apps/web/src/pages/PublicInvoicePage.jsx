@@ -35,6 +35,8 @@ export default function PublicInvoicePage() {
       catch (e) { setError(e?.message || "This invoice link is not valid."); }
       finally { setLoading(false); }
     })();
+    // Fire-and-forget "viewed" beacon so the business owner sees the invoice was opened.
+    api.markInvoiceViewed(token).catch(() => {});
   }, [token]);
 
   const wrap = {

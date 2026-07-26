@@ -121,6 +121,10 @@ public class BusinessInvoice {
     @Column(name = "sent_channel", length = 16)
     private String sentChannel;
 
+    /** First time the customer opened the public invoice page (drives the VIEWED status). */
+    @Column(name = "viewed_at")
+    private LocalDateTime viewedAt;
+
     /* ---- Payment reconciliation (manual) ---- */
     @Column(name = "paid_at")
     private LocalDate paidAt;
