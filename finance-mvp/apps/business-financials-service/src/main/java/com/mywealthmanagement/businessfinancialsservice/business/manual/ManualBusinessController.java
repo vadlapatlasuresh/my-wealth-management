@@ -42,6 +42,8 @@ public class ManualBusinessController {
     private final BusinessRecurringInvoiceRepository recurringRepo;
     private final BusinessRecurringInvoiceItemRepository recurringItemRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.recurring.RecurringInvoiceService recurringService;
+    private final BusinessProjectRepository projectRepo;
+    private final BusinessProjectMilestoneRepository milestoneRepo;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -100,6 +102,7 @@ public class ManualBusinessController {
         expenseRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         quoteRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // quote line items cascade at DB
         recurringRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // recurring items cascade at DB
+        projectRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // milestones cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
@@ -775,6 +778,208 @@ public class ManualBusinessController {
                 .filter(a -> a != null)
                 .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
         s.setAmount(InvoiceMath.compute(subtotal, s.getDiscountType(), s.getDiscountValue(), s.getTaxRate()).total());
+    }
+
+    /* ---------------- Projects (progress / milestone invoicing) ---------------- */
+
+    @GetMapping("/businesses/{businessId}/projects")
+    public List<BusinessProject> listProjects(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<BusinessProject> projects = projectRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        if (!projects.isEmpty()) {
+            java.util.Map<Long, java.util.List<BusinessProjectMilestone>> byProject =
+                    milestoneRepo.findByProjectIdInOrderByPositionAsc(projects.stream().map(BusinessProject::getId).toList())
+                            .stream().collect(java.util.stream.Collectors.groupingBy(BusinessProjectMilestone::getProjectId));
+            for (BusinessProject p : projects) attachProjectComputed(p, byProject.getOrDefault(p.getId(), java.util.List.of()));
+        }
+        return projects;
+    }
+
+    @PostMapping("/businesses/{businessId}/projects")
+    public BusinessProject createProject(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessProject p = new BusinessProject();
+        p.setUserId(userId());
+        p.setBusinessId(businessId);
+        applyProjectFields(p, body, businessId);
+        if (p.getName() == null || p.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A project name is required");
+        }
+        if (p.getCustomer() == null || p.getCustomer().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
+        }
+        if (p.getStatus() == null) p.setStatus("ACTIVE");
+        BusinessProject saved = projectRepo.save(p);
+        attachProjectComputed(saved, java.util.List.of());
+        return saved;
+    }
+
+    @PutMapping("/projects/{id}")
+    public BusinessProject updateProject(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessProject p = projectRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        applyProjectFields(p, body, p.getBusinessId());
+        BusinessProject saved = projectRepo.save(p);
+        attachProjectComputed(saved, milestoneRepo.findByProjectIdOrderByPositionAsc(saved.getId()));
+        return saved;
+    }
+
+    @DeleteMapping("/projects/{id}")
+    public ResponseEntity<Void> deleteProject(@PathVariable Long id) {
+        BusinessProject p = projectRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        projectRepo.delete(p); // milestones cascade at DB; generated invoices are kept
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/projects/{projectId}/milestones")
+    public BusinessProjectMilestone addMilestone(@PathVariable Long projectId, @RequestBody Map<String, Object> body) {
+        BusinessProject p = projectRepo.findByIdAndUserId(projectId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessProjectMilestone m = new BusinessProjectMilestone();
+        m.setUserId(userId());
+        m.setProjectId(p.getId());
+        int next = milestoneRepo.findByProjectIdOrderByPositionAsc(p.getId()).size();
+        m.setPosition(next);
+        applyMilestoneFields(m, body, p);
+        if (m.getName() == null || m.getName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A milestone name is required");
+        }
+        return milestoneRepo.save(m);
+    }
+
+    @PutMapping("/milestones/{id}")
+    public BusinessProjectMilestone updateMilestone(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessProjectMilestone m = milestoneRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("INVOICED".equalsIgnoreCase(m.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This milestone has been invoiced and can't be edited.");
+        }
+        BusinessProject p = projectRepo.findByIdAndUserId(m.getProjectId(), userId()).orElse(null);
+        applyMilestoneFields(m, body, p);
+        return milestoneRepo.save(m);
+    }
+
+    @DeleteMapping("/milestones/{id}")
+    public ResponseEntity<Void> deleteMilestone(@PathVariable Long id) {
+        BusinessProjectMilestone m = milestoneRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        milestoneRepo.delete(m);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Bill a milestone: materialize an invoice for its amount and mark it INVOICED. */
+    @PostMapping("/milestones/{id}/bill")
+    @Transactional
+    public BusinessInvoice billMilestone(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        BusinessProjectMilestone m = milestoneRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("INVOICED".equalsIgnoreCase(m.getStatus()) && m.getInvoiceId() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This milestone has already been billed.");
+        }
+        BusinessProject p = projectRepo.findByIdAndUserId(m.getProjectId(), userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Project not found"));
+        Map<String, Object> b = body == null ? Map.of() : body;
+
+        BigDecimal amount = m.getAmount() == null ? BigDecimal.ZERO : m.getAmount();
+        BusinessInvoice inv = new BusinessInvoice();
+        inv.setUserId(userId());
+        inv.setBusinessId(p.getBusinessId());
+        inv.setCustomerId(p.getCustomerId());
+        inv.setCustomer(p.getCustomer());
+        inv.setCustomerEmail(p.getCustomerEmail());
+        inv.setCustomerPhone(p.getCustomerPhone());
+        inv.setStatus("OPEN");
+        inv.setIssuedAt(LocalDate.now());
+        inv.setDueDate(b.containsKey("dueDate") ? date(b.get("dueDate")) : m.getDueDate());
+        inv.setNotes(p.getName() + " — " + m.getName());
+        inv.setSubtotal(amount);
+        inv.setAmount(amount);
+        BusinessInvoice saved = invoiceRepo.save(inv);
+
+        BusinessInvoiceLineItem li = new BusinessInvoiceLineItem();
+        li.setInvoiceId(saved.getId());
+        li.setUserId(userId());
+        li.setPosition(0);
+        li.setDescription(p.getName() + " — " + m.getName());
+        li.setQuantity(BigDecimal.ONE);
+        li.setUnitPrice(amount);
+        li.setAmount(amount);
+        saved.setLineItems(lineItemRepo.saveAll(java.util.List.of(li)));
+
+        m.setStatus("INVOICED");
+        m.setInvoiceId(saved.getId());
+        milestoneRepo.save(m);
+
+        notificationClient.notify(userId(), "BUSINESS", "Milestone invoiced",
+                "\"" + m.getName() + "\" on " + p.getName() + " was billed to " + saved.getCustomer()
+                        + " for " + usd(amount) + ".");
+        return saved;
+    }
+
+    private void applyProjectFields(BusinessProject p, Map<String, Object> body, Long businessId) {
+        if (body.containsKey("name")) p.setName(str(body.get("name")));
+        if (body.containsKey("customer")) p.setCustomer(str(body.get("customer")));
+        if (body.containsKey("customerEmail")) p.setCustomerEmail(str(body.get("customerEmail")));
+        if (body.containsKey("customerPhone")) p.setCustomerPhone(str(body.get("customerPhone")));
+        if (body.containsKey("contractTotal")) p.setContractTotal(nonNeg(money(body.get("contractTotal"))));
+        if (body.containsKey("notes")) p.setNotes(str(body.get("notes")));
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            if (s != null) p.setStatus(s.toUpperCase());
+        }
+        if (body.containsKey("customerId")) {
+            Long customerId = asLong(body.get("customerId"));
+            if (customerId == null || customerId == 0L) {
+                p.setCustomerId(null);
+            } else {
+                BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown customer"));
+                p.setCustomerId(c.getId());
+                if (!body.containsKey("customer") || str(body.get("customer")) == null) p.setCustomer(c.getDisplayName());
+                if (!body.containsKey("customerEmail") && p.getCustomerEmail() == null) p.setCustomerEmail(c.getEmail());
+                if (!body.containsKey("customerPhone") && p.getCustomerPhone() == null) {
+                    p.setCustomerPhone(c.getMobile() != null ? c.getMobile() : c.getPhone());
+                }
+            }
+        }
+    }
+
+    /** Applies milestone fields; a {@code percent} (of the project's contract) sets the amount. */
+    private void applyMilestoneFields(BusinessProjectMilestone m, Map<String, Object> body, BusinessProject project) {
+        if (body.containsKey("name")) m.setName(str(body.get("name")));
+        if (body.containsKey("dueDate")) m.setDueDate(date(body.get("dueDate")));
+        if (body.containsKey("position")) {
+            Integer pos = intVal(body.get("position"));
+            if (pos != null && pos >= 0) m.setPosition(pos);
+        }
+        // percent (of contract) takes precedence over an explicit amount when supplied.
+        if (body.containsKey("percent") && str(body.get("percent")) != null) {
+            BigDecimal pct = money(body.get("percent"));
+            m.setPercent(pct);
+            BigDecimal contract = project != null && project.getContractTotal() != null ? project.getContractTotal() : BigDecimal.ZERO;
+            if (pct != null) {
+                m.setAmount(contract.multiply(pct).divide(InvoiceMath.HUNDRED, 2, java.math.RoundingMode.HALF_UP));
+            }
+        } else if (body.containsKey("amount")) {
+            m.setAmount(nonNeg(money(body.get("amount"))));
+            m.setPercent(null);
+        }
+    }
+
+    /** Attaches milestones and computes billed-to-date / remaining for the UI. */
+    private void attachProjectComputed(BusinessProject p, List<BusinessProjectMilestone> milestones) {
+        p.setMilestones(milestones);
+        BigDecimal billed = milestones.stream()
+                .filter(m -> "INVOICED".equalsIgnoreCase(m.getStatus()))
+                .map(BusinessProjectMilestone::getAmount)
+                .filter(a -> a != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        p.setBilledToDate(billed);
+        BigDecimal contract = p.getContractTotal() == null ? BigDecimal.ZERO : p.getContractTotal();
+        p.setRemaining(contract.subtract(billed));
     }
 
     /* ---------------- Invoices ---------------- */

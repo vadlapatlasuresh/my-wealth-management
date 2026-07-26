@@ -4961,6 +4961,27 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Progress / milestone billing: bill a fixed-price project in stages -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-progress" style="color:var(--tv-forest-light);margin-right:6px;"></i>Projects &amp; milestone billing</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New project</button></div>
+          <p class="item-sub" style="margin:-4px 0 12px;">Track a fixed-price job and bill it in stages (deposit, midpoint, completion). Each milestone bills as an invoice and draws down the contract.</p>
+          <div style="border-top:1px solid var(--tv-border);padding-top:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:600;"><i class="ti ti-chevron-down" style="margin-right:4px;"></i>Website build</div><div class="item-sub">Blue Harbor LLC · $3,000 of $10,000 billed</div></div><span class="badge badge-gray">Active</span></div>
+            <div class="progress-bar" style="margin-top:8px;"><div class="progress-fill" style="width:30%;background:var(--tv-forest-light);"></div></div>
+            <div class="item-sub" style="margin-top:2px;">$7,000 remaining</div>
+            <div class="table-scroll" style="margin-top:10px;">
+              <table class="tv-table">
+                <thead><tr><th>Milestone</th><th style="text-align:right;">Amount</th><th>Due</th><th>Status</th><th style="text-align:right;"></th></tr></thead>
+                <tbody>
+                  <tr><td>Deposit · 30%</td><td style="text-align:right;">$3,000</td><td style="color:var(--tv-text-muted);">—</td><td><span class="badge badge-green">Invoiced</span></td><td style="text-align:right;"><span class="item-sub">Invoiced</span></td></tr>
+                  <tr><td>Midpoint · 40%</td><td style="text-align:right;">$4,000</td><td style="color:var(--tv-text-muted);">Sep 15</td><td><span class="badge badge-amber">Pending</span></td><td style="text-align:right;"><button class="btn btn-primary btn-sm"><i class="ti ti-file-invoice"></i> Bill</button></td></tr>
+                  <tr><td>Completion · 30%</td><td style="text-align:right;">$3,000</td><td style="color:var(--tv-text-muted);">Oct 30</td><td><span class="badge badge-amber">Pending</span></td><td style="text-align:right;"><button class="btn btn-primary btn-sm"><i class="ti ti-file-invoice"></i> Bill</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
         <!-- Recurring / subscription invoices: auto-generated on a cadence -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title"><i class="ti ti-repeat" style="color:var(--tv-forest-light);margin-right:6px;"></i>Recurring invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New schedule</button></div>

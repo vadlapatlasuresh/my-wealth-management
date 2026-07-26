@@ -807,6 +807,31 @@ export const api = {
   runRecurringInvoice: (id) =>
     request(`/api/v1/business/manual/recurring-invoices/${id}/run`, { method: "POST" }),
 
+  // Projects + milestones — progress / milestone invoicing (order-to-cash Phase 1.4b).
+  getBusinessProjects: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/projects`),
+  createBusinessProject: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/projects`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessProject: (id, payload) =>
+    request(`/api/v1/business/manual/projects/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteBusinessProject: (id) =>
+    request(`/api/v1/business/manual/projects/${id}`, { method: "DELETE" }),
+  addProjectMilestone: (projectId, payload) =>
+    request(`/api/v1/business/manual/projects/${projectId}/milestones`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateProjectMilestone: (id, payload) =>
+    request(`/api/v1/business/manual/milestones/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteProjectMilestone: (id) =>
+    request(`/api/v1/business/manual/milestones/${id}`, { method: "DELETE" }),
+  // Bill a milestone -> generates an invoice for its amount. Returns the new invoice.
+  billProjectMilestone: (id, payload) =>
+    request(`/api/v1/business/manual/milestones/${id}/bill`, { method: "POST", body: JSON.stringify(payload || {}) }),
+
   getManualInvoices: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/invoices`),
   createManualInvoice: (businessId, payload) =>
