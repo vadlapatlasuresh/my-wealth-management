@@ -766,6 +766,16 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // General-ledger financial statements (GL.3), derived from the double-entry ledger.
+  getLedgerPnl: (businessId, from, to) =>
+    request(`/api/v1/business/ledger/${businessId}/statements/pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  getLedgerBalanceSheet: (businessId, asOf) =>
+    request(`/api/v1/business/ledger/${businessId}/statements/balance-sheet?asOf=${encodeURIComponent(asOf)}`),
+  getLedgerCashFlow: (businessId, from, to) =>
+    request(`/api/v1/business/ledger/${businessId}/statements/cash-flow?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+  getLedgerTrialBalance: (businessId) =>
+    request(`/api/v1/business/ledger/${businessId}/trial-balance`),
+
   // Dunning — automated payment reminders (order-to-cash Phase 1.9).
   getReminderSettings: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/reminder-settings`),

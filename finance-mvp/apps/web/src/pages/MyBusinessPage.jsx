@@ -9,6 +9,7 @@ import ProjectsPanel from '../components/business/ProjectsPanel';
 import TaxRatesDrawer from '../components/business/TaxRatesDrawer';
 import ShareButton from '../components/ShareButton';
 import ReminderSettingsCard from '../components/business/ReminderSettingsCard';
+import StatementsPanel from '../components/business/StatementsPanel';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -4414,6 +4415,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
           {/* ============================================================ */}
           {activeTab === 'reports' && (
             <>
+              {/* GL-derived statements (double-entry ledger) — the accounting source of truth */}
+              {selectedBusiness && (
+                <StatementsPanel businessId={selectedBusiness.id} scopeLabel={selectedBusiness.name} onError={setError} />
+              )}
+
               <div className="card" style={{ marginBottom: 16 }}>
                 <div className="section-header">
                   <div className="section-title">
