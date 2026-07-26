@@ -29,6 +29,7 @@ class RecurringInvoiceServiceTest {
     @Mock private BusinessInvoiceRepository invoiceRepo;
     @Mock private BusinessInvoiceLineItemRepository invoiceItemRepo;
     @Mock private NotificationClient notificationClient;
+    @Mock private com.mywealthmanagement.businessfinancialsservice.ledger.LedgerPostingService ledgerPosting;
 
     @InjectMocks private RecurringInvoiceService service;
 

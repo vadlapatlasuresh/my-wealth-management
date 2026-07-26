@@ -48,6 +48,7 @@ public class ManualBusinessController {
     private final BusinessReminderSettingsRepository reminderSettingsRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
+    private final com.mywealthmanagement.businessfinancialsservice.ledger.LedgerPostingService ledgerPosting;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -679,6 +680,7 @@ public class ManualBusinessController {
             invLines.add(li);
         }
         savedInv.setLineItems(lineItemRepo.saveAll(invLines));
+        ledgerPosting.postInvoiceIssued(savedInv); // the converted invoice is now receivable
 
         q.setStatus("CONVERTED");
         q.setConvertedInvoiceId(savedInv.getId());
@@ -1069,6 +1071,7 @@ public class ManualBusinessController {
         li.setUnitPrice(amount);
         li.setAmount(amount);
         saved.setLineItems(lineItemRepo.saveAll(java.util.List.of(li)));
+        ledgerPosting.postInvoiceIssued(saved); // milestone invoice is now receivable
 
         m.setStatus("INVOICED");
         m.setInvoiceId(saved.getId());
@@ -1196,6 +1199,7 @@ public class ManualBusinessController {
         if (inv.getIssuedAt() == null) inv.setIssuedAt(LocalDate.now());
         BusinessInvoice saved = invoiceRepo.save(inv);
         persistLineItems(saved, parsedLines);
+        ledgerPosting.postInvoiceIssued(saved); // no-op for DRAFT; idempotent
         String due = saved.getDueDate() != null ? " Due " + saved.getDueDate() + "." : "";
         notificationClient.notify(userId(), "BUSINESS", "Invoice created",
                 "Invoice for " + usd(saved.getAmount()) + " to " + saved.getCustomer() + " was created." + due);
@@ -1219,8 +1223,10 @@ public class ManualBusinessController {
         List<BusinessInvoiceLineItem> parsedLines = applyLineItemsAndTotals(inv, body);
         BusinessInvoice saved = invoiceRepo.save(inv);
         persistLineItems(saved, parsedLines);
-        // Notify when an invoice is newly marked paid — a positive, cash-in-the-door moment.
+        // Keep the ledger in step with status transitions (both idempotent).
+        ledgerPosting.postInvoiceIssued(saved); // posts once it's no longer a draft
         if (!"PAID".equalsIgnoreCase(priorStatus) && "PAID".equalsIgnoreCase(saved.getStatus())) {
+            ledgerPosting.postInvoicePaid(saved);
             notificationClient.notify(userId(), "BUSINESS", "Invoice paid",
                     saved.getCustomer() + " paid " + usd(saved.getAmount()) + ". Nice — that's money in the door.");
         }
@@ -1405,6 +1411,7 @@ public class ManualBusinessController {
             inv.setStatus("SENT");
         }
         BusinessInvoice saved = invoiceRepo.save(inv);
+        ledgerPosting.postInvoiceIssued(saved); // a sent invoice is receivable
 
         Map<String, Object> out = new java.util.LinkedHashMap<>();
         out.put("invoice", saved);
@@ -1450,6 +1457,7 @@ public class ManualBusinessController {
             inv.setPaidAt(null);
         }
         BusinessInvoice saved = invoiceRepo.save(inv);
+        if (fullyPaid) ledgerPosting.postInvoicePaid(saved); // DR Cash / CR AR (idempotent)
         if (fullyPaid && !wasPaid) {
             notificationClient.notify(userId(), "BUSINESS", "Payment received",
                     saved.getCustomer() + " paid " + usd(saved.getPaidAmount()) + ". Invoice marked paid.");
@@ -1474,7 +1482,9 @@ public class ManualBusinessController {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "A paid invoice can't be voided.");
         }
         inv.setStatus("VOID");
-        return invoiceRepo.save(inv);
+        BusinessInvoice saved = invoiceRepo.save(inv);
+        ledgerPosting.postInvoiceVoided(saved); // reverse the issuance entry, if any
+        return saved;
     }
 
     /**
@@ -1548,7 +1558,8 @@ public class ManualBusinessController {
             inv.setStatus("PAID");
             inv.setPaymentMethod(payMethodLabel(payMethod(body.get("method"))));
             inv.setPaymentReference(ref);
-            invoiceRepo.save(inv);
+            BusinessInvoice savedPaid = invoiceRepo.save(inv);
+            ledgerPosting.postInvoicePaid(savedPaid); // DR Cash / CR AR
             notificationClient.notify(inv.getUserId(), "BUSINESS", "Payment received",
                     inv.getCustomer() + " paid " + usd(inv.getAmount()) + " online. Invoice marked paid.");
         }
