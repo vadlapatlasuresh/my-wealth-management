@@ -5,6 +5,7 @@ import LastRefreshed from '../components/LastRefreshed';
 import PlaidLinkButton from '../components/PlaidLinkButton';
 import ExpensesTab from '../components/business/ExpensesTab';
 import CustomerManagerDrawer from '../components/business/CustomerManagerDrawer';
+import ProjectsPanel from '../components/business/ProjectsPanel';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -4039,6 +4040,19 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 )}
               </div>
+
+              {/* Progress / milestone billing — bill a fixed-price project in stages */}
+              {selectedBusiness && (
+                <ProjectsPanel
+                  businessId={selectedBusiness.id}
+                  customers={customers}
+                  currency={currency}
+                  formatDate={bizDate}
+                  onInvoiceCreated={(inv) => setManualInvoices((prev) => [inv, ...prev])}
+                  onError={setError}
+                  onFlash={flash}
+                />
+              )}
 
               {/* Recurring / subscription invoices — auto-generated on a cadence */}
               <div className="card" style={{ marginBottom: 16 }}>
