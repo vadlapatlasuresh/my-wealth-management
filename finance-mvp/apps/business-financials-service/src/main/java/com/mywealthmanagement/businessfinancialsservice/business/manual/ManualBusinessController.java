@@ -44,6 +44,7 @@ public class ManualBusinessController {
     private final com.mywealthmanagement.businessfinancialsservice.business.recurring.RecurringInvoiceService recurringService;
     private final BusinessProjectRepository projectRepo;
     private final BusinessProjectMilestoneRepository milestoneRepo;
+    private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -1302,6 +1303,80 @@ public class ManualBusinessController {
             if (changed) invoiceRepo.save(inv);
         }
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Start a "Pay Now" checkout for the public invoice. Body: { method: CARD|ACH|ECHECK }.
+     * Returns the hosted-checkout URL to redirect the customer to, plus the attempt ref.
+     * Unauthenticated + token-scoped (the token is the secret).
+     */
+    @PostMapping("/invoices/public/{token}/pay")
+    public Map<String, Object> startInvoicePayment(@PathVariable String token, @RequestBody(required = false) Map<String, Object> body) {
+        BusinessInvoice inv = invoiceRepo.findByShareToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
+        String st = inv.getStatus() == null ? "" : inv.getStatus().toUpperCase();
+        if (st.equals("PAID")) throw new ResponseStatusException(HttpStatus.CONFLICT, "This invoice is already paid.");
+        if (st.equals("VOID")) throw new ResponseStatusException(HttpStatus.CONFLICT, "This invoice was voided.");
+        if (inv.getAmount() == null || inv.getAmount().signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nothing to pay on this invoice.");
+        }
+        String method = payMethod(body == null ? null : body.get("method"));
+        String base = webUrl == null || webUrl.isBlank() ? "" : webUrl;
+        com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider.Checkout c =
+                paymentProvider.createCheckout(inv, method, base);
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("checkoutUrl", c.url());
+        out.put("ref", c.ref());
+        out.put("provider", c.provider());
+        out.put("method", method);
+        out.put("live", paymentProvider.live());
+        return out;
+    }
+
+    /**
+     * Confirm a returned "Pay Now" attempt. Body: { ref, method? }. Verifies with the
+     * processor and, when paid, marks the invoice PAID + records the payment (auto-reconcile).
+     */
+    @PostMapping("/invoices/public/{token}/pay/confirm")
+    public Map<String, Object> confirmInvoicePayment(@PathVariable String token, @RequestBody Map<String, Object> body) {
+        BusinessInvoice inv = invoiceRepo.findByShareToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Invoice not found"));
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        if ("PAID".equalsIgnoreCase(inv.getStatus())) {
+            out.put("status", "PAID");
+            out.put("paid", true);
+            return out;
+        }
+        String ref = str(body.get("ref"));
+        boolean paid = paymentProvider.verifyPaid(ref, inv);
+        if (paid) {
+            inv.setPaidAmount(inv.getAmount());
+            inv.setPaidAt(LocalDate.now());
+            inv.setStatus("PAID");
+            inv.setPaymentMethod(payMethodLabel(payMethod(body.get("method"))));
+            inv.setPaymentReference(ref);
+            invoiceRepo.save(inv);
+            notificationClient.notify(inv.getUserId(), "BUSINESS", "Payment received",
+                    inv.getCustomer() + " paid " + usd(inv.getAmount()) + " online. Invoice marked paid.");
+        }
+        out.put("status", inv.getStatus());
+        out.put("paid", paid);
+        return out;
+    }
+
+    /** CARD | ACH | ECHECK, defaulting to CARD. */
+    private String payMethod(Object o) {
+        String s = str(o);
+        if (s == null) return "CARD";
+        s = s.toUpperCase();
+        return (s.equals("ACH") || s.equals("ECHECK")) ? s : "CARD";
+    }
+    private String payMethodLabel(String method) {
+        return switch (method) {
+            case "ACH" -> "Bank transfer (ACH)";
+            case "ECHECK" -> "e-Check";
+            default -> "Card";
+        };
     }
 
     /** Public (unauthenticated) invoice view for the customer. Token-scoped; no user data. */

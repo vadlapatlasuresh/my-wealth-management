@@ -862,6 +862,18 @@ export const api = {
   // Public (unauthenticated) invoice view for the customer.
   getPublicInvoice: (token) =>
     request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}`),
+  // Start a Pay-Now checkout (method: CARD|ACH|ECHECK). Returns { checkoutUrl, ref, provider, live }.
+  startInvoicePayment: (token, method) =>
+    request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}/pay`, {
+      method: "POST",
+      body: JSON.stringify({ method }),
+    }),
+  // Confirm a returned Pay-Now attempt -> auto-reconciles when the processor verifies it.
+  confirmInvoicePayment: (token, ref, method) =>
+    request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}/pay/confirm`, {
+      method: "POST",
+      body: JSON.stringify({ ref, method }),
+    }),
 
   // Per-business document center (link-based). Pass invoiceId to scope to one invoice.
   getBusinessDocuments: (businessId, invoiceId, year) =>
