@@ -24,6 +24,7 @@ export default function StatementsPanel({ businessId, scopeLabel = 'Business', o
   const [data, setData] = useState({ pnl: null, balanceSheet: null, cashFlow: null });
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState('');
+  const [integrity, setIntegrity] = useState(null); // { valid, count }
 
   const [from, to] = useMemo(() => presetRange(preset).map(iso), [preset]);
   const periodLabel = useMemo(() => `${from} → ${to}`, [from, to]);
@@ -32,12 +33,14 @@ export default function StatementsPanel({ businessId, scopeLabel = 'Business', o
     if (!businessId) return;
     setLoading(true);
     try {
-      const [pnl, balanceSheet, cashFlow] = await Promise.all([
+      const [pnl, balanceSheet, cashFlow, verify] = await Promise.all([
         api.getLedgerPnl(businessId, from, to),
         api.getLedgerBalanceSheet(businessId, to),
         api.getLedgerCashFlow(businessId, from, to),
+        api.verifyLedger(businessId).catch(() => null),
       ]);
       setData({ pnl, balanceSheet, cashFlow });
+      setIntegrity(verify);
     } catch (err) { onError?.(err?.message || 'Could not load statements.'); }
     finally { setLoading(false); }
   }, [businessId, from, to, onError]);
@@ -74,7 +77,14 @@ export default function StatementsPanel({ businessId, scopeLabel = 'Business', o
           <button className="btn btn-secondary btn-sm" onClick={() => doExport('pdf')} disabled={!!exporting}><i className="ti ti-file-type-pdf"></i> PDF</button>
         </div>
       </div>
-      <p className="item-sub" style={{ margin: '-4px 0 12px' }}>Derived from your double-entry general ledger · {periodLabel}</p>
+      <p className="item-sub" style={{ margin: '-4px 0 12px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <span>Derived from your double-entry general ledger · {periodLabel}</span>
+        {integrity && (
+          integrity.valid
+            ? <span className="badge badge-green" title={`${integrity.count} journal entries verified against the tamper-evident hash chain`}><i className="ti ti-shield-check"></i> Ledger verified ({integrity.count})</span>
+            : <span className="badge badge-red" title={`Integrity check failed at entry #${integrity.firstBrokenEntryId}`}><i className="ti ti-shield-x"></i> Integrity check failed</span>
+        )}
+      </p>
 
       <div className="seg-group" style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
         {[['pnl', 'Profit & Loss'], ['balance', 'Balance Sheet'], ['cash', 'Cash Flow']].map(([id, label]) => (

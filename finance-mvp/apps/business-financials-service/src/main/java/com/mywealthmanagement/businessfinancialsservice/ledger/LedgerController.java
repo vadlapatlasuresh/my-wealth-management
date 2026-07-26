@@ -83,6 +83,13 @@ public class LedgerController {
         return ledger.trialBalance(businessId, userId());
     }
 
+    /** Verify the tamper-evident hash chain over this business's ledger (GL.4). */
+    @GetMapping("/{businessId}/verify")
+    public Map<String, Object> verify(@PathVariable Long businessId) {
+        assertOwned(businessId);
+        return ledger.verifyChain(businessId, userId());
+    }
+
     /* ---------------- Financial statements (GL.3) ---------------- */
 
     @GetMapping("/{businessId}/statements/pnl")
