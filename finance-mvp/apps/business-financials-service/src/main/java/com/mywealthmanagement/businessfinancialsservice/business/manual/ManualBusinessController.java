@@ -39,6 +39,9 @@ public class ManualBusinessController {
     private final BusinessInvoiceLineItemRepository lineItemRepo;
     private final BusinessQuoteRepository quoteRepo;
     private final BusinessQuoteLineItemRepository quoteLineItemRepo;
+    private final BusinessRecurringInvoiceRepository recurringRepo;
+    private final BusinessRecurringInvoiceItemRepository recurringItemRepo;
+    private final com.mywealthmanagement.businessfinancialsservice.business.recurring.RecurringInvoiceService recurringService;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
@@ -96,6 +99,7 @@ public class ManualBusinessController {
         expenseLinkRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // links before expenses
         expenseRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         quoteRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // quote line items cascade at DB
+        recurringRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // recurring items cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
@@ -606,6 +610,171 @@ public class ManualBusinessController {
         quoteLineItemRepo.deleteByQuoteId(q.getId());
         for (BusinessQuoteLineItem li : lines) li.setQuoteId(q.getId());
         q.setLineItems(quoteLineItemRepo.saveAll(lines));
+    }
+
+    /* ---------------- Recurring invoices (subscriptions) ---------------- */
+
+    @GetMapping("/businesses/{businessId}/recurring-invoices")
+    public List<BusinessRecurringInvoice> listRecurring(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<BusinessRecurringInvoice> list = recurringRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        if (!list.isEmpty()) {
+            java.util.Map<Long, java.util.List<BusinessRecurringInvoiceItem>> byId =
+                    recurringItemRepo.findByScheduleIdInOrderByPositionAsc(list.stream().map(BusinessRecurringInvoice::getId).toList())
+                            .stream().collect(java.util.stream.Collectors.groupingBy(BusinessRecurringInvoiceItem::getScheduleId));
+            for (BusinessRecurringInvoice s : list) attachRecurring(s, byId.getOrDefault(s.getId(), java.util.List.of()));
+        }
+        return list;
+    }
+
+    @PostMapping("/businesses/{businessId}/recurring-invoices")
+    public BusinessRecurringInvoice createRecurring(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessRecurringInvoice s = new BusinessRecurringInvoice();
+        s.setUserId(userId());
+        s.setBusinessId(businessId);
+        applyRecurringFields(s, body, businessId);
+        if (s.getCustomer() == null || s.getCustomer().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "customer is required");
+        }
+        if (s.getFrequency() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "frequency is required");
+        if (s.getStartDate() == null) s.setStartDate(LocalDate.now());
+        if (s.getNextRunDate() == null) s.setNextRunDate(s.getStartDate());
+        if (s.getStatus() == null) s.setStatus("ACTIVE");
+        List<BusinessRecurringInvoiceItem> parsed = parseRecurringItems(s, body);
+        BusinessRecurringInvoice saved = recurringRepo.save(s);
+        persistRecurringItems(saved, parsed);
+        return saved;
+    }
+
+    @PutMapping("/recurring-invoices/{id}")
+    public BusinessRecurringInvoice updateRecurring(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessRecurringInvoice s = recurringRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        applyRecurringFields(s, body, s.getBusinessId());
+        List<BusinessRecurringInvoiceItem> parsed = parseRecurringItems(s, body);
+        BusinessRecurringInvoice saved = recurringRepo.save(s);
+        persistRecurringItems(saved, parsed);
+        return saved;
+    }
+
+    @DeleteMapping("/recurring-invoices/{id}")
+    public ResponseEntity<Void> deleteRecurring(@PathVariable Long id) {
+        BusinessRecurringInvoice s = recurringRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        recurringRepo.delete(s); // items cascade at DB
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Generate an invoice from this schedule right now (also advances its next run date). */
+    @PostMapping("/recurring-invoices/{id}/run")
+    public BusinessInvoice runRecurring(@PathVariable Long id) {
+        BusinessRecurringInvoice s = recurringRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!"ACTIVE".equals(s.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active schedules can generate invoices.");
+        }
+        return recurringService.generateOne(s, LocalDate.now());
+    }
+
+    private void applyRecurringFields(BusinessRecurringInvoice s, Map<String, Object> body, Long businessId) {
+        if (body.containsKey("customer")) s.setCustomer(str(body.get("customer")));
+        if (body.containsKey("customerEmail")) s.setCustomerEmail(str(body.get("customerEmail")));
+        if (body.containsKey("customerPhone")) s.setCustomerPhone(str(body.get("customerPhone")));
+        if (body.containsKey("frequency")) {
+            String f = str(body.get("frequency"));
+            s.setFrequency(f == null ? null : f.toUpperCase());
+        }
+        if (body.containsKey("intervalCount")) {
+            Integer n = intVal(body.get("intervalCount"));
+            s.setIntervalCount(n == null || n < 1 ? 1 : n);
+        }
+        if (body.containsKey("startDate")) s.setStartDate(date(body.get("startDate")));
+        if (body.containsKey("endDate")) s.setEndDate(date(body.get("endDate")));
+        if (body.containsKey("nextRunDate")) s.setNextRunDate(date(body.get("nextRunDate")));
+        if (body.containsKey("dueDays")) {
+            Integer d = intVal(body.get("dueDays"));
+            s.setDueDays(d == null || d < 0 ? 0 : d);
+        }
+        if (body.containsKey("notes")) s.setNotes(str(body.get("notes")));
+        if (body.containsKey("status")) {
+            String st = str(body.get("status"));
+            if (st != null) s.setStatus(st.toUpperCase());
+        }
+        if (body.containsKey("customerId")) {
+            Long customerId = asLong(body.get("customerId"));
+            if (customerId == null || customerId == 0L) {
+                s.setCustomerId(null);
+            } else {
+                BusinessCustomer c = customerRepo.findByIdAndBusinessIdAndUserId(customerId, businessId, userId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown customer"));
+                s.setCustomerId(c.getId());
+                if (!body.containsKey("customer") || str(body.get("customer")) == null) s.setCustomer(c.getDisplayName());
+                if (!body.containsKey("customerEmail") && s.getCustomerEmail() == null) s.setCustomerEmail(c.getEmail());
+                if (!body.containsKey("customerPhone") && s.getCustomerPhone() == null) {
+                    s.setCustomerPhone(c.getMobile() != null ? c.getMobile() : c.getPhone());
+                }
+            }
+        }
+    }
+
+    /** Parses the template line items + discount/tax onto the schedule. */
+    private List<BusinessRecurringInvoiceItem> parseRecurringItems(BusinessRecurringInvoice s, Map<String, Object> body) {
+        if (body.containsKey("discountType")) {
+            String d = str(body.get("discountType"));
+            s.setDiscountType(d == null ? null : d.toUpperCase());
+        }
+        if (body.containsKey("discountValue")) s.setDiscountValue(money(body.get("discountValue")));
+        if (body.containsKey("taxRate")) s.setTaxRate(money(body.get("taxRate")));
+        if (!body.containsKey("lineItems")) return null;
+        List<BusinessRecurringInvoiceItem> lines = new java.util.ArrayList<>();
+        if (body.get("lineItems") instanceof List<?> list) {
+            int pos = 0;
+            for (Object o : list) {
+                if (!(o instanceof Map<?, ?> m)) continue;
+                String desc = str(m.get("description"));
+                java.math.BigDecimal qty = money(m.get("quantity"));
+                java.math.BigDecimal price = money(m.get("unitPrice"));
+                if (qty == null) qty = java.math.BigDecimal.ONE;
+                if (price == null) price = java.math.BigDecimal.ZERO;
+                if ((desc == null || desc.isBlank()) && price.signum() == 0) continue;
+                if (desc == null || desc.isBlank()) desc = "Item";
+                if (desc.length() > 500) desc = desc.substring(0, 500);
+                BusinessRecurringInvoiceItem li = new BusinessRecurringInvoiceItem();
+                li.setUserId(userId());
+                li.setPosition(pos++);
+                li.setDescription(desc);
+                li.setQuantity(qty);
+                li.setUnitPrice(price);
+                li.setAmount(qty.multiply(price).setScale(2, java.math.RoundingMode.HALF_UP));
+                lines.add(li);
+            }
+        }
+        return lines;
+    }
+
+    private void persistRecurringItems(BusinessRecurringInvoice s, List<BusinessRecurringInvoiceItem> lines) {
+        List<BusinessRecurringInvoiceItem> effective;
+        if (lines == null) {
+            effective = recurringItemRepo.findByScheduleIdOrderByPositionAsc(s.getId());
+        } else {
+            recurringItemRepo.deleteByScheduleId(s.getId());
+            for (BusinessRecurringInvoiceItem li : lines) li.setScheduleId(s.getId());
+            effective = recurringItemRepo.saveAll(lines);
+        }
+        attachRecurring(s, effective);
+    }
+
+    /** Attaches the template line items + computes the schedule's total for the UI. */
+    private void attachRecurring(BusinessRecurringInvoice s, List<BusinessRecurringInvoiceItem> items) {
+        s.setLineItems(items);
+        java.math.BigDecimal subtotal = items.stream()
+                .map(BusinessRecurringInvoiceItem::getAmount)
+                .filter(a -> a != null)
+                .reduce(java.math.BigDecimal.ZERO, java.math.BigDecimal::add);
+        s.setAmount(InvoiceMath.compute(subtotal, s.getDiscountType(), s.getDiscountValue(), s.getTaxRate()).total());
     }
 
     /* ---------------- Invoices ---------------- */
