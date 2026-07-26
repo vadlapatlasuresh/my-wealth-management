@@ -12,4 +12,11 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long
     Optional<JournalEntry> findByIdAndBusinessIdAndUserId(Long id, Long businessId, Long userId);
 
     boolean existsByBusinessIdAndReversalOf(Long businessId, Long reversalOf);
+
+    /* ---- Idempotency for automated postings (GL.2): one entry per (source_type, source_ref). ---- */
+
+    boolean existsByBusinessIdAndSourceTypeAndSourceRef(Long businessId, String sourceType, String sourceRef);
+
+    Optional<JournalEntry> findFirstByBusinessIdAndSourceTypeAndSourceRefOrderByIdAsc(
+            Long businessId, String sourceType, String sourceRef);
 }

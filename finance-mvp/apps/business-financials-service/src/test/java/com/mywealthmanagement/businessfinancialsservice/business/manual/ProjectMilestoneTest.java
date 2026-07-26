@@ -65,6 +65,7 @@ class ProjectMilestoneTest {
     @Mock private NotificationClient notificationClient;
     @Mock private DocumentsRegistryClient documentsRegistryClient;
     @Mock private CommsClient commsClient;
+    @Mock private com.mywealthmanagement.businessfinancialsservice.ledger.LedgerPostingService ledgerPosting;
 
     @InjectMocks private ManualBusinessController controller;
 

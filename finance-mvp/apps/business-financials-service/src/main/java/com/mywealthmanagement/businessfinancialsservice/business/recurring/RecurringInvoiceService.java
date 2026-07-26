@@ -31,6 +31,7 @@ public class RecurringInvoiceService {
     private final BusinessInvoiceRepository invoiceRepo;
     private final BusinessInvoiceLineItemRepository invoiceItemRepo;
     private final NotificationClient notificationClient;
+    private final com.mywealthmanagement.businessfinancialsservice.ledger.LedgerPostingService ledgerPosting;
 
     /** Generates invoices for every ACTIVE schedule due on or before {@code today}. */
     @Transactional
@@ -99,6 +100,8 @@ public class RecurringInvoiceService {
             lines.add(li);
         }
         invoiceItemRepo.saveAll(lines);
+        saved.setLineItems(lines);
+        ledgerPosting.postInvoiceIssued(saved); // generated invoice is receivable
 
         // Advance the schedule.
         s.setLastGeneratedAt(LocalDateTime.now());
