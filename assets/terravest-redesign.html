@@ -4961,6 +4961,21 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Recurring / subscription invoices: auto-generated on a cadence -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-repeat" style="color:var(--tv-forest-light);margin-right:6px;"></i>Recurring invoices</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New schedule</button></div>
+          <p class="item-sub" style="margin:-4px 0 12px;">Bill retainers &amp; subscriptions automatically — a daily job generates each invoice on its cadence. Pause, resume, or run one now.</p>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Customer</th><th>Every</th><th style="text-align:right;">Amount</th><th>Next run</th><th>Status</th><th style="text-align:right;"></th></tr></thead>
+              <tbody>
+                <tr><td>Northwind Co.</td><td>Monthly</td><td style="text-align:right;">$2,500</td><td style="color:var(--tv-text-muted);">Aug 1</td><td><span class="badge badge-green">Active</span></td><td style="text-align:right;"><button class="btn btn-secondary btn-sm"><i class="ti ti-player-play"></i> Run</button></td></tr>
+                <tr><td>Harbor Group</td><td>Quarterly</td><td style="text-align:right;">$6,000</td><td style="color:var(--tv-text-muted);">Sep 30</td><td><span class="badge badge-amber">Paused</span></td><td style="text-align:right;"><button class="icon-btn" title="Resume"><i class="ti ti-player-play"></i></button></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Customers: reusable contacts (tax id, preferred pay method, billing/shipping) -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title"><i class="ti ti-address-book" style="color:var(--tv-forest-light);margin-right:6px;"></i>Customers</div><button class="btn btn-secondary btn-sm"><i class="ti ti-users"></i> Manage customers</button></div>

@@ -788,6 +788,25 @@ export const api = {
       body: JSON.stringify(payload || {}),
     }),
 
+  // Recurring / subscription invoices — a template + cadence that auto-generates invoices.
+  getRecurringInvoices: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/recurring-invoices`),
+  createRecurringInvoice: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/recurring-invoices`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateRecurringInvoice: (id, payload) =>
+    request(`/api/v1/business/manual/recurring-invoices/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteRecurringInvoice: (id) =>
+    request(`/api/v1/business/manual/recurring-invoices/${id}`, { method: "DELETE" }),
+  // Generate an invoice from the schedule now (also advances its next run date).
+  runRecurringInvoice: (id) =>
+    request(`/api/v1/business/manual/recurring-invoices/${id}/run`, { method: "POST" }),
+
   getManualInvoices: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/invoices`),
   createManualInvoice: (businessId, payload) =>

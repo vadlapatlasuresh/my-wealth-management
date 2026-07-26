@@ -438,6 +438,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [showAddQuote, setShowAddQuote] = useState(false);
   const emptyQuoteForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', expiryDate: '', notes: '', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
   const [quoteForm, setQuoteForm] = useState(emptyQuoteForm);
+  const [recurringSchedules, setRecurringSchedules] = useState([]);
+  const [showAddRecurring, setShowAddRecurring] = useState(false);
+  const emptyRecurringForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', frequency: 'MONTHLY', startDate: new Date().toISOString().slice(0, 10), dueDays: '14', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
+  const [recurringForm, setRecurringForm] = useState(emptyRecurringForm);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
   const [payInv, setPayInv] = useState(null);     // invoice being reconciled (record payment)
   const [reminding, setReminding] = useState(false); // bulk overdue-reminder run in progress
@@ -601,10 +605,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const loadBusinessDetail = useCallback(async (businessId) => {
     if (!businessId) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setQuotes([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setQuotes([]); setRecurringSchedules([]); setAssignedLinkedIds(new Set());
       return;
     }
-    const [acc, tx, inv, linked, docs, cust, qts] = await Promise.allSettled([
+    const [acc, tx, inv, linked, docs, cust, qts, rec] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
@@ -612,6 +616,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       api.getBusinessDocuments(businessId),
       api.getBusinessCustomers(businessId),
       api.getBusinessQuotes(businessId),
+      api.getRecurringInvoices(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
@@ -619,6 +624,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     setBizDocuments(docs.status === 'fulfilled' && Array.isArray(docs.value) ? docs.value : []);
     setCustomers(cust.status === 'fulfilled' && Array.isArray(cust.value) ? cust.value : []);
     setQuotes(qts.status === 'fulfilled' && Array.isArray(qts.value) ? qts.value : []);
+    setRecurringSchedules(rec.status === 'fulfilled' && Array.isArray(rec.value) ? rec.value : []);
     const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
     setAssignedLinkedIds(new Set(linkedIds));
   }, []);
@@ -635,7 +641,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
   const loadAllBusinessesDetail = useCallback(async (list) => {
     const biz = Array.isArray(list) ? list : [];
-    setCustomers([]); setQuotes([]); // customer + quote management is single-business only
+    setCustomers([]); setQuotes([]); setRecurringSchedules([]); // customer + quote + recurring management is single-business only
     if (!biz.length) {
       setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
@@ -1236,6 +1242,58 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       setQuotes((prev) => prev.filter((x) => x.id !== id));
       flash('Quote deleted.');
     } catch (err) { setError(err?.message || 'Could not delete quote.'); }
+  }
+
+  /* ---- Recurring invoice schedules ---- */
+  async function handleAddRecurring(e) {
+    e.preventDefault();
+    if (!selectedBusiness) return;
+    const customer = recurringForm.customer.trim();
+    const totals = computeInvoiceTotals(recurringForm);
+    if (!customer || !(totals.total > 0)) return;
+    try {
+      const created = await api.createRecurringInvoice(selectedBusiness.id, {
+        customerId: recurringForm.customerId || null,
+        customer,
+        customerEmail: recurringForm.customerEmail || null,
+        customerPhone: recurringForm.customerPhone || null,
+        frequency: recurringForm.frequency,
+        startDate: recurringForm.startDate || null,
+        dueDays: recurringForm.dueDays || 0,
+        lineItems: totals.cleanLines,
+        discountType: recurringForm.discountType || null,
+        discountValue: recurringForm.discountValue || null,
+        taxRate: recurringForm.taxRate || null,
+      });
+      setRecurringSchedules((prev) => [created, ...prev]);
+      setRecurringForm(emptyRecurringForm);
+      setShowAddRecurring(false);
+      flash(`Recurring ${recurringForm.frequency.toLowerCase()} invoice for ${customer} set up.`);
+    } catch (err) { setError(err?.message || 'Could not create the schedule.'); }
+  }
+  async function handleRunRecurring(id) {
+    try {
+      const inv = await api.runRecurringInvoice(id);
+      setManualInvoices((prev) => [inv, ...prev]);
+      const list = await api.getRecurringInvoices(selectedBusiness.id);
+      setRecurringSchedules(Array.isArray(list) ? list : []);
+      flash('Invoice generated from the schedule.');
+    } catch (err) { setError(err?.message || 'Could not generate the invoice.'); }
+  }
+  async function handleToggleRecurring(sch) {
+    const next = String(sch.status).toUpperCase() === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    try {
+      const updated = await api.updateRecurringInvoice(sch.id, { status: next });
+      setRecurringSchedules((prev) => prev.map((x) => (x.id === sch.id ? updated : x)));
+    } catch (err) { setError(err?.message || 'Could not update the schedule.'); }
+  }
+  async function handleDeleteRecurring(id) {
+    if (!window.confirm('Delete this recurring schedule? Invoices already generated are kept.')) return;
+    try {
+      await api.deleteRecurringInvoice(id);
+      setRecurringSchedules((prev) => prev.filter((x) => x.id !== id));
+      flash('Recurring schedule deleted.');
+    } catch (err) { setError(err?.message || 'Could not delete the schedule.'); }
   }
 
   /* Bulk collections: send a payment reminder to every overdue manual invoice
@@ -3972,6 +4030,103 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                                 )}
                                 {converted && <span className="item-sub" style={{ marginRight: 6 }}>Invoiced</span>}
                                 <button className="icon-btn" style={{ marginLeft: 4 }} title="Delete quote" onClick={() => handleDeleteQuote(q.id)}><i className="ti ti-trash"></i></button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Recurring / subscription invoices — auto-generated on a cadence */}
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="section-header">
+                  <div className="section-title"><i className="ti ti-repeat" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>Recurring invoices</div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowAddRecurring((v) => !v)} disabled={!selectedBusiness}>
+                    <i className={`ti ${showAddRecurring ? 'ti-x' : 'ti-plus'}`}></i>{showAddRecurring ? ' Cancel' : ' New schedule'}
+                  </button>
+                </div>
+
+                {showAddRecurring && selectedBusiness && (
+                  <form onSubmit={handleAddRecurring} style={{ marginBottom: 14 }}>
+                    {customers.length > 0 && (
+                      <div className="form-group">
+                        <label className="form-label">Saved customer</label>
+                        <select className="form-select" value={recurringForm.customerId}
+                          onChange={(e) => {
+                            const c = customers.find((x) => String(x.id) === e.target.value);
+                            setRecurringForm((p) => c
+                              ? { ...p, customerId: String(c.id), customer: c.displayName, customerEmail: c.email || '', customerPhone: c.mobile || c.phone || '' }
+                              : { ...p, customerId: '' });
+                          }}>
+                          <option value="">New / one-off customer…</option>
+                          {customers.filter((c) => (c.status || 'ACTIVE') !== 'ARCHIVED').map((c) => (
+                            <option key={c.id} value={c.id}>{c.displayName}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Customer *</label>
+                        <input className="form-input" value={recurringForm.customer} onChange={(e) => setRecurringForm({ ...recurringForm, customer: e.target.value, customerId: '' })} placeholder="e.g. Acme Corp" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Frequency</label>
+                        <select className="form-select" value={recurringForm.frequency} onChange={(e) => setRecurringForm({ ...recurringForm, frequency: e.target.value })}>
+                          <option value="WEEKLY">Weekly</option>
+                          <option value="MONTHLY">Monthly</option>
+                          <option value="QUARTERLY">Quarterly</option>
+                          <option value="ANNUALLY">Annually</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid-2">
+                      <div className="form-group">
+                        <label className="form-label">Starts / next run</label>
+                        <input className="form-input" type="date" value={recurringForm.startDate} onChange={(e) => setRecurringForm({ ...recurringForm, startDate: e.target.value })} />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Payment terms (days until due)</label>
+                        <input className="form-input" type="number" min="0" step="1" value={recurringForm.dueDays} onChange={(e) => setRecurringForm({ ...recurringForm, dueDays: e.target.value })} placeholder="14" />
+                      </div>
+                    </div>
+                    <InvoiceLineItemsEditor form={recurringForm} setForm={setRecurringForm} currency={currency} />
+                    <button type="submit" className="btn btn-primary btn-sm" disabled={!recurringForm.customer.trim() || !(computeInvoiceTotals(recurringForm).total > 0)}>
+                      <i className="ti ti-plus"></i> Create schedule
+                    </button>
+                  </form>
+                )}
+
+                {recurringSchedules.length === 0 ? (
+                  <div className="empty-state"><i className="ti ti-repeat"></i><p>No recurring invoices. Set up a schedule to bill a retainer or subscription automatically.</p></div>
+                ) : (
+                  <div className="table-scroll">
+                    <table className="tv-table">
+                      <thead><tr><th>Customer</th><th>Every</th><th style={{ textAlign: 'right' }}>Amount</th><th>Next run</th><th>Status</th><th style={{ textAlign: 'right' }}></th></tr></thead>
+                      <tbody>
+                        {recurringSchedules.map((s) => {
+                          const active = String(s.status).toUpperCase() === 'ACTIVE';
+                          const freq = String(s.frequency || '').toLowerCase();
+                          return (
+                            <tr key={s.id}>
+                              <td style={{ fontWeight: 500 }}>{s.customer || '—'}</td>
+                              <td style={{ textTransform: 'capitalize' }}>{s.intervalCount > 1 ? `${s.intervalCount} × ` : ''}{freq}</td>
+                              <td style={{ textAlign: 'right' }}><span className="item-amount">{currency(Number(s.amount) || 0)}</span></td>
+                              <td style={{ color: 'var(--tv-text-muted)' }}>{s.status === 'ENDED' ? '—' : bizDate(s.nextRunDate)}</td>
+                              <td><span className={`badge ${active ? 'badge-green' : s.status === 'ENDED' ? 'badge-gray' : 'badge-amber'}`}>{s.status}</span></td>
+                              <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                                {active && (
+                                  <button className="btn btn-secondary btn-sm" title="Generate an invoice now" onClick={() => handleRunRecurring(s.id)}><i className="ti ti-player-play"></i> Run</button>
+                                )}
+                                {s.status !== 'ENDED' && (
+                                  <button className="icon-btn" style={{ marginLeft: 4 }} title={active ? 'Pause' : 'Resume'} onClick={() => handleToggleRecurring(s)}>
+                                    <i className={`ti ${active ? 'ti-player-pause' : 'ti-player-play'}`}></i>
+                                  </button>
+                                )}
+                                <button className="icon-btn" style={{ marginLeft: 4 }} title="Delete schedule" onClick={() => handleDeleteRecurring(s.id)}><i className="ti ti-trash"></i></button>
                               </td>
                             </tr>
                           );
