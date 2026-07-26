@@ -24,6 +24,7 @@ import java.util.Map;
 public class LedgerController {
 
     private final LedgerService ledger;
+    private final LedgerStatementsService statements;
     private final ManualBusinessRepository businessRepo;
 
     private Long userId() {
@@ -80,6 +81,43 @@ public class LedgerController {
     public Map<String, Object> trialBalance(@PathVariable Long businessId) {
         assertOwned(businessId);
         return ledger.trialBalance(businessId, userId());
+    }
+
+    /* ---------------- Financial statements (GL.3) ---------------- */
+
+    @GetMapping("/{businessId}/statements/pnl")
+    public Map<String, Object> pnl(@PathVariable Long businessId,
+                                   @RequestParam(required = false) String from,
+                                   @RequestParam(required = false) String to) {
+        assertOwned(businessId);
+        LocalDate[] range = range(from, to);
+        return statements.profitAndLoss(businessId, userId(), range[0], range[1]);
+    }
+
+    @GetMapping("/{businessId}/statements/balance-sheet")
+    public Map<String, Object> balanceSheet(@PathVariable Long businessId,
+                                            @RequestParam(required = false) String asOf) {
+        assertOwned(businessId);
+        LocalDate d = date(asOf);
+        return statements.balanceSheet(businessId, userId(), d != null ? d : LocalDate.now());
+    }
+
+    @GetMapping("/{businessId}/statements/cash-flow")
+    public Map<String, Object> cashFlow(@PathVariable Long businessId,
+                                        @RequestParam(required = false) String from,
+                                        @RequestParam(required = false) String to) {
+        assertOwned(businessId);
+        LocalDate[] range = range(from, to);
+        return statements.cashFlow(businessId, userId(), range[0], range[1]);
+    }
+
+    /** Defaults an unspecified range to the current year-to-date. */
+    private LocalDate[] range(String from, String to) {
+        LocalDate t = date(to);
+        LocalDate f = date(from);
+        if (t == null) t = LocalDate.now();
+        if (f == null) f = t.withDayOfYear(1);
+        return new LocalDate[]{ f, t };
     }
 
     /* ---- small parse helpers (mirror ManualBusinessController) ---- */
