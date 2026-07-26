@@ -766,6 +766,17 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // Dunning — automated payment reminders (order-to-cash Phase 1.9).
+  getReminderSettings: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/reminder-settings`),
+  updateReminderSettings: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/reminder-settings`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  runReminders: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/reminder-settings/run`, { method: "POST" }),
+
   // Sales-tax rates — owner-defined per-jurisdiction rates (order-to-cash Phase 1.7).
   getBusinessTaxRates: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/tax-rates`),

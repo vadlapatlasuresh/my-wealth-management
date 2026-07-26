@@ -45,6 +45,8 @@ public class ManualBusinessController {
     private final BusinessProjectRepository projectRepo;
     private final BusinessProjectMilestoneRepository milestoneRepo;
     private final BusinessTaxRateRepository taxRateRepo;
+    private final BusinessReminderSettingsRepository reminderSettingsRepo;
+    private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
     private final BusinessSummaryService summaryService;
     private final com.mywealthmanagement.businessfinancialsservice.business.storage.DocumentStorageService storageService;
@@ -106,6 +108,7 @@ public class ManualBusinessController {
         recurringRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // recurring items cascade at DB
         projectRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // milestones cascade at DB
         taxRateRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        reminderSettingsRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // reminder logs cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         businessRepo.delete(b);
@@ -411,6 +414,66 @@ public class ManualBusinessController {
         if (o instanceof Boolean b) return b;
         String s = String.valueOf(o).trim();
         return s.equalsIgnoreCase("true") || s.equals("1") || s.equalsIgnoreCase("yes");
+    }
+
+    /* ---------------- Dunning (automated payment reminders) ---------------- */
+
+    @GetMapping("/businesses/{businessId}/reminder-settings")
+    public BusinessReminderSettings getReminderSettings(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return reminderSettingsRepo.findByBusinessIdAndUserId(businessId, userId())
+                .orElseGet(() -> {
+                    // Return an unsaved default so the UI has something to render.
+                    BusinessReminderSettings s = new BusinessReminderSettings();
+                    s.setUserId(userId());
+                    s.setBusinessId(businessId);
+                    return s;
+                });
+    }
+
+    @PutMapping("/businesses/{businessId}/reminder-settings")
+    public BusinessReminderSettings updateReminderSettings(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessReminderSettings s = reminderSettingsRepo.findByBusinessIdAndUserId(businessId, userId())
+                .orElseGet(() -> {
+                    BusinessReminderSettings n = new BusinessReminderSettings();
+                    n.setUserId(userId());
+                    n.setBusinessId(businessId);
+                    return n;
+                });
+        if (body.containsKey("enabled")) s.setEnabled(bool(body.get("enabled"), false));
+        if (body.containsKey("channel")) {
+            String ch = str(body.get("channel"));
+            s.setChannel(ch == null ? "AUTO" : ch.toUpperCase());
+        }
+        if (body.containsKey("offsets")) s.setOffsets(normalizeOffsets(body.get("offsets")));
+        return reminderSettingsRepo.save(s);
+    }
+
+    /** Manually run this business's reminders now (respects offsets/channel; bypasses the enabled gate). */
+    @PostMapping("/businesses/{businessId}/reminder-settings/run")
+    public Map<String, Object> runReminders(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessReminderSettings s = reminderSettingsRepo.findByBusinessIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Configure reminders first."));
+        int sent = dunningService.runForBusiness(s, LocalDate.now());
+        return Map.of("sent", sent);
+    }
+
+    /** Accepts a CSV string or a list of numbers; returns a clean "-3,0,7" style CSV. */
+    private String normalizeOffsets(Object raw) {
+        String csv;
+        if (raw instanceof List<?> list) {
+            csv = list.stream().map(o -> str(o)).filter(java.util.Objects::nonNull).reduce((a, b) -> a + "," + b).orElse("");
+        } else {
+            csv = str(raw) == null ? "" : str(raw);
+        }
+        List<Integer> offsets = com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService.parseOffsets(csv);
+        if (offsets.isEmpty()) return "-3,0,7";
+        return offsets.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("-3,0,7");
     }
 
     /* ---------------- Sales-tax rates ---------------- */
