@@ -1204,6 +1204,12 @@ public class ManualBusinessController {
         String status = commsClient.send(channel, recipient, subject, message);
         inv.setSentAt(java.time.LocalDateTime.now());
         inv.setSentChannel(channel);
+        // Advance the lifecycle: a DRAFT/OPEN invoice becomes SENT once delivered. Don't
+        // downgrade an already-viewed/paid/overdue invoice on a re-send.
+        String st = inv.getStatus() == null ? "" : inv.getStatus().toUpperCase();
+        if (st.equals("DRAFT") || st.equals("OPEN") || st.isEmpty()) {
+            inv.setStatus("SENT");
+        }
         BusinessInvoice saved = invoiceRepo.save(inv);
 
         Map<String, Object> out = new java.util.LinkedHashMap<>();
@@ -1225,9 +1231,12 @@ public class ManualBusinessController {
     public BusinessInvoice recordPayment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        java.math.BigDecimal total = inv.getAmount() == null ? java.math.BigDecimal.ZERO : inv.getAmount();
+        // paidAmount is the cumulative total received; default to full when omitted.
         java.math.BigDecimal paid = money(body.get("paidAmount"));
-        inv.setPaidAmount(paid != null ? paid : inv.getAmount());
-        inv.setPaidAt(date(body.get("paidAt")) != null ? date(body.get("paidAt")) : LocalDate.now());
+        if (paid == null) paid = total;
+        if (paid.signum() < 0) paid = java.math.BigDecimal.ZERO;
+        inv.setPaidAmount(paid);
         inv.setPaymentMethod(str(body.get("paymentMethod")));
         inv.setPaymentReference(str(body.get("paymentReference")));
         Long txId = longVal(body.get("linkedTransactionId"));
@@ -1237,14 +1246,62 @@ public class ManualBusinessController {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "linked transaction not found"));
             inv.setLinkedTransactionId(txId);
         }
+        boolean fullyPaid = paid.compareTo(total) >= 0 && total.signum() > 0 || (total.signum() == 0 && paid.signum() == 0);
         boolean wasPaid = "PAID".equalsIgnoreCase(inv.getStatus());
-        inv.setStatus("PAID");
+        if (fullyPaid) {
+            inv.setStatus("PAID");
+            inv.setPaidAt(date(body.get("paidAt")) != null ? date(body.get("paidAt")) : LocalDate.now());
+        } else if (paid.signum() > 0) {
+            inv.setStatus("PARTIALLY_PAID");
+            inv.setPaidAt(null);
+        }
         BusinessInvoice saved = invoiceRepo.save(inv);
-        if (!wasPaid) {
+        if (fullyPaid && !wasPaid) {
             notificationClient.notify(userId(), "BUSINESS", "Payment received",
                     saved.getCustomer() + " paid " + usd(saved.getPaidAmount()) + ". Invoice marked paid.");
+        } else if (!fullyPaid && paid.signum() > 0) {
+            notificationClient.notify(userId(), "BUSINESS", "Partial payment received",
+                    saved.getCustomer() + " paid " + usd(paid) + " of " + usd(total) + ". "
+                            + usd(total.subtract(paid)) + " remaining.");
         }
         return saved;
+    }
+
+    /**
+     * Void an invoice (cancel it without deleting — it drops out of AR). Refused once an
+     * invoice has any payment; use a credit/refund flow for that instead.
+     */
+    @PostMapping("/invoices/{id}/void")
+    public BusinessInvoice voidInvoice(@PathVariable Long id) {
+        BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("PAID".equalsIgnoreCase(inv.getStatus())
+                || (inv.getPaidAmount() != null && inv.getPaidAmount().signum() > 0)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A paid invoice can't be voided.");
+        }
+        inv.setStatus("VOID");
+        return invoiceRepo.save(inv);
+    }
+
+    /**
+     * Unauthenticated beacon: the customer opened the public invoice page. Records the first
+     * view time and moves a SENT/DELIVERED/OPEN invoice to VIEWED (never downgrading a
+     * paid/partially-paid/void invoice). Returns 204.
+     */
+    @PostMapping("/invoices/public/{token}/viewed")
+    public ResponseEntity<Void> markViewed(@PathVariable String token) {
+        BusinessInvoice inv = invoiceRepo.findByShareToken(token).orElse(null);
+        if (inv != null) {
+            boolean changed = false;
+            if (inv.getViewedAt() == null) { inv.setViewedAt(java.time.LocalDateTime.now()); changed = true; }
+            String st = inv.getStatus() == null ? "" : inv.getStatus().toUpperCase();
+            if (st.equals("SENT") || st.equals("DELIVERED") || st.equals("OPEN")) {
+                inv.setStatus("VIEWED");
+                changed = true;
+            }
+            if (changed) invoiceRepo.save(inv);
+        }
+        return ResponseEntity.noContent().build();
     }
 
     /** Public (unauthenticated) invoice view for the customer. Token-scoped; no user data. */
@@ -1272,6 +1329,7 @@ public class ManualBusinessController {
         m.put("payInstructions", inv.getPayInstructions());
         m.put("paidAt", inv.getPaidAt());
         m.put("paidAmount", inv.getPaidAmount());
+        m.put("viewedAt", inv.getViewedAt());
         return m;
     }
 

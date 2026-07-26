@@ -1,0 +1,11 @@
+-- Order-to-Cash, Phase 1.5 — full invoice lifecycle + "Viewed" tracking.
+--
+-- Status becomes a richer lifecycle (handled in code, not a DB enum):
+--   DRAFT -> SENT -> DELIVERED -> VIEWED -> PARTIALLY_PAID -> PAID
+--   plus OVERDUE (past due, unpaid) and VOID (cancelled). OPEN stays a legacy synonym for
+--   an issued/unpaid invoice. AR now excludes PAID / VOID / DRAFT and nets off partial
+--   payments (see BusinessInvoiceRepository).
+--
+-- viewed_at records the first time the customer opened the public invoice page (set by an
+-- unauthenticated beacon), which drives the SENT/DELIVERED -> VIEWED transition.
+ALTER TABLE business_invoices ADD COLUMN viewed_at TIMESTAMP WITHOUT TIME ZONE;

@@ -846,6 +846,12 @@ export const api = {
     }),
   deleteManualInvoice: (id) =>
     request(`/api/v1/business/manual/invoices/${id}`, { method: "DELETE" }),
+  // Void an invoice (cancel without deleting; drops out of AR). Refused once paid.
+  voidManualInvoice: (id) =>
+    request(`/api/v1/business/manual/invoices/${id}/void`, { method: "POST" }),
+  // Public beacon: mark an invoice as viewed by the customer (unauthenticated, fire-and-forget).
+  markInvoiceViewed: (token) =>
+    request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}/viewed`, { method: "POST" }),
   // Send an invoice to the customer by email/SMS. Returns { invoice, deliveryStatus,
   // channel, recipient, publicUrl, message } — message is a copy-to-send fallback.
   sendManualInvoice: (id, payload) =>
