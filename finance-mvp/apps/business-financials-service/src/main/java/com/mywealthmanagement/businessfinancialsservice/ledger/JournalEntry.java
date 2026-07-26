@@ -49,6 +49,13 @@ public class JournalEntry {
     @Column(name = "posted_at", nullable = false)
     private LocalDateTime postedAt = LocalDateTime.now();
 
+    /* ---- Tamper-evident hash chain (GL.4). Set once at post time, never edited. ---- */
+    @Column(name = "prev_hash", length = 64)
+    private String prevHash;
+
+    @Column(name = "entry_hash", length = 64)
+    private String entryHash;
+
     @Transient
     private java.util.List<JournalLine> lines;
 

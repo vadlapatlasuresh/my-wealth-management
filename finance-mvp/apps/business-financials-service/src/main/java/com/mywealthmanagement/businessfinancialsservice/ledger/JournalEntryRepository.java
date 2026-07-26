@@ -19,4 +19,10 @@ public interface JournalEntryRepository extends JpaRepository<JournalEntry, Long
 
     Optional<JournalEntry> findFirstByBusinessIdAndSourceTypeAndSourceRefOrderByIdAsc(
             Long businessId, String sourceType, String sourceRef);
+
+    /* ---- Hash chain (GL.4) ---- */
+
+    JournalEntry findTopByBusinessIdOrderByIdDesc(Long businessId);
+
+    List<JournalEntry> findByBusinessIdAndUserIdOrderByIdAsc(Long businessId, Long userId);
 }

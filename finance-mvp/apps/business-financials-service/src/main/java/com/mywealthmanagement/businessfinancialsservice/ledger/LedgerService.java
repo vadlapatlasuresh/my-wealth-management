@@ -26,6 +26,7 @@ public class LedgerService {
     private final LedgerAccountRepository accountRepo;
     private final JournalEntryRepository entryRepo;
     private final JournalLineRepository lineRepo;
+    private final LedgerChain chain;
 
     /** One line of a posting request: a debit OR a credit against an account code. */
     public record LineInput(String accountCode, BigDecimal debit, BigDecimal credit, String memo) {}
@@ -109,6 +110,10 @@ public class LedgerService {
             throw badRequest("Entry does not balance: debits " + totalDebit + " ≠ credits " + totalCredit);
         }
 
+        // Capture the current chain head BEFORE inserting this entry.
+        JournalEntry last = entryRepo.findTopByBusinessIdOrderByIdDesc(businessId);
+        String prevHash = last != null && last.getEntryHash() != null ? last.getEntryHash() : LedgerChain.GENESIS;
+
         JournalEntry e = new JournalEntry();
         e.setUserId(userId);
         e.setBusinessId(businessId);
@@ -119,7 +124,14 @@ public class LedgerService {
         JournalEntry saved = entryRepo.save(e);
         for (JournalLine l : built) l.setEntryId(saved.getId());
         saved.setLines(lineRepo.saveAll(built));
-        return saved;
+        return chainAndSave(saved, prevHash);
+    }
+
+    /** Stamp the tamper-evident hash on a saved entry and persist it. */
+    private JournalEntry chainAndSave(JournalEntry saved, String prevHash) {
+        saved.setPrevHash(prevHash);
+        saved.setEntryHash(chain.hash(prevHash, saved, saved.getLines()));
+        return entryRepo.save(saved);
     }
 
     /**
@@ -134,6 +146,8 @@ public class LedgerService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This entry has already been reversed");
         }
         List<JournalLine> originalLines = lineRepo.findByEntryIdOrderByPositionAsc(entryId);
+        JournalEntry lastHead = entryRepo.findTopByBusinessIdOrderByIdDesc(businessId);
+        String prevHash = lastHead != null && lastHead.getEntryHash() != null ? lastHead.getEntryHash() : LedgerChain.GENESIS;
 
         JournalEntry rev = new JournalEntry();
         rev.setUserId(userId);
@@ -158,7 +172,35 @@ public class LedgerService {
             swapped.add(l);
         }
         saved.setLines(lineRepo.saveAll(swapped));
-        return saved;
+        return chainAndSave(saved, prevHash);
+    }
+
+    /**
+     * Walks the per-business hash chain and confirms every link + content hash. Returns
+     * {@code {valid, count, firstBrokenEntryId}} — detecting an altered amount, a deleted
+     * row (broken link), or a reordered entry. Rows without a hash (pre-activation) are skipped.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> verifyChain(Long businessId, Long userId) {
+        List<JournalEntry> entries = entryRepo.findByBusinessIdAndUserIdOrderByIdAsc(businessId, userId);
+        String prev = LedgerChain.GENESIS;
+        Long firstBroken = null;
+        int checked = 0;
+        for (JournalEntry e : entries) {
+            if (e.getEntryHash() == null) { prev = LedgerChain.GENESIS; continue; } // pre-chain row
+            List<JournalLine> lines = lineRepo.findByEntryIdOrderByPositionAsc(e.getId());
+            String expected = chain.hash(prev, e, lines);
+            boolean linkOk = prev.equals(e.getPrevHash());
+            boolean hashOk = expected.equals(e.getEntryHash());
+            if (firstBroken == null && (!linkOk || !hashOk)) firstBroken = e.getId();
+            checked++;
+            prev = e.getEntryHash(); // chain forward on the stored hash
+        }
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("valid", firstBroken == null);
+        out.put("count", checked);
+        out.put("firstBrokenEntryId", firstBroken);
+        return out;
     }
 
     /* ---------------- Reads ---------------- */

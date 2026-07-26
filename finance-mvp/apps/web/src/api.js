@@ -775,6 +775,9 @@ export const api = {
     request(`/api/v1/business/ledger/${businessId}/statements/cash-flow?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
   getLedgerTrialBalance: (businessId) =>
     request(`/api/v1/business/ledger/${businessId}/trial-balance`),
+  // Verify the ledger's tamper-evident hash chain -> { valid, count, firstBrokenEntryId }.
+  verifyLedger: (businessId) =>
+    request(`/api/v1/business/ledger/${businessId}/verify`),
 
   // Dunning — automated payment reminders (order-to-cash Phase 1.9).
   getReminderSettings: (businessId) =>

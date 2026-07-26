@@ -30,6 +30,7 @@ class LedgerServiceTest {
     @Mock private LedgerAccountRepository accountRepo;
     @Mock private JournalEntryRepository entryRepo;
     @Mock private JournalLineRepository lineRepo;
+    @Mock private LedgerChain chain;
 
     @InjectMocks private LedgerService ledger;
 
