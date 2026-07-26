@@ -766,6 +766,25 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // Sales-tax rates — owner-defined per-jurisdiction rates (order-to-cash Phase 1.7).
+  getBusinessTaxRates: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/tax-rates`),
+  createBusinessTaxRate: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/tax-rates`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessTaxRate: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/tax-rates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessTaxRate: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/tax-rates/${id}`, { method: "DELETE" }),
+  // Resolve the applicable tax rate for a customer's billing location.
+  resolveBusinessTaxRate: (businessId, customerId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/tax-rates/resolve?customerId=${encodeURIComponent(customerId)}`),
+
   // Quotes / estimates — proposals that convert to invoices (order-to-cash Phase 1.3).
   getBusinessQuotes: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/quotes`),
