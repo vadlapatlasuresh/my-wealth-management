@@ -871,6 +871,9 @@ export const api = {
   // Public beacon: mark an invoice as viewed by the customer (unauthenticated, fire-and-forget).
   markInvoiceViewed: (token) =>
     request(`/api/v1/business/manual/invoices/public/${encodeURIComponent(token)}/viewed`, { method: "POST" }),
+  // Mint (if needed) + return the invoice's public share link + a ready-to-share message.
+  getInvoiceShareLink: (id) =>
+    request(`/api/v1/business/manual/invoices/${id}/share-link`, { method: "POST" }),
   // Send an invoice to the customer by email/SMS. Returns { invoice, deliveryStatus,
   // channel, recipient, publicUrl, message } — message is a copy-to-send fallback.
   sendManualInvoice: (id, payload) =>

@@ -1281,6 +1281,34 @@ public class ManualBusinessController {
      * public invoice page. Returns the invoice, the delivery status, the public URL and
      * a ready-to-copy message (used as a fallback when SMS has no live provider).
      */
+    /**
+     * Mint (if needed) and return the invoice's public share link + a ready-to-share message,
+     * without sending it anywhere. Backs the native share-sheet button so the owner can share
+     * the pay link via WhatsApp / iMessage / AirDrop / etc.
+     */
+    @PostMapping("/invoices/{id}/share-link")
+    public Map<String, Object> invoiceShareLink(@PathVariable Long id) {
+        BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (inv.getShareToken() == null) {
+            inv.setShareToken(java.util.UUID.randomUUID().toString().replace("-", ""));
+            invoiceRepo.save(inv);
+        }
+        ManualBusiness biz = businessRepo.findByIdAndUserId(inv.getBusinessId(), userId()).orElse(null);
+        String bizName = biz != null ? biz.getName() : "our business";
+        String base = webUrl == null || webUrl.isBlank() ? "" : webUrl.replaceAll("/+$", "");
+        String publicUrl = base + "/invoice/" + inv.getShareToken();
+        String due = inv.getDueDate() != null ? " (due " + inv.getDueDate() + ")" : "";
+        String message = "Invoice from " + bizName + " for " + usd(inv.getAmount()) + due
+                + ".\nView and pay: " + publicUrl;
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("publicUrl", publicUrl);
+        out.put("token", inv.getShareToken());
+        out.put("title", "Invoice from " + bizName);
+        out.put("message", message);
+        return out;
+    }
+
     @PostMapping("/invoices/{id}/send")
     public Map<String, Object> sendInvoice(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         BusinessInvoice inv = invoiceRepo.findByIdAndUserId(id, userId())

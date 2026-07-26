@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import ShareButton from "../components/ShareButton";
 
 /* ---------------------------------------------------------------------------
    Public invoice page (no login).
@@ -104,10 +105,16 @@ export default function PublicInvoicePage() {
                 <div style={{ fontSize: 13, color: "var(--tv-text-muted)" }}>From</div>
                 <div style={{ fontSize: 18, fontWeight: 700 }}>{inv.businessName || "—"}</div>
               </div>
-              <span className="badge" style={{
-                background: paid ? "rgba(45,90,61,.14)" : "var(--tv-gold-pale)",
-                color: paid ? "var(--tv-forest)" : "var(--tv-gold, #b8860b)", fontWeight: 600,
-              }}>{paid ? "Paid" : "Due"}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <ShareButton variant="icon" icon="ti-share" tooltip="Share this invoice"
+                  title={`Invoice from ${inv.businessName || "a business"}`}
+                  text={`Invoice from ${inv.businessName || "a business"} — ${money(inv.amount)}`}
+                  url={typeof window !== "undefined" ? window.location.href : undefined} />
+                <span className="badge" style={{
+                  background: paid ? "rgba(45,90,61,.14)" : "var(--tv-gold-pale)",
+                  color: paid ? "var(--tv-forest)" : "var(--tv-gold, #b8860b)", fontWeight: 600,
+                }}>{paid ? "Paid" : "Due"}</span>
+              </div>
             </div>
 
             {inv.invoiceNumber && (

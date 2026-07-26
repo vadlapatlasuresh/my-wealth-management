@@ -7,6 +7,7 @@ import ExpensesTab from '../components/business/ExpensesTab';
 import CustomerManagerDrawer from '../components/business/CustomerManagerDrawer';
 import ProjectsPanel from '../components/business/ProjectsPanel';
 import TaxRatesDrawer from '../components/business/TaxRatesDrawer';
+import ShareButton from '../components/ShareButton';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -1173,6 +1174,16 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       flash('Transaction deleted.');
     } catch (err) { setError(err?.message || 'Could not delete transaction.'); }
   }
+
+  /* Lazy share payload for an invoice — mints the public link on demand (Phase 1.8). */
+  const invoiceShareData = (inv) => async () => {
+    const r = await api.getInvoiceShareLink(inv.id);
+    return {
+      title: r?.title || 'Invoice',
+      text: `Invoice for ${inv.customer} — ${currency(Number(inv.amount) || 0)}.`,
+      url: r?.publicUrl,
+    };
+  };
 
   /* Auto-fill the tax rate for a picked customer's billing location (Phase 1.7). */
   async function applyResolvedTax(setForm, customerId) {
@@ -4314,6 +4325,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                                 const terminal = ['PAID', 'VOID'].includes(inv.status);
                                 return (<>
                                   <button className="btn btn-secondary btn-sm" title="Send to customer" onClick={() => setSendInv(raw)}><i className="ti ti-send"></i></button>
+                                  <ShareButton variant="icon" icon="ti-share" tooltip="Share via WhatsApp, Messages, AirDrop…"
+                                    getShareData={invoiceShareData(raw)} onError={(e) => setError(e?.message || 'Could not share.')} />{' '}
                                   {!terminal && (
                                     <button className="btn btn-secondary btn-sm" style={{ marginLeft: 4 }} title="Record payment" onClick={() => setPayInv(raw)}><i className="ti ti-cash"></i></button>
                                   )}

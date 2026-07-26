@@ -141,6 +141,19 @@ class InvoiceLifecycleTest {
     }
 
     @Test
+    void shareLink_mintsTokenAndReturnsPublicUrl() {
+        BusinessInvoice inv = invoice("SENT", "500");
+        inv.setShareToken(null);
+        when(invoiceRepo.findByIdAndUserId(500L, USER)).thenReturn(Optional.of(inv));
+
+        Map<String, Object> out = controller.invoiceShareLink(500L);
+
+        assertThat(inv.getShareToken()).isNotNull(); // minted
+        assertThat((String) out.get("publicUrl")).contains("/invoice/" + inv.getShareToken());
+        assertThat(out.get("message")).asString().contains("View and pay");
+    }
+
+    @Test
     void void_cancelsUnpaidButRefusesPaid() {
         BusinessInvoice open = invoice("SENT", "1000");
         when(invoiceRepo.findByIdAndUserId(500L, USER)).thenReturn(Optional.of(open));
