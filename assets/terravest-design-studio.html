@@ -349,6 +349,9 @@ const SCREENS = {
     {type:'list',title:'Recurring invoices',rows:[
       {dot:C.stocks,label:'Northwind Co.',sub:'Monthly · Next Aug 1 · Active · tap Run',val:'$2,500'},
       {dot:C.alt,label:'Harbor Group',sub:'Quarterly · Paused',val:'$6,000'}]},
+    {type:'list',title:'Transaction rules · auto-categorize',rows:[
+      {dot:C.stocks,label:'Merchant contains "AWS"',sub:'→ Software & Subscriptions',val:'●'},
+      {dot:C.alt,label:'Merchant contains "Gusto"',sub:'→ Payroll · tap Apply now',val:'●'}]},
     {type:'list',title:'Purchase orders',rows:[
       {dot:C.stocks,label:'Acme Supply',sub:'Approved · Expected Aug 8 · tap Convert',val:'$1,200'},
       {dot:C.income,label:'Metro Print',sub:'Converted · Billed',val:'$640'}]},
