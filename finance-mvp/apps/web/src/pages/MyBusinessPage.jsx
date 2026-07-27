@@ -12,6 +12,7 @@ import ReminderSettingsCard from '../components/business/ReminderSettingsCard';
 import StatementsPanel from '../components/business/StatementsPanel';
 import BillsPanel from '../components/business/BillsPanel';
 import PurchaseOrdersPanel from '../components/business/PurchaseOrdersPanel';
+import TxnRulesDrawer from '../components/business/TxnRulesDrawer';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -470,6 +471,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [showAddRecurring, setShowAddRecurring] = useState(false);
   const [bills, setBills] = useState([]);
   const [billsPayable, setBillsPayable] = useState(0);
+  const [showRulesDrawer, setShowRulesDrawer] = useState(false);
   const emptyRecurringForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', frequency: 'MONTHLY', startDate: new Date().toISOString().slice(0, 10), dueDays: '14', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
   const [recurringForm, setRecurringForm] = useState(emptyRecurringForm);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
@@ -3359,6 +3361,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                     Transactions
                   </div>
                   <div style={{ display: 'flex', gap: 8 }}>
+                    {selectedBusiness && (
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowRulesDrawer(true)} title="Auto-categorize transactions with rules">
+                        <i className="ti ti-filter-cog"></i> Rules
+                      </button>
+                    )}
                     <button className="btn btn-secondary btn-sm" onClick={exportCsv} disabled={sortedTx.length === 0} title="Export current view to CSV">
                       <i className="ti ti-download"></i> Export
                     </button>
@@ -4748,6 +4755,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       {showTaxDrawer && selectedBusiness && (
         <TaxRatesDrawer businessId={selectedBusiness.id}
           onClose={() => setShowTaxDrawer(false)} />
+      )}
+      {showRulesDrawer && selectedBusiness && (
+        <TxnRulesDrawer businessId={selectedBusiness.id}
+          onApplied={() => loadBusinessDetail(selectedBusiness.id)}
+          onClose={() => setShowRulesDrawer(false)} />
       )}
     </div>
   );
