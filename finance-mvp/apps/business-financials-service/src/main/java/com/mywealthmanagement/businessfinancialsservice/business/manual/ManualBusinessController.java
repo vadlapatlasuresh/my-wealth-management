@@ -47,6 +47,8 @@ public class ManualBusinessController {
     private final BusinessTaxRateRepository taxRateRepo;
     private final BusinessBillRepository billRepo;
     private final BusinessPurchaseOrderRepository poRepo;
+    private final BusinessTxnRuleRepository txnRuleRepo;
+    private final TxnRuleService txnRuleService;
     private final BusinessReminderSettingsRepository reminderSettingsRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
@@ -113,6 +115,7 @@ public class ManualBusinessController {
         taxRateRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         billRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         poRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        txnRuleRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         reminderSettingsRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // reminder logs cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
@@ -301,6 +304,10 @@ public class ManualBusinessController {
         t.setDescription(str(body.get("description")));
         t.setMerchant(str(body.get("merchant")));
         t.setCategory(str(body.get("category")));
+        // Auto-categorize from the business's rules when the caller didn't set one.
+        if (t.getCategory() == null) {
+            t.setCategory(txnRuleService.resolveCategory(businessId, userId(), t.getMerchant(), t.getDescription()));
+        }
         t.setAmount(money(body.get("amount")));
         t.setPostedAt(date(body.get("postedAt")));
         if (t.getDescription() == null || t.getDescription().isBlank()) {
@@ -687,6 +694,75 @@ public class ManualBusinessController {
         if (body.containsKey("status")) {
             String s = str(body.get("status"));
             if (s != null) b.setStatus(s.toUpperCase());
+        }
+    }
+
+    /* ---------------- Transaction categorization rules ---------------- */
+
+    @GetMapping("/businesses/{businessId}/txn-rules")
+    public List<BusinessTxnRule> listTxnRules(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return txnRuleRepo.findByBusinessIdAndUserIdOrderByPositionAscIdAsc(businessId, userId());
+    }
+
+    @PostMapping("/businesses/{businessId}/txn-rules")
+    public BusinessTxnRule createTxnRule(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessTxnRule r = new BusinessTxnRule();
+        r.setUserId(userId());
+        r.setBusinessId(businessId);
+        r.setPosition(txnRuleRepo.findByBusinessIdAndUserIdOrderByPositionAscIdAsc(businessId, userId()).size());
+        applyTxnRule(r, body);
+        if (r.getMatchValue() == null || r.getMatchValue().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A match value is required");
+        }
+        if (r.getSetCategory() == null || r.getSetCategory().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A category is required");
+        }
+        return txnRuleRepo.save(r);
+    }
+
+    @PutMapping("/txn-rules/{id}")
+    public BusinessTxnRule updateTxnRule(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessTxnRule r = txnRuleRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rule not found"));
+        applyTxnRule(r, body);
+        return txnRuleRepo.save(r);
+    }
+
+    @DeleteMapping("/txn-rules/{id}")
+    public ResponseEntity<Void> deleteTxnRule(@PathVariable Long id) {
+        BusinessTxnRule r = txnRuleRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Rule not found"));
+        txnRuleRepo.delete(r);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Apply the rules to this business's uncategorized manual transactions. Returns { updated }. */
+    @PostMapping("/businesses/{businessId}/txn-rules/apply")
+    public Map<String, Object> applyTxnRules(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return Map.of("updated", txnRuleService.applyToUncategorized(businessId, userId()));
+    }
+
+    private void applyTxnRule(BusinessTxnRule r, Map<String, Object> body) {
+        if (body.containsKey("matchField")) {
+            String f = str(body.get("matchField"));
+            r.setMatchField(f == null ? "MERCHANT" : f.toUpperCase());
+        }
+        if (body.containsKey("matchType")) {
+            String t = str(body.get("matchType"));
+            r.setMatchType(t == null ? "CONTAINS" : t.toUpperCase());
+        }
+        if (body.containsKey("matchValue")) r.setMatchValue(str(body.get("matchValue")));
+        if (body.containsKey("setCategory")) r.setSetCategory(str(body.get("setCategory")));
+        if (body.containsKey("active")) r.setActive(bool(body.get("active"), true));
+        if (body.containsKey("position")) {
+            Integer p = intVal(body.get("position"));
+            if (p != null && p >= 0) r.setPosition(p);
         }
     }
 

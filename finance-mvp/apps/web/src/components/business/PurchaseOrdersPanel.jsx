@@ -20,7 +20,7 @@ function statusLabel(s) {
   return u.charAt(0) + u.slice(1).toLowerCase();
 }
 
-export default function PurchaseOrdersPanel({ businessId, currency, formatDate, onError, onFlash }) {
+export default function PurchaseOrdersPanel({ businessId, currency, formatDate, onError, onFlash, onConverted }) {
   const [pos, setPos] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const empty = { vendor: '', poNumber: '', expenseCategory: 'Operating Expenses', orderDate: new Date().toISOString().slice(0, 10), expectedDate: '', amount: '', notes: '' };
@@ -61,6 +61,7 @@ export default function PurchaseOrdersPanel({ businessId, currency, formatDate, 
     try {
       await api.convertBusinessPurchaseOrder(po.id, {});
       await reload();
+      await onConverted?.();
       onFlash?.('PO converted — a bill was created in Bills & payables.');
     } catch (err) { onError?.(err?.message || 'Could not convert the PO.'); }
   }

@@ -782,6 +782,21 @@ export const api = {
   convertBusinessPurchaseOrder: (id, payload) =>
     request(`/api/v1/business/manual/purchase-orders/${id}/convert`, { method: "POST", body: JSON.stringify(payload || {}) }),
 
+  // Transaction categorization rules (bank feeds Phase 3a).
+  getBusinessTxnRules: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/txn-rules`),
+  createBusinessTxnRule: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/txn-rules`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessTxnRule: (id, payload) =>
+    request(`/api/v1/business/manual/txn-rules/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteBusinessTxnRule: (id) =>
+    request(`/api/v1/business/manual/txn-rules/${id}`, { method: "DELETE" }),
+  applyBusinessTxnRules: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/txn-rules/apply`, { method: "POST" }),
+
   // Vendor bills / accounts payable (procure-to-pay Phase 2a).
   getBusinessBills: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/bills`),

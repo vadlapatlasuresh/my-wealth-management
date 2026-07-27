@@ -4685,6 +4685,16 @@ a { text-decoration: none; color: inherit; }
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-arrow-down" style="color:var(--tv-negative)"></i> Expenses</div><div class="kpi-value">$28,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">This month</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-chart-line" style="color:var(--tv-forest-light)"></i> Net Profit</div><div class="kpi-value">$14,000</div><div class="kpi-delta" style="color:var(--tv-text-muted);">This month</div></div>
           <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-invoice" style="color:var(--tv-forest-light)"></i> Outstanding Invoices</div><div class="kpi-value">$3,450</div><div class="kpi-delta" style="color:var(--tv-text-muted);">As of today</div></div>
+          <div class="kpi-card"><div class="kpi-label"><i class="ti ti-file-dollar" style="color:var(--tv-negative)"></i> Bills due (AP)</div><div class="kpi-value">$4,180</div><div class="kpi-delta" style="color:var(--tv-negative);"><i class="ti ti-alert-triangle"></i> $420 overdue</div></div>
+        </div>
+
+        <!-- Payables aging (mirrors receivables aging) -->
+        <div class="card" style="margin:16px 0;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-file-dollar" style="color:var(--tv-negative);margin-right:6px;"></i>Payables aging</div><span class="badge badge-gray">$4,180 owed</span></div>
+          <div style="display:flex;height:14px;border-radius:7px;overflow:hidden;margin:6px 0 14px;background:var(--tv-border);"><div style="width:70%;background:var(--tv-positive);"></div><div style="width:20%;background:var(--tv-gold);"></div><div style="width:10%;background:var(--tv-negative);"></div></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--tv-positive);margin-right:8px;"></span>Current</span><span>$2,940</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--tv-gold);margin-right:8px;"></span>1–30 days</span><span>$820</span></div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;"><span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--tv-negative);margin-right:8px;"></span>90+ days</span><span>$420</span></div>
         </div>
         <div style="height:16px;"></div>
 
@@ -4840,8 +4850,9 @@ a { text-decoration: none; color: inherit; }
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header">
             <div class="section-title">Transactions</div>
-            <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add manual</button></div>
+            <div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm" title="Auto-categorize with rules"><i class="ti ti-filter-cog"></i> Rules</button><button class="btn btn-secondary btn-sm"><i class="ti ti-download"></i> Export</button><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> Add manual</button></div>
           </div>
+          <p class="item-sub" style="margin:-4px 0 10px;">Set rules (e.g. Merchant contains "AWS" → Software) to auto-categorize incoming transactions; apply them to existing ones with one click.</p>
           <!-- Quick filters -->
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
             <button class="seg-btn active" style="border-radius:999px;padding:7px 14px;border:1px solid var(--tv-forest);background:var(--tv-forest);color:#fff;"><i class="ti ti-list"></i> All</button>

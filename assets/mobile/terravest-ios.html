@@ -1801,7 +1801,9 @@ body{
           <div class="row"><div class="lead-ic" style="background:var(--tv-positive);"><i class="ti ti-pig-money"></i></div><div class="body"><div class="t">Business Savings <span class="chip green" style="font-size:10px;">Linked</span></div><div class="s">Chase · Savings</div></div><div class="val"><div class="v">$6,400</div></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-gold);"><i class="ti ti-credit-card"></i></div><div class="body"><div class="t">Amex Biz Platinum <span class="chip green" style="font-size:10px;">Linked</span></div><div class="s">21% used · $15,820 left · Due Jul 18</div></div><div class="val"><div class="v neg">$4,180</div></div></div>
         </div>
-        <div class="sec-label">Transactions</div>
+        <div class="sec-label" style="display:flex;justify-content:space-between;align-items:center;">Transactions <span style="font-size:13px;color:var(--tv-forest);font-weight:600;"><i class="ti ti-filter-cog"></i> Rules</span></div>
+        <!-- Auto-categorization rules: Merchant contains "AWS" → Software, etc. -->
+        <div class="group"><div class="row"><div class="lead-ic" style="background:var(--tv-forest);"><i class="ti ti-filter-cog"></i></div><div class="body"><div class="t">Auto-categorize rules</div><div class="s">"AWS" → Software · "Gusto" → Payroll · apply now</div></div><i class="ti ti-chevron-right chev"></i></div></div>
         <div class="chips" style="margin-bottom:8px;">
           <div class="chip on" style="background:var(--tv-forest);color:#fff;">All</div>
           <div class="chip">Deposits</div><div class="chip">Payments</div><div class="chip">Transfers</div><div class="chip">Refunds</div>
@@ -1828,6 +1830,13 @@ body{
         <div class="group">
           <div class="row"><div class="lead-ic" style="background:var(--tv-warning);"><i class="ti ti-file-dollar"></i></div><div class="body"><div class="t">Staples</div><div class="s">Operating · Due Aug 5</div></div><div class="val"><div class="v neg">$1,180</div><div class="d" style="color:var(--tv-forest);">Pay</div></div></div>
           <div class="row"><div class="lead-ic" style="background:var(--tv-warning);"><i class="ti ti-file-dollar"></i></div><div class="body"><div class="t">AWS</div><div class="s">Partially paid · $1,500 due</div></div><div class="val"><div class="v neg">$3,000</div><div class="d" style="color:var(--tv-forest);">Pay</div></div></div>
+        </div>
+        <div class="sec-label">Payables aging</div>
+        <!-- AP aging buckets, mirrors receivables aging -->
+        <div class="group" style="padding:12px 14px;">
+          <div style="display:flex;justify-content:space-between;font-size:13px;"><span>Bills due (AP)</span><span style="font-weight:700;">$4,180</span></div>
+          <div style="height:6px;border-radius:999px;background:var(--tv-chip);margin:8px 0;overflow:hidden;display:flex;"><div style="width:70%;background:var(--tv-positive);"></div><div style="width:20%;background:var(--tv-gold);"></div><div style="width:10%;background:var(--tv-negative);"></div></div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--tv-text-muted);"><span>Current $2,940 · 1–30 $820</span><span style="color:var(--tv-negative);">90+ $420</span></div>
         </div>
         <div class="sec-label" style="display:flex;justify-content:space-between;align-items:center;">Financial statements · from your ledger <span style="font-size:12px;color:var(--tv-positive);font-weight:600;"><i class="ti ti-shield-check"></i> Verified</span></div>
         <!-- Real double-entry P&L / Balance Sheet / Cash Flow, exportable to Excel/PDF -->
