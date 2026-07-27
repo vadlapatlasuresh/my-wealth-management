@@ -4948,6 +4948,22 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Vendor bills / accounts payable (procure-to-pay) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-file-dollar" style="color:var(--tv-forest-light);margin-right:6px;"></i>Bills &amp; payables <span class="badge badge-amber" style="margin-left:6px;">$4,180 owed</span></div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New bill</button></div>
+          <p class="item-sub" style="margin:-4px 0 10px;">Record vendor bills and pay them (full or partial) — each posts to your ledger as an expense and accounts payable.</p>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Vendor</th><th>Category</th><th style="text-align:right;">Amount</th><th>Due</th><th>Status</th><th style="text-align:right;"></th></tr></thead>
+              <tbody>
+                <tr><td>Staples</td><td>Operating Expenses</td><td style="text-align:right;">$1,180</td><td style="color:var(--tv-text-muted);">Aug 5</td><td><span class="badge badge-amber">Open</span></td><td style="text-align:right;"><button class="btn btn-secondary btn-sm"><i class="ti ti-cash"></i> Pay</button></td></tr>
+                <tr><td>AWS</td><td>Software &amp; Subscriptions</td><td style="text-align:right;">$3,000<div class="item-sub">$1,500 due</div></td><td style="color:var(--tv-text-muted);">Aug 12</td><td><span class="badge badge-amber">Partially paid</span></td><td style="text-align:right;"><button class="btn btn-secondary btn-sm"><i class="ti ti-cash"></i> Pay</button></td></tr>
+                <tr><td>City Utilities</td><td>Utilities</td><td style="text-align:right;">$420</td><td style="color:var(--tv-text-muted);">Jul 28</td><td><span class="badge badge-green">Paid</span></td><td style="text-align:right;"><span style="color:var(--tv-text-muted);">—</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Financial statements derived from the double-entry general ledger -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title"><i class="ti ti-report-money" style="color:var(--tv-forest-light);margin-right:6px;"></i>Financial statements <span class="badge badge-gray" style="margin-left:6px;">from your ledger</span></div><div style="display:flex;gap:8px;"><button class="btn btn-secondary btn-sm"><i class="ti ti-file-spreadsheet"></i> Excel</button><button class="btn btn-secondary btn-sm"><i class="ti ti-file-type-pdf"></i> PDF</button></div></div>

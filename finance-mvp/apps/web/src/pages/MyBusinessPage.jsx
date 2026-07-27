@@ -10,6 +10,7 @@ import TaxRatesDrawer from '../components/business/TaxRatesDrawer';
 import ShareButton from '../components/ShareButton';
 import ReminderSettingsCard from '../components/business/ReminderSettingsCard';
 import StatementsPanel from '../components/business/StatementsPanel';
+import BillsPanel from '../components/business/BillsPanel';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -4096,6 +4097,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 )}
               </div>
+
+              {/* Vendor bills / accounts payable (procure-to-pay) */}
+              {selectedBusiness && (
+                <BillsPanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
+              )}
 
               {/* Progress / milestone billing — bill a fixed-price project in stages */}
               {selectedBusiness && (

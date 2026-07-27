@@ -1,5 +1,6 @@
 package com.mywealthmanagement.businessfinancialsservice.ledger;
 
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessBill;
 import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessInvoice;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -28,6 +29,8 @@ public class LedgerPostingService {
 
     private static final String SRC_INVOICE = "INVOICE";
     private static final String SRC_PAYMENT = "PAYMENT";
+    private static final String SRC_BILL = "BILL";
+    private static final String SRC_BILL_PAYMENT = "BILL_PAYMENT";
 
     private final LedgerService ledger;
     private final JournalEntryRepository entryRepo;
@@ -105,6 +108,86 @@ public class LedgerPostingService {
         } catch (RuntimeException e) {
             log.warn("ledger: failed to void invoice {}: {}", inv.getId(), e.getMessage());
         }
+    }
+
+    /* ==================== Procure-to-Pay (bills / AP) ==================== */
+
+    /**
+     * Bill entered:
+     *   DR &lt;expense account by category&gt; = amount
+     *   CR 2000 Accounts Payable          = amount
+     */
+    public void postBillEntered(BusinessBill bill) {
+        if (bill == null || bill.getId() == null) return;
+        String st = bill.getStatus() == null ? "" : bill.getStatus().toUpperCase();
+        if (st.equals("VOID")) return;
+        String ref = String.valueOf(bill.getId());
+        try {
+            if (entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(bill.getBusinessId(), SRC_BILL, ref)) return;
+            BigDecimal amount = nz(bill.getAmount());
+            if (amount.signum() <= 0) return;
+            String expenseCode = expenseAccountFor(bill.getExpenseCategory());
+            List<LedgerService.LineInput> lines = List.of(
+                    new LedgerService.LineInput(expenseCode, amount, null, "Bill from " + bill.getVendor()),
+                    new LedgerService.LineInput("2000", null, amount, "Accounts payable"));
+            ledger.post(bill.getBusinessId(), bill.getUserId(),
+                    bill.getBillDate() != null ? bill.getBillDate() : LocalDate.now(),
+                    "Bill" + (bill.getBillNumber() != null ? " #" + bill.getBillNumber() : "") + " — " + bill.getVendor(),
+                    SRC_BILL, ref, lines);
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to post bill {}: {}", bill.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * Bill paid in full:
+     *   DR 2000 Accounts Payable = amount
+     *   CR 1000 Cash             = amount
+     */
+    public void postBillPaid(BusinessBill bill) {
+        if (bill == null || bill.getId() == null) return;
+        if (!"PAID".equalsIgnoreCase(bill.getStatus())) return;
+        String ref = String.valueOf(bill.getId());
+        try {
+            postBillEntered(bill); // ensure AP exists to relieve
+            if (entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(bill.getBusinessId(), SRC_BILL_PAYMENT, ref)) return;
+            BigDecimal paid = bill.getPaidAmount() != null ? bill.getPaidAmount() : nz(bill.getAmount());
+            if (paid.signum() <= 0) return;
+            List<LedgerService.LineInput> lines = List.of(
+                    new LedgerService.LineInput("2000", paid, null, "Pay accounts payable"),
+                    new LedgerService.LineInput("1000", null, paid, "Cash paid to " + bill.getVendor()));
+            ledger.post(bill.getBusinessId(), bill.getUserId(),
+                    bill.getPaidAt() != null ? bill.getPaidAt() : LocalDate.now(),
+                    "Bill payment — " + bill.getVendor(), SRC_BILL_PAYMENT, ref, lines);
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to post bill payment {}: {}", bill.getId(), e.getMessage());
+        }
+    }
+
+    /** Bill voided — reverse its entry (if posted and not already reversed). */
+    public void postBillVoided(BusinessBill bill) {
+        if (bill == null || bill.getId() == null) return;
+        String ref = String.valueOf(bill.getId());
+        try {
+            entryRepo.findFirstByBusinessIdAndSourceTypeAndSourceRefOrderByIdAsc(bill.getBusinessId(), SRC_BILL, ref)
+                    .ifPresent(entered -> {
+                        if (!entryRepo.existsByBusinessIdAndReversalOf(bill.getBusinessId(), entered.getId())) {
+                            ledger.reverse(bill.getBusinessId(), bill.getUserId(), entered.getId(), LocalDate.now(),
+                                    "Void of bill" + (bill.getBillNumber() != null ? " #" + bill.getBillNumber() : ""));
+                        }
+                    });
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to void bill {}: {}", bill.getId(), e.getMessage());
+        }
+    }
+
+    /** Maps a free-text expense category to a seeded ledger expense account code. */
+    private String expenseAccountFor(String category) {
+        String c = category == null ? "" : category.toLowerCase();
+        if (c.contains("cogs") || c.contains("cost of goods") || c.contains("inventory") || c.contains("materials")) return "5000";
+        if (c.contains("payroll") || c.contains("wage") || c.contains("salar")) return "6100";
+        if (c.contains("bank") || c.contains("merchant") || c.contains("fee") || c.contains("interest")) return "6200";
+        return "6000"; // Operating Expenses
     }
 
     /** An invoice is postable once it's real (not DRAFT/VOID) and has an amount. */
