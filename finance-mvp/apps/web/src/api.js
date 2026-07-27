@@ -766,6 +766,22 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // Purchase orders (procure-to-pay Phase 2b).
+  getBusinessPurchaseOrders: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/purchase-orders`),
+  createBusinessPurchaseOrder: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/purchase-orders`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessPurchaseOrder: (id, payload) =>
+    request(`/api/v1/business/manual/purchase-orders/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteBusinessPurchaseOrder: (id) =>
+    request(`/api/v1/business/manual/purchase-orders/${id}`, { method: "DELETE" }),
+  // Convert an approved PO -> an AP bill (posts to the ledger). Returns the new bill.
+  convertBusinessPurchaseOrder: (id, payload) =>
+    request(`/api/v1/business/manual/purchase-orders/${id}/convert`, { method: "POST", body: JSON.stringify(payload || {}) }),
+
   // Vendor bills / accounts payable (procure-to-pay Phase 2a).
   getBusinessBills: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/bills`),

@@ -4948,6 +4948,21 @@ a { text-decoration: none; color: inherit; }
           </div>
         </div>
 
+        <!-- Purchase orders (procure-to-pay) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-header"><div class="section-title"><i class="ti ti-clipboard-list" style="color:var(--tv-forest-light);margin-right:6px;"></i>Purchase orders</div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New PO</button></div>
+          <p class="item-sub" style="margin:-4px 0 10px;">Issue a PO to a vendor, then convert it to a bill on approval/receipt — one click drops it into Bills &amp; payables. POs don't touch the books until billed.</p>
+          <div class="table-scroll">
+            <table class="tv-table">
+              <thead><tr><th>Vendor</th><th>Category</th><th style="text-align:right;">Amount</th><th>Expected</th><th>Status</th><th style="text-align:right;"></th></tr></thead>
+              <tbody>
+                <tr><td>Acme Supply</td><td>Cost of Goods Sold</td><td style="text-align:right;">$1,200</td><td style="color:var(--tv-text-muted);">Aug 8</td><td><span class="badge badge-forest">Approved</span></td><td style="text-align:right;"><button class="btn btn-primary btn-sm"><i class="ti ti-file-dollar"></i> Convert</button></td></tr>
+                <tr><td>Metro Print</td><td>Operating Expenses</td><td style="text-align:right;">$640</td><td style="color:var(--tv-text-muted);">—</td><td><span class="badge badge-green">Converted</span></td><td style="text-align:right;"><span class="item-sub">Billed</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Vendor bills / accounts payable (procure-to-pay) -->
         <div class="card" style="margin-bottom:16px;">
           <div class="section-header"><div class="section-title"><i class="ti ti-file-dollar" style="color:var(--tv-forest-light);margin-right:6px;"></i>Bills &amp; payables <span class="badge badge-amber" style="margin-left:6px;">$4,180 owed</span></div><button class="btn btn-secondary btn-sm"><i class="ti ti-plus"></i> New bill</button></div>
