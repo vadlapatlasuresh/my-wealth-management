@@ -468,6 +468,8 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   const [quoteForm, setQuoteForm] = useState(emptyQuoteForm);
   const [recurringSchedules, setRecurringSchedules] = useState([]);
   const [showAddRecurring, setShowAddRecurring] = useState(false);
+  const [bills, setBills] = useState([]);
+  const [billsPayable, setBillsPayable] = useState(0);
   const emptyRecurringForm = { customerId: '', customer: '', customerEmail: '', customerPhone: '', frequency: 'MONTHLY', startDate: new Date().toISOString().slice(0, 10), dueDays: '14', lineItems: [{ description: '', quantity: '1', unitPrice: '' }], discountType: '', discountValue: '', taxRate: '' };
   const [recurringForm, setRecurringForm] = useState(emptyRecurringForm);
   const [sendInv, setSendInv] = useState(null);   // invoice being sent to a customer
@@ -633,10 +635,10 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
   const loadBusinessDetail = useCallback(async (businessId) => {
     if (!businessId) {
-      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setQuotes([]); setRecurringSchedules([]); setAssignedLinkedIds(new Set());
+      setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setCustomers([]); setQuotes([]); setRecurringSchedules([]); setBills([]); setBillsPayable(0); setAssignedLinkedIds(new Set());
       return;
     }
-    const [acc, tx, inv, linked, docs, cust, qts, rec] = await Promise.allSettled([
+    const [acc, tx, inv, linked, docs, cust, qts, rec, bil] = await Promise.allSettled([
       api.getBusinessAccounts(businessId),
       api.getBusinessTransactions(businessId),
       api.getManualInvoices(businessId),
@@ -645,6 +647,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
       api.getBusinessCustomers(businessId),
       api.getBusinessQuotes(businessId),
       api.getRecurringInvoices(businessId),
+      api.getBusinessBills(businessId),
     ]);
     setBizAccounts(acc.status === 'fulfilled' && Array.isArray(acc.value) ? acc.value : []);
     setBizTransactions(tx.status === 'fulfilled' && Array.isArray(tx.value) ? tx.value : []);
@@ -653,9 +656,21 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     setCustomers(cust.status === 'fulfilled' && Array.isArray(cust.value) ? cust.value : []);
     setQuotes(qts.status === 'fulfilled' && Array.isArray(qts.value) ? qts.value : []);
     setRecurringSchedules(rec.status === 'fulfilled' && Array.isArray(rec.value) ? rec.value : []);
+    setBills(bil.status === 'fulfilled' && Array.isArray(bil.value?.bills) ? bil.value.bills : []);
+    setBillsPayable(bil.status === 'fulfilled' ? (Number(bil.value?.totalPayable) || 0) : 0);
     const linkedIds = linked.status === 'fulfilled' && Array.isArray(linked.value) ? linked.value.map(String) : [];
     setAssignedLinkedIds(new Set(linkedIds));
   }, []);
+
+  /* Reload just the vendor bills for the selected business (after BillsPanel edits). */
+  const reloadBills = useCallback(async () => {
+    if (!selectedId || selectedId === 'ALL') return;
+    try {
+      const res = await api.getBusinessBills(selectedId);
+      setBills(Array.isArray(res?.bills) ? res.bills : []);
+      setBillsPayable(Number(res?.totalPayable) || 0);
+    } catch { /* non-fatal */ }
+  }, [selectedId]);
 
   /* Reload just the saved customers for the selected business (after drawer edits). */
   const reloadCustomers = useCallback(async () => {
@@ -669,7 +684,7 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
   /* Aggregate every business's accounts/transactions/invoices/assignments into one view. */
   const loadAllBusinessesDetail = useCallback(async (list) => {
     const biz = Array.isArray(list) ? list : [];
-    setCustomers([]); setQuotes([]); setRecurringSchedules([]); // customer + quote + recurring management is single-business only
+    setCustomers([]); setQuotes([]); setRecurringSchedules([]); setBills([]); setBillsPayable(0); // single-business-only tools
     if (!biz.length) {
       setBizAccounts([]); setBizTransactions([]); setManualInvoices([]); setBizDocuments([]); setAssignedLinkedIds(new Set());
       return;
@@ -1993,6 +2008,45 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
     };
   }, [pendingInvoices]);
 
+  /* AP aging — bucket open vendor bills by days past their due date (mirrors AR aging). */
+  const apAging = useMemo(() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const buckets = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90: 0 };
+    const counts = { current: 0, d1_30: 0, d31_60: 0, d61_90: 0, d90: 0 };
+    const byVendor = new Map();
+    let overdue = 0, total = 0;
+    (bills || []).forEach((b) => {
+      const status = (b.status || '').toUpperCase();
+      if (status === 'PAID' || status === 'VOID') return;
+      const amt = Math.max(0, (Number(b.amount) || 0) - (Number(b.paidAmount) || 0));
+      if (amt <= 0) return;
+      total += amt;
+      const due = b.dueDate ? new Date(b.dueDate) : null;
+      let key = 'current';
+      if (due && !Number.isNaN(due.getTime())) {
+        due.setHours(0, 0, 0, 0);
+        const days = Math.floor((today - due) / 86400000);
+        if (days <= 0) key = 'current';
+        else if (days <= 30) key = 'd1_30';
+        else if (days <= 60) key = 'd31_60';
+        else if (days <= 90) key = 'd61_90';
+        else key = 'd90';
+      }
+      buckets[key] += amt; counts[key] += 1;
+      if (key !== 'current') {
+        overdue += amt;
+        const v = b.vendor || 'Unknown';
+        byVendor.set(v, (byVendor.get(v) || 0) + amt);
+      }
+    });
+    const worstVendor = [...byVendor.entries()].sort((a, b) => b[1] - a[1])[0] || null;
+    return {
+      buckets, counts, overdue, total,
+      overduePct: total > 0 ? overdue / total : 0,
+      worstVendor: worstVendor ? { name: worstVendor[0], amount: worstVendor[1] } : null,
+    };
+  }, [bills]);
+
   /* 90-day cash-flow forecast. Projects available cash from the trailing
      daily-net trend, plus the expected collection of overdue receivables
      (assumed to land ~14 days out — money the trend hasn't captured yet). */
@@ -3127,6 +3181,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 </div>
                 <div className="kpi-card" style={{ '--kpi-accent': 'var(--tv-negative)' }}>
+                  <div className="kpi-label"><span className="kpi-icon"><i className="ti ti-file-dollar"></i></span><span className="kpi-label-text">Bills due (AP)</span></div>
+                  <div className="kpi-value">{currency(apAging.total || billsPayable)}</div>
+                  <div className={`kpi-delta ${apAging.overdue > 0 ? 'neg' : 'flat'}`}>
+                    <span className="kpi-delta-badge"><i className={`ti ${apAging.overdue > 0 ? 'ti-alert-triangle' : 'ti-check'}`}></i>
+                      {apAging.overdue > 0 ? `${currency(apAging.overdue)} overdue` : 'All current'}</span>
+                  </div>
+                </div>
+                <div className="kpi-card" style={{ '--kpi-accent': 'var(--tv-negative)' }}>
                   <div className="kpi-label"><span className="kpi-icon"><i className="ti ti-credit-card"></i></span><span className="kpi-label-text">Card balances owed</span></div>
                   <div className="kpi-value">{currency(creditOwed)}</div>
                   <div className="kpi-delta flat"><span className="kpi-delta-sub">{creditCards.length} card{creditCards.length === 1 ? '' : 's'}</span></div>
@@ -3235,6 +3297,19 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   <AgingBars aging={arAging} onEmail={remindAllOverdue} busy={reminding} />
                 ) : (
                   <div className="empty-state"><i className="ti ti-checks"></i><p>No outstanding invoices — nothing to age. Create an invoice from Business Tools to start tracking receivables.</p></div>
+                )}
+              </div>
+
+              {/* AP aging (payables) */}
+              <div className="card" style={{ marginBottom: 16 }}>
+                <div className="section-header">
+                  <div className="section-title"><i className="ti ti-file-dollar" style={{ marginRight: 6, color: 'var(--tv-negative)' }}></i>Payables aging</div>
+                  <span className="badge badge-gray">{currency(apAging.total)} owed</span>
+                </div>
+                {apAging.total > 0 ? (
+                  <AgingBars aging={apAging} itemNoun="bill" poolLabel="payables" worstKey="worstVendor" />
+                ) : (
+                  <div className="empty-state"><i className="ti ti-checks"></i><p>No unpaid bills — nothing to age. Record vendor bills from Business Tools to track payables.</p></div>
                 )}
               </div>
 
@@ -4101,12 +4176,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
 
               {/* Purchase orders (procure-to-pay) */}
               {selectedBusiness && (
-                <PurchaseOrdersPanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
+                <PurchaseOrdersPanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} onConverted={reloadBills} />
               )}
 
               {/* Vendor bills / accounts payable (procure-to-pay) */}
               {selectedBusiness && (
-                <BillsPanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
+                <BillsPanel businessId={selectedBusiness.id} bills={bills} totalPayable={billsPayable} onChanged={reloadBills} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
               )}
 
               {/* Progress / milestone billing — bill a fixed-price project in stages */}
@@ -5358,7 +5433,7 @@ function ForecastChart({ forecast }) {
 /* ------------------------------------------------------------------ */
 /* AR aging — segmented bar + per-bucket rows.                         */
 /* ------------------------------------------------------------------ */
-function AgingBars({ aging, onEmail, busy }) {
+function AgingBars({ aging, onEmail, busy, itemNoun = 'invoice', poolLabel = 'receivables', worstKey = 'worstCustomer' }) {
   const defs = [
     { key: 'current', label: 'Current', color: 'var(--tv-positive)' },
     { key: 'd1_30', label: '1–30 days', color: 'var(--tv-gold)' },
@@ -5385,7 +5460,7 @@ function AgingBars({ aging, onEmail, busy }) {
             <div style={{ width: 10, height: 10, borderRadius: 3, background: d.color, marginRight: 10, flexShrink: 0 }} />
             <div className="item-main">
               <div className="item-name">{d.label}</div>
-              <div className="item-sub">{cnt} invoice{cnt === 1 ? '' : 's'}</div>
+              <div className="item-sub">{cnt} {itemNoun}{cnt === 1 ? '' : 's'}</div>
             </div>
             <div className="item-right">
               <div className={`item-amount ${d.key !== 'current' && amt > 0 ? 'amount-neg' : ''}`}>{currency(amt)}</div>
@@ -5397,10 +5472,10 @@ function AgingBars({ aging, onEmail, busy }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <div className="item-sub">
           {aging.overdue > 0
-            ? <><strong style={{ color: 'var(--tv-negative)' }}>{currency(aging.overdue)}</strong> overdue ({Math.round(aging.overduePct * 100)}% of receivables){aging.worstCustomer ? ` · largest: ${aging.worstCustomer.name}` : ''}</>
-            : 'All receivables are current.'}
+            ? <><strong style={{ color: 'var(--tv-negative)' }}>{currency(aging.overdue)}</strong> overdue ({Math.round(aging.overduePct * 100)}% of {poolLabel}){aging[worstKey] ? ` · largest: ${aging[worstKey].name}` : ''}</>
+            : `All ${poolLabel} are current.`}
         </div>
-        {aging.overdue > 0 && (
+        {aging.overdue > 0 && onEmail && (
           <button className="btn btn-secondary btn-sm" onClick={onEmail} disabled={busy}>
             <i className={`ti ${busy ? 'ti-loader-2' : 'ti-send'}`}></i> {busy ? 'Sending…' : 'Send reminders'}
           </button>

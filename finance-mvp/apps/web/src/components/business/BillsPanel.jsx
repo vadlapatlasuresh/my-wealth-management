@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { api } from '../../api';
 
 /**
@@ -21,23 +21,12 @@ function statusLabel(s) {
   return u.charAt(0) + u.slice(1).toLowerCase();
 }
 
-export default function BillsPanel({ businessId, currency, formatDate, onError, onFlash }) {
-  const [bills, setBills] = useState([]);
-  const [totalPayable, setTotalPayable] = useState(0);
+export default function BillsPanel({ businessId, bills = [], totalPayable = 0, onChanged, currency, formatDate, onError, onFlash }) {
   const [showAdd, setShowAdd] = useState(false);
   const empty = { vendor: '', billNumber: '', expenseCategory: 'Operating Expenses', billDate: new Date().toISOString().slice(0, 10), dueDate: '', amount: '', notes: '' };
   const [form, setForm] = useState(empty);
 
-  const reload = useCallback(async () => {
-    if (!businessId) return;
-    try {
-      const res = await api.getBusinessBills(businessId);
-      setBills(Array.isArray(res?.bills) ? res.bills : []);
-      setTotalPayable(Number(res?.totalPayable) || 0);
-    } catch (err) { onError?.(err?.message || 'Could not load bills.'); }
-  }, [businessId, onError]);
-
-  useEffect(() => { reload(); }, [reload]);
+  const reload = async () => { await onChanged?.(); };
 
   const onField = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
