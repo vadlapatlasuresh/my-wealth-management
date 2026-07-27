@@ -46,6 +46,7 @@ public class ManualBusinessController {
     private final BusinessProjectMilestoneRepository milestoneRepo;
     private final BusinessTaxRateRepository taxRateRepo;
     private final BusinessBillRepository billRepo;
+    private final BusinessPurchaseOrderRepository poRepo;
     private final BusinessReminderSettingsRepository reminderSettingsRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
@@ -111,6 +112,7 @@ public class ManualBusinessController {
         projectRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // milestones cascade at DB
         taxRateRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         billRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        poRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         reminderSettingsRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // reminder logs cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
@@ -477,6 +479,103 @@ public class ManualBusinessController {
         List<Integer> offsets = com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService.parseOffsets(csv);
         if (offsets.isEmpty()) return "-3,0,7";
         return offsets.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("-3,0,7");
+    }
+
+    /* ---------------- Purchase orders ---------------- */
+
+    @GetMapping("/businesses/{businessId}/purchase-orders")
+    public List<BusinessPurchaseOrder> listPurchaseOrders(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return poRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+    }
+
+    @PostMapping("/businesses/{businessId}/purchase-orders")
+    public BusinessPurchaseOrder createPurchaseOrder(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessPurchaseOrder po = new BusinessPurchaseOrder();
+        po.setUserId(userId());
+        po.setBusinessId(businessId);
+        applyPurchaseOrder(po, body);
+        if (po.getVendor() == null || po.getVendor().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "vendor is required");
+        }
+        if (po.getAmount() == null || po.getAmount().signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount is required");
+        }
+        if (po.getStatus() == null) po.setStatus("DRAFT");
+        if (po.getOrderDate() == null) po.setOrderDate(LocalDate.now());
+        return poRepo.save(po);
+    }
+
+    @PutMapping("/purchase-orders/{id}")
+    public BusinessPurchaseOrder updatePurchaseOrder(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessPurchaseOrder po = poRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("CONVERTED".equalsIgnoreCase(po.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This PO was already converted to a bill.");
+        }
+        applyPurchaseOrder(po, body);
+        return poRepo.save(po);
+    }
+
+    @DeleteMapping("/purchase-orders/{id}")
+    public ResponseEntity<Void> deletePurchaseOrder(@PathVariable Long id) {
+        BusinessPurchaseOrder po = poRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        poRepo.delete(po);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** One-click convert: create an AP Bill from the PO, post it to the ledger, mark PO CONVERTED. */
+    @PostMapping("/purchase-orders/{id}/convert")
+    @Transactional
+    public BusinessBill convertPurchaseOrder(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
+        BusinessPurchaseOrder po = poRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("CONVERTED".equalsIgnoreCase(po.getStatus()) && po.getConvertedBillId() != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "This PO was already converted to a bill.");
+        }
+        Map<String, Object> b = body == null ? Map.of() : body;
+
+        BusinessBill bill = new BusinessBill();
+        bill.setUserId(userId());
+        bill.setBusinessId(po.getBusinessId());
+        bill.setVendor(po.getVendor());
+        bill.setBillNumber(po.getPoNumber());
+        bill.setExpenseCategory(po.getExpenseCategory());
+        bill.setBillDate(LocalDate.now());
+        bill.setDueDate(date(b.get("dueDate")));
+        bill.setAmount(po.getAmount());
+        bill.setTaxAmount(po.getTaxAmount());
+        bill.setStatus("OPEN");
+        bill.setNotes("From PO" + (po.getPoNumber() != null ? " #" + po.getPoNumber() : "") + (po.getNotes() != null ? " — " + po.getNotes() : ""));
+        BusinessBill savedBill = billRepo.save(bill);
+        ledgerPosting.postBillEntered(savedBill); // DR expense / CR AP
+
+        po.setStatus("CONVERTED");
+        po.setConvertedBillId(savedBill.getId());
+        poRepo.save(po);
+
+        notificationClient.notify(userId(), "BUSINESS", "PO converted",
+                "PO for " + usd(savedBill.getAmount()) + " to " + savedBill.getVendor() + " is now a bill.");
+        return savedBill;
+    }
+
+    private void applyPurchaseOrder(BusinessPurchaseOrder po, Map<String, Object> body) {
+        if (body.containsKey("vendor")) po.setVendor(str(body.get("vendor")));
+        if (body.containsKey("poNumber")) po.setPoNumber(str(body.get("poNumber")));
+        if (body.containsKey("expenseCategory")) po.setExpenseCategory(str(body.get("expenseCategory")));
+        if (body.containsKey("orderDate")) po.setOrderDate(date(body.get("orderDate")));
+        if (body.containsKey("expectedDate")) po.setExpectedDate(date(body.get("expectedDate")));
+        if (body.containsKey("amount")) po.setAmount(money(body.get("amount")));
+        if (body.containsKey("taxAmount")) po.setTaxAmount(money(body.get("taxAmount")));
+        if (body.containsKey("notes")) po.setNotes(str(body.get("notes")));
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            if (s != null) po.setStatus(s.toUpperCase());
+        }
     }
 
     /* ---------------- Vendor bills (accounts payable) ---------------- */

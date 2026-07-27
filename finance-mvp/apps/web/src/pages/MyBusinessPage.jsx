@@ -11,6 +11,7 @@ import ShareButton from '../components/ShareButton';
 import ReminderSettingsCard from '../components/business/ReminderSettingsCard';
 import StatementsPanel from '../components/business/StatementsPanel';
 import BillsPanel from '../components/business/BillsPanel';
+import PurchaseOrdersPanel from '../components/business/PurchaseOrdersPanel';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -4097,6 +4098,11 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                   </div>
                 )}
               </div>
+
+              {/* Purchase orders (procure-to-pay) */}
+              {selectedBusiness && (
+                <PurchaseOrdersPanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
+              )}
 
               {/* Vendor bills / accounts payable (procure-to-pay) */}
               {selectedBusiness && (
