@@ -766,6 +766,23 @@ export const api = {
   deleteBusinessCustomer: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/customers/${id}`, { method: "DELETE" }),
 
+  // Vendor bills / accounts payable (procure-to-pay Phase 2a).
+  getBusinessBills: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/bills`),
+  createBusinessBill: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/bills`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessBill: (id, payload) =>
+    request(`/api/v1/business/manual/bills/${id}`, { method: "PUT", body: JSON.stringify(payload) }),
+  deleteBusinessBill: (id) =>
+    request(`/api/v1/business/manual/bills/${id}`, { method: "DELETE" }),
+  payBusinessBill: (id, payload) =>
+    request(`/api/v1/business/manual/bills/${id}/payment`, { method: "POST", body: JSON.stringify(payload || {}) }),
+  voidBusinessBill: (id) =>
+    request(`/api/v1/business/manual/bills/${id}/void`, { method: "POST" }),
+
   // General-ledger financial statements (GL.3), derived from the double-entry ledger.
   getLedgerPnl: (businessId, from, to) =>
     request(`/api/v1/business/ledger/${businessId}/statements/pnl?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),

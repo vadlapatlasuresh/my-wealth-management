@@ -1,5 +1,6 @@
 package com.mywealthmanagement.businessfinancialsservice.ledger;
 
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessBill;
 import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessInvoice;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -94,6 +95,48 @@ class LedgerPostingServiceTest {
         List<LedgerService.LineInput> lines = linesCaptor.getValue();
         assertThat(lineFor(lines, "1000").debit()).isEqualByComparingTo("108.00");  // cash
         assertThat(lineFor(lines, "1100").credit()).isEqualByComparingTo("108.00"); // clear AR
+    }
+
+    private BusinessBill bill(String status, String amount, String category, String paid) {
+        BusinessBill b = new BusinessBill();
+        b.setId(88L); b.setUserId(USER); b.setBusinessId(BIZ); b.setVendor("Supplier Co");
+        b.setStatus(status); b.setAmount(new BigDecimal(amount)); b.setExpenseCategory(category);
+        if (paid != null) b.setPaidAmount(new BigDecimal(paid));
+        b.setBillDate(LocalDate.of(2026, 7, 26));
+        return b;
+    }
+
+    @Test
+    void billEntered_debitsExpenseByCategoryCreditsAP() {
+        when(entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(BIZ, "BILL", "88")).thenReturn(false);
+
+        posting.postBillEntered(bill("OPEN", "500.00", "Payroll", null));
+
+        verify(ledger).post(eq(BIZ), eq(USER), any(), any(), eq("BILL"), eq("88"), linesCaptor.capture());
+        List<LedgerService.LineInput> lines = linesCaptor.getValue();
+        assertThat(lineFor(lines, "6100").debit()).isEqualByComparingTo("500.00"); // payroll expense
+        assertThat(lineFor(lines, "2000").credit()).isEqualByComparingTo("500.00"); // accounts payable
+    }
+
+    @Test
+    void billEntered_defaultsToOperatingExpenses() {
+        when(entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(BIZ, "BILL", "88")).thenReturn(false);
+        posting.postBillEntered(bill("OPEN", "200.00", null, null));
+        verify(ledger).post(eq(BIZ), eq(USER), any(), any(), eq("BILL"), eq("88"), linesCaptor.capture());
+        assertThat(lineFor(linesCaptor.getValue(), "6000").debit()).isEqualByComparingTo("200.00");
+    }
+
+    @Test
+    void billPaid_debitsAPCreditsCash() {
+        when(entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(BIZ, "BILL", "88")).thenReturn(true);
+        when(entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(BIZ, "BILL_PAYMENT", "88")).thenReturn(false);
+
+        posting.postBillPaid(bill("PAID", "500.00", "Operating", "500.00"));
+
+        verify(ledger).post(eq(BIZ), eq(USER), any(), any(), eq("BILL_PAYMENT"), eq("88"), linesCaptor.capture());
+        List<LedgerService.LineInput> lines = linesCaptor.getValue();
+        assertThat(lineFor(lines, "2000").debit()).isEqualByComparingTo("500.00");  // relieve AP
+        assertThat(lineFor(lines, "1000").credit()).isEqualByComparingTo("500.00"); // cash out
     }
 
     @Test

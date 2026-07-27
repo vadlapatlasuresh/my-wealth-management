@@ -45,6 +45,7 @@ public class ManualBusinessController {
     private final BusinessProjectRepository projectRepo;
     private final BusinessProjectMilestoneRepository milestoneRepo;
     private final BusinessTaxRateRepository taxRateRepo;
+    private final BusinessBillRepository billRepo;
     private final BusinessReminderSettingsRepository reminderSettingsRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
@@ -109,6 +110,7 @@ public class ManualBusinessController {
         recurringRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // recurring items cascade at DB
         projectRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // milestones cascade at DB
         taxRateRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        billRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         reminderSettingsRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // reminder logs cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
@@ -475,6 +477,118 @@ public class ManualBusinessController {
         List<Integer> offsets = com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService.parseOffsets(csv);
         if (offsets.isEmpty()) return "-3,0,7";
         return offsets.stream().map(String::valueOf).reduce((a, b) -> a + "," + b).orElse("-3,0,7");
+    }
+
+    /* ---------------- Vendor bills (accounts payable) ---------------- */
+
+    @GetMapping("/businesses/{businessId}/bills")
+    public Map<String, Object> listBills(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        List<BusinessBill> bills = billRepo.findByBusinessIdAndUserIdOrderByCreatedAtDesc(businessId, userId());
+        Map<String, Object> out = new java.util.LinkedHashMap<>();
+        out.put("bills", bills);
+        out.put("totalPayable", billRepo.sumPayable(userId(), businessId));
+        return out;
+    }
+
+    @PostMapping("/businesses/{businessId}/bills")
+    public BusinessBill createBill(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        BusinessBill b = new BusinessBill();
+        b.setUserId(userId());
+        b.setBusinessId(businessId);
+        applyBill(b, body);
+        if (b.getVendor() == null || b.getVendor().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "vendor is required");
+        }
+        if (b.getAmount() == null || b.getAmount().signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "amount is required");
+        }
+        if (b.getStatus() == null) b.setStatus("OPEN");
+        if (b.getBillDate() == null) b.setBillDate(LocalDate.now());
+        BusinessBill saved = billRepo.save(b);
+        ledgerPosting.postBillEntered(saved); // DR expense / CR AP
+        notificationClient.notify(userId(), "BUSINESS", "Bill added",
+                "Bill for " + usd(saved.getAmount()) + " from " + saved.getVendor() + " was recorded.");
+        return saved;
+    }
+
+    @PutMapping("/bills/{id}")
+    public BusinessBill updateBill(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessBill b = billRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        applyBill(b, body);
+        BusinessBill saved = billRepo.save(b);
+        ledgerPosting.postBillEntered(saved); // idempotent
+        return saved;
+    }
+
+    @DeleteMapping("/bills/{id}")
+    public ResponseEntity<Void> deleteBill(@PathVariable Long id) {
+        BusinessBill b = billRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        billRepo.delete(b);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Record a payment against a bill (full or partial). Body: { paidAmount?, paidAt?, paymentMethod?, paymentReference? }. */
+    @PostMapping("/bills/{id}/payment")
+    public BusinessBill payBill(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        BusinessBill b = billRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("VOID".equalsIgnoreCase(b.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A voided bill can't be paid.");
+        }
+        BigDecimal total = b.getAmount() == null ? BigDecimal.ZERO : b.getAmount();
+        BigDecimal paid = money(body.get("paidAmount"));
+        if (paid == null) paid = total;
+        if (paid.signum() < 0) paid = BigDecimal.ZERO;
+        b.setPaidAmount(paid);
+        if (body.containsKey("paymentMethod")) b.setPaymentMethod(str(body.get("paymentMethod")));
+        if (body.containsKey("paymentReference")) b.setPaymentReference(str(body.get("paymentReference")));
+        boolean fullyPaid = paid.compareTo(total) >= 0 && total.signum() > 0;
+        if (fullyPaid) {
+            b.setStatus("PAID");
+            b.setPaidAt(date(body.get("paidAt")) != null ? date(body.get("paidAt")) : LocalDate.now());
+        } else if (paid.signum() > 0) {
+            b.setStatus("PARTIALLY_PAID");
+            b.setPaidAt(null);
+        }
+        BusinessBill saved = billRepo.save(b);
+        if (fullyPaid) ledgerPosting.postBillPaid(saved); // DR AP / CR Cash
+        return saved;
+    }
+
+    @PostMapping("/bills/{id}/void")
+    public BusinessBill voidBill(@PathVariable Long id) {
+        BusinessBill b = billRepo.findByIdAndUserId(id, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if ("PAID".equalsIgnoreCase(b.getStatus())
+                || (b.getPaidAmount() != null && b.getPaidAmount().signum() > 0)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A paid bill can't be voided.");
+        }
+        b.setStatus("VOID");
+        BusinessBill saved = billRepo.save(b);
+        ledgerPosting.postBillVoided(saved);
+        return saved;
+    }
+
+    private void applyBill(BusinessBill b, Map<String, Object> body) {
+        if (body.containsKey("vendor")) b.setVendor(str(body.get("vendor")));
+        if (body.containsKey("billNumber")) b.setBillNumber(str(body.get("billNumber")));
+        if (body.containsKey("expenseCategory")) b.setExpenseCategory(str(body.get("expenseCategory")));
+        if (body.containsKey("billDate")) b.setBillDate(date(body.get("billDate")));
+        if (body.containsKey("dueDate")) b.setDueDate(date(body.get("dueDate")));
+        if (body.containsKey("scheduledPayDate")) b.setScheduledPayDate(date(body.get("scheduledPayDate")));
+        if (body.containsKey("amount")) b.setAmount(money(body.get("amount")));
+        if (body.containsKey("taxAmount")) b.setTaxAmount(money(body.get("taxAmount")));
+        if (body.containsKey("notes")) b.setNotes(str(body.get("notes")));
+        if (body.containsKey("status")) {
+            String s = str(body.get("status"));
+            if (s != null) b.setStatus(s.toUpperCase());
+        }
     }
 
     /* ---------------- Sales-tax rates ---------------- */
