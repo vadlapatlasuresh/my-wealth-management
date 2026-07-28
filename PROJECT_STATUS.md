@@ -1,6 +1,6 @@
 # My Wealth Management — Project Status & Roadmap
 
-_Last updated: 2026-06-06_
+_Last updated: 2026-07-28_
 
 This is the master status document. Detailed, actionable breakdowns live in
 [`docs/phases/`](docs/phases/). Each phase file lists scope, concrete steps, files to touch,
@@ -94,6 +94,11 @@ CRUD + valuation (mock provider) at `/api/v1/real-estate`; RealEstatePage live; 
 
 ### Phase 4 — Business Financials Service ✅
 QuickBooks-style dashboard/P&L/invoices/expenses (mock) at `/api/v1/business`; MyBusinessPage live.
+
+Additional progress in the QuickBooks-parity initiative:
+- Phase 3b reconciliation is implemented in the backend and web UI for one-click bank transaction matching to open invoices/bills.
+- Inventory/COGS and payroll/1099 contractor flows are now implemented in the backend and MyBusiness UI, including CRUD, stock adjustments, and basic accounting postings.
+- Business-team RBAC is now implemented as a working foundation in the backend and surfaced in the MyBusiness UI with role-aware view/manage access.
 
 ### Phase 5 — AI Insights Service ✅
 Insights + chat (mock LLM provider) at `/api/v1/ai`; AIAssistantPage live (insights + working chat).

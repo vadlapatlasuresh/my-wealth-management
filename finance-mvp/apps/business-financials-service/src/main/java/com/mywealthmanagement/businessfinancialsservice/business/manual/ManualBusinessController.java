@@ -49,8 +49,10 @@ public class ManualBusinessController {
     private final BusinessPurchaseOrderRepository poRepo;
     private final BusinessTxnRuleRepository txnRuleRepo;
     private final TxnRuleService txnRuleService;
+    private final ReconciliationService reconciliationService;
     private final BusinessReminderSettingsRepository reminderSettingsRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.dunning.DunningReminderService dunningService;
+    private final BusinessTeamMemberRepository teamMemberRepo;
     private final com.mywealthmanagement.businessfinancialsservice.business.pay.InvoicePaymentProvider paymentProvider;
     private final com.mywealthmanagement.businessfinancialsservice.ledger.LedgerPostingService ledgerPosting;
     private final BusinessSummaryService summaryService;
@@ -58,6 +60,7 @@ public class ManualBusinessController {
     private final com.mywealthmanagement.businessfinancialsservice.comms.NotificationClient notificationClient;
     private final com.mywealthmanagement.businessfinancialsservice.comms.DocumentsRegistryClient documentsRegistryClient;
     private final com.mywealthmanagement.businessfinancialsservice.comms.CommsClient commsClient;
+    private final BusinessAccessService accessService;
 
     @org.springframework.beans.factory.annotation.Value("${app.web-url:http://localhost:5173}")
     private String webUrl;
@@ -93,6 +96,63 @@ public class ManualBusinessController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         apply(b, body);
         return businessRepo.save(b);
+    }
+
+    @GetMapping("/businesses/{businessId}/team")
+    public List<BusinessTeamMember> listTeamMembers(@PathVariable Long businessId) {
+        Long actingUserId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId);
+    }
+
+    @PostMapping("/businesses/{businessId}/team")
+    public BusinessTeamMember addTeamMember(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        Long actingUserId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        BusinessTeamMember member = new BusinessTeamMember();
+        member.setMemberUserId(Long.valueOf(str(body.get("memberUserId"))));
+        member.setRole(str(body.getOrDefault("role", "VIEWER")));
+        member.setStatus(str(body.getOrDefault("status", "ACTIVE")));
+        member.setUserId(actingUserId);
+        member.setBusinessId(businessId);
+        return teamMemberRepo.save(member);
+    }
+
+    @PutMapping("/businesses/{businessId}/team/{id}")
+    public BusinessTeamMember updateTeamMember(@PathVariable Long businessId, @PathVariable Long id, @RequestBody Map<String, Object> body) {
+        Long actingUserId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        BusinessTeamMember member = teamMemberRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (body.containsKey("role")) member.setRole(str(body.get("role")));
+        if (body.containsKey("status")) member.setStatus(str(body.get("status")));
+        return teamMemberRepo.save(member);
+    }
+
+    @DeleteMapping("/businesses/{businessId}/team/{id}")
+    public ResponseEntity<Void> deleteTeamMember(@PathVariable Long businessId, @PathVariable Long id) {
+        Long actingUserId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        BusinessTeamMember member = teamMemberRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        teamMemberRepo.delete(member);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/businesses/{id}")
@@ -695,6 +755,29 @@ public class ManualBusinessController {
             String s = str(body.get("status"));
             if (s != null) b.setStatus(s.toUpperCase());
         }
+    }
+
+    /* ---------------- Bank reconciliation (Phase 3b) ---------------- */
+
+    /** Suggested matches: deposits → open invoices, withdrawals → open bills, by amount. */
+    @GetMapping("/businesses/{businessId}/reconcile/suggestions")
+    public List<Map<String, Object>> reconcileSuggestions(@PathVariable Long businessId) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return reconciliationService.suggest(businessId, userId());
+    }
+
+    /** Confirm one match. Body: { transactionId, type: INVOICE|BILL, targetId }. */
+    @PostMapping("/businesses/{businessId}/reconcile/confirm")
+    public Map<String, Object> reconcileConfirm(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
+        businessRepo.findByIdAndUserId(businessId, userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Long txnId = asLong(body.get("transactionId"));
+        Long targetId = asLong(body.get("targetId"));
+        if (txnId == null || targetId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "transactionId and targetId are required");
+        }
+        return reconciliationService.confirm(businessId, userId(), txnId, str(body.get("type")), targetId);
     }
 
     /* ---------------- Transaction categorization rules ---------------- */

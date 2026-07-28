@@ -13,6 +13,10 @@ import StatementsPanel from '../components/business/StatementsPanel';
 import BillsPanel from '../components/business/BillsPanel';
 import PurchaseOrdersPanel from '../components/business/PurchaseOrdersPanel';
 import TxnRulesDrawer from '../components/business/TxnRulesDrawer';
+import ReconcilePanel from '../components/business/ReconcilePanel';
+import InventoryPanel from '../components/business/InventoryPanel';
+import ContractorsPanel from '../components/business/ContractorsPanel';
+import TeamMembersPanel from '../components/business/TeamMembersPanel';
 
 /* ------------------------------------------------------------------ */
 /* Local UI preference key (selection only; data is server-persisted)  */
@@ -3354,6 +3358,12 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 </div>
               </div>
 
+              {/* One-click reconciliation — suggested matches to open invoices/bills */}
+              {selectedBusiness && (
+                <ReconcilePanel businessId={selectedBusiness.id} currency={currency} formatDate={bizDate}
+                  onError={setError} onFlash={flash} onReconciled={() => loadBusinessDetail(selectedBusiness.id)} />
+              )}
+
               <div className="card" ref={txSectionRef}>
                 <div className="section-header">
                   <div className="section-title">
@@ -4189,6 +4199,21 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
               {/* Vendor bills / accounts payable (procure-to-pay) */}
               {selectedBusiness && (
                 <BillsPanel businessId={selectedBusiness.id} bills={bills} totalPayable={billsPayable} onChanged={reloadBills} currency={currency} formatDate={bizDate} onError={setError} onFlash={flash} />
+              )}
+
+              {/* Inventory / COGS foundation */}
+              {selectedBusiness && (
+                <InventoryPanel businessId={selectedBusiness.id} currency={currency} onError={setError} onFlash={flash} />
+              )}
+
+              {/* Contractors / 1099 foundation */}
+              {selectedBusiness && (
+                <ContractorsPanel businessId={selectedBusiness.id} currency={currency} onError={setError} onFlash={flash} />
+              )}
+
+              {/* Team access / RBAC foundation */}
+              {selectedBusiness && (
+                <TeamMembersPanel businessId={selectedBusiness.id} onError={setError} onFlash={flash} />
               )}
 
               {/* Progress / milestone billing — bill a fixed-price project in stages */}

@@ -130,10 +130,64 @@ export const SCREENS = {
   ] },
   mybusiness: { section: "business", name: "My Business", blocks: [
     { type: "header", title: "My Business", subtitle: "Acme LLC · Connected" },
-    { type: "kpis", items: [{ l: "Revenue MTD", v: "$42,100", d: "+8%", up: true }, { l: "Expenses", v: "$18,300" }, { l: "Net profit", v: "$23,800", d: "up", up: true }] },
+    { type: "kpis", items: [
+      { l: "Available cash", v: "$31,200", d: "+4.2%", up: true },
+      { l: "Receivables due", v: "$3,450", d: "$180 overdue", up: false },
+      { l: "Bills due (AP)", v: "$4,180", d: "$420 overdue", up: false },
+      { l: "Card balances owed", v: "$4,180", d: "3 cards" },
+      { l: "Net profit", v: "$23,800", d: "this month", up: true },
+      { l: "Revenue", v: "$42,100", d: "MTD", up: true },
+    ] },
     { type: "bars", title: "Revenue · 6 months", series: [
       { label: "Feb", value: 44, color: "#F0803C" }, { label: "Mar", value: 52, color: "#F0803C" }, { label: "Apr", value: 48, color: "#F0803C" },
-      { label: "May", value: 61, color: "#F0803C" }, { label: "Jun", value: 55, color: "#F0803C" }, { label: "Jul", value: 63, color: "#F0803C" }] },
+      { label: "May", value: 61, color: "#F0803C" }, { label: "Jun", value: 55, color: "#F0803C" }, { label: "Jul", value: 63, color: "#F0803C" },
+    ] },
+    { type: "ring", pct: 0.72, label: "Runway", caption: "3.8 months · Good" },
+    { type: "list", title: "Receivables aging", rows: [
+      { dot: C.income, label: "Current", sub: "Not yet due", val: "$2,940" },
+      { dot: C.alt, label: "1–30 days", sub: "Recently overdue", val: "$820" },
+      { dot: C.neg, label: "90+ days", sub: "Past due", val: "$420" },
+    ] },
+    { type: "list", title: "Payables aging", rows: [
+      { dot: C.income, label: "Current", sub: "Not yet due", val: "$2,940" },
+      { dot: C.alt, label: "1–30 days", sub: "Due soon", val: "$820" },
+      { dot: C.neg, label: "90+ days", sub: "Past due", val: "$420" },
+    ] },
+    { type: "verdict", tone: "warn", title: "Overdue invoices are straining runway", detail: "Collect $820 in overdue receivables to improve cash availability and avoid a shortfall." },
+    { type: "list", title: "Business tools", rows: [
+      { dot: C.stocks, label: "Purchase orders", sub: "Procure-to-pay", val: "New PO" },
+      { dot: C.alt, label: "Bills & payables", sub: "Record vendor bills", val: "Pay" },
+      { dot: C.income, label: "Invoices", sub: "Pay Now links + auto-reconcile", val: "Send" },
+      { dot: C.stocks, label: "Recurring invoices", sub: "Auto-run schedules", val: "2 active" },
+      { dot: C.alt, label: "Quotes & estimates", sub: "Convert to invoice", val: "New" },
+      { dot: C.other, label: "Projects & milestone billing", sub: "Stage-based contracts", val: "Bill" },
+      { dot: C.housing, label: "Customers", sub: "Tax rates and contact details", val: "Manage" },
+      { dot: C.cash, label: "Documents", sub: "Per-business file vault", val: "Add" },
+      { dot: C.other, label: "Financial statements", sub: "Ledger-backed P&L / Balance Sheet", val: "Export" },
+    ] },
+    { type: "list", title: "Operations foundation", rows: [
+      { dot: C.cash, label: "Inventory & COGS", sub: "Tracked line items", val: "Ready" },
+      { dot: C.alt, label: "Contractors / 1099", sub: "Managed payees and forms", val: "Active" },
+      { dot: C.housing, label: "Team members", sub: "Access & roles", val: "2" },
+    ] },
+    { type: "list", title: "Recent business actions", rows: [
+      { dot: C.stocks, label: "Northwind Co.", sub: "Paid in full", val: "$6,200" },
+      { dot: C.neg, label: "Pinecrest Studio", sub: "Overdue · Viewed Jun 12", val: "$3,450" },
+      { dot: C.alt, label: "Harbor Group", sub: "Partially paid · $900 due", val: "$2,100" },
+    ] },
+  ] },
+  "business-firstrun": { section: "business", name: "My Business · First run", isNew: true, blocks: [
+    { type: "header", title: "My Business", subtitle: "First run — no business added yet" },
+    { type: "list", title: "Get started", rows: [
+      { dot: C.stocks, label: "Add a business", sub: "Name it and pick the entity type", val: "Start" },
+      { dot: C.income, label: "Link accounts", sub: "Bank and credit cards sync automatically", val: "Link" },
+      { dot: C.other, label: "Invoice & file", sub: "Create invoices and file documents by year", val: "Go" },
+    ] },
+    { type: "list", title: "Why it matters", rows: [
+      { dot: C.housing, label: "Separate business cash flow", sub: "Per-business P&L and ledger tracking", val: "Clear" },
+      { dot: C.alt, label: "Track bills and invoices", sub: "Payables, receivables and reminders", val: "Smart" },
+      { dot: C.income, label: "Ledger-backed statements", sub: "Export PDF / Excel", val: "Tax-ready" },
+    ] },
   ] },
   properties: { section: "realestate", name: "Properties", blocks: [
     { type: "header", title: "Properties", subtitle: "Your real estate portfolio" },
