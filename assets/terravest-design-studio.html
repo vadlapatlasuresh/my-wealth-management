@@ -339,50 +339,67 @@ const SCREENS = {
   ]},
   mybusiness:{section:'business',name:'My Business',blocks:[
     {type:'header',title:'My Business',subtitle:'Acme LLC · Connected'},
-    {type:'kpis',items:[{l:'Revenue MTD',v:'$42,100',d:'+8%',up:true},{l:'Expenses',v:'$18,300'},{l:'Net profit',v:'$23,800',up:true}]},
+    {type:'kpis',items:[
+      {l:'Available cash',v:'$31,200',d:'+4.2%',up:true},
+      {l:'Receivables due',v:'$3,450',d:'$180 overdue',up:false},
+      {l:'Bills due (AP)',v:'$4,180',d:'$420 overdue',up:false},
+      {l:'Card balances owed',v:'$4,180',d:'3 cards'},
+      {l:'Net profit',v:'$23,800',d:'this month',up:true},
+      {l:'Revenue',v:'$42,100',d:'MTD',up:true},
+    ]},
     {type:'bars',title:'Revenue · 6 months',series:[
       {label:'Feb',value:44,color:'#F0803C'},{label:'Mar',value:52,color:'#F0803C'},{label:'Apr',value:48,color:'#F0803C'},
-      {label:'May',value:61,color:'#F0803C'},{label:'Jun',value:55,color:'#F0803C'},{label:'Jul',value:63,color:'#F0803C'}]},
-    {type:'list',title:'Projects & milestone billing',rows:[
-      {dot:C.stocks,label:'Website build · $3k of $10k',sub:'Deposit 30% invoiced · Midpoint 40% pending → Bill',val:'30%'},
-      {dot:C.alt,label:'Completion · 30%',sub:'Due Oct 30 · Pending',val:'$3,000'}]},
-    {type:'list',title:'Recurring invoices',rows:[
-      {dot:C.stocks,label:'Northwind Co.',sub:'Monthly · Next Aug 1 · Active · tap Run',val:'$2,500'},
-      {dot:C.alt,label:'Harbor Group',sub:'Quarterly · Paused',val:'$6,000'}]},
-    {type:'list',title:'Transaction rules · auto-categorize',rows:[
-      {dot:C.stocks,label:'Merchant contains "AWS"',sub:'→ Software & Subscriptions',val:'●'},
-      {dot:C.alt,label:'Merchant contains "Gusto"',sub:'→ Payroll · tap Apply now',val:'●'}]},
-    {type:'list',title:'Purchase orders',rows:[
-      {dot:C.stocks,label:'Acme Supply',sub:'Approved · Expected Aug 8 · tap Convert',val:'$1,200'},
-      {dot:C.income,label:'Metro Print',sub:'Converted · Billed',val:'$640'}]},
-    {type:'list',title:'Bills & payables',rows:[
-      {dot:C.alt,label:'Staples',sub:'Operating · Due Aug 5 · tap Pay',val:'$1,180'},
-      {dot:C.alt,label:'AWS',sub:'Partially paid · $1,500 due',val:'$3,000'}]},
-    {type:'list',title:'Payables aging',rows:[
+      {label:'May',value:61,color:'#F0803C'},{label:'Jun',value:55,color:'#F0803C'},{label:'Jul',value:63,color:'#F0803C'},
+    ]},
+    {type:'ring',pct:0.72,label:'Runway',caption:'3.8 months · Good'},
+    {type:'list',title:'Receivables aging',rows:[
       {dot:C.income,label:'Current',sub:'Not yet due',val:'$2,940'},
       {dot:C.alt,label:'1–30 days',sub:'Recently overdue',val:'$820'},
-      {dot:C.entertainment,label:'90+ days',sub:'Past due',val:'$420'}]},
-    {type:'list',title:'Financial statements · from your ledger',rows:[
-      {dot:C.income,label:'Profit & Loss',sub:'Real double-entry · Net profit $23,800 · YTD · 🛡 verified',val:'PDF/XLSX'},
-      {dot:C.stocks,label:'Balance Sheet',sub:'Assets = Liabilities + Equity · balanced',val:'●'},
-      {dot:C.alt,label:'Statement of Cash Flows',sub:'Net change in cash · export',val:'●'}]},
-    {type:'list',title:'Automated payment reminders',rows:[
-      {dot:C.income,label:'Dunning · On',sub:'3d before · on due · 7d overdue · email/SMS · skips paid/void',val:'⏰'}]},
-    {type:'list',title:'Quotes & estimates',rows:[
-      {dot:C.stocks,label:'Blue Harbor LLC',sub:'Sent · Expires Aug 15 · tap to convert',val:'$4,800'},
-      {dot:C.income,label:'Cedar & Co.',sub:'Converted · Invoiced',val:'$1,250'}]},
-    {type:'list',title:'Invoices',rows:[
-      {dot:C.income,label:'Northwind Co.',sub:'Itemized · Paid in full · Share / Pay Now',val:'$6,200'},
-      {dot:C.alt,label:'Pinecrest Studio',sub:'Viewed Jun 12 · Overdue · tap Share (WhatsApp/AirDrop)',val:'$3,450'},
-      {dot:C.stocks,label:'Harbor Group',sub:'Partially paid · $900 due · Pay Now: card/ACH',val:'$2,100'}]},
-    {type:'list',title:'Customers',rows:[
-      {dot:C.stocks,label:'Northwind Co.',sub:'billing@northwind.co · Pays by ACH',val:'●'},
-      {dot:C.stocks,label:'Harbor Group',sub:'+1 555 0142 · Pays by card',val:'●'}]},
-    {type:'list',title:'Sales-tax rates',rows:[
-      {dot:C.income,label:'CA Sales Tax',sub:'US · CA · auto-applied by customer location',val:'8.25%'},
-      {dot:C.alt,label:'Default',sub:'Fallback when nothing else matches',val:'0%'}]},
+      {dot:C.neg,label:'90+ days',sub:'Past due',val:'$420'},
+    ]},
+    {type:'list',title:'Payables aging',rows:[
+      {dot:C.income,label:'Current',sub:'Not yet due',val:'$2,940'},
+      {dot:C.alt,label:'1–30 days',sub:'Due soon',val:'$820'},
+      {dot:C.neg,label:'90+ days',sub:'Past due',val:'$420'},
+    ]},
+    {type:'verdict',tone:'warn',title:'Overdue invoices are straining runway',detail:'Collect $820 in overdue receivables to improve cash availability and avoid a shortfall.'},
+    {type:'list',title:'Business tools',rows:[
+      {dot:C.stocks,label:'Purchase orders',sub:'Procure-to-pay',val:'New PO'},
+      {dot:C.alt,label:'Bills & payables',sub:'Record vendor bills',val:'Pay'},
+      {dot:C.income,label:'Invoices',sub:'Pay Now links + auto-reconcile',val:'Send'},
+      {dot:C.stocks,label:'Recurring invoices',sub:'Auto-run schedules',val:'2 active'},
+      {dot:C.alt,label:'Quotes & estimates',sub:'Convert to invoice',val:'New'},
+      {dot:C.other,label:'Projects & milestone billing',sub:'Stage-based contracts',val:'Bill'},
+      {dot:C.housing,label:'Customers',sub:'Tax rates and contact details',val:'Manage'},
+      {dot:C.cash,label:'Documents',sub:'Per-business file vault',val:'Add'},
+      {dot:C.stocks,label:'Financial statements',sub:'Ledger-backed P&L / Balance Sheet',val:'Export'},
+    ]},
+    {type:'list',title:'Operations foundation',rows:[
+      {dot:C.cash,label:'Inventory & COGS',sub:'Tracked line items',val:'Ready'},
+      {dot:C.alt,label:'Contractors / 1099',sub:'Managed payees and forms',val:'Active'},
+      {dot:C.housing,label:'Team members',sub:'Access & roles',val:'2'},
+    ]},
+    {type:'list',title:'Recent business actions',rows:[
+      {dot:C.stocks,label:'Northwind Co.',sub:'Paid in full',val:'$6,200'},
+      {dot:C.neg,label:'Pinecrest Studio',sub:'Overdue · Viewed Jun 12',val:'$3,450'},
+      {dot:C.alt,label:'Harbor Group',sub:'Partially paid · $900 due',val:'$2,100'},
+    ]},
+  ]},
+  business-firstrun:{section:'business',name:'My Business · First run',isNew:true,blocks:[
+    {type:'header',title:'My Business',subtitle:'First run — no business added yet'},
+    {type:'list',title:'Get started',rows:[
+      {dot:C.stocks,label:'Add a business',sub:'Name it and pick the entity type',val:'Start'},
+      {dot:C.income,label:'Link accounts',sub:'Bank and credit cards sync automatically',val:'Link'},
+      {dot:C.other,label:'Invoice & file',sub:'Create invoices and file documents by year',val:'Go'},
+    ]},
+    {type:'list',title:'Why it matters',rows:[
+      {dot:C.housing,label:'Separate business cash flow',sub:'Per-business P&L and ledger tracking',val:'Clear'},
+      {dot:C.alt,label:'Track bills and invoices',sub:'Payables, receivables and reminders',val:'Smart'},
+      {dot:C.income,label:'Ledger-backed statements',sub:'Export PDF / Excel',val:'Tax-ready'},
+    ]},
   ]},
   properties:{section:'realestate',name:'Properties',blocks:[
+
     {type:'header',title:'Properties',subtitle:'Your real estate portfolio'},
     {type:'kpis',items:[{l:'Total value',v:'$720k',up:true},{l:'Equity',v:'$310k'},{l:'Mortgage',v:'$410k'}]},
     {type:'list',title:'Portfolio',rows:[

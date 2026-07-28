@@ -75,6 +75,10 @@ public class BusinessBill {
     @Column(name = "payment_reference", length = 200)
     private String paymentReference;
 
+    /** The bank transaction reconciled to this bill (Phase 3b), if any. */
+    @Column(name = "linked_transaction_id")
+    private Long linkedTransactionId;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

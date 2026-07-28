@@ -782,6 +782,68 @@ export const api = {
   convertBusinessPurchaseOrder: (id, payload) =>
     request(`/api/v1/business/manual/purchase-orders/${id}/convert`, { method: "POST", body: JSON.stringify(payload || {}) }),
 
+  // One-click bank reconciliation (Phase 3b).
+  getReconcileSuggestions: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/reconcile/suggestions`),
+  confirmReconcile: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/reconcile/confirm`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  // Inventory / COGS foundation (Phase 4).
+  getBusinessInventory: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory`),
+  createBusinessInventoryItem: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessInventoryItem: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessInventoryItem: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory/${id}`, { method: "DELETE" }),
+  adjustBusinessInventoryItem: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory/${id}/adjust`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  // Payroll / 1099 contractor foundation (Phase 5).
+  getBusinessContractors: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractors`),
+  createBusinessContractor: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractors`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessContractor: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractors/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessContractor: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractors/${id}`, { method: "DELETE" }),
+
+  // Business-team RBAC foundation (cross-cutting).
+  getBusinessTeamMembers: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/team`),
+  createBusinessTeamMember: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/team`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessTeamMember: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/team/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessTeamMember: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/team/${id}`, { method: "DELETE" }),
+
   // Transaction categorization rules (bank feeds Phase 3a).
   getBusinessTxnRules: (businessId) =>
     request(`/api/v1/business/manual/businesses/${businessId}/txn-rules`),

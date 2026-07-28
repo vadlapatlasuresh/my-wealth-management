@@ -1,5 +1,10 @@
 # Phase 4 — Business Financials Service (QuickBooks Online) ✅ DONE (mock provider)
 
+## QuickBooks-parity update (2026-07-28)
+- Phase 3b reconciliation is now implemented in the backend and web UI for matching bank transactions to open invoices and bills.
+- Inventory/COGS and payroll/1099 contractor flows are now implemented end-to-end in the backend and MyBusiness UI, including CRUD, stock adjustments, and basic ledger posting.
+- Business-team RBAC is now implemented as a working foundation in the backend and surfaced in the MyBusiness UI with view/manage access rules.
+
 > **Status:** Built and live. `business-financials-service` (:8085) at `/api/v1/business`
 > (connection, dashboard, pnl, invoices, expenses, connect, sync); `MyBusinessPage` is wired.
 > Data comes from `MockBusinessDataProvider` (deterministic per user). Set the `qbo.*` keys and
