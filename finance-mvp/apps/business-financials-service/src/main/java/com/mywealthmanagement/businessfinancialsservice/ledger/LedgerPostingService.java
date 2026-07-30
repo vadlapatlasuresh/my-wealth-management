@@ -1,7 +1,11 @@
 package com.mywealthmanagement.businessfinancialsservice.ledger;
 
 import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessBill;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessContractorPayment;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessInventoryItem;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessInventoryMovement;
 import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessInvoice;
+import com.mywealthmanagement.businessfinancialsservice.business.manual.BusinessPayrollRun;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +35,9 @@ public class LedgerPostingService {
     private static final String SRC_PAYMENT = "PAYMENT";
     private static final String SRC_BILL = "BILL";
     private static final String SRC_BILL_PAYMENT = "BILL_PAYMENT";
+    private static final String SRC_INV_MOVE = "INVENTORY_MOVE";
+    private static final String SRC_CONTRACTOR_PAYMENT = "CONTRACTOR_PAYMENT";
+    private static final String SRC_PAYROLL = "PAYROLL_RUN";
 
     private final LedgerService ledger;
     private final JournalEntryRepository entryRepo;
@@ -178,6 +185,92 @@ public class LedgerPostingService {
                     });
         } catch (RuntimeException e) {
             log.warn("ledger: failed to void bill {}: {}", bill.getId(), e.getMessage());
+        }
+    }
+
+    /* ==================== Inventory / COGS (Phase 4) ==================== */
+
+    /**
+     * A stock movement, valued at cost. Keyed on the movement id so it posts exactly once.
+     *   Stock in  (RECEIVE / positive ADJUST): DR 1200 Inventory / CR 5000 COGS (capitalize)
+     *   Stock out (SELL / negative ADJUST):     DR 5000 COGS / CR 1200 Inventory (recognize)
+     */
+    public void postInventoryMovement(BusinessInventoryMovement m, BusinessInventoryItem item) {
+        if (m == null || m.getId() == null || item == null) return;
+        String ref = String.valueOf(m.getId());
+        try {
+            if (entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(m.getBusinessId(), SRC_INV_MOVE, ref)) return;
+            BigDecimal unit = m.getUnitCost() != null ? m.getUnitCost() : nz(item.getCostPrice());
+            BigDecimal amount = unit.multiply(BigDecimal.valueOf(Math.abs(m.getDelta())));
+            if (amount.signum() <= 0) return;
+            String label = (m.getKind() == null ? "Inventory" : m.getKind().charAt(0) + m.getKind().substring(1).toLowerCase())
+                    + " — " + item.getName();
+            List<LedgerService.LineInput> lines = m.getDelta() >= 0
+                    ? List.of(new LedgerService.LineInput("1200", amount, null, "Inventory in — " + item.getName()),
+                              new LedgerService.LineInput("5000", null, amount, "COGS adjustment"))
+                    : List.of(new LedgerService.LineInput("5000", amount, null, "COGS — " + item.getName()),
+                              new LedgerService.LineInput("1200", null, amount, "Inventory out"));
+            ledger.post(m.getBusinessId(), m.getUserId(),
+                    m.getCreatedAt() != null ? m.getCreatedAt().toLocalDate() : LocalDate.now(),
+                    label, SRC_INV_MOVE, ref, lines);
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to post inventory movement {}: {}", m.getId(), e.getMessage());
+        }
+    }
+
+    /* ==================== Payroll / 1099 (Phase 5) ==================== */
+
+    /**
+     * A 1099 contractor payment — contract labor, paid in cash:
+     *   DR 6000 Operating Expenses = amount
+     *   CR 1000 Cash               = amount
+     * Keyed on the payment id (idempotent).
+     */
+    public void postContractorPayment(BusinessContractorPayment p, String contractorName) {
+        if (p == null || p.getId() == null) return;
+        String ref = String.valueOf(p.getId());
+        try {
+            if (entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(p.getBusinessId(), SRC_CONTRACTOR_PAYMENT, ref)) return;
+            BigDecimal amt = nz(p.getAmount());
+            if (amt.signum() <= 0) return;
+            String who = contractorName != null ? contractorName : "contractor";
+            List<LedgerService.LineInput> lines = List.of(
+                    new LedgerService.LineInput("6000", amt, null, "Contract labor — " + who),
+                    new LedgerService.LineInput("1000", null, amt, "Paid " + who));
+            ledger.post(p.getBusinessId(), p.getUserId(),
+                    p.getPaidAt() != null ? p.getPaidAt() : LocalDate.now(),
+                    "Contractor payment — " + who, SRC_CONTRACTOR_PAYMENT, ref, lines);
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to post contractor payment {}: {}", p.getId(), e.getMessage());
+        }
+    }
+
+    /**
+     * An employee payroll run:
+     *   DR 6100 Payroll Expense       = gross
+     *   CR 2300 Payroll Liabilities   = withholdings (fed + state + FICA)
+     *   CR 1000 Cash                  = net take-home
+     * Keyed on the run id (idempotent).
+     */
+    public void postPayrollRun(BusinessPayrollRun r, String employeeName) {
+        if (r == null || r.getId() == null) return;
+        String ref = String.valueOf(r.getId());
+        try {
+            if (entryRepo.existsByBusinessIdAndSourceTypeAndSourceRef(r.getBusinessId(), SRC_PAYROLL, ref)) return;
+            BigDecimal gross = nz(r.getGross());
+            if (gross.signum() <= 0) return;
+            BigDecimal withheld = nz(r.getFedWh()).add(nz(r.getStateWh())).add(nz(r.getFica()));
+            BigDecimal net = nz(r.getNet());
+            String who = employeeName != null ? employeeName : "employee";
+            List<LedgerService.LineInput> lines = new ArrayList<>();
+            lines.add(new LedgerService.LineInput("6100", gross, null, "Gross wages — " + who));
+            if (withheld.signum() > 0) lines.add(new LedgerService.LineInput("2300", null, withheld, "Payroll withholdings"));
+            lines.add(new LedgerService.LineInput("1000", null, net, "Net pay — " + who));
+            ledger.post(r.getBusinessId(), r.getUserId(),
+                    r.getPaidAt() != null ? r.getPaidAt() : LocalDate.now(),
+                    "Payroll — " + who, SRC_PAYROLL, ref, lines);
+        } catch (RuntimeException e) {
+            log.warn("ledger: failed to post payroll run {}: {}", r.getId(), e.getMessage());
         }
     }
 

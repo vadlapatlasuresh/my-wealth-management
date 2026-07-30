@@ -95,12 +95,18 @@ export default function InventoryPanel({ businessId, currency, onError, onFlash 
 
   async function adjustStock(item, delta) {
     try {
-      await api.adjustBusinessInventoryItem(businessId, item.id, { delta });
+      // +stock is a receipt, −stock is a sale — the ledger posts COGS accordingly.
+      const kind = delta > 0 ? 'RECEIVE' : 'SELL';
+      await api.adjustBusinessInventoryItem(businessId, item.id, { delta, kind });
       await loadItems();
       onFlash?.(`Stock adjusted for ${item.name}.`);
     } catch (err) {
       onError?.(err?.message || 'Could not adjust stock.');
     }
+  }
+
+  function isLow(item) {
+    return item.reorderPoint != null && (item.onHand ?? 0) <= item.reorderPoint;
   }
 
   return (
@@ -180,7 +186,10 @@ export default function InventoryPanel({ businessId, currency, onError, onFlash 
                     {item.notes ? <div className="item-sub">{item.notes}</div> : null}
                   </td>
                   <td style={{ color: 'var(--tv-text-muted)' }}>{item.sku || '—'}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>{item.onHand ?? 0}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                    {item.onHand ?? 0}
+                    {isLow(item) ? <span className="badge badge-warning" style={{ marginLeft: 6 }} title={`At or below reorder point (${item.reorderPoint})`}><i className="ti ti-alert-triangle"></i> Low</span> : null}
+                  </td>
                   <td style={{ textAlign: 'right' }}>{currency(Number(item.costPrice) || 0)}</td>
                   <td style={{ textAlign: 'right' }}>{currency(Number(item.sellPrice) || 0)}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
