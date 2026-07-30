@@ -445,11 +445,11 @@ a { text-decoration: none; color: inherit; }
   transform: translateY(-1px);
 }
 .kpi-label {
-  font-size: 11.5px;
-  color: var(--tv-text-muted);
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--tv-text-secondary);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -473,6 +473,9 @@ a { text-decoration: none; color: inherit; }
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-weight: 700;
+  color: var(--tv-text-primary);
+  font-size: 13.5px;
 }
 .kpi-chevron {
   margin-left: auto;
@@ -489,13 +492,19 @@ a { text-decoration: none; color: inherit; }
 }
 .kpi-value {
   font-family: var(--font-display);
-  /* Scale to the card's own width (container query) so millions stay on one
-     line inside the box; caps at 22px on roomy cards. */
-  font-size: clamp(15px, 10.5cqi, 22px);
+  font-size: clamp(18px, 11.5cqi, 26px);
+  font-weight: 800;
   color: var(--tv-text-primary);
   line-height: 1.15;
   min-width: 0;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+}
+.stat-tile-value, .big-val, .kpi-value-lg, .num, .item-amount, .tv-row, .kpi-delta, .tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  font-weight: 700;
 }
 .kpi-delta {
   font-size: 11px;
@@ -1346,34 +1355,62 @@ a { text-decoration: none; color: inherit; }
           <!-- Net Worth Chart -->
           <div class="card col-span-2">
             <div class="section-header">
-              <div class="section-title">Net worth over time</div>
+              <div class="section-title" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span>Net worth over time</span>
+                <div style="display:inline-flex;align-items:center;gap:6px;background:var(--tv-card);border:1px solid var(--tv-border);padding:2px 8px;border-radius:var(--radius-sm);">
+                  <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;color:var(--tv-text-muted);display:inline-flex;align-items:center;gap:4px;"><i class="ti ti-filter"></i> PORTFOLIO:</span>
+                  <select id="nw-portfolio-filter" onchange="updateNwChart()" class="form-select" style="font-size:12.5px;font-weight:600;padding:2px 6px;height:28px;width:auto;border:none;background:transparent;color:var(--tv-text-primary);cursor:pointer;">
+                    <option value="all">All (Net Worth)</option>
+                    <option value="investments">Investments Only</option>
+                    <option value="cash">Cash & Liquid</option>
+                    <option value="realestate">Real Estate Equity</option>
+                    <option value="business">Business Financials</option>
+                    <option value="debt">Credit & Debt (Liabilities)</option>
+                  </select>
+                </div>
+              </div>
               <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
                 <!-- Chart-type segmented toggle (connected buttons) -->
-                <div style="display:inline-flex;border:1px solid var(--tv-border);border-radius:var(--radius-sm);overflow:hidden;">
-                  <button class="btn-sm" style="padding:4px 12px;background:var(--tv-forest);color:#fff;border-radius:0;font-weight:500;">Area</button>
-                  <button class="btn-sm" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Line</button>
-                  <button class="btn-sm" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Bars</button>
+                <div id="nw-chart-type-toggle" style="display:inline-flex;border:1px solid var(--tv-border);border-radius:var(--radius-sm);overflow:hidden;">
+                  <button class="btn-sm nw-type-btn active" onclick="setNwChartType('area', this)" style="padding:4px 12px;background:var(--tv-forest);color:#fff;border-radius:0;font-weight:500;">Area</button>
+                  <button class="btn-sm nw-type-btn" onclick="setNwChartType('line', this)" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Line</button>
+                  <button class="btn-sm nw-type-btn" onclick="setNwChartType('bars', this)" style="padding:4px 12px;background:transparent;color:var(--tv-text-secondary);border-radius:0;border-left:1px solid var(--tv-border);font-weight:500;">Bars</button>
                 </div>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1H</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1D</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1W</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1M</button>
-                <button class="btn btn-primary btn-sm" style="padding:4px 10px;background:var(--tv-forest);">3M</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">1Y</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;">All</button>
-                <button class="btn btn-secondary btn-sm" style="padding:4px 10px;"><i class="ti ti-calendar-event"></i> Custom</button>
+              <div id="nw-range-toggle" style="display:flex;gap:6px;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('1H', this)" style="padding:4px 10px;">1H</button>
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('1D', this)" style="padding:4px 10px;">1D</button>
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('1W', this)" style="padding:4px 10px;">1W</button>
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('1M', this)" style="padding:4px 10px;">1M</button>
+                <button class="btn btn-primary btn-sm nw-range-btn active" onclick="setNwRange('3M', this)" style="padding:4px 10px;background:var(--tv-forest);">3M</button>
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('1Y', this)" style="padding:4px 10px;">1Y</button>
+                <button class="btn btn-secondary btn-sm nw-range-btn" onclick="setNwRange('All', this)" style="padding:4px 10px;">All</button>
               </div>
               </div>
             </div>
 
-            <!-- Downfall alert banner — only appears when net worth drops >15% in the period (example state shown) -->
-            <div style="display:flex;align-items:flex-start;gap:8px;background:var(--tv-negative-bg);border-left:3px solid var(--tv-negative);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--tv-text-primary);">
+            <!-- 3-Column Summary Metrics Grid -->
+            <div id="nw-summary-metrics" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0 16px;padding:12px 16px;background:var(--tv-sage-pale);border-radius:var(--radius-md);border:1px solid var(--tv-border-light);">
+              <div>
+                <div id="nw-metric-label" style="font-size:11px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:2px;text-transform:uppercase;">CURRENT NET WORTH</div>
+                <div id="nw-metric-val" style="font-family:var(--font-display);font-size:20px;font-weight:800;color:var(--tv-text-primary);font-variant-numeric:tabular-nums;">$263,820</div>
+              </div>
+              <div>
+                <div style="font-size:11px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:2px;text-transform:uppercase;">7-DAY CHANGE</div>
+                <div id="nw-metric-week-change" style="font-size:16px;font-weight:700;color:var(--tv-positive);font-variant-numeric:tabular-nums;">+$2,450 (+0.9%)</div>
+              </div>
+              <div>
+                <div id="nw-metric-period-label" style="font-size:11px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.04em;margin-bottom:2px;text-transform:uppercase;">PERIOD CHANGE (3M)</div>
+                <div id="nw-metric-change-amt-pct" style="font-size:16px;font-weight:700;color:var(--tv-positive);font-variant-numeric:tabular-nums;">+$15,732 (+6.3%)</div>
+              </div>
+            </div>
+
+            <!-- Downfall alert banner — only appears when net worth drops >15% in the period -->
+            <div id="nw-alert-banner" style="display:flex;align-items:flex-start;gap:8px;background:var(--tv-negative-bg);border-left:3px solid var(--tv-negative);border-radius:var(--radius-md);padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--tv-text-primary);">
               <span style="color:var(--tv-negative);font-weight:600;">⚠</span>
               <span>Net worth fell <strong>18.2%</strong> this period. Biggest drag: Credit cards (<span style="color:var(--tv-negative);font-weight:600;">−$1,038</span>).</span>
             </div>
 
-            <div class="chart-wrap">
+            <div class="chart-wrap" id="nw-chart-svg-container">
               <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
                 <!-- Grid lines -->
                 <line x1="0" y1="170" x2="800" y2="170" stroke="#DDE5E1" stroke-width="0.5"/>
@@ -6025,6 +6062,159 @@ function toggleSsn(btn) {
   const shown = el.textContent.trim() === '•••-••-6789';
   el.textContent = shown ? '•••-••-••••' : '•••-••-6789';
   btn.innerHTML = shown ? '<i class="ti ti-eye"></i> Show' : '<i class="ti ti-eye-off"></i> Hide';
+}
+
+// Net Worth Chart & Summary Metrics Engine
+let currentNwChartType = 'area';
+let currentNwRange = '3M';
+
+const portfolioData = {
+  all: { label: 'CURRENT NET WORTH', val: '$263,820', week: '+$2,450 (+0.9%)', amt: '+$15,732', pct: '+6.3%', color: '#1A4D3B' },
+  investments: { label: 'PORTFOLIO VALUE (INVESTMENTS)', val: '$181,029', week: '+$1,820 (+1.0%)', amt: '+$10,450', pct: '+6.1%', color: '#6B46C1' },
+  cash: { label: 'CASH & LIQUID BALANCES', val: '$38,420', week: '+$310 (+0.8%)', amt: '+$2,320', pct: '+6.4%', color: '#1E5FAD' },
+  realestate: { label: 'REAL ESTATE EQUITY', val: '$312,000', week: '+$500 (+0.2%)', amt: '+$8,500', pct: '+2.8%', color: '#C9973A' },
+  business: { label: 'BUSINESS NET ASSETS', val: '$95,200', week: '+$620 (+0.7%)', amt: '+$4,150', pct: '+4.5%', color: '#2E7D5B' },
+  debt: { label: 'TOTAL CREDIT & DEBT (LIABILITIES)', val: '$45,629', week: '-$240 (-0.5%)', amt: '-$1,038', pct: '-2.2%', color: '#E05252' }
+};
+
+function setNwChartType(type, btn) {
+  currentNwChartType = type;
+  document.querySelectorAll('.nw-type-btn').forEach(b => {
+    b.style.background = 'transparent';
+    b.style.color = 'var(--tv-text-secondary)';
+    b.classList.remove('active');
+  });
+  if (btn) {
+    btn.style.background = 'var(--tv-forest)';
+    btn.style.color = '#fff';
+    btn.classList.add('active');
+  }
+  updateNwChart();
+}
+
+function setNwRange(range, btn) {
+  currentNwRange = range;
+  document.querySelectorAll('.nw-range-btn').forEach(b => {
+    b.className = 'btn btn-secondary btn-sm nw-range-btn';
+    b.style.background = 'transparent';
+  });
+  if (btn) {
+    btn.className = 'btn btn-primary btn-sm nw-range-btn active';
+    btn.style.background = 'var(--tv-forest)';
+  }
+  updateNwChart();
+}
+
+function updateNwChart() {
+  const filter = document.getElementById('nw-portfolio-filter')?.value || 'all';
+  const data = portfolioData[filter] || portfolioData.all;
+  
+  const lblEl = document.getElementById('nw-metric-label');
+  const valEl = document.getElementById('nw-metric-val');
+  const weekEl = document.getElementById('nw-metric-week-change');
+  const periodLblEl = document.getElementById('nw-metric-period-label');
+  const changeAmtPctEl = document.getElementById('nw-metric-change-amt-pct');
+  
+  if (lblEl) lblEl.textContent = data.label;
+  if (valEl) valEl.textContent = data.val;
+  if (weekEl) {
+    weekEl.textContent = data.week;
+    weekEl.style.color = data.week.startsWith('-') ? 'var(--tv-negative)' : 'var(--tv-positive)';
+  }
+  if (periodLblEl) periodLblEl.textContent = `PERIOD CHANGE (${currentNwRange})`;
+  if (changeAmtPctEl) {
+    changeAmtPctEl.textContent = `${data.amt} (${data.pct})`;
+    changeAmtPctEl.style.color = data.amt.startsWith('-') ? 'var(--tv-negative)' : 'var(--tv-positive)';
+  }
+
+  const alertBanner = document.getElementById('nw-alert-banner');
+  if (alertBanner) {
+    if (filter === 'debt') {
+      alertBanner.style.display = 'flex';
+      alertBanner.innerHTML = `<span style="color:var(--tv-negative);font-weight:700;">⚠</span><span>Credit card balances increased <strong>14.2%</strong> over the past 30 days (<span style="color:var(--tv-negative);font-weight:700;">+$1,038</span>).</span>`;
+    } else {
+      alertBanner.style.display = 'flex';
+      alertBanner.innerHTML = `<span style="color:var(--tv-positive);font-weight:700;">✓</span><span>Portfolio trajectory is positive up <strong>${data.pct}</strong> (${data.amt}) in the <strong>${currentNwRange}</strong> window.</span>`;
+      alertBanner.style.background = 'var(--tv-positive-bg)';
+      alertBanner.style.borderLeft = '3px solid var(--tv-positive)';
+    }
+  }
+
+  const svgContainer = document.getElementById('nw-chart-svg-container');
+  if (!svgContainer) return;
+
+  const color = data.color;
+  let chartContent = '';
+
+  if (currentNwChartType === 'bars') {
+    chartContent = `
+      <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="170" x2="800" y2="170" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="130" x2="800" y2="130" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="90"  x2="800" y2="90"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="50"  x2="800" y2="50"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <rect x="70" y="120" width="36" height="50" rx="4" fill="${color}" opacity="0.6"/>
+        <rect x="230" y="100" width="36" height="70" rx="4" fill="${color}" opacity="0.7"/>
+        <rect x="390" y="80" width="36" height="90" rx="4" fill="${color}" opacity="0.8"/>
+        <rect x="550" y="60" width="36" height="110" rx="4" fill="${color}" opacity="0.9"/>
+        <rect x="710" y="35" width="36" height="135" rx="4" fill="${color}"/>
+        <rect x="680" y="10" width="105" height="26" rx="6" fill="${color}"/>
+        <text x="732" y="27" text-anchor="middle" font-size="11" fill="white" font-family="DM Sans,sans-serif" font-weight="700">${data.val}</text>
+        <text x="88"  y="192" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Mar</text>
+        <text x="248" y="192" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Apr</text>
+        <text x="408" y="192" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">May</text>
+        <text x="568" y="192" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
+        <text x="728" y="192" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Now</text>
+      </svg>
+    `;
+  } else if (currentNwChartType === 'line') {
+    chartContent = `
+      <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="170" x2="800" y2="170" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="130" x2="800" y2="130" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="90"  x2="800" y2="90"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="50"  x2="800" y2="50"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <path d="M40,162 C60,158 100,165 140,155 C180,145 200,138 240,130 C280,122 300,118 340,110 C380,102 400,108 440,98 C480,88 500,85 540,78 C580,71 600,74 640,65 C680,56 720,52 760,40" fill="none" stroke="${color}" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="760" cy="40" r="5" fill="${color}"/>
+        <circle cx="760" cy="40" r="9" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.3"/>
+        <rect x="680" y="10" width="105" height="26" rx="6" fill="${color}"/>
+        <text x="732" y="27" text-anchor="middle" font-size="11" fill="white" font-family="DM Sans,sans-serif" font-weight="700">${data.val}</text>
+        <text x="40"  y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Mar</text>
+        <text x="200" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Apr</text>
+        <text x="400" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">May</text>
+        <text x="600" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
+        <text x="760" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Now</text>
+      </svg>
+    `;
+  } else {
+    // Area chart
+    chartContent = `
+      <svg viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+        <line x1="0" y1="170" x2="800" y2="170" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="130" x2="800" y2="130" stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="90"  x2="800" y2="90"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <line x1="0" y1="50"  x2="800" y2="50"  stroke="#DDE5E1" stroke-width="0.5"/>
+        <defs>
+          <linearGradient id="chartGradDyn" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity="0.2"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+        <path d="M40,162 C60,158 100,165 140,155 C180,145 200,138 240,130 C280,122 300,118 340,110 C380,102 400,108 440,98 C480,88 500,85 540,78 C580,71 600,74 640,65 C680,56 720,52 760,40 L760,190 L40,190 Z" fill="url(#chartGradDyn)"/>
+        <path d="M40,162 C60,158 100,165 140,155 C180,145 200,138 240,130 C280,122 300,118 340,110 C380,102 400,108 440,98 C480,88 500,85 540,78 C580,71 600,74 640,65 C680,56 720,52 760,40" fill="none" stroke="${color}" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="760" cy="40" r="5" fill="${color}"/>
+        <circle cx="760" cy="40" r="9" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.3"/>
+        <rect x="680" y="10" width="105" height="26" rx="6" fill="${color}"/>
+        <text x="732" y="27" text-anchor="middle" font-size="11" fill="white" font-family="DM Sans,sans-serif" font-weight="700">${data.val}</text>
+        <text x="40"  y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Mar</text>
+        <text x="200" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Apr</text>
+        <text x="400" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">May</text>
+        <text x="600" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Jun</text>
+        <text x="760" y="195" font-size="10" fill="#7A9086" text-anchor="middle" font-family="DM Sans,sans-serif">Now</text>
+      </svg>
+    `;
+  }
+  svgContainer.innerHTML = chartContent;
 }
 </script>
 </body>
