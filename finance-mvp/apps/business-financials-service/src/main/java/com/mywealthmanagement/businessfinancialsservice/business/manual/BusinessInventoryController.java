@@ -67,7 +67,33 @@ public class BusinessInventoryController {
         }
         Integer delta = body.get("delta") instanceof Number n ? n.intValue() : null;
         if (delta == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "delta is required");
-        return inventoryService.adjustStock(userId, businessId, id, delta);
+        String kind = body.get("kind") == null ? null : String.valueOf(body.get("kind"));
+        String note = body.get("note") == null ? null : String.valueOf(body.get("note"));
+        return inventoryService.adjustStock(userId, businessId, id, delta, kind, note);
+    }
+
+    /** Items at or below their reorder point — the low-stock / reorder alert list. */
+    @GetMapping("/businesses/{businessId}/inventory/low-stock")
+    public List<BusinessInventoryItem> lowStock(@PathVariable Long businessId) {
+        Long userId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canView(userId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return inventoryService.lowStock(userId, businessId);
+    }
+
+    /** The stock-movement history for one item (newest first). */
+    @GetMapping("/businesses/{businessId}/inventory/{id}/movements")
+    public List<BusinessInventoryMovement> movements(@PathVariable Long businessId, @PathVariable Long id) {
+        Long userId = userId();
+        ManualBusiness business = businessRepo.findById(businessId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        if (!accessService.canView(userId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
+        return inventoryService.movements(userId, businessId, id);
     }
 
     @DeleteMapping("/businesses/{businessId}/inventory/{id}")

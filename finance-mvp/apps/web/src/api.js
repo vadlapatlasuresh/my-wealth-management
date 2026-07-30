@@ -811,6 +811,10 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  getBusinessInventoryLowStock: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory/low-stock`),
+  getBusinessInventoryMovements: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/inventory/${id}/movements`),
 
   // Payroll / 1099 contractor foundation (Phase 5).
   getBusinessContractors: (businessId) =>
@@ -827,6 +831,40 @@ export const api = {
     }),
   deleteBusinessContractor: (businessId, id) =>
     request(`/api/v1/business/manual/businesses/${businessId}/contractors/${id}`, { method: "DELETE" }),
+
+  // Contractor payments + year-end 1099 report (Phase 5).
+  getBusinessContractorPayments: (businessId, contractorId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractor-payments${contractorId ? `?contractorId=${contractorId}` : ""}`),
+  payBusinessContractor: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractor-payments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  getBusiness1099Report: (businessId, year) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/contractors/1099${year ? `?year=${year}` : ""}`),
+
+  // Employees + payroll runs (Phase 5).
+  getBusinessEmployees: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/employees`),
+  createBusinessEmployee: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/employees`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+  updateBusinessEmployee: (businessId, id, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/employees/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    }),
+  deleteBusinessEmployee: (businessId, id) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/employees/${id}`, { method: "DELETE" }),
+  getBusinessPayrollRuns: (businessId) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/payroll-runs`),
+  runBusinessPayroll: (businessId, payload) =>
+    request(`/api/v1/business/manual/businesses/${businessId}/payroll-runs`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
 
   // Business-team RBAC foundation (cross-cutting).
   getBusinessTeamMembers: (businessId) =>

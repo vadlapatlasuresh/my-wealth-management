@@ -18,6 +18,10 @@ export default function ContractorsPanel({ businessId, currency, onError, onFlas
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
   const [canManage, setCanManage] = useState(true);
+  const [payingId, setPayingId] = useState(null);
+  const [payForm, setPayForm] = useState({ amount: '', paidAt: '', method: 'ACH', reference: '' });
+  const [report, setReport] = useState(null);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
 
   const loadContractors = async () => {
     if (!businessId) return;
@@ -95,6 +99,41 @@ export default function ContractorsPanel({ businessId, currency, onError, onFlas
     }
   }
 
+  function startPay(contractor) {
+    setPayingId(contractor.id);
+    setPayForm({ amount: contractor.amount ?? '', paidAt: '', method: 'ACH', reference: '' });
+  }
+
+  async function submitPay(e, contractor) {
+    e.preventDefault();
+    const amount = Number(payForm.amount);
+    if (!amount || amount <= 0) return;
+    try {
+      await api.payBusinessContractor(businessId, {
+        contractorId: contractor.id,
+        amount,
+        paidAt: payForm.paidAt || null,
+        method: payForm.method || null,
+        reference: payForm.reference.trim() || null,
+      });
+      setPayingId(null);
+      onFlash?.(`Paid ${contractor.name} — recorded to the ledger.`);
+      if (report) await load1099(reportYear);
+    } catch (err) {
+      onError?.(err?.message || 'Could not record payment.');
+    }
+  }
+
+  async function load1099(year) {
+    try {
+      const r = await api.getBusiness1099Report(businessId, year);
+      setReport(r);
+      setReportYear(year);
+    } catch (err) {
+      onError?.(err?.message || 'Could not load the 1099 report.');
+    }
+  }
+
   return (
     <div className="card" style={{ marginBottom: 16 }}>
       <div className="section-header">
@@ -102,11 +141,49 @@ export default function ContractorsPanel({ businessId, currency, onError, onFlas
           <i className="ti ti-users" style={{ marginRight: 6, color: 'var(--tv-forest-light)' }}></i>
           Contractors &amp; 1099s
         </div>
-        <button className="btn btn-secondary btn-sm" onClick={() => (showAdd ? resetForm() : setShowAdd(true))} disabled={!businessId || !canManage}>
-          <i className={`ti ${showAdd ? 'ti-x' : 'ti-plus'}`}></i>{showAdd ? ' Cancel' : ' New contractor'}
-        </button>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => (report ? setReport(null) : load1099(reportYear))} disabled={!businessId}>
+            <i className="ti ti-file-dollar"></i>{report ? ' Hide 1099s' : ' 1099 report'}
+          </button>
+          <button className="btn btn-secondary btn-sm" onClick={() => (showAdd ? resetForm() : setShowAdd(true))} disabled={!businessId || !canManage}>
+            <i className={`ti ${showAdd ? 'ti-x' : 'ti-plus'}`}></i>{showAdd ? ' Cancel' : ' New contractor'}
+          </button>
+        </div>
       </div>
-      <p className="item-sub" style={{ margin: '-4px 0 12px' }}>Keep a simple contractor roster for payroll and 1099 tracking.</p>
+      <p className="item-sub" style={{ margin: '-4px 0 12px' }}>Track contractors, record payments (posted to the ledger), and see year-end 1099 totals.</p>
+
+      {report && (
+        <div className="card" style={{ background: 'var(--tv-surface-2, rgba(0,0,0,0.03))', marginBottom: 14, padding: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ fontWeight: 600 }}><i className="ti ti-file-dollar"></i> 1099-NEC totals</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => load1099(reportYear - 1)}><i className="ti ti-chevron-left"></i></button>
+              <span style={{ fontWeight: 600 }}>{report.year}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => load1099(reportYear + 1)} disabled={reportYear >= new Date().getFullYear()}><i className="ti ti-chevron-right"></i></button>
+            </div>
+          </div>
+          <p className="item-sub" style={{ margin: '0 0 8px' }}>{report.reportableCount || 0} contractor(s) at or above the {currency(Number(report.threshold) || 600)} IRS reporting threshold · {currency(Number(report.grandTotal) || 0)} paid in {report.year}.</p>
+          {(report.rows || []).length === 0 ? (
+            <div className="item-sub">No contractor payments recorded for {report.year}.</div>
+          ) : (
+            <div className="table-scroll">
+              <table className="tv-table">
+                <thead><tr><th>Contractor</th><th>Tax form</th><th style={{ textAlign: 'right' }}>Paid {report.year}</th><th>1099?</th></tr></thead>
+                <tbody>
+                  {report.rows.map((r) => (
+                    <tr key={r.contractorId}>
+                      <td><div style={{ fontWeight: 600 }}>{r.name}</div>{r.email ? <div className="item-sub">{r.email}</div> : null}</td>
+                      <td style={{ color: 'var(--tv-text-muted)' }}>{r.taxForm || '1099'}</td>
+                      <td style={{ textAlign: 'right', fontWeight: 600 }}>{currency(Number(r.total) || 0)}</td>
+                      <td>{r.reportable ? <span className="badge badge-forest">Required</span> : <span className="badge">Under</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
       {!canManage && (
         <div className="item-sub" style={{ margin: '-4px 0 12px', color: 'var(--tv-warning)' }}><i className="ti ti-eye-off"></i> You currently have view-only access to this business workspace.</div>
       )}
@@ -167,7 +244,8 @@ export default function ContractorsPanel({ businessId, currency, onError, onFlas
             </thead>
             <tbody>
               {contractors.map((contractor) => (
-                <tr key={contractor.id}>
+                <React.Fragment key={contractor.id}>
+                <tr>
                   <td>
                     <div style={{ fontWeight: 600 }}>{contractor.name}</div>
                     {contractor.email ? <div className="item-sub">{contractor.email}</div> : null}
@@ -176,10 +254,40 @@ export default function ContractorsPanel({ businessId, currency, onError, onFlas
                   <td style={{ textAlign: 'right' }}>{currency(Number(contractor.amount) || 0)}</td>
                   <td><span className="badge badge-forest">{contractor.status || 'ACTIVE'}</span></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
-                    <button className="btn btn-secondary btn-sm" onClick={() => startEdit(contractor)}><i className="ti ti-pencil"></i></button>
+                    <button className="btn btn-primary btn-sm" onClick={() => startPay(contractor)} disabled={!canManage} title="Record a payment"><i className="ti ti-cash"></i> Pay</button>
+                    <button className="btn btn-secondary btn-sm" style={{ marginLeft: 6 }} onClick={() => startEdit(contractor)}><i className="ti ti-pencil"></i></button>
                     <button className="btn btn-secondary btn-sm" style={{ marginLeft: 6 }} onClick={() => deleteContractor(contractor)}><i className="ti ti-trash"></i></button>
                   </td>
                 </tr>
+                {payingId === contractor.id && (
+                  <tr>
+                    <td colSpan={5}>
+                      <form onSubmit={(e) => submitPay(e, contractor)} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'flex-end', padding: '6px 0' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label">Amount *</label>
+                          <input className="form-input" type="number" min="0" step="0.01" value={payForm.amount} onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0.00" style={{ width: 120 }} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label">Date</label>
+                          <input className="form-input" type="date" value={payForm.paidAt} onChange={(e) => setPayForm((p) => ({ ...p, paidAt: e.target.value }))} />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label className="form-label">Method</label>
+                          <select className="form-select" value={payForm.method} onChange={(e) => setPayForm((p) => ({ ...p, method: e.target.value }))}>
+                            <option>ACH</option><option>Check</option><option>Card</option><option>Cash</option><option>Wire</option>
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ margin: 0, flex: 1, minWidth: 140 }}>
+                          <label className="form-label">Reference</label>
+                          <input className="form-input" value={payForm.reference} onChange={(e) => setPayForm((p) => ({ ...p, reference: e.target.value }))} placeholder="Invoice / memo" />
+                        </div>
+                        <button type="submit" className="btn btn-primary btn-sm" disabled={!(Number(payForm.amount) > 0)}><i className="ti ti-check"></i> Record payment</button>
+                        <button type="button" className="btn btn-secondary btn-sm" onClick={() => setPayingId(null)}><i className="ti ti-x"></i></button>
+                      </form>
+                    </td>
+                  </tr>
+                )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>

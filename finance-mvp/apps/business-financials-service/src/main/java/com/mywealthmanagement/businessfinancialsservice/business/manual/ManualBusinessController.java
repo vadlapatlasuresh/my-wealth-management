@@ -109,6 +109,11 @@ public class ManualBusinessController {
         return teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId);
     }
 
+    /**
+     * Invite a teammate by email (owners don't know internal user ids). Body:
+     * { email, role?, memberUserId? }. A resolved {@code memberUserId} (if the invitee already
+     * has an account) activates immediately; otherwise the row is INVITED until they join.
+     */
     @PostMapping("/businesses/{businessId}/team")
     public BusinessTeamMember addTeamMember(@PathVariable Long businessId, @RequestBody Map<String, Object> body) {
         Long actingUserId = userId();
@@ -117,13 +122,29 @@ public class ManualBusinessController {
         if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
-        BusinessTeamMember member = new BusinessTeamMember();
-        member.setMemberUserId(Long.valueOf(str(body.get("memberUserId"))));
-        member.setRole(str(body.getOrDefault("role", "VIEWER")));
-        member.setStatus(str(body.getOrDefault("status", "ACTIVE")));
+        String email = str(body.get("email"));
+        Long memberUserId = longVal(body.get("memberUserId"));
+        if (email == null && memberUserId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "An email (or memberUserId) is required to invite a teammate");
+        }
+        // Don't create duplicate invites for the same email on this business.
+        BusinessTeamMember member = email != null
+                ? teamMemberRepo.findByBusinessIdAndInvitedEmailIgnoreCase(businessId, email).orElseGet(BusinessTeamMember::new)
+                : new BusinessTeamMember();
         member.setUserId(actingUserId);
         member.setBusinessId(businessId);
-        return teamMemberRepo.save(member);
+        if (email != null) member.setInvitedEmail(email);
+        if (memberUserId != null) member.setMemberUserId(memberUserId);
+        member.setRole(str(body.getOrDefault("role", "VIEWER")));
+        // A row with a resolved user is ACTIVE; an email-only invite waits as INVITED.
+        String status = str(body.get("status"));
+        member.setStatus(status != null ? status : (member.getMemberUserId() != null ? "ACTIVE" : "INVITED"));
+        BusinessTeamMember saved = teamMemberRepo.save(member);
+        if (email != null && !email.isBlank()) {
+            notificationClient.notify(actingUserId, "BUSINESS", "Teammate invited",
+                    "Invited " + email + " to help manage \"" + business.getName() + "\".");
+        }
+        return saved;
     }
 
     @PutMapping("/businesses/{businessId}/team/{id}")
@@ -134,10 +155,12 @@ public class ManualBusinessController {
         if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
-        BusinessTeamMember member = teamMemberRepo.findById(id)
+        // Scope the lookup to this business — never let a manager on business A touch a row on B.
+        BusinessTeamMember member = teamMemberRepo.findByIdAndBusinessId(id, businessId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         if (body.containsKey("role")) member.setRole(str(body.get("role")));
         if (body.containsKey("status")) member.setStatus(str(body.get("status")));
+        if (body.containsKey("memberUserId")) member.setMemberUserId(longVal(body.get("memberUserId")));
         return teamMemberRepo.save(member);
     }
 
@@ -149,7 +172,7 @@ public class ManualBusinessController {
         if (!accessService.canManage(actingUserId, business.getUserId(), teamMemberRepo.findByBusinessIdOrderByRoleAsc(businessId))) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
-        BusinessTeamMember member = teamMemberRepo.findById(id)
+        BusinessTeamMember member = teamMemberRepo.findByIdAndBusinessId(id, businessId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         teamMemberRepo.delete(member);
         return ResponseEntity.noContent().build();
@@ -178,7 +201,10 @@ public class ManualBusinessController {
         txnRuleRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
         reminderSettingsRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // reminder logs cascade at DB
         customerRepo.deleteByBusinessIdAndUserId(b.getId(), userId()); // after invoices + quotes (FK)
+        teamMemberRepo.deleteByBusinessId(b.getId());
         accountRepo.deleteByBusinessIdAndUserId(b.getId(), userId());
+        // Inventory items/movements, contractors/payments, employees/payroll-runs are removed by the
+        // ON DELETE CASCADE added in V35 when the business row is deleted below.
         businessRepo.delete(b);
         return ResponseEntity.noContent().build();
     }

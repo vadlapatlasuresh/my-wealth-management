@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../../api';
 
 const defaultForm = {
-  memberUserId: '',
+  email: '',
   role: 'VIEWER'
 };
 
@@ -35,14 +35,14 @@ export default function TeamMembersPanel({ businessId, onError, onFlash }) {
   async function addMember(e) {
     e.preventDefault();
     if (!businessId) return;
-    const memberUserId = Number(form.memberUserId);
-    if (!memberUserId) return;
+    const email = form.email.trim();
+    if (!email) return;
     try {
-      await api.createBusinessTeamMember(businessId, { memberUserId, role: form.role || 'VIEWER' });
+      await api.createBusinessTeamMember(businessId, { email, role: form.role || 'VIEWER' });
       setForm(defaultForm);
       setShowAdd(false);
       await loadMembers();
-      onFlash?.('Team member added.');
+      onFlash?.(`Invite sent to ${email}.`);
     } catch (err) {
       onError?.(err?.message || 'Could not add team member.');
     }
@@ -69,7 +69,7 @@ export default function TeamMembersPanel({ businessId, onError, onFlash }) {
           <i className={`ti ${showAdd ? 'ti-x' : 'ti-plus'}`}></i>{showAdd ? ' Cancel' : ' Add member'}
         </button>
       </div>
-      <p className="item-sub" style={{ margin: '-4px 0 12px' }}>Grant collaborators access to the business workspace with simple role-based permissions.</p>
+      <p className="item-sub" style={{ margin: '-4px 0 12px' }}>Invite collaborators by email with role-based permissions. Invites stay pending until the teammate joins with that email.</p>
       {!canManage && (
         <div className="item-sub" style={{ margin: '-4px 0 12px', color: 'var(--tv-warning)' }}><i className="ti ti-eye-off"></i> You currently have view-only access to this business workspace.</div>
       )}
@@ -78,8 +78,8 @@ export default function TeamMembersPanel({ businessId, onError, onFlash }) {
         <form onSubmit={addMember} style={{ marginBottom: 14 }}>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">Member user ID *</label>
-              <input className="form-input" type="number" min="1" value={form.memberUserId} onChange={(e) => setForm((p) => ({ ...p, memberUserId: e.target.value }))} placeholder="e.g. 42" />
+              <label className="form-label">Email *</label>
+              <input className="form-input" type="email" value={form.email} onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))} placeholder="teammate@example.com" />
             </div>
             <div className="form-group">
               <label className="form-label">Role</label>
@@ -90,7 +90,7 @@ export default function TeamMembersPanel({ businessId, onError, onFlash }) {
               </select>
             </div>
           </div>
-          <button type="submit" className="btn btn-primary btn-sm" disabled={!form.memberUserId}><i className="ti ti-plus"></i> Add member</button>
+          <button type="submit" className="btn btn-primary btn-sm" disabled={!form.email.trim()}><i className="ti ti-send"></i> Send invite</button>
         </form>
       )}
 
@@ -103,17 +103,18 @@ export default function TeamMembersPanel({ businessId, onError, onFlash }) {
           <table className="tv-table">
             <thead>
               <tr>
-                <th>User ID</th>
+                <th>Member</th>
                 <th>Role</th>
                 <th>Status</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {members.map((member) => (
                 <tr key={member.id}>
-                  <td style={{ fontWeight: 600 }}>{member.memberUserId}</td>
+                  <td style={{ fontWeight: 600 }}>{member.invitedEmail || (member.memberUserId ? `User #${member.memberUserId}` : '—')}</td>
                   <td>{member.role || 'VIEWER'}</td>
-                  <td><span className="badge badge-forest">{member.status || 'ACTIVE'}</span></td>
+                  <td><span className={`badge ${member.status === 'INVITED' ? 'badge-warning' : 'badge-forest'}`}>{member.status || 'ACTIVE'}</span></td>
                   <td style={{ whiteSpace: 'nowrap' }}>
                     <button className="btn btn-secondary btn-sm" onClick={() => deleteMember(member)}><i className="ti ti-trash"></i></button>
                   </td>

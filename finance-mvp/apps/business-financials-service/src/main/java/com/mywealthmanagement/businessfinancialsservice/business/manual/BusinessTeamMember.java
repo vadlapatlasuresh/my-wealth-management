@@ -24,8 +24,13 @@ public class BusinessTeamMember {
     @Column(name = "business_id", nullable = false)
     private Long businessId;
 
-    @Column(name = "member_user_id", nullable = false)
+    /** The invitee's internal user id — null until they accept/have an account (invite by email). */
+    @Column(name = "member_user_id")
     private Long memberUserId;
+
+    /** Email the invite was sent to; how we identify a member before/after they have an account. */
+    @Column(name = "invited_email", length = 255)
+    private String invitedEmail;
 
     @Column(nullable = false, length = 32)
     private String role = "VIEWER";

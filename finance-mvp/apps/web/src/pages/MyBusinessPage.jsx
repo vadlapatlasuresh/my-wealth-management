@@ -16,6 +16,7 @@ import TxnRulesDrawer from '../components/business/TxnRulesDrawer';
 import ReconcilePanel from '../components/business/ReconcilePanel';
 import InventoryPanel from '../components/business/InventoryPanel';
 import ContractorsPanel from '../components/business/ContractorsPanel';
+import PayrollPanel from '../components/business/PayrollPanel';
 import TeamMembersPanel from '../components/business/TeamMembersPanel';
 
 /* ------------------------------------------------------------------ */
@@ -4206,9 +4207,14 @@ export default function MyBusinessPage({ user, formatDate, accounts = [], transa
                 <InventoryPanel businessId={selectedBusiness.id} currency={currency} onError={setError} onFlash={flash} />
               )}
 
-              {/* Contractors / 1099 foundation */}
+              {/* Contractors / 1099 payments */}
               {selectedBusiness && (
                 <ContractorsPanel businessId={selectedBusiness.id} currency={currency} onError={setError} onFlash={flash} />
+              )}
+
+              {/* Employees / payroll runs */}
+              {selectedBusiness && (
+                <PayrollPanel businessId={selectedBusiness.id} currency={currency} onError={setError} onFlash={flash} />
               )}
 
               {/* Team access / RBAC foundation */}
