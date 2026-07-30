@@ -3,6 +3,7 @@ import {
   computeDownfall,
   computeContributors,
   deriveUpcomingBills,
+  derivePortfolios,
   NW_ALERT_THRESHOLD,
 } from "./netWorth";
 
@@ -84,5 +85,54 @@ describe("deriveUpcomingBills", () => {
 
   it("returns [] for no intents (honest empty state)", () => {
     expect(deriveUpcomingBills([])).toEqual([]);
+  });
+});
+
+describe("derivePortfolios", () => {
+  const snap = {
+    net_worth: { total: 263820, change_30d: 15732 },
+    components: {
+      cash: 38420, cash_change_30d: 2320,
+      investments: 181029, investments_change_30d: 10450,
+      real_estate_equity: 112000, real_estate_equity_change_30d: 1800,
+      credit_cards: 45629, credit_cards_change_30d: 1038,
+    },
+  };
+
+  it("derives All/Investments/Cash/Real estate/Debt lenses from the snapshot", () => {
+    const ids = derivePortfolios(snap).map((p) => p.id);
+    expect(ids).toEqual(["all", "investments", "cash", "realestate", "debt"]);
+  });
+
+  it("carries real values and marks debt as a liability", () => {
+    const byId = Object.fromEntries(derivePortfolios(snap).map((p) => [p.id, p]));
+    expect(byId.all.value).toBe(263820);
+    expect(byId.investments.value).toBe(181029);
+    expect(byId.debt.value).toBe(45629);
+    expect(byId.debt.liability).toBe(true);
+    expect(byId.investments.liability).toBe(false);
+  });
+
+  it("omits the business lens when there is no business data (no empty tile)", () => {
+    expect(derivePortfolios(snap).some((p) => p.id === "business")).toBe(false);
+  });
+
+  it("includes the business lens only when business net assets are present", () => {
+    const withBiz = { ...snap, components: { ...snap.components, business_net_assets: 95200 } };
+    const biz = derivePortfolios(withBiz).find((p) => p.id === "business");
+    expect(biz).toBeTruthy();
+    expect(biz.value).toBe(95200);
+  });
+
+  it("prefers a caller-supplied real-estate equity override", () => {
+    const re = derivePortfolios(snap, { realEstateEquity: 120500 }).find((p) => p.id === "realestate");
+    expect(re.value).toBe(120500);
+  });
+
+  it("accepts camelCase snapshot components", () => {
+    const camel = { netWorth: { total: 100, change30d: 5 }, components: { investments: 60, investmentsChange30d: 3 } };
+    const inv = derivePortfolios(camel).find((p) => p.id === "investments");
+    expect(inv.value).toBe(60);
+    expect(inv.change).toBe(3);
   });
 });

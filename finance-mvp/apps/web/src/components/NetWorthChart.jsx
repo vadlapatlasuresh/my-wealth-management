@@ -48,6 +48,8 @@ export default function NetWorthChart({
   chartType = "area",
   alert = false,       // true when net worth fell beyond the alert threshold
   declinePct = 0,      // how far it fell over the period, in %
+  accentColor,         // optional palette override (e.g. the selected portfolio's color)
+  label = "Current net worth", // overlay title — reflects the selected portfolio
 }) {
   const wrapRef = useRef(null);
   const lineRef = useRef(null);
@@ -55,11 +57,14 @@ export default function NetWorthChart({
 
   const positive = (change30d ?? 0) >= 0;
   // A significant downfall forces the danger palette regardless of the 30d sign,
-  // so the drop is unmistakable.
+  // so the drop is unmistakable. Otherwise honor a caller-supplied accent
+  // (the active portfolio's color) before falling back to sentiment defaults.
   const danger = !!alert;
   const accent = danger
     ? "var(--tv-negative)"
-    : positive
+    : accentColor
+      ? accentColor
+      : positive
       ? "var(--tv-forest-light)"
       : "var(--tv-negative)";
   const lineStroke = danger ? "var(--tv-negative)" : "url(#nw-line)";
@@ -133,7 +138,7 @@ export default function NetWorthChart({
       {/* In-chart value overlay */}
       <div style={{ position: "absolute", top: 4, left: 4, pointerEvents: "none" }}>
         <div style={{ fontSize: 11, color: "var(--tv-text-muted)", letterSpacing: ".04em", textTransform: "uppercase" }}>
-          {hoverPt ? "Selected" : "Current net worth"}
+          {hoverPt ? "Selected" : label}
         </div>
         <div style={{ fontFamily: "var(--font-display)", fontSize: 26, color: "var(--tv-text-primary)", lineHeight: 1.1 }}>
           {money0(hoverPt ? hoverPt.v : total)}
