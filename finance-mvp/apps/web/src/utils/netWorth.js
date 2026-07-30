@@ -47,6 +47,46 @@ export function computeContributors(components = {}) {
 }
 
 /**
+ * Portfolio "lenses" for the net-worth chart filter. Each lens is derived from
+ * the real snapshot — no fabricated numbers. `id` matches the <select> value;
+ * `metricLabel` is the summary-grid headline; `color` recolors the chart; the
+ * asset/liability breakdown drives sentiment (a debt rise is a fall).
+ *
+ * Only lenses backed by real data are returned: `business` appears solely when
+ * the snapshot actually carries business net assets, so no empty tile is shown.
+ *
+ * `opts.realEstateEquity` / `opts.realEstateEquityChange` let the caller pass
+ * the property-derived equity it already computes (more precise than the
+ * snapshot component when properties are loaded).
+ */
+export function derivePortfolios(snapshot = {}, opts = {}) {
+  const s = snapshot || {};
+  const c = s.components || {};
+  const nwTotal = num(s.net_worth?.total ?? s.netWorth?.total);
+  const nwChange = num(s.net_worth?.change_30d ?? s.netWorth?.change30d);
+
+  const reEquity = opts.realEstateEquity != null
+    ? num(opts.realEstateEquity)
+    : num(c.real_estate_equity ?? c.realEstateEquity);
+  const reEquityChange = opts.realEstateEquityChange != null
+    ? num(opts.realEstateEquityChange)
+    : num(c.real_estate_equity_change_30d ?? c.realEstateEquityChange30d);
+
+  const businessValue = num(c.business_net_assets ?? c.businessNetAssets);
+
+  const lenses = [
+    { id: "all", label: "All (Net Worth)", metricLabel: "Current net worth", color: "var(--tv-forest)", value: nwTotal, change: nwChange, liability: false },
+    { id: "investments", label: "Investments Only", metricLabel: "Portfolio value (investments)", color: "#6B46C1", value: num(c.investments), change: num(c.investments_change_30d ?? c.investmentsChange30d), liability: false },
+    { id: "cash", label: "Cash & Liquid", metricLabel: "Cash & liquid balances", color: "#1E5FAD", value: num(c.cash), change: num(c.cash_change_30d ?? c.cashChange30d), liability: false },
+    { id: "realestate", label: "Real Estate Equity", metricLabel: "Real estate equity", color: "#C9973A", value: reEquity, change: reEquityChange, liability: false },
+    { id: "business", label: "Business Financials", metricLabel: "Business net assets", color: "#2E7D5B", value: businessValue, change: num(c.business_net_assets_change_30d ?? c.businessNetAssetsChange30d), liability: false, requiresData: true },
+    { id: "debt", label: "Credit & Debt (Liabilities)", metricLabel: "Total credit & debt (liabilities)", color: "#E05252", value: num(c.credit_cards ?? c.creditCards), change: num(c.credit_cards_change_30d ?? c.creditCardsChange30d), liability: true },
+  ];
+
+  return lenses.filter((l) => !l.requiresData || Math.abs(l.value) > 0.5);
+}
+
+/**
  * Real upcoming bills derived from scheduled/pending bill-pay intents (soonest
  * first). No mock data — returns [] when nothing is scheduled.
  * `formatDate` is optional; falls back to toLocaleDateString.

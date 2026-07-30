@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import NetWorthChart from "../components/NetWorthChart";
 // import RealEstateWidget from "../components/RealEstateWidget"; // Removed
 import { currency, currency0, greeting, formatDateTime } from "../utils/format"; // formatDate is now passed as a prop
-import { computeDownfall, computeContributors, deriveUpcomingBills } from "../utils/netWorth";
+import { computeDownfall, computeContributors, deriveUpcomingBills, derivePortfolios } from "../utils/netWorth";
 import LastRefreshed from "../components/LastRefreshed";
 import ProgressRing from "../components/viz/ProgressRing"; // studio-design migration
 import { api } from "../api";
@@ -107,6 +107,11 @@ export default function HomePage({
 }) {
   const navigate = useNavigate();
   const [range, setRange] = useState("3M");
+  // Which portfolio "lens" the net-worth chart is filtered to (All / Investments /
+  // Cash / Real estate / Business / Debt). Persisted so it survives navigation.
+  const [portfolio, setPortfolio] = useState(
+    () => localStorage.getItem("tv_nw_portfolio") || "all"
+  );
   const [chartType, setChartType] = useState(
     () => localStorage.getItem("tv_nw_charttype") || "area"
   );
@@ -116,6 +121,10 @@ export default function HomePage({
   const pickChartType = (id) => {
     setChartType(id);
     try { localStorage.setItem("tv_nw_charttype", id); } catch { /* ignore */ }
+  };
+  const pickPortfolio = (id) => {
+    setPortfolio(id);
+    try { localStorage.setItem("tv_nw_portfolio", id); } catch { /* ignore */ }
   };
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -204,6 +213,40 @@ export default function HomePage({
   const realEstateEquity = properties.reduce((sum, p) => sum + (p.equity || 0), 0);
   const totalRealEstateValue = properties.reduce((sum, p) => sum + (p.currentValue || 0), 0);
   // const totalAssets = (snapshot?.components?.cash || 0) + (snapshot?.components?.investments || 0) + totalRealEstateValue; // Not directly used in new KPI grid
+
+  // --- Portfolio filter: lens the net-worth chart by category (real snapshot data) ---
+  const portfolios = derivePortfolios(activeSnapshot || snapshot, {
+    realEstateEquity: properties.length ? realEstateEquity : undefined,
+    realEstateEquityChange: snapshot?.components?.real_estate_equity_change_30d,
+  });
+  const activePortfolio = portfolios.find((p) => p.id === portfolio) || portfolios[0];
+  // Whether the active lens is gaining ground (a debt DECREASE is favorable).
+  const portfolioFavorable = activePortfolio
+    ? (activePortfolio.liability ? activePortfolio.change < 0 : activePortfolio.change >= 0)
+    : true;
+  // Percent change vs. the prior value (guarded against /0).
+  const portfolioPct = activePortfolio && Math.abs(activePortfolio.value - activePortfolio.change) > 0.005
+    ? (activePortfolio.change / Math.abs(activePortfolio.value - activePortfolio.change)) * 100
+    : 0;
+  // Share of net worth this lens represents (assets only; liabilities show n/a).
+  const portfolioShare = !activePortfolio || activePortfolio.liability || !chartTotal
+    ? null
+    : (activePortfolio.value / chartTotal) * 100;
+
+  // The chart plots the real net-worth series. For a sub-portfolio we scale that
+  // series so its endpoint equals the lens's current value — a proportional
+  // projection that preserves the real trend shape until the backend can return
+  // per-portfolio history. The "All" lens is unscaled (factor 1).
+  const toNum = (p) => (typeof p === "number" ? p : Number(p?.value ?? p?.v ?? p));
+  const portfolioSeries = (() => {
+    if (!activePortfolio || activePortfolio.id === "all") return chartSeries;
+    const nums = (chartSeries || []).map(toNum).filter((n) => !Number.isNaN(n));
+    const lastVal = nums[nums.length - 1];
+    if (!lastVal || !activePortfolio.value) return chartSeries;
+    const factor = activePortfolio.value / lastVal;
+    return nums.map((v) => v * factor);
+  })();
+  const isAllPortfolio = !activePortfolio || activePortfolio.id === "all";
 
   // Real upcoming bills from scheduled/pending intents (pure helper, tested).
   const upcomingBills = deriveUpcomingBills(paymentIntents, formatDate);
@@ -297,7 +340,36 @@ export default function HomePage({
         {/* Net Worth Chart */}
         <div className="card col-span-2">
           <div className="section-header">
-            <div className="section-title">Net worth over time</div>
+            <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <span>Net worth over time</span>
+              {/* Portfolio lens: filter the chart + headline metrics by category */}
+              <div style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: 'var(--tv-card)', border: '1px solid var(--tv-border)',
+                padding: '2px 8px', borderRadius: 'var(--radius-sm)',
+              }}>
+                <span style={{
+                  fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+                  color: 'var(--tv-text-muted)', display: 'inline-flex', alignItems: 'center', gap: 4,
+                }}>
+                  <i className="ti ti-filter"></i> PORTFOLIO:
+                </span>
+                <select
+                  value={portfolio}
+                  onChange={(e) => pickPortfolio(e.target.value)}
+                  aria-label="Filter net worth by portfolio"
+                  className="form-select"
+                  style={{
+                    fontSize: 12.5, fontWeight: 600, padding: '2px 6px', height: 28, width: 'auto',
+                    border: 'none', background: 'transparent', color: 'var(--tv-text-primary)', cursor: 'pointer',
+                  }}
+                >
+                  {portfolios.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: '6px', alignItems: 'center', position: 'relative', flexWrap: 'wrap' }}>
               {/* Chart layout toggle: Area / Line / Bars */}
               <div
@@ -373,8 +445,42 @@ export default function HomePage({
             </div>
           </div>
 
+          {/* 3-column summary metrics — headline value + change + share, keyed to the active lens */}
+          {activePortfolio && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12,
+              margin: '12px 0 16px', padding: '12px 16px', background: 'var(--tv-sage-pale)',
+              borderRadius: 'var(--radius-md)', border: '1px solid var(--tv-border-light)',
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--tv-text-muted)', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 2, textTransform: 'uppercase' }}>
+                  {activePortfolio.metricLabel}
+                </div>
+                <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 800, color: 'var(--tv-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                  {currency(activePortfolio.value)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--tv-text-muted)', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 2, textTransform: 'uppercase' }}>
+                  30-day change
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: portfolioFavorable ? 'var(--tv-positive)' : 'var(--tv-negative)', fontVariantNumeric: 'tabular-nums' }}>
+                  {activePortfolio.change > 0 ? '+' : ''}{currency0(activePortfolio.change)} ({portfolioPct > 0 ? '+' : ''}{portfolioPct.toFixed(1)}%)
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--tv-text-muted)', fontWeight: 700, letterSpacing: '0.04em', marginBottom: 2, textTransform: 'uppercase' }}>
+                  {activePortfolio.liability ? 'Type' : 'Share of net worth'}
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--tv-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+                  {portfolioShare != null ? `${portfolioShare.toFixed(1)}%` : 'Liability'}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Downfall alert: shown only when net worth fell beyond the threshold */}
-          {nwAlert && (
+          {nwAlert && isAllPortfolio && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', marginBottom: 12,
               background: 'var(--tv-negative-bg)', border: '1px solid var(--tv-negative)',
@@ -392,7 +498,16 @@ export default function HomePage({
             </div>
           )}
 
-          <NetWorthChart total={chartTotal} change30d={chartChange} series={chartSeries} chartType={chartType} alert={nwAlert} declinePct={nwDeclinePct} />
+          <NetWorthChart
+            total={activePortfolio ? activePortfolio.value : chartTotal}
+            change30d={activePortfolio ? activePortfolio.change : chartChange}
+            series={portfolioSeries}
+            chartType={chartType}
+            alert={nwAlert && isAllPortfolio}
+            declinePct={nwDeclinePct}
+            accentColor={isAllPortfolio ? undefined : activePortfolio?.color}
+            label={activePortfolio ? activePortfolio.metricLabel : 'Current net worth'}
+          />
 
           {/* What moved net worth — color-coded contributions (green up / red down) */}
           {contributors.length > 0 && (
