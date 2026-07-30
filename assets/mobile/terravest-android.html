@@ -213,6 +213,8 @@ body{
 .m-switch.on{background:var(--tv-forest);}
 .m-switch.on::after{left:26px; width:24px; height:24px; top:4px; background:#fff;}
 
+.tabular-nums, .stat-value, .num, .pos, .neg { font-variant-numeric:tabular-nums; font-feature-settings:"tnum"; }
+
 /* progress */
 .m-prog{height:8px; border-radius:4px; background:var(--tv-border-light); overflow:hidden;}
 .m-prog > span{display:block; height:100%; border-radius:4px; background:var(--tv-forest);}
@@ -246,8 +248,8 @@ body{
 .row{display:flex; align-items:center;}
 .between{justify-content:space-between;}
 .gap8{gap:8px;} .gap12{gap:12px;}
-.greeting{font-family:var(--display); font-size:26px; line-height:1.1; margin:6px 0 4px;}
-.big-val{font-family:var(--display); font-size:38px; line-height:1; letter-spacing:.5px;}
+.greeting{font-family:var(--display); font-size:26px; line-height:1.1; margin:6px 0 4px; font-weight:700;}
+.big-val{font-family:var(--display); font-size:42px; line-height:1; letter-spacing:.5px; font-weight:800; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1, "zero" 1;}
 
 /* institution circle */
 .inst{width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; flex-shrink:0;}
@@ -257,7 +259,7 @@ body{
 .lrow{display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--tv-border-light);}
 .lrow:last-child{border-bottom:none;}
 .lrow .grow{flex:1; min-width:0;}
-.lrow .t1{font-size:14.5px; font-weight:600; color:var(--tv-text-primary);}
+.lrow .t1{font-size:14.5px; font-weight:700; color:var(--tv-text-primary);}
 .lrow .t2{font-size:12.5px; color:var(--tv-text-muted); margin-top:2px;}
 
 /* code boxes */
@@ -268,8 +270,8 @@ body{
 /* kpi grid */
 .kpi-grid{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
 .kpi{background:var(--tv-card); border-radius:16px; padding:14px; box-shadow:0 1px 3px rgba(17,29,23,.07);}
-.kpi .k-lbl{font-size:12px; color:var(--tv-text-muted); font-weight:600;}
-.kpi .k-val{font-size:19px; font-weight:700; margin:4px 0 3px;}
+.kpi .k-lbl{font-size:13px; color:var(--tv-text-secondary); font-weight:700;}
+.kpi .k-val{font-size:22px; font-weight:800; margin:4px 0 3px; font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1, "zero" 1;}
 
 /* alert banner */
 .alert-banner{background:var(--tv-negative-bg); border:1px solid #f5cbc4; border-radius:16px; padding:14px; display:flex; gap:11px;}
@@ -618,10 +620,35 @@ svg{display:block;}
       <div class="secondary tiny" style="margin-bottom:14px;">Saturday, June 7</div>
       <!-- hero -->
       <div class="m-card elev">
-        <div class="lbl">Current net worth</div>
-        <div class="big-val" style="margin:6px 0 8px;">$128,430</div>
-        <span class="pill up"><i class="ti ti-arrow-up-right"></i> +$2,140 · 30d</span>
-        <div class="segmented sm" style="margin:16px 0 10px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div class="lbl" style="display:inline-flex;align-items:center;gap:4px;"><i class="ti ti-filter" style="font-size:12px;"></i> PORTFOLIO:</div>
+          <select id="android-portfolio-filter" onchange="if(window.updateAndroidPortfolio) updateAndroidPortfolio(this.value)" style="background:var(--tv-chip);color:var(--tv-text-primary);border:1px solid var(--tv-border);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700;cursor:pointer;">
+            <option value="all" selected>All (Net Worth)</option>
+            <option value="investments">Investments Only</option>
+            <option value="cash">Cash &amp; Liquid</option>
+            <option value="realestate">Real Estate Equity</option>
+            <option value="business">Business Assets</option>
+            <option value="debt">Credit &amp; Debt</option>
+          </select>
+        </div>
+
+        <!-- 3-Column Dynamic Summary Grid -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:var(--tv-sage-pale);border:1px solid var(--tv-border-light);border-radius:12px;padding:8px 10px;margin-bottom:12px;">
+          <div>
+            <div id="android-m-lbl" style="font-size:9.5px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.03em;text-transform:uppercase;">CURRENT VAL</div>
+            <div id="android-m-val" style="font-size:16px;font-weight:800;color:var(--tv-text-primary);font-variant-numeric:tabular-nums;margin-top:2px;">$263,820</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.03em;text-transform:uppercase;">7-DAY</div>
+            <div id="android-m-week" style="font-size:12.5px;font-weight:700;color:var(--tv-positive);font-variant-numeric:tabular-nums;margin-top:2px;">+$2,450</div>
+          </div>
+          <div>
+            <div id="android-m-period-lbl" style="font-size:9.5px;color:var(--tv-text-muted);font-weight:700;letter-spacing:0.03em;text-transform:uppercase;">PERIOD (3M)</div>
+            <div id="android-m-period" style="font-size:12.5px;font-weight:700;color:var(--tv-positive);font-variant-numeric:tabular-nums;margin-top:2px;">+$15,732 (+6.3%)</div>
+          </div>
+        </div>
+
+        <div class="segmented sm" style="margin:12px 0 10px;">
           <div class="seg sel"><i class="ti ti-check"></i> Area</div><div class="seg">Line</div><div class="seg">Bars</div>
         </div>
         <svg width="100%" height="120" viewBox="0 0 320 120" preserveAspectRatio="none">
@@ -636,10 +663,10 @@ svg{display:block;}
       </div>
       <div class="section-title">Overview</div>
       <div class="kpi-grid">
-        <div class="kpi"><div class="k-lbl">Net Worth</div><div class="k-val">$128,430</div><span class="delta-up tiny">↗ +1.7%</span></div>
-        <div class="kpi"><div class="k-lbl">Cash</div><div class="k-val">$24,180</div><span class="delta-up tiny">↗ +$320</span></div>
-        <div class="kpi"><div class="k-lbl">Investments</div><div class="k-val">$86,300</div><span class="delta-up tiny">↗ +$1,940</span></div>
-        <div class="kpi"><div class="k-lbl">Debt</div><div class="k-val">$18,050</div><span class="delta-down tiny">↘ −$120</span></div>
+        <div class="kpi"><div class="k-lbl">Net Worth</div><div class="k-val">$263,820</div><span class="delta-up tiny">↗ +6.3%</span></div>
+        <div class="kpi"><div class="k-lbl">Cash</div><div class="k-val">$38,420</div><span class="delta-up tiny">↗ +$2,320</span></div>
+        <div class="kpi"><div class="k-lbl">Investments</div><div class="k-val">$181,029</div><span class="delta-up tiny">↗ +$10,450</span></div>
+        <div class="kpi"><div class="k-lbl">Debt</div><div class="k-val">$45,629</div><span class="delta-down tiny">↘ −$1,038</span></div>
       </div>
       <div class="section-title">Upcoming bills</div>
       <div class="m-card" style="padding:6px 16px;">
@@ -2962,6 +2989,36 @@ svg{display:block;}
   <div class="caption-chip"><span class="num">36</span>Subscription &amp; plans</div>
 </div>
 
+<script>
+const androidPortfolioData = {
+  all: { label: 'CURRENT VAL', val: '$263,820', week: '+$2,450', period: '+$15,732 (+6.3%)' },
+  investments: { label: 'INVESTMENTS', val: '$181,029', week: '+$1,820', period: '+$10,450 (+6.1%)' },
+  cash: { label: 'CASH & LIQUID', val: '$38,420', week: '+$310', period: '+$2,320 (+6.4%)' },
+  realestate: { label: 'REAL ESTATE', val: '$312,000', week: '+$500', period: '+$8,500 (+2.8%)' },
+  business: { label: 'BUSINESS', val: '$95,200', week: '+$620', period: '+$4,150 (+4.5%)' },
+  debt: { label: 'CREDIT & DEBT', val: '$45,629', week: '-$240', period: '-$1,038 (-2.2%)' }
+};
+
+function updateAndroidPortfolio(type) {
+  const data = androidPortfolioData[type] || androidPortfolioData.all;
+  const lbl = document.getElementById('android-m-lbl');
+  const val = document.getElementById('android-m-val');
+  const week = document.getElementById('android-m-week');
+  const period = document.getElementById('android-m-period');
+  
+  if (lbl) lbl.textContent = data.label;
+  if (val) val.textContent = data.val;
+  if (week) {
+    week.textContent = data.week;
+    week.style.color = data.week.startsWith('-') ? 'var(--tv-negative)' : 'var(--tv-positive)';
+  }
+  if (period) {
+    period.textContent = data.period;
+    period.style.color = data.period.startsWith('-') ? 'var(--tv-negative)' : 'var(--tv-positive)';
+  }
+}
+window.updateAndroidPortfolio = updateAndroidPortfolio;
+</script>
 </main>
 </body>
 </html>

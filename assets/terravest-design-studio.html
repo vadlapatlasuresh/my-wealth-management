@@ -237,20 +237,22 @@ const SECTIONS = {
 // same color here as in the real app.
 const C = {housing:'#F25FA8',shopping:'#4EA8F0',food:'#F5C445',groceries:'#4FBE83',
   auto:'#F0803C',utilities:'#7A6FF0',medical:'#E5675A',entertainment:'#2CC4C4',
-  education:'#5B8DEF',income:'#3DDC97',other:'#9AAEA4',stocks:'#2E7D5B',alt:'#5BB98C',cash:'#E6B455'};
+  education:'#5B8DEF',income:'#3DDC97',other:'#9AAEA4',stocks:'#2E7D5B',alt:'#5BB98C',cash:'#E6B455',
+  neg:'#F0776B',negative:'#F0776B'};
 
 const SCREENS = {
   today:{section:'today',name:'Today',blocks:[
     {type:'header',title:'Good morning, Alex',subtitle:"Here's what needs you today"},
     {type:'ring',pct:0.78,label:'Health',caption:'Financial health · Good'},
-    {type:'kpis',items:[{l:'Net worth',v:'$335,608',d:'+1.0%',up:true},{l:'Cash',v:'$12,480'},{l:'Bills due',v:'3'}]},
+    {type:'kpis',items:[{l:'Net worth',v:'$263,820',d:'+6.3%',up:true},{l:'Cash',v:'$38,420'},{l:'Bills due',v:'3'}]},
     {type:'list',title:'Needs you today',rows:[
       {dot:C.utilities,label:'Electric bill due in 2 days',sub:'Review',val:'$142'},
       {dot:C.income,label:'Paycheck landed',sub:'Chase ••1234',val:'+$3,100'}]},
   ]},
   home:{section:'money',name:'Home',blocks:[
-    {type:'header',title:'Net worth',subtitle:'All your wealth, one place'},
-    {type:'kpis',items:[{l:'Net worth',v:'$335,608',d:'+1.0%',up:true},{l:'Investments',v:'$180k',d:'+2.7%',up:true},{l:'Debt',v:'$54k',d:'−1.2%',up:false}]},
+    {type:'header',title:'Net worth & Portfolios',subtitle:'All your wealth, filtered and categorized'},
+    {type:'portfolio_summary',val:'$263,820',week:'+$2,450',period:'+$15,732 (+6.3%)'},
+    {type:'kpis',items:[{l:'Net worth',v:'$263,820',d:'+6.3%',up:true},{l:'Cash',v:'$38,420',d:'+$2.3k',up:true},{l:'Investments',v:'$181,029',d:'+$10.4k',up:true},{l:'Debt',v:'$45,629',d:'−$1.0k',up:false}]},
     {type:'bars',title:'Net worth over time',series:[
       {label:'Feb',value:60,color:C.stocks},{label:'Mar',value:66,color:C.stocks},{label:'Apr',value:63,color:C.stocks},
       {label:'May',value:74,color:C.stocks},{label:'Jun',value:82,color:C.stocks},{label:'Jul',value:88,color:C.stocks}]},
@@ -385,7 +387,7 @@ const SCREENS = {
       {dot:C.alt,label:'Harbor Group',sub:'Partially paid · $900 due',val:'$2,100'},
     ]},
   ]},
-  business-firstrun:{section:'business',name:'My Business · First run',isNew:true,blocks:[
+  'business-firstrun':{section:'business',name:'My Business · First run',isNew:true,blocks:[
     {type:'header',title:'My Business',subtitle:'First run — no business added yet'},
     {type:'list',title:'Get started',rows:[
       {dot:C.stocks,label:'Add a business',sub:'Name it and pick the entity type',val:'Start'},
@@ -538,6 +540,29 @@ function renderBlock(b){
     case 'list': return card(b.title,b.rows.map(r=>`<div class="row"><span class="dot" style="background:${r.dot||'var(--muted)'}"></span><div class="rl">${esc(r.label)}<div class="rs">${esc(r.sub||'')}</div></div><span class="rv">${esc(r.val||'')}</span></div>`).join(''));
     case 'factors': return card('What\'s affecting it',b.rows.map(r=>`<div style="padding:7px 0"><div style="display:flex;gap:8px;align-items:center;margin-bottom:5px"><span style="font-size:12.5px;font-weight:600">${esc(r.label)}</span><span class="rs">${r.weight}%</span><span class="pill" style="margin-left:auto;background:rgba(255,255,255,.06);color:${TONE[r.tone]}">${esc(r.status)}</span></div><div style="height:6px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden"><div style="width:${r.pct}%;height:100%;background:${TONE[r.tone]}"></div></div></div>`).join(''));
     case 'verdict': return `<div class="sc-card" style="border-left:3px solid ${TONE[b.tone]||'var(--warning)'}"><div style="font-weight:700;font-size:14px">${esc(b.title)}</div><div class="rs" style="margin-top:3px">${esc(b.detail||'')}</div></div>`;
+    case 'portfolio_summary':
+      return card('', `
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:0.04em;">PORTFOLIO:</div>
+          <select style="background:rgba(255,255,255,.08);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:700;">
+            ${(b.options||['All (Net Worth)','Investments Only','Cash & Liquid','Real Estate Equity','Business Net Assets','Credit & Debt']).map(o=>`<option style="color:#000;" ${o===(b.active||'All (Net Worth)')?'selected':''}>${esc(o)}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;background:rgba(255,255,255,.05);border:1px solid var(--border-soft);border-radius:10px;padding:8px 10px;">
+          <div>
+            <div style="font-size:9.5px;color:var(--muted);font-weight:700;letter-spacing:0.03em;">CURRENT VAL</div>
+            <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:2px;">${esc(b.val||'$263,820')}</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px;color:var(--muted);font-weight:700;letter-spacing:0.03em;">7-DAY</div>
+            <div style="font-size:12px;font-weight:700;color:var(--positive);margin-top:2px;">${esc(b.week||'+$2,450')}</div>
+          </div>
+          <div>
+            <div style="font-size:9.5px;color:var(--muted);font-weight:700;letter-spacing:0.03em;">PERIOD (3M)</div>
+            <div style="font-size:12px;font-weight:700;color:var(--positive);margin-top:2px;">${esc(b.period||'+$15,732 (+6.3%)')}</div>
+          </div>
+        </div>
+      `);
     default: return card('Unknown block',`<div class="rs">type: ${esc(b.type)}</div>`);
   }
 }
