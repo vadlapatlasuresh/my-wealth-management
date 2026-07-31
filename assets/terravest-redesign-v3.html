@@ -7,10 +7,10 @@
 <meta name="color-scheme" content="light dark">
 <!--
   TerraVest V3 — Financial Operating System (standalone prototype)
-  One self-contained file, no build step. Brand fonts (DM Serif Display + DM Sans)
-  load from Google Fonts for on-brand local viewing; icons are an inline SVG sprite
+  Self-contained, no build step. Brand fonts (DM Serif Display + DM Sans) load
+  from Google Fonts for on-brand local viewing; icons are an inline SVG sprite
   (no network dependency). The Artifact-published twin uses a system-font fallback
-  because the claude.ai CSP blocks font CDNs — otherwise the two are identical.
+  under the claude.ai CSP — otherwise the two are identical.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,7 +41,7 @@
   --spring:cubic-bezier(.34,1.4,.64,1);
   --d1:.12s;--d2:.2s;--d3:.34s;--d4:.55s;
 
-  --rail-w:250px; --rail-w-min:74px; --bar-h:60px; --maxw:1460px;
+  --rail-w:250px; --rail-w-min:74px; --bar-h:60px; --hub-h:46px; --maxw:1460px;
 
   /* brand anchors (never themed) */
   --forest:#1A4D3B; --forest-mid:#24614A; --forest-light:#3D8A68;
@@ -185,6 +185,14 @@ input,select,textarea{font:inherit;color:inherit}
 .ws.active{display:block;animation:wsIn var(--d3) var(--ease)}
 @keyframes wsIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .container{max-width:var(--maxw);margin:0 auto;padding:var(--sp-6) var(--sp-7) var(--sp-10)}
+/* secondary hub tab-bar (primary workspace → its sub-workspaces) */
+.hub-bar{position:sticky;top:0;z-index:16;height:var(--hub-h);display:flex;align-items:stretch;gap:var(--sp-1);padding:0 var(--sp-7);background:var(--glass);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.hub-bar::-webkit-scrollbar{display:none}
+.hub-tab{padding:0 var(--sp-3);font-size:var(--fs-sm);font-weight:600;color:var(--ink-3);white-space:nowrap;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.hub-tab:hover{color:var(--ink)}
+.hub-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.hub-tab .nav-badge{position:static}
+@media(max-width:920px){.hub-bar{padding:0 var(--sp-4)}}
 
 /* ---- 4 · TYPE HELPERS ---------------------------------------------------- */
 .wshead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-5)}
@@ -336,7 +344,7 @@ input,select,textarea{font:inherit;color:inherit}
 .legend-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
 
 /* ---- 12 · SUMMARY STRIP -------------------------------------------------- */
-.summary{position:sticky;top:0;z-index:15;display:flex;background:var(--glass);backdrop-filter:blur(14px);
+.summary{position:sticky;top:var(--hub-h);z-index:15;display:flex;background:var(--glass);backdrop-filter:blur(14px);
   border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh1);margin-bottom:var(--sp-6);overflow:hidden;
   transition:box-shadow var(--d2),border-radius var(--d2)}
 .summary.stuck{border-radius:0 0 var(--r-md) var(--r-md);box-shadow:var(--sh2)}
@@ -592,8 +600,8 @@ select.finput{cursor:pointer;appearance:none}
 
     <main class="viewport scroll" id="viewport">
       <!-- Generated workspaces mount into #wsHost; Today is authored inline below -->
-      <section id="ws-today" class="ws active"><div class="container" id="todayBody"></div></section>
-      <section id="ws-generic" class="ws"><div class="container" id="wsHost"></div></section>
+      <div class="hub-bar" id="hubBar"></div>
+      <div class="container" id="wsHost"></div>
     </main>
   </div>
 </div>
@@ -628,10 +636,10 @@ select.finput{cursor:pointer;appearance:none}
 
 <!-- Mobile bottom nav -->
 <nav class="mobnav" aria-label="Mobile">
-  <a data-nav="today" class="active"><svg class="ic"><use href="#i-sparkles"/></svg>Today</a>
-  <a data-nav="accounts"><svg class="ic"><use href="#i-wallet"/></svg>Money</a>
-  <a data-nav="investments"><svg class="ic"><use href="#i-trend"/></svg>Grow</a>
-  <a data-nav="business"><svg class="ic"><use href="#i-brief"/></svg>Business</a>
+  <a data-nav="overview" class="active"><svg class="ic"><use href="#i-sparkles"/></svg>Today</a>
+  <a data-nav="money"><svg class="ic"><use href="#i-wallet"/></svg>Money</a>
+  <a data-nav="grow"><svg class="ic"><use href="#i-trend"/></svg>Grow</a>
+  <a data-nav="biz"><svg class="ic"><use href="#i-brief"/></svg>Business</a>
   <a data-nav="ai"><svg class="ic"><use href="#i-robot"/></svg>Advisor</a>
 </nav>
 
@@ -649,105 +657,118 @@ function cssVar(n){ return getComputedStyle(document.documentElement).getPropert
 /* ============================================================================
    1 · INFORMATION ARCHITECTURE  (workspaces, not pages)
    ============================================================================ */
-const IA = [
-  { group:'Overview', items:[
+/* Lean IA — 9 primary workspaces; each opens a secondary hub tab-bar of the
+   former standalone screens, so every builder is reused with zero features lost.
+   Components is intentionally NOT in the rail (dev-only, reachable via ⌘K). */
+const NAV = [
+  { id:'overview', label:'Today', icon:'sparkles', tabs:[
     { id:'today', label:'Today', icon:'sparkles' },
     { id:'net-worth', label:'Net worth', icon:'scale' },
     { id:'alerts', label:'Alerts', icon:'bell', badge:'2' },
   ]},
-  { group:'Money', items:[
+  { id:'money', label:'Money', icon:'wallet', tabs:[
     { id:'accounts', label:'Accounts', icon:'wallet' },
     { id:'transactions', label:'Transactions', icon:'exchange' },
     { id:'spending', label:'Spending', icon:'cart' },
     { id:'budgets', label:'Budgets', icon:'grid' },
     { id:'cashflow', label:'Cash flow', icon:'repeat' },
-    { id:'bills', label:'Bills & payments', icon:'receipt', badge:'3' },
+    { id:'bills', label:'Bills', icon:'receipt', badge:'3' },
     { id:'recurring', label:'Recurring', icon:'repeat' },
   ]},
-  { group:'Grow', items:[
+  { id:'grow', label:'Invest & grow', icon:'trend', tabs:[
     { id:'investments', label:'Investments', icon:'trend' },
     { id:'goals', label:'Goals', icon:'target' },
-    { id:'debt', label:'Debt payoff', icon:'percent' },
+    { id:'debt', label:'Debt', icon:'percent' },
     { id:'retirement', label:'Retirement', icon:'pig' },
     { id:'calculators', label:'Calculators', icon:'percent' },
-    { id:'ai', label:'AI advisor', icon:'robot', badge:'4' },
   ]},
-  { group:'Shared', items:[
+  { id:'shared', label:'Household', icon:'users', tabs:[
     { id:'household', label:'Household', icon:'users' },
     { id:'sharedmoney', label:'Shared goals & bills', icon:'coins' },
     { id:'family', label:'Family', icon:'heart' },
   ]},
-  { group:'Business & Tax', items:[
+  { id:'biz', label:'Business', icon:'brief', tabs:[
     { id:'business', label:'My business', icon:'brief' },
     { id:'taxes', label:'Taxes', icon:'invoice' },
     { id:'cpa', label:'Find a CPA', icon:'users' },
   ]},
-  { group:'Real estate', items:[
+  { id:'realestate', label:'Real estate', icon:'estate', tabs:[
     { id:'properties', label:'Properties', icon:'estate' },
     { id:'dealroom', label:'Deal Room', icon:'map' },
     { id:'fractional', label:'Fractional LLC', icon:'coins' },
   ]},
-  { group:'Planning', items:[
+  { id:'plan', label:'Planning', icon:'compass', tabs:[
     { id:'planning', label:'Coach', icon:'compass' },
     { id:'healthscore', label:'Health score', icon:'heart' },
     { id:'emergencyfund', label:'Emergency fund', icon:'umbrella' },
     { id:'benchmarks', label:'Benchmarks', icon:'trend' },
     { id:'reports', label:'Reports', icon:'file' },
   ]},
-  { group:'More', items:[
-    { id:'documents', label:'Documents', icon:'folder' },
+  { id:'ai', label:'AI advisor', icon:'robot', badge:'4' },
+  { id:'system', label:'Settings', icon:'settings', tabs:[
+    { id:'profile', label:'Profile', icon:'users' },
     { id:'messages', label:'Messages', icon:'msg', badge:'2' },
     { id:'security', label:'Security', icon:'shield' },
     { id:'subscription', label:'Subscription', icon:'crown' },
-    { id:'profile', label:'Profile', icon:'users' },
-    { id:'settings', label:'Settings', icon:'settings' },
-    { id:'components', label:'Components', icon:'grid' },
+    { id:'documents', label:'Documents', icon:'folder' },
+    { id:'settings', label:'Preferences', icon:'settings' },
   ]},
 ];
-const LABELS = {}, ICONS = {};
-IA.forEach(g => g.items.forEach(i => { LABELS[i.id]=i.label; ICONS[i.id]=i.icon; }));
-
-/* build rail */
-const railNav = $('#railNav');
-IA.forEach(g => {
-  const grp = document.createElement('div');
-  grp.className = 'grp' + (g.group==='Overview' ? '' : ' closed');
-  grp.innerHTML = `<div class="grp-label" role="button" tabindex="0"><span>${g.group}</span>${I('chev-d','grp-chev')}</div>`;
-  g.items.forEach(it => {
-    const a = document.createElement('a');
-    a.className = 'nav-link' + (it.id==='today' ? ' active' : '');
-    a.dataset.nav = it.id; a.href = '#'+it.id;
-    a.innerHTML = `${I(it.icon)}<span class="nav-txt">${it.label}</span>${it.badge?`<span class="nav-badge">${it.badge}</span>`:''}`;
-    grp.appendChild(a);
-  });
-  grp.querySelector('.grp-label').addEventListener('click', () => grp.classList.toggle('closed'));
-  railNav.appendChild(grp);
+const LABELS = {}, ICONS = {}, HUB = {}, HUB_OF = {};
+NAV.forEach(h => {
+  HUB[h.id] = h;
+  if (h.tabs) h.tabs.forEach(t => { HUB_OF[t.id] = h.id; LABELS[t.id] = t.label; ICONS[t.id] = t.icon || h.icon; });
+  else { LABELS[h.id] = h.label; ICONS[h.id] = h.icon; }
 });
-function openActiveGroup(id){ $$('.grp').forEach(g => { if (g.querySelector(`.nav-link[data-nav="${id}"]`)) g.classList.remove('closed'); }); }
+LABELS['components'] = 'Components'; ICONS['components'] = 'grid';
+
+/* build rail — flat primary workspaces */
+const railNav = $('#railNav');
+NAV.forEach(h => {
+  const a = document.createElement('a');
+  a.className = 'nav-link' + (h.id==='overview' ? ' active' : '');
+  a.dataset.nav = h.id; a.href = '#'+h.id;
+  a.innerHTML = `${I(h.icon)}<span class="nav-txt">${h.label}</span>${h.badge?`<span class="nav-badge">${h.badge}</span>`:''}`;
+  railNav.appendChild(a);
+});
 
 /* ============================================================================
    2 · ROUTER  (workspace swap, context preserved — no reload)
    ============================================================================ */
-let CURRENT = 'today';
+let CURRENT = 'today', CURRENT_HUB = 'overview', BOOTED = false;
 const viewport = $('#viewport'), app = $('#app');
-function navigate(id){
-  $$('.ws').forEach(w => w.classList.remove('active'));
-  if (id === 'today'){ $('#ws-today').classList.add('active'); renderToday(); }
-  else { mountPage(id); $('#ws-generic').classList.add('active'); }
-  CURRENT = id;
-  $$('.nav-link').forEach(n => n.classList.toggle('active', n.dataset.nav===id));
-  $$('.mobnav a').forEach(n => n.classList.toggle('active', n.dataset.nav===id));
-  openActiveGroup(id);
+/* navigate accepts either a primary hub id or any sub-workspace id (deep links,
+   command palette, in-page data-nav all resolve to the right hub + tab). */
+function navigate(target){
+  let hub, sub;
+  if (HUB[target]) { hub = HUB[target]; sub = hub.tabs ? hub.tabs[0].id : target; }
+  else if (HUB_OF[target]) { hub = HUB[HUB_OF[target]]; sub = target; }
+  else { hub = null; sub = target; }
+  CURRENT_HUB = hub ? hub.id : null;
+  renderHub(hub, sub);
+  $$('.nav-link').forEach(n => n.classList.toggle('active', n.dataset.nav===CURRENT_HUB));
+  $$('.mobnav a').forEach(n => n.classList.toggle('active', n.dataset.nav===CURRENT_HUB));
   viewport.scrollTop = 0;
   app.classList.remove('rail-open');
   closeCmdk();
 }
-function mountPage(id){
+function renderHub(hub, sub){
+  const bar = $('#hubBar');
+  if (hub && hub.tabs) {
+    bar.style.display = '';
+    bar.innerHTML = hub.tabs.map(t => `<button class="hub-tab${t.id===sub?' active':''}" data-sub="${t.id}" role="tab" aria-selected="${t.id===sub}">${t.label}${t.badge?` <span class="nav-badge">${t.badge}</span>`:''}</button>`).join('');
+  } else { bar.style.display = 'none'; bar.innerHTML = ''; }
+  renderSub(sub);
+}
+function renderSub(sub){
+  CURRENT = sub;
   const host = $('#wsHost');
-  host.innerHTML = (PAGES[id] ? PAGES[id]() : placeholder(id));
+  if (sub === 'today') { renderToday(host); return; }
+  host.innerHTML = (PAGES[sub] ? PAGES[sub]() : placeholder(sub));
   host.querySelectorAll('[data-carousel]').forEach(c => { if(!c.__init){ initCarousel(c); c.__init=true; } });
   host.querySelectorAll('[data-chart]').forEach(drawChartEl);
 }
+function rerender(){ if (CURRENT === 'today') renderToday($('#wsHost')); else renderSub(CURRENT); }
 
 /* ============================================================================
    3 · SHARED TEMPLATE HELPERS  (one component vocabulary everywhere)
@@ -942,8 +963,8 @@ const TIMELINES = {
 /* ============================================================================
    6 · TODAY — the flagship command deck
    ============================================================================ */
-function renderToday(){
-  const host = $('#todayBody');
+function renderToday(host){
+  host = host || $('#wsHost');
   const acctStrip = carousel(ACCOUNTS.map(acctCard).join(''));
   const aiStrip = carousel(AI.map(a=>`<div class="ai-card" role="listitem"><div class="ai-head"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="ai-title">${a.title}</div></div><div class="ai-body">${a.body}</div><div data-chart="spark" data-v="[${a.spark}]"></div><div class="row" style="justify-content:space-between;align-items:center"><span class="ai-metric">${a.metric}</span><button class="btn btn-ghost btn-sm" data-nav="ai">Review ${I('arr-r')}</button></div></div>`).join(''));
 
@@ -2040,7 +2061,7 @@ PAGES.components = () => {
 
 /* placeholder inherits the same shell */
 function placeholder(id){
-  const label=LABELS[id]||'Workspace', group=(IA.find(g=>g.items.some(i=>i.id===id))||{}).group||'', icon=ICONS[id]||'grid';
+  const label=LABELS[id]||'Workspace', group=(HUB[HUB_OF[id]]||{}).label||'', icon=ICONS[id]||'grid';
   return `${wshead(group,label,'Built on the V3 operating-system shell — same tokens, drawers, timeline and advisor. High-fidelity build lands in a later pass.',
     `<button class="btn btn-outline btn-sm" data-nav="today">${I('arr-l')} Today</button>`)}
     ${actionBar()}
@@ -2164,11 +2185,12 @@ function wireSummary(){
    ============================================================================ */
 const cmdk=$('#cmdk'), cmdkInput=$('#cmdkInput'), cmdkList=$('#cmdkList');
 const CMDS=[
-  ...IA.flatMap(g=>g.items.map(i=>({type:'Go to',label:i.label,icon:i.icon,hint:'Workspace',run:()=>navigate(i.id)}))),
+  ...NAV.flatMap(h => h.tabs ? h.tabs.map(t=>({type:'Go to',label:t.label,icon:t.icon||h.icon,hint:h.label,run:()=>navigate(t.id)})) : [{type:'Go to',label:h.label,icon:h.icon,hint:'Workspace',run:()=>navigate(h.id)}]),
   ...ACCOUNTS.map(a=>({type:'Open',label:a.name,icon:a.icon,hint:a.inst,run:()=>openDrawer('account',a.id)})),
   {type:'Action',label:'Link an account',icon:'bank',hint:'⌘N',run:()=>openDrawer('link')},
   {type:'Action',label:'Create a goal',icon:'target',run:()=>openDrawer('goal')},
   {type:'Action',label:'Ask the advisor',icon:'robot',run:()=>navigate('ai')},
+  {type:'Action',label:'Component gallery (dev)',icon:'grid',run:()=>navigate('components')},
   {type:'Action',label:'Toggle theme',icon:'moon',run:()=>{themePref=root.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(themePref);}},
 ];
 let cmdkActive=0, cmdkFiltered=CMDS;
@@ -2201,7 +2223,7 @@ function applyTheme(mode){
   root.setAttribute('data-theme',eff);
   $$('[data-theme-set]').forEach(b=>b.classList.toggle('active',b.dataset.themeSet===mode));
   try{localStorage.setItem('tv3-theme',mode);}catch(e){}
-  if(CURRENT==='today') renderToday(); else mountPage(CURRENT);
+  if(BOOTED) rerender();
 }
 let themePref=(()=>{try{return localStorage.getItem('tv3-theme')||'system';}catch(e){return 'system';}})();
 $$('[data-theme-set]').forEach(b=>b.addEventListener('click',()=>{themePref=b.dataset.themeSet;applyTheme(themePref);}));
@@ -2218,6 +2240,7 @@ function toast(msg,icon='check'){ const t=document.createElement('div'); t.class
 $('#notif').addEventListener('click',()=>toast('2 alerts need your attention','bell'));
 
 document.addEventListener('click',e=>{
+  const hs=e.target.closest('.hub-tab[data-sub]'); if(hs){ $$('#hubBar .hub-tab').forEach(x=>{const on=x===hs;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); renderSub(hs.dataset.sub); viewport.scrollTop=0; return; }
   const nav=e.target.closest('[data-nav]'); if(nav){ e.preventDefault(); navigate(nav.dataset.nav); return; }
   const dr=e.target.closest('[data-drawer]'); if(dr){ e.preventDefault(); openDrawer(dr.dataset.drawer,dr.dataset.id); return; }
   if(e.target.closest('[data-close-drawer]')){ closeDrawer(); return; }
@@ -2250,7 +2273,9 @@ scrim.addEventListener('click',()=>{ closeCmdk(); closeDrawer(); app.classList.r
 /* ============================================================================
    15 · BOOT
    ============================================================================ */
-applyTheme(themePref);   /* also renders Today (via mount) */
+applyTheme(themePref);
+BOOTED = true;
+navigate('overview');   /* opens the Overview hub with the Today flagship active */
 </script>
 
 
