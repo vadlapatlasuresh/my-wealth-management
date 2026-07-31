@@ -1,0 +1,1764 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TerraVest V3 — Financial Operating System</title>
+<meta name="color-scheme" content="light dark">
+<!--
+  TerraVest V3 — Financial Operating System (standalone prototype)
+  One self-contained file, no build step. Brand fonts (DM Serif Display + DM Sans)
+  load from Google Fonts for on-brand local viewing; icons are an inline SVG sprite
+  (no network dependency). The Artifact-published twin uses a system-font fallback
+  because the claude.ai CSP blocks font CDNs — otherwise the two are identical.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+</head>
+<body>
+<style>
+/* ============================================================================
+   TerraVest V3 — Financial Operating System
+   Self-contained (CSP-safe): inline SVG icons, system font pairing.
+   Brand preserved: Forest / Sage / Gold.
+   ============================================================================ */
+
+/* ---- 1 · TOKENS ---------------------------------------------------------- */
+:root{
+  --font-display:'DM Serif Display','Iowan Old Style',Palatino,Georgia,serif;
+  --font-body:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,system-ui,sans-serif;
+
+  --fs-display-xl:clamp(2.3rem,4.4cqi,3.3rem);
+  --fs-display:clamp(1.75rem,3.2cqi,2.4rem);
+  --fs-h2:1.28rem; --fs-title:1.05rem; --fs-body:.94rem;
+  --fs-sm:.83rem; --fs-xs:.75rem; --fs-over:.68rem;
+
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-7:32px;--sp-8:40px;--sp-9:48px;--sp-10:64px;
+  --r-xs:8px;--r-sm:12px;--r-md:16px;--r-lg:20px;--r-xl:26px;--r-full:999px;
+
+  --ease:cubic-bezier(.22,1,.36,1);
+  --spring:cubic-bezier(.34,1.4,.64,1);
+  --d1:.12s;--d2:.2s;--d3:.34s;--d4:.55s;
+
+  --rail-w:250px; --rail-w-min:74px; --bar-h:60px; --maxw:1460px;
+
+  /* brand anchors (never themed) */
+  --forest:#1A4D3B; --forest-mid:#24614A; --forest-light:#3D8A68;
+  --sage:#8AB89A; --sage-soft:#C4DDD0; --brand-gold:#C9973A;
+}
+
+/* ---- Light (chosen, green-biased neutrals) ---- */
+:root,:root[data-theme="light"]{
+  --bg:#F4F7F5; --bg-2:#EDF3EF;
+  --surface:#FFFFFF; --surface-2:#F2F7F3; --surface-3:#E9F0EB;
+  --glass:rgba(255,255,255,.74); --glass-bd:rgba(26,77,59,.12);
+  --border:#DEE8E1; --border-strong:#C7D6CC;
+  --ink:#11201A; --ink-2:#3A5147; --ink-3:#6B8579; --on-accent:#FFFFFF;
+  --accent:#1A4D3B; --accent-2:#3D8A68; --accent-soft:#E7F1EB; --accent-line:rgba(26,77,59,.16);
+  --gold:#B0821F; --gold-soft:#F7EDD6;
+  --pos:#157347; --pos-soft:#E2F1E8; --neg:#C0392B; --neg-soft:#FBEAE7;
+  --warn:#9A6B14; --warn-soft:#FAEFD7; --info:#2560A8; --info-soft:#E7EFFA;
+  --c1:#2F7D5C; --c2:#C9973A; --c3:#5B7CC4; --c4:#8A6FC9; --c5:#4FA9A2; --c6:#C9636B;
+  --sh1:0 1px 2px rgba(16,32,26,.06),0 1px 3px rgba(16,32,26,.05);
+  --sh2:0 4px 14px rgba(16,32,26,.08),0 2px 6px rgba(16,32,26,.05);
+  --sh3:0 14px 38px rgba(16,32,26,.12),0 6px 14px rgba(16,32,26,.07);
+  --sh-pop:0 26px 66px rgba(16,32,26,.22);
+}
+/* ---- Dark (premium green-black) ---- */
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0A110E; --bg-2:#0D1611;
+    --surface:#131F19; --surface-2:#182720; --surface-3:#1F332A;
+    --glass:rgba(19,31,25,.68); --glass-bd:rgba(255,255,255,.08);
+    --border:#24382E; --border-strong:#33493E;
+    --ink:#E9F2ED; --ink-2:#A6C0B4; --ink-3:#6E887C; --on-accent:#06120D;
+    --accent:#5FBB90; --accent-2:#6FC79C; --accent-soft:rgba(95,187,144,.15); --accent-line:rgba(95,187,144,.28);
+    --gold:#E4B563; --gold-soft:rgba(228,181,99,.15);
+    --pos:#58CC8B; --pos-soft:rgba(88,204,139,.15); --neg:#F0796F; --neg-soft:rgba(240,121,111,.15);
+    --warn:#E4B563; --warn-soft:rgba(228,181,99,.15); --info:#7CA8E6; --info-soft:rgba(124,168,230,.15);
+    --c1:#5FBB90; --c2:#E4B563; --c3:#7CA8E6; --c4:#B79BEA; --c5:#5FC2BA; --c6:#E68A91;
+    --sh1:0 1px 2px rgba(0,0,0,.4);
+    --sh2:0 6px 18px rgba(0,0,0,.42); --sh3:0 16px 40px rgba(0,0,0,.5); --sh-pop:0 28px 70px rgba(0,0,0,.6);
+  }
+}
+/* explicit toggle wins over media query, both directions */
+:root[data-theme="dark"]{
+  --bg:#0A110E; --bg-2:#0D1611;
+  --surface:#131F19; --surface-2:#182720; --surface-3:#1F332A;
+  --glass:rgba(19,31,25,.68); --glass-bd:rgba(255,255,255,.08);
+  --border:#24382E; --border-strong:#33493E;
+  --ink:#E9F2ED; --ink-2:#A6C0B4; --ink-3:#6E887C; --on-accent:#06120D;
+  --accent:#5FBB90; --accent-2:#6FC79C; --accent-soft:rgba(95,187,144,.15); --accent-line:rgba(95,187,144,.28);
+  --gold:#E4B563; --gold-soft:rgba(228,181,99,.15);
+  --pos:#58CC8B; --pos-soft:rgba(88,204,139,.15); --neg:#F0796F; --neg-soft:rgba(240,121,111,.15);
+  --warn:#E4B563; --warn-soft:rgba(228,181,99,.15); --info:#7CA8E6; --info-soft:rgba(124,168,230,.15);
+  --c1:#5FBB90; --c2:#E4B563; --c3:#7CA8E6; --c4:#B79BEA; --c5:#5FC2BA; --c6:#E68A91;
+  --sh1:0 1px 2px rgba(0,0,0,.4);
+  --sh2:0 6px 18px rgba(0,0,0,.42); --sh3:0 16px 40px rgba(0,0,0,.5); --sh-pop:0 28px 70px rgba(0,0,0,.6);
+}
+
+/* ---- 2 · RESET / BASE ---------------------------------------------------- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+body{font-family:var(--font-body);background:var(--bg);color:var(--ink);line-height:1.5;min-height:100vh;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-rendering:optimizeLegibility;
+  transition:background var(--d3) var(--ease),color var(--d3) var(--ease)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font:inherit;color:inherit}
+.ic{width:1em;height:1em;display:inline-block;vertical-align:-.14em;flex-shrink:0}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--ink-3)}
+.stack{display:flex;flex-direction:column}.row{display:flex;align-items:center}.wrap{flex-wrap:wrap}
+.grow{flex:1;min-width:0}.mla{margin-left:auto}
+.gap-1{gap:var(--sp-1)}.gap-2{gap:var(--sp-2)}.gap-3{gap:var(--sp-3)}.gap-4{gap:var(--sp-4)}.gap-5{gap:var(--sp-5)}.gap-6{gap:var(--sp-6)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+::selection{background:var(--accent-soft);color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:5px}
+.scroll::-webkit-scrollbar{width:8px;height:8px}
+.scroll::-webkit-scrollbar-thumb{background:var(--border-strong);border-radius:var(--r-full)}
+.scroll::-webkit-scrollbar-track{background:transparent}
+
+/* ---- 3 · SHELL ----------------------------------------------------------- */
+.app{display:grid;grid-template-columns:var(--rail-w) 1fr;height:100vh;overflow:hidden}
+.app.rail-min{grid-template-columns:var(--rail-w-min) 1fr}
+
+.rail{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;min-height:0;position:relative;z-index:30}
+.brand{height:var(--bar-h);display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);border-bottom:1px solid var(--border);flex-shrink:0}
+.brand-mark{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0;
+  background:linear-gradient(140deg,var(--forest-light),var(--forest));box-shadow:0 4px 14px rgba(26,77,59,.35);color:#fff}
+.brand-mark .ic{font-size:19px}
+.brand-name{font-family:var(--font-display);font-size:1.16rem;line-height:1;letter-spacing:.01em}
+.brand-sub{font-size:var(--fs-over);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-3);margin-top:3px}
+.rail-min .brand-text,.rail-min .nav-txt,.rail-min .nav-badge,.rail-min .grp-label span,.rail-min .grp-chev,
+.rail-min .who-meta,.rail-min .who .ic-dots{display:none}
+.rail-min .brand{justify-content:center;padding:0}
+.rail-min .nav-link{justify-content:center;padding:10px 0}
+.rail-min .grp-label{justify-content:center;padding:8px 0 2px}
+
+.rail-scroll{flex:1;min-height:0;overflow-y:auto;padding:var(--sp-3) var(--sp-3) var(--sp-6)}
+.rail-scroll::-webkit-scrollbar{width:0}
+.grp{margin-top:var(--sp-2)}.grp:first-child{margin-top:0}
+.grp-label{display:flex;align-items:center;gap:6px;padding:var(--sp-3) var(--sp-3) 4px;font-size:var(--fs-over);
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;user-select:none;cursor:pointer}
+.grp-chev{margin-left:auto;font-size:14px;transition:transform var(--d2) var(--ease)}
+.grp.closed .grp-chev{transform:rotate(-90deg)}
+.grp.closed .nav-link{display:none}
+.nav-link{display:flex;align-items:center;gap:var(--sp-3);padding:9px var(--sp-3);border-radius:var(--r-sm);
+  color:var(--ink-2);font-size:var(--fs-sm);font-weight:500;position:relative;margin-bottom:1px;
+  transition:background var(--d1),color var(--d1)}
+.nav-link .ic{font-size:19px;width:22px}
+.nav-link:hover{background:var(--surface-3);color:var(--ink)}
+.nav-link.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-link.active::before{content:'';position:absolute;left:-3px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--accent)}
+.nav-badge{margin-left:auto;min-width:19px;height:19px;padding:0 6px;display:grid;place-items:center;border-radius:var(--r-full);
+  background:var(--gold);color:var(--on-accent);font-size:var(--fs-over);font-weight:700}
+.rail-foot{border-top:1px solid var(--border);padding:var(--sp-3);flex-shrink:0}
+.who{display:flex;align-items:center;gap:var(--sp-3);padding:8px;border-radius:var(--r-sm);cursor:pointer;transition:background var(--d1)}
+.who:hover{background:var(--surface-3)}
+.avatar{width:34px;height:34px;border-radius:var(--r-full);flex-shrink:0;display:grid;place-items:center;font-weight:700;font-size:var(--fs-sm);
+  background:linear-gradient(140deg,var(--forest-light),var(--forest));color:#fff}
+.who-name{font-size:var(--fs-sm);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who-role{font-size:var(--fs-xs);color:var(--ink-3)}
+
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.topbar{height:var(--bar-h);flex-shrink:0;display:flex;align-items:center;gap:var(--sp-3);padding:0 var(--sp-5);
+  background:var(--glass);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);position:relative;z-index:20}
+.iconbtn{width:38px;height:38px;border-radius:var(--r-sm);display:grid;place-items:center;color:var(--ink-2);font-size:19px;
+  position:relative;transition:background var(--d1),color var(--d1)}
+.iconbtn:hover{background:var(--surface-3);color:var(--ink)}
+.iconbtn .ping{position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--neg);border:2px solid var(--surface)}
+.omnibar{flex:1;max-width:440px;height:40px;display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-3);
+  border-radius:var(--r-full);background:var(--surface-3);border:1px solid transparent;color:var(--ink-3);font-size:var(--fs-sm);
+  transition:border-color var(--d2),background var(--d2)}
+.omnibar:hover{border-color:var(--border-strong)}
+.kbd{font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);padding:2px 7px;border-radius:6px;background:var(--surface);
+  border:1px solid var(--border);box-shadow:var(--sh1)}
+.seg{display:inline-flex;background:var(--surface-3);border-radius:var(--r-full);padding:3px;gap:2px}
+.seg button{padding:6px 13px;border-radius:var(--r-full);font-size:var(--fs-xs);font-weight:600;color:var(--ink-3);white-space:nowrap;transition:all var(--d2)}
+.seg button.active{background:var(--surface);color:var(--accent);box-shadow:var(--sh1)}
+.seg.icons button{width:32px;height:28px;padding:0;display:grid;place-items:center;font-size:16px}
+
+.viewport{flex:1;min-height:0;overflow-y:auto;scroll-behavior:smooth}
+.ws{display:none}
+.ws.active{display:block;animation:wsIn var(--d3) var(--ease)}
+@keyframes wsIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.container{max-width:var(--maxw);margin:0 auto;padding:var(--sp-6) var(--sp-7) var(--sp-10)}
+
+/* ---- 4 · TYPE HELPERS ---------------------------------------------------- */
+.wshead{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap;margin-bottom:var(--sp-5)}
+.eyebrow{font-size:var(--fs-over);letter-spacing:.16em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:6px}
+.ws-title{font-family:var(--font-display);font-size:var(--fs-display);line-height:1.06;letter-spacing:-.01em;text-wrap:balance}
+.ws-sub{color:var(--ink-3);font-size:var(--fs-body);margin-top:5px;max-width:60ch}
+.sec-title{font-size:var(--fs-title);font-weight:700;letter-spacing:-.01em}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.more{font-size:var(--fs-sm);font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:4px}
+.more:hover{text-decoration:underline}
+
+/* ---- 5 · ACTION BAR (universal) ----------------------------------------- */
+.actionbar{display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;margin-bottom:var(--sp-5);
+  padding:var(--sp-2);background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh1)}
+.actionbar .ab-search{flex:1;min-width:180px;height:38px;display:flex;align-items:center;gap:var(--sp-2);padding:0 var(--sp-3);
+  border-radius:var(--r-sm);background:var(--surface-3);color:var(--ink-3);font-size:var(--fs-sm)}
+.actionbar .divider{width:1px;align-self:stretch;background:var(--border);margin:0 2px}
+
+/* ---- 6 · BUTTONS / CHIPS / BADGES --------------------------------------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--sp-2);padding:9px var(--sp-4);border-radius:var(--r-sm);
+  font-size:var(--fs-sm);font-weight:600;white-space:nowrap;transition:transform var(--d1) var(--ease),background var(--d2),box-shadow var(--d2),border-color var(--d2)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn .ic{font-size:17px}
+.btn-primary{background:var(--accent);color:var(--on-accent);box-shadow:0 4px 14px rgba(26,77,59,.24)}
+.btn-primary:hover{background:var(--accent-2);box-shadow:0 6px 20px rgba(26,77,59,.3)}
+.btn-ghost{background:var(--surface-3);color:var(--ink)}.btn-ghost:hover{background:var(--border)}
+.btn-outline{border:1px solid var(--border-strong);color:var(--ink-2)}.btn-outline:hover{border-color:var(--ink-3);color:var(--ink)}
+.btn-gold{background:var(--gold);color:var(--on-accent)}
+.btn-sm{padding:7px 12px;font-size:var(--fs-xs);border-radius:var(--r-xs)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-full);font-size:var(--fs-xs);font-weight:600;
+  white-space:nowrap;background:var(--surface-3);color:var(--ink-2);border:1px solid transparent;transition:all var(--d2)}
+.chip:hover{border-color:var(--border-strong);color:var(--ink)}
+.chip.active{background:var(--accent);color:var(--on-accent)}
+.chip .ic{font-size:14px}
+.chiprow{display:flex;gap:var(--sp-2);overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chiprow::-webkit-scrollbar{display:none}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:var(--r-full);font-size:var(--fs-xs);font-weight:600;white-space:nowrap}
+.badge .ic{font-size:13px}
+.badge.pos{background:var(--pos-soft);color:var(--pos)}.badge.neg{background:var(--neg-soft);color:var(--neg)}
+.badge.warn{background:var(--warn-soft);color:var(--warn)}.badge.info{background:var(--info-soft);color:var(--info)}
+.badge.gold{background:var(--gold-soft);color:var(--gold)}.badge.neutral{background:var(--surface-3);color:var(--ink-2)}
+.delta{display:inline-flex;align-items:center;gap:3px;font-weight:700;font-size:var(--fs-sm)}
+.delta.up{color:var(--pos)}.delta.down{color:var(--neg)}
+
+/* ---- 7 · CARDS / GRID ---------------------------------------------------- */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-5);box-shadow:var(--sh1);
+  transition:box-shadow var(--d2),border-color var(--d2),transform var(--d2)}
+.card.lg{padding:var(--sp-6)}
+.card.act{cursor:pointer}
+.card.act:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--border-strong)}
+.card.glass{background:var(--glass);backdrop-filter:blur(14px);border-color:var(--glass-bd)}
+.grid{display:grid;gap:var(--sp-5)}
+.g12{grid-template-columns:repeat(12,1fr)}
+.c4{grid-column:span 4}.c5{grid-column:span 5}.c6{grid-column:span 6}.c7{grid-column:span 7}.c8{grid-column:span 8}.c12{grid-column:span 12}
+.tile{width:42px;height:42px;border-radius:var(--r-sm);flex-shrink:0;display:grid;place-items:center;font-size:19px;background:var(--accent-soft);color:var(--accent)}
+.tile.sm{width:32px;height:32px;font-size:15px}
+.tile.gold{background:var(--gold-soft);color:var(--gold)}.tile.info{background:var(--info-soft);color:var(--info)}
+.tile.neg{background:var(--neg-soft);color:var(--neg)}.tile.pos{background:var(--pos-soft);color:var(--pos)}
+.tile.violet{background:rgba(138,111,201,.16);color:var(--c4)}
+
+/* KPI */
+.kpirow{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:var(--sp-4)}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:var(--sp-4) var(--sp-5);
+  box-shadow:var(--sh1);container-type:inline-size;min-width:0;transition:box-shadow var(--d2),transform var(--d2),border-color var(--d2)}
+.kpi.act{cursor:pointer}.kpi.act:hover{box-shadow:var(--sh2);transform:translateY(-2px);border-color:var(--border-strong)}
+.kpi-top{display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-3)}
+.kpi-ic{width:30px;height:30px;border-radius:var(--r-xs);display:grid;place-items:center;font-size:15px;flex-shrink:0}
+.kpi-label{font-size:var(--fs-sm);font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-chev{margin-left:auto;color:var(--ink-3);font-size:15px;opacity:.5;transition:transform var(--d2),opacity var(--d2)}
+.kpi.act:hover .kpi-chev{opacity:1;transform:translateX(3px)}
+.kpi-val{font-family:var(--font-display);font-size:clamp(1.35rem,15cqi,1.95rem);line-height:1.05;letter-spacing:-.01em}
+.kpi-foot{margin-top:var(--sp-2);display:flex;align-items:center;gap:var(--sp-2);flex-wrap:wrap;font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* ---- 8 · TABS (scrollable context) -------------------------------------- */
+.tabs{position:relative}
+.tabs-track{display:flex;gap:var(--sp-1);overflow-x:auto;scroll-behavior:smooth;border-bottom:1.5px solid var(--border);scrollbar-width:none}
+.tabs-track::-webkit-scrollbar{display:none}
+.tab{padding:11px var(--sp-4);font-size:var(--fs-sm);font-weight:600;color:var(--ink-3);white-space:nowrap;
+  display:inline-flex;align-items:center;gap:6px;border-bottom:2px solid transparent;margin-bottom:-1.5px;transition:color var(--d2)}
+.tab .ic{font-size:16px}
+.tab:hover{color:var(--ink)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tabpanel{padding-top:var(--sp-5)}
+
+/* ---- 9 · CAROUSEL -------------------------------------------------------- */
+.carousel{position:relative;margin:0 calc(-1*var(--sp-1))}
+.carousel-track{display:flex;gap:var(--sp-4);overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;
+  padding:var(--sp-1) var(--sp-1) var(--sp-3);scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.carousel-track::-webkit-scrollbar{display:none}
+.carousel-track>*{scroll-snap-align:start;flex:0 0 auto}
+.carousel-fade{position:absolute;top:0;bottom:var(--sp-3);width:46px;pointer-events:none;z-index:2;opacity:0;transition:opacity var(--d2)}
+.carousel-fade.l{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.carousel-fade.r{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+.carousel[data-start="false"] .carousel-fade.l{opacity:1}
+.carousel[data-end="false"] .carousel-fade.r{opacity:1}
+.carr{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:36px;height:36px;border-radius:var(--r-full);
+  background:var(--surface);border:1px solid var(--border);box-shadow:var(--sh2);display:grid;place-items:center;color:var(--ink);
+  font-size:19px;opacity:0;transition:opacity var(--d2),background var(--d2)}
+.carousel:hover .carr{opacity:1}
+.carr:hover{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.carr.l{left:-6px}.carr.r{right:-6px}
+.carousel[data-start="true"] .carr.l,.carousel[data-end="true"] .carr.r{opacity:0!important;pointer-events:none}
+.acct-card{width:258px;padding:var(--sp-4);border-radius:var(--r-md);background:var(--surface);border:1px solid var(--border);
+  box-shadow:var(--sh1);cursor:pointer;transition:box-shadow var(--d2),transform var(--d2),border-color var(--d2)}
+.acct-card:hover{box-shadow:var(--sh2);transform:translateY(-3px);border-color:var(--border-strong)}
+.acct-top{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4)}
+.acct-name{font-weight:600;font-size:var(--fs-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.acct-inst{font-size:var(--fs-xs);color:var(--ink-3)}
+.acct-bal{font-family:var(--font-display);font-size:1.5rem;letter-spacing:-.01em}
+.acct-meta{font-size:var(--fs-xs);color:var(--ink-3);margin-top:2px}
+
+/* ---- 10 · AI CARDS ------------------------------------------------------- */
+.ai-card{width:344px;padding:var(--sp-5);border-radius:var(--r-md);border:1px solid var(--border);box-shadow:var(--sh1);
+  display:flex;flex-direction:column;gap:var(--sp-3);
+  background:radial-gradient(120% 120% at 100% 0%,var(--accent-soft),transparent 62%),var(--surface)}
+.ai-head{display:flex;align-items:center;gap:var(--sp-2)}
+.ai-title{font-weight:700;font-size:var(--fs-body)}
+.ai-body{font-size:var(--fs-sm);color:var(--ink-2);line-height:1.55;flex:1}
+.ai-metric{font-family:var(--font-display);font-size:1.45rem}
+.spark{width:100%;height:34px}
+.ai-dots{display:flex;gap:6px;margin-top:var(--sp-3);justify-content:center}
+.ai-dots button{width:24px;height:4px;border-radius:var(--r-full);background:var(--border-strong);transition:background var(--d2)}
+.ai-dots button.active{background:var(--accent)}
+
+/* ---- 11 · RICH LIST ROWS ------------------------------------------------- */
+.rowlist{display:flex;flex-direction:column}
+.rowitem{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) 0;border-bottom:1px solid var(--border)}
+.rowitem:last-child{border-bottom:0}
+.rowitem.act{cursor:pointer;border-radius:var(--r-sm);padding-left:8px;padding-right:8px;margin:0 -8px;transition:background var(--d1)}
+.rowitem.act:hover{background:var(--surface-2)}
+.r-name{font-size:var(--fs-sm);font-weight:600}
+.r-sub{font-size:var(--fs-xs);color:var(--ink-3);margin-top:1px}
+.r-amt{font-weight:700;font-variant-numeric:tabular-nums}
+/* expandable */
+.exrow-body{display:none;padding:0 0 var(--sp-3) 54px;font-size:var(--fs-sm)}
+.exrow.open .exrow-body{display:block;animation:wsIn var(--d2) var(--ease)}
+.exrow.open .ex-chev{transform:rotate(180deg)}
+.ex-chev{transition:transform var(--d2)}
+
+/* progress / ring / bars */
+.bar{height:8px;border-radius:var(--r-full);background:var(--surface-3);overflow:hidden}
+.bar>i{display:block;height:100%;border-radius:var(--r-full);background:var(--accent);transition:width var(--d4) var(--ease)}
+.minibar{height:6px;border-radius:var(--r-full);background:var(--surface-3);overflow:hidden}
+.minibar>i{display:block;height:100%;border-radius:var(--r-full)}
+.ring{display:grid;place-items:center;border-radius:50%}
+.ring-inner{border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center}
+.legend{display:flex;flex-direction:column;gap:var(--sp-2)}
+.legend-item{display:flex;align-items:center;gap:var(--sp-2);font-size:var(--fs-sm)}
+.legend-dot{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+
+/* ---- 12 · SUMMARY STRIP -------------------------------------------------- */
+.summary{position:sticky;top:0;z-index:15;display:flex;background:var(--glass);backdrop-filter:blur(14px);
+  border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh1);margin-bottom:var(--sp-6);overflow:hidden;
+  transition:box-shadow var(--d2),border-radius var(--d2)}
+.summary.stuck{border-radius:0 0 var(--r-md) var(--r-md);box-shadow:var(--sh2)}
+.summary-track{display:flex;overflow-x:auto;scrollbar-width:none;width:100%}
+.summary-track::-webkit-scrollbar{display:none}
+.scell{flex:1;padding:var(--sp-3) var(--sp-4);border-right:1px solid var(--border);min-width:120px}
+.scell:last-child{border-right:0}
+.sc-label{font-size:var(--fs-over);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3);font-weight:600}
+.sc-val{font-weight:700;font-size:var(--fs-body);font-variant-numeric:tabular-nums;margin-top:2px}
+
+/* ---- 13 · TIMELINE (universal) ------------------------------------------ */
+.timeline{position:relative;padding-left:var(--sp-6)}
+.timeline::before{content:'';position:absolute;left:11px;top:6px;bottom:6px;width:2px;background:var(--border)}
+.tl-item{position:relative;padding:0 0 var(--sp-5)}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:'';position:absolute;left:5px;top:2px;width:14px;height:14px;border-radius:50%;background:var(--surface);border:3px solid var(--accent)}
+.tl-item.muted-dot::before{border-color:var(--border-strong)}
+.tl-item.gold-dot::before{border-color:var(--gold)}
+.tl-name{font-size:var(--fs-sm);font-weight:600}
+.tl-sub{font-size:var(--fs-xs);color:var(--ink-3);margin-top:1px}
+
+/* ---- 14 · DRAWER / PALETTE / SCRIM -------------------------------------- */
+.scrim{position:fixed;inset:0;background:rgba(6,12,9,.5);backdrop-filter:blur(2px);opacity:0;pointer-events:none;
+  transition:opacity var(--d3);z-index:90}
+.scrim.show{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;height:100vh;width:min(500px,96vw);background:var(--surface);border-left:1px solid var(--border);
+  box-shadow:var(--sh-pop);z-index:100;transform:translateX(100%);transition:transform var(--d3) var(--ease);display:flex;flex-direction:column}
+.drawer.show{transform:none}
+.drawer-head{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-5);border-bottom:1px solid var(--border)}
+.drawer-tabs{display:flex;gap:var(--sp-1);padding:0 var(--sp-5);border-bottom:1px solid var(--border);overflow-x:auto;scrollbar-width:none}
+.drawer-tabs::-webkit-scrollbar{display:none}
+.drawer-tab{padding:11px var(--sp-3);font-size:var(--fs-sm);font-weight:600;color:var(--ink-3);white-space:nowrap;
+  border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--d2)}
+.drawer-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.drawer-body{flex:1;overflow-y:auto;padding:var(--sp-5)}
+
+.cmdk{position:fixed;top:12vh;left:50%;transform:translateX(-50%) scale(.97);width:min(640px,94vw);background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--sh-pop);z-index:100;opacity:0;pointer-events:none;
+  transition:opacity var(--d2),transform var(--d2);overflow:hidden}
+.cmdk.show{opacity:1;pointer-events:auto;transform:translateX(-50%) scale(1)}
+.cmdk-in{display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-4) var(--sp-5);border-bottom:1px solid var(--border)}
+.cmdk-in input{flex:1;border:0;background:none;outline:none;font-size:var(--fs-title)}
+.cmdk-in .ic{font-size:21px;color:var(--ink-3)}
+.cmdk-list{max-height:54vh;overflow-y:auto;padding:var(--sp-2)}
+.cmdk-grp{font-size:var(--fs-over);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);padding:var(--sp-3) var(--sp-3) var(--sp-1);font-weight:700}
+.cmdk-item{display:flex;align-items:center;gap:var(--sp-3);padding:10px var(--sp-3);border-radius:var(--r-xs);cursor:pointer}
+.cmdk-item .ic{font-size:18px;color:var(--ink-2);width:22px}
+.cmdk-hint{margin-left:auto;font-size:var(--fs-xs);color:var(--ink-3)}
+.cmdk-item.active,.cmdk-item:hover{background:var(--accent-soft);color:var(--accent)}
+.cmdk-item.active .ic,.cmdk-item:hover .ic{color:var(--accent)}
+
+/* ---- 15 · FAB / TOAST / EMPTY / SKELETON -------------------------------- */
+.fabwrap{position:fixed;right:var(--sp-6);bottom:var(--sp-6);z-index:60;display:flex;flex-direction:column;align-items:flex-end;gap:var(--sp-3)}
+.fabmenu{display:flex;flex-direction:column;gap:var(--sp-2);align-items:flex-end}
+.fabitem{display:inline-flex;align-items:center;gap:var(--sp-2);padding:9px var(--sp-4);border-radius:var(--r-full);
+  background:var(--surface);border:1px solid var(--border);box-shadow:var(--sh2);font-size:var(--fs-sm);font-weight:600;white-space:nowrap;
+  opacity:0;transform:translateY(8px) scale(.96);pointer-events:none;transition:opacity var(--d2) var(--ease),transform var(--d2) var(--spring)}
+.fabitem .ic{font-size:17px;color:var(--accent)}
+.fabwrap.open .fabitem{opacity:1;transform:none;pointer-events:auto}
+.fab{width:56px;height:56px;border-radius:var(--r-full);background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
+  font-size:24px;box-shadow:0 10px 28px rgba(26,77,59,.4);transition:transform var(--d2) var(--spring),background var(--d2)}
+.fab:hover{background:var(--accent-2)}
+.fabwrap.open .fab{transform:rotate(135deg)}
+.toastwrap{position:fixed;bottom:var(--sp-6);left:50%;transform:translateX(-50%);z-index:120;display:flex;flex-direction:column;gap:var(--sp-2);align-items:center}
+.toast{display:flex;align-items:center;gap:var(--sp-2);padding:11px var(--sp-4);border-radius:var(--r-full);background:var(--ink);color:var(--bg);
+  font-size:var(--fs-sm);font-weight:600;box-shadow:var(--sh3);animation:toastIn var(--d3) var(--spring)}
+.toast .ic{color:var(--accent);font-size:17px}
+@keyframes toastIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+.empty{text-align:center;padding:var(--sp-9) var(--sp-6);color:var(--ink-3)}
+.empty .e-ic{width:64px;height:64px;border-radius:var(--r-lg);background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-size:30px;margin:0 auto var(--sp-4)}
+.empty h3{font-family:var(--font-display);font-size:var(--fs-h2);color:var(--ink);margin-bottom:6px}
+.divider{height:1px;background:var(--border);border:0;margin:var(--sp-4) 0}
+.tgl{width:42px;height:25px;border-radius:var(--r-full);background:var(--border-strong);position:relative;flex-shrink:0;cursor:pointer;transition:background var(--d2)}
+.tgl::after{content:'';position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:var(--sh1);transition:left var(--d2)}
+.tgl.on{background:var(--accent)}.tgl.on::after{left:20px}
+.tglrow{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-3);padding:var(--sp-3) 0;border-bottom:1px solid var(--border)}
+.tglrow:last-child{border-bottom:0}
+.setgrid{display:grid;grid-template-columns:210px 1fr;gap:var(--sp-6);align-items:start}
+.setnav{display:flex;flex-direction:column;gap:2px;position:sticky;top:0}
+.setlink{padding:10px var(--sp-3);border-radius:var(--r-sm);font-size:var(--fs-sm);font-weight:600;color:var(--ink-2);cursor:pointer;display:flex;align-items:center;gap:var(--sp-2)}
+.setlink .ic{font-size:17px}
+.setlink.active{background:var(--accent-soft);color:var(--accent)}
+@media(max-width:720px){.setgrid{grid-template-columns:1fr}.setnav{flex-direction:row;overflow-x:auto;scrollbar-width:none;position:static}}
+
+/* ---- 16 · MOBILE --------------------------------------------------------- */
+.mobnav{display:none}.hamb{display:none}
+@media (max-width:1120px){.c4,.c5,.c7,.c8{grid-column:span 6}}
+@media (max-width:920px){
+  .app{grid-template-columns:1fr}
+  .rail{position:fixed;inset:0 auto 0 0;width:var(--rail-w);transform:translateX(-100%);transition:transform var(--d3) var(--ease);box-shadow:var(--sh-pop)}
+  .app.rail-open .rail{transform:none}
+  .hamb{display:grid}
+  .container{padding:var(--sp-5) var(--sp-4) 92px}
+  .c4,.c5,.c6,.c7,.c8,.c12{grid-column:span 12}
+  .summary{position:static}
+  .mobnav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:50;background:var(--glass);backdrop-filter:blur(16px);
+    border-top:1px solid var(--border);padding:8px 6px calc(8px + env(safe-area-inset-bottom,0px));justify-content:space-around}
+  .mobnav a{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--ink-3);padding:4px 10px;border-radius:var(--r-sm);flex:1}
+  .mobnav a .ic{font-size:21px}
+  .mobnav a.active{color:var(--accent)}
+  .fabwrap{bottom:82px}
+  .drawer{width:100vw;border-left:0;border-top-left-radius:var(--r-lg);border-top-right-radius:var(--r-lg);top:auto;bottom:0;height:88vh;
+    transform:translateY(100%)}
+  .drawer.show{transform:none}
+}
+@media (max-width:600px){
+  .ws-title{font-size:1.65rem}
+  .card,.kpi{padding:var(--sp-4)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important;scroll-behavior:auto!important}
+}
+</style>
+
+<!-- ===================== ICON SPRITE (inline, CSP-safe) ===================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="sty"></g>
+  </defs>
+  <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M18.5 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-arr-ur" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M8 7h9v9"/></symbol>
+  <symbol id="i-arr-dr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10M17 8v9H8"/></symbol>
+  <symbol id="i-arr-dl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7L7 17M16 17H7V8"/></symbol>
+  <symbol id="i-arr-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-arr-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18"/><circle cx="16.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8M15 7h5v5"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10l8-5 8 5M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M3 10h18"/></symbol>
+  <symbol id="i-estate" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 21v-4h6v4M8 7h.5M12 7h.5M16 7h.5M8 11h.5M12 11h.5M16 11h.5"/></symbol>
+  <symbol id="i-brief" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2M3 13h18"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7M6 10v9h12v-9M10 19v-5h4v5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h3"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-receipt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+  <symbol id="i-robot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4M8 4h8"/><circle cx="9.5" cy="13" r="1.1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="13" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M18 7h2M4 17h4M13 17h7"/><circle cx="15" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-dots" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="19" r="1.6" fill="currentColor"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14a8 8 0 01-10-10 8 8 0 1010 10z"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4L19 7"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.2"/><rect x="14" y="3" width="7" height="5" rx="1.2"/><rect x="14" y="11" width="7" height="10" rx="1.2"/><rect x="3" y="15" width="7" height="6" rx="1.2"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="8" cy="7" rx="5" ry="2.5"/><path d="M3 7v4c0 1.4 2.2 2.5 5 2.5"/><ellipse cx="16" cy="14" rx="5" ry="2.5"/><path d="M11 14v4c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5v-4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.6" cy="6" r=".8" fill="currentColor" stroke="none"/><circle cx="3.6" cy="12" r=".8" fill="currentColor" stroke="none"/><circle cx="3.6" cy="18" r=".8" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 10-.6 4M20 5v6h-6"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></symbol>
+  <symbol id="i-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16l-6 8v6l-4-2v-4z"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M4 12h7M4 17h4M17 5v14M17 19l3-3M17 19l-3-3"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-8 8M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 5l12 7-12 7z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 5v14M16 5v14"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3L5 13h6l-1 8 8-11h-6z"/></symbol>
+  <symbol id="i-pig" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13a5 4 0 018-3h3a3 3 0 013 3v1h1M5 17v2M13 18v1M11 10l1-3"/><path d="M4 13a5 4 0 005 5h4a3 3 0 003-3"/><circle cx="15" cy="12" r=".8" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-car" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 13l1.6-5A2 2 0 017.5 7h9a2 2 0 011.9 1.4L20 13M4 13h16v4H4zM6 17v2M18 17v2"/><circle cx="7.5" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="15" r="1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-flame" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 4 5 6 5 9a5 5 0 01-10 0c0-1.5.5-2.6 1.6-3.6C9 10 10 9 12 3z"/></symbol>
+  <symbol id="i-umbrella" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 019 8H3a9 9 0 019-8zM12 11v7a2 2 0 01-4 0"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a1 1 0 011-1h14a1 1 0 011 1v9a1 1 0 01-1 1H9l-4 3z"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l8-8h7v7l-8 8z"/><circle cx="15" cy="9" r="1.1" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11l-8.5 8.5a5 5 0 01-7-7L14 4a3.5 3.5 0 015 5l-9 9a2 2 0 01-3-3l8.2-8.2"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M9.6 9.5a2.5 2.5 0 013.6 2c0 1.6-2 2-2.2 3"/><circle cx="11" cy="16.4" r=".7" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v16M6 20h12M5 8h14M8 8l-3 5a3 3 0 006 0zM16 8l3 5a3 3 0 01-6 0z"/></symbol>
+  <symbol id="i-exchange" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13M14 5l3 3-3 3M20 16H7M10 13l-3 3 3 3"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0112 0M16 5.5a3 3 0 010 5.6M21 20a6 6 0 00-4-5.6"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c4-4.5 7-8 7-11a7 7 0 10-14 0c0 3 3 6.5 7 11z"/><circle cx="12" cy="10" r="2.4"/></symbol>
+  <symbol id="i-fork" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3v6a2 2 0 004 0V3M8 11v10M16 3c-1.5 0-2 3-2 6s2 3 2 3v9"/></symbol>
+  <symbol id="i-cart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h2l2 11h9l2-7H7"/><circle cx="9" cy="20" r="1.3"/><circle cx="17" cy="20" r="1.3"/></symbol>
+  <symbol id="i-wifi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9a13 13 0 0116 0M7 12.5a8 8 0 0110 0M10 16a3 3 0 014 0"/><circle cx="12" cy="19" r=".8" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9l3-3 3 3M6 6v6a3 3 0 003 3h9M20 15l-3 3-3-3M18 18v-6a3 3 0 00-3-3H6"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5M9 9h6M9 13h3"/></symbol>
+  <symbol id="i-link2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3A4 4 0 0013 5.3l-1.5 1.5M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1.5-1.5"/></symbol>
+  <symbol id="i-percent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
+  <symbol id="i-invoice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v15l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h5M9 12h6M9 16h4"/></symbol>
+</svg>
+
+<!-- ===================== APP SHELL ===================== -->
+<div class="app" id="app">
+  <!-- Workspace rail -->
+  <aside class="rail" id="rail" aria-label="Workspaces">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true"><svg class="ic"><use href="#i-estate"/></svg></div>
+      <div class="brand-text">
+        <div class="brand-name">TerraVest</div>
+        <div class="brand-sub">Financial OS</div>
+      </div>
+    </div>
+    <nav class="rail-scroll scroll" id="railNav"></nav>
+    <div class="rail-foot">
+      <div class="who" tabindex="0" role="button" data-drawer="profile">
+        <div class="avatar">AK</div>
+        <div class="who-meta grow"><div class="who-name">Alex Kim</div><div class="who-role">Accredited investor</div></div>
+        <svg class="ic ic-dots" style="color:var(--ink-3)"><use href="#i-dots"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- Universal top bar -->
+    <header class="topbar">
+      <button class="iconbtn hamb" id="hamb" aria-label="Toggle navigation"><svg class="ic"><use href="#i-menu"/></svg></button>
+      <button class="iconbtn" id="collapse" aria-label="Collapse rail" title="Collapse"><svg class="ic"><use href="#i-list"/></svg></button>
+      <button class="omnibar" id="omni" aria-haspopup="dialog"><svg class="ic"><use href="#i-search"/></svg><span class="grow" style="text-align:left">Search accounts, transactions, actions…</span><span class="kbd">⌘K</span></button>
+      <div class="mla row gap-2">
+        <div class="seg icons" role="group" aria-label="Theme">
+          <button data-theme-set="light" title="Light" aria-label="Light theme"><svg class="ic"><use href="#i-sun"/></svg></button>
+          <button data-theme-set="dark" title="Dark" aria-label="Dark theme"><svg class="ic"><use href="#i-moon"/></svg></button>
+          <button data-theme-set="system" title="System" aria-label="System theme"><svg class="ic"><use href="#i-monitor"/></svg></button>
+        </div>
+        <button class="iconbtn" aria-label="Help"><svg class="ic"><use href="#i-help"/></svg></button>
+        <button class="iconbtn" id="notif" aria-label="Notifications"><svg class="ic"><use href="#i-bell"/></svg><span class="ping"></span></button>
+      </div>
+    </header>
+
+    <main class="viewport scroll" id="viewport">
+      <!-- Generated workspaces mount into #wsHost; Today is authored inline below -->
+      <section id="ws-today" class="ws active"><div class="container" id="todayBody"></div></section>
+      <section id="ws-generic" class="ws"><div class="container" id="wsHost"></div></section>
+    </main>
+  </div>
+</div>
+
+<!-- FAB -->
+<div class="fabwrap" id="fab">
+  <div class="fabmenu">
+    <button class="fabitem" data-drawer="link"><svg class="ic"><use href="#i-bank"/></svg> Link account</button>
+    <button class="fabitem" data-drawer="goal"><svg class="ic"><use href="#i-target"/></svg> New goal</button>
+    <button class="fabitem" data-nav="ai"><svg class="ic"><use href="#i-robot"/></svg> Ask advisor</button>
+  </div>
+  <button class="fab" id="fabBtn" aria-label="Quick actions" aria-expanded="false"><svg class="ic"><use href="#i-plus"/></svg></button>
+</div>
+
+<!-- Command palette -->
+<div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Command palette">
+  <div class="cmdk-in"><svg class="ic"><use href="#i-search"/></svg><input id="cmdkInput" placeholder="Search workspaces, accounts, actions…" autocomplete="off"><span class="kbd">Esc</span></div>
+  <div class="cmdk-list scroll" id="cmdkList"></div>
+</div>
+
+<!-- Universal drawer -->
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Detail">
+  <div class="drawer-head">
+    <div class="tile" id="drawerIcon"><svg class="ic"><use href="#i-wallet"/></svg></div>
+    <div class="grow"><div class="sec-title" id="drawerTitle">—</div><div class="muted" style="font-size:var(--fs-xs)" id="drawerSub"></div></div>
+    <button class="iconbtn" data-close-drawer aria-label="Close"><svg class="ic"><use href="#i-x"/></svg></button>
+  </div>
+  <div class="drawer-tabs" id="drawerTabs"></div>
+  <div class="drawer-body scroll" id="drawerBody"></div>
+</aside>
+<div class="scrim" id="scrim"></div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobnav" aria-label="Mobile">
+  <a data-nav="today" class="active"><svg class="ic"><use href="#i-sparkles"/></svg>Today</a>
+  <a data-nav="accounts"><svg class="ic"><use href="#i-wallet"/></svg>Money</a>
+  <a data-nav="investments"><svg class="ic"><use href="#i-trend"/></svg>Grow</a>
+  <a data-nav="business"><svg class="ic"><use href="#i-brief"/></svg>Business</a>
+  <a data-nav="ai"><svg class="ic"><use href="#i-robot"/></svg>Advisor</a>
+</nav>
+
+<div class="toastwrap" id="toasts"></div>
+
+<script>
+/* ============================================================================
+   0 · PRIMITIVES
+   ============================================================================ */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+function I(name, cls){ return `<svg class="ic${cls?' '+cls:''}"><use href="#i-${name}"/></svg>`; }
+function cssVar(n){ return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+
+/* ============================================================================
+   1 · INFORMATION ARCHITECTURE  (workspaces, not pages)
+   ============================================================================ */
+const IA = [
+  { group:'Overview', items:[
+    { id:'today', label:'Today', icon:'sparkles' },
+    { id:'net-worth', label:'Net worth', icon:'scale' },
+    { id:'alerts', label:'Alerts', icon:'bell', badge:'2' },
+  ]},
+  { group:'Money', items:[
+    { id:'accounts', label:'Accounts', icon:'wallet' },
+    { id:'transactions', label:'Transactions', icon:'exchange' },
+    { id:'cashflow', label:'Cash flow', icon:'repeat' },
+    { id:'bills', label:'Bills & payments', icon:'receipt', badge:'3' },
+    { id:'budgets', label:'Budgets', icon:'grid' },
+  ]},
+  { group:'Grow', items:[
+    { id:'investments', label:'Investments', icon:'trend' },
+    { id:'goals', label:'Goals', icon:'target' },
+    { id:'debt', label:'Debt payoff', icon:'percent' },
+    { id:'ai', label:'AI advisor', icon:'robot', badge:'4' },
+  ]},
+  { group:'Business & Real estate', items:[
+    { id:'business', label:'My business', icon:'brief' },
+    { id:'properties', label:'Properties', icon:'estate' },
+    { id:'taxes', label:'Taxes', icon:'invoice' },
+  ]},
+  { group:'Household', items:[
+    { id:'household', label:'Household', icon:'users' },
+    { id:'documents', label:'Documents', icon:'folder' },
+  ]},
+  { group:'System', items:[
+    { id:'security', label:'Security', icon:'shield' },
+    { id:'settings', label:'Settings', icon:'settings' },
+    { id:'components', label:'Components', icon:'grid' },
+  ]},
+];
+const LABELS = {}, ICONS = {};
+IA.forEach(g => g.items.forEach(i => { LABELS[i.id]=i.label; ICONS[i.id]=i.icon; }));
+
+/* build rail */
+const railNav = $('#railNav');
+IA.forEach(g => {
+  const grp = document.createElement('div');
+  grp.className = 'grp' + (g.group==='Overview' ? '' : ' closed');
+  grp.innerHTML = `<div class="grp-label" role="button" tabindex="0"><span>${g.group}</span>${I('chev-d','grp-chev')}</div>`;
+  g.items.forEach(it => {
+    const a = document.createElement('a');
+    a.className = 'nav-link' + (it.id==='today' ? ' active' : '');
+    a.dataset.nav = it.id; a.href = '#'+it.id;
+    a.innerHTML = `${I(it.icon)}<span class="nav-txt">${it.label}</span>${it.badge?`<span class="nav-badge">${it.badge}</span>`:''}`;
+    grp.appendChild(a);
+  });
+  grp.querySelector('.grp-label').addEventListener('click', () => grp.classList.toggle('closed'));
+  railNav.appendChild(grp);
+});
+function openActiveGroup(id){ $$('.grp').forEach(g => { if (g.querySelector(`.nav-link[data-nav="${id}"]`)) g.classList.remove('closed'); }); }
+
+/* ============================================================================
+   2 · ROUTER  (workspace swap, context preserved — no reload)
+   ============================================================================ */
+let CURRENT = 'today';
+const viewport = $('#viewport'), app = $('#app');
+function navigate(id){
+  $$('.ws').forEach(w => w.classList.remove('active'));
+  if (id === 'today'){ $('#ws-today').classList.add('active'); renderToday(); }
+  else { mountPage(id); $('#ws-generic').classList.add('active'); }
+  CURRENT = id;
+  $$('.nav-link').forEach(n => n.classList.toggle('active', n.dataset.nav===id));
+  $$('.mobnav a').forEach(n => n.classList.toggle('active', n.dataset.nav===id));
+  openActiveGroup(id);
+  viewport.scrollTop = 0;
+  app.classList.remove('rail-open');
+  closeCmdk();
+}
+function mountPage(id){
+  const host = $('#wsHost');
+  host.innerHTML = (PAGES[id] ? PAGES[id]() : placeholder(id));
+  host.querySelectorAll('[data-carousel]').forEach(c => { if(!c.__init){ initCarousel(c); c.__init=true; } });
+  host.querySelectorAll('[data-chart]').forEach(drawChartEl);
+}
+
+/* ============================================================================
+   3 · SHARED TEMPLATE HELPERS  (one component vocabulary everywhere)
+   ============================================================================ */
+function wshead(eyebrow, title, sub, actions){
+  return `<div class="wshead"><div><div class="eyebrow">${eyebrow}</div><h1 class="ws-title">${title}</h1>${sub?`<p class="ws-sub">${sub}</p>`:''}</div>${actions?`<div class="row gap-2 wrap">${actions}</div>`:''}</div>`;
+}
+/* Universal action bar */
+function actionBar(chips){
+  return `<div class="actionbar">
+    <div class="ab-search">${I('search')}<span>Search this workspace…</span></div>
+    <div class="chiprow" style="flex:2;min-width:0">${chips||['Today','Week','Month','Quarter','Year'].map((c,i)=>`<span class="chip${i===2?' active':''}">${c}</span>`).join('')}</div>
+    <div class="divider"></div>
+    <button class="btn btn-ghost btn-sm" data-nav="ai">${I('sparkles')} AI</button>
+    <button class="btn btn-ghost btn-sm">${I('download')} Export</button>
+    <button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Add</button>
+  </div>`;
+}
+function sechead(t, right){ return `<div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">${t}</div>${right||''}</div>`; }
+function kpi(icon, cls, label, val, foot, entity){
+  return `<div class="kpi${entity?' act':''}"${entity?` data-drawer="${entity.type}" data-id="${entity.id}"`:''}>
+    <div class="kpi-top"><div class="kpi-ic tile ${cls}" style="width:30px;height:30px;font-size:15px">${I(icon)}</div><div class="kpi-label">${label}</div>${entity?I('chev-r','kpi-chev'):''}</div>
+    <div class="kpi-val num">${val}</div>${foot?`<div class="kpi-foot">${foot}</div>`:''}</div>`;
+}
+function legend(items){
+  return `<div class="legend">${items.map(it=>`<div class="legend-item"><span class="legend-dot" style="background:${cssVar(it.color)||it.color}"></span><span class="grow">${it.label}</span>${it.pct?`<span class="muted">${it.pct}</span>`:''}<strong class="num">${it.val}</strong></div>`).join('')}</div>`;
+}
+function carousel(inner){
+  return `<div class="carousel" data-carousel><div class="carousel-fade l"></div><div class="carousel-fade r"></div>
+    <button class="carr l" data-arrow="-1" aria-label="Scroll left">${I('chev-l')}</button>
+    <button class="carr r" data-arrow="1" aria-label="Scroll right">${I('chev-r')}</button>
+    <div class="carousel-track" tabindex="0" role="list">${inner}</div></div>`;
+}
+function acctCard(a){
+  return `<div class="acct-card" role="listitem" tabindex="0" data-drawer="account" data-id="${a.id}">
+    <div class="acct-top"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="grow"><div class="acct-name">${a.name}</div><div class="acct-inst">${a.inst}</div></div>${I('dots','muted')}</div>
+    <div class="acct-bal num">${a.bal}</div><div class="acct-meta">${a.meta}</div></div>`;
+}
+/* Universal timeline — reused across every entity drawer */
+function timeline(items){
+  return `<div class="timeline">${items.map(it=>`<div class="tl-item ${it.tone==='muted'?'muted-dot':it.tone==='gold'?'gold-dot':''}"><div class="tl-name">${it.name}${it.badge?` <span class="badge ${it.badgeCls||'neutral'}" style="margin-left:4px">${it.badge}</span>`:''}</div><div class="tl-sub">${it.sub}</div></div>`).join('')}</div>`;
+}
+/* Rich row */
+function richRow(o){
+  return `<div class="rowitem${o.entity?' act':''}"${o.entity?` data-drawer="${o.entity.type}" data-id="${o.entity.id}"`:''}>
+    <div class="tile sm ${o.cls||''}">${I(o.icon)}</div>
+    <div class="grow"><div class="r-name">${o.name}</div><div class="r-sub">${o.sub}</div></div>
+    <div class="r-amt num"${o.amtColor?` style="color:${o.amtColor}"`:''}>${o.amt}</div>${o.entity?I('chev-r','muted'):''}</div>`;
+}
+/* Scrollable context tabs — reusable across every workspace */
+function tabsBlock(tabs){
+  return `<div class="tabs-block" data-tabs>
+    <div class="tabs"><div class="tabs-track">${tabs.map((t,i)=>`<button class="tab${i===0?' active':''}" data-tabidx="${i}">${t.icon?I(t.icon):''}${t.label}</button>`).join('')}</div></div>
+    ${tabs.map((t,i)=>`<div class="tabpanel" data-tabidx="${i}"${i===0?'':' style="display:none"'}>${t.panel}</div>`).join('')}
+  </div>`;
+}
+/* stacked severity bar (AR/AP aging, budgets) */
+function stackBar(segs){ return `<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface-3)">${segs.map(s=>`<div style="width:${s.pct}%;background:var(${s.color})"></div>`).join('')}</div>`; }
+
+/* ============================================================================
+   4 · CHART ENGINE  (hand-rolled SVG, theme-aware, one palette)
+   ============================================================================ */
+function areaPath(vals,w,h,pad){
+  const min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)||1,n=vals.length;
+  const X=i=>pad+(i/(n-1))*(w-2*pad), Y=v=>(h-pad)-((v-min)/rng)*(h-2*pad);
+  let d=`M ${X(0)} ${Y(vals[0])}`;
+  for(let i=1;i<n;i++){const x0=X(i-1),y0=Y(vals[i-1]),x1=X(i),y1=Y(vals[i]),cx=(x0+x1)/2; d+=` C ${cx} ${y0} ${cx} ${y1} ${x1} ${y1}`;}
+  return {line:d,X,Y,last:{x:X(n-1),y:Y(vals[n-1])}};
+}
+function sparkSVG(vals){
+  const p=areaPath(vals,120,34,4), c=cssVar('--accent');
+  return `<svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><path d="${p.line} L 116 34 L 4 34 Z" fill="${c}" opacity=".13"/><path d="${p.line}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+function donutSVG(segs,size,top,sub){
+  size=size||150; const r=size/2, ir=r*0.62, cx=r, cy=r, total=segs.reduce((s,x)=>s+x.val,0)||1;
+  let a=-Math.PI/2, out='';
+  segs.forEach(s=>{ let f=s.val/total, a2=a+f*2*Math.PI; if(f>=.9999)a2=a+2*Math.PI-.001;
+    const col=cssVar(s.color)||s.color, lg=f>.5?1:0;
+    const x1=cx+r*Math.cos(a),y1=cy+r*Math.sin(a),x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+    const xi2=cx+ir*Math.cos(a2),yi2=cy+ir*Math.sin(a2),xi1=cx+ir*Math.cos(a),yi1=cy+ir*Math.sin(a);
+    out+=`<path d="M${x1} ${y1} A${r} ${r} 0 ${lg} 1 ${x2} ${y2} L${xi2} ${yi2} A${ir} ${ir} 0 ${lg} 0 ${xi1} ${yi1} Z" fill="${col}"/>`; a=a2; });
+  const ctr=top?`<text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="15" font-weight="700" fill="${cssVar('--ink')}" font-family="Georgia,serif">${top}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="9" fill="${cssVar('--ink-3')}">${sub||''}</text>`:'';
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0">${out}${ctr}</svg>`;
+}
+function inoutSVG(data){
+  const w=560,h=170,pad=24,max=Math.max(...data.map(d=>Math.max(d.i,d.o)))*1.15;
+  const pos=cssVar('--pos'),gold=cssVar('--gold'),tx=cssVar('--ink-3'),grid=cssVar('--border');
+  let inner=`<line x1="0" y1="${h-pad}" x2="${w}" y2="${h-pad}" stroke="${grid}"/>`; const gw=(w-2*pad)/data.length;
+  data.forEach((d,i)=>{const cx=pad+gw*i+gw/2;
+    inner+=`<rect x="${cx-14}" y="${h-pad-(d.i/max)*(h-2*pad)}" width="12" height="${(d.i/max)*(h-2*pad)}" rx="4" fill="${pos}"/><rect x="${cx+2}" y="${h-pad-(d.o/max)*(h-2*pad)}" width="12" height="${(d.o/max)*(h-2*pad)}" rx="4" fill="${gold}"/><text x="${cx}" y="${h-6}" text-anchor="middle" font-size="10" fill="${tx}">${d.l}</text>`;});
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img" aria-label="Cash in vs out">${inner}</svg>`;
+}
+/* the net-worth command chart (area/line/bars) */
+function nwSVG(vals, colorVar, type){
+  const w=760,h=210,pad=26,color=cssVar(colorVar||'--c1'),grid=cssVar('--border'),tx=cssVar('--ink-3');
+  let inner='';
+  for(let g=0;g<4;g++){const y=pad+g*((h-2*pad)/3); inner+=`<line x1="${pad}" y1="${y}" x2="${w-pad}" y2="${y}" stroke="${grid}"/>`;}
+  if(type==='bars'){
+    const min=Math.min(...vals),max=Math.max(...vals),rng=(max-min)*1.1||1,n=vals.length,bw=Math.min(34,(w-2*pad)/n*0.6);
+    vals.forEach((v,i)=>{const x=pad+(i/(n-1))*(w-2*pad)-bw/2,bh=((v-min)/rng)*(h-2*pad-8)+8; inner+=`<rect x="${x}" y="${h-pad-bh}" width="${bw}" height="${bh}" rx="5" fill="${color}" opacity="${0.5+0.45*(i/(n-1))}"/>`;});
+  } else {
+    const p=areaPath(vals,w,h,pad);
+    if(type!=='line'){ inner+=`<defs><linearGradient id="nwg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="${color}" stop-opacity=".26"/><stop offset="100%" stop-color="${color}" stop-opacity="0"/></linearGradient></defs><path d="${p.line} L ${p.last.x} ${h-pad} L ${pad} ${h-pad} Z" fill="url(#nwg)"/>`; }
+    inner+=`<path d="${p.line}" fill="none" stroke="${color}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="stroke-dasharray:1600;stroke-dashoffset:1600;animation:draw 1s var(--ease) forwards"/>`;
+    inner+=`<circle cx="${p.last.x}" cy="${p.last.y}" r="5" fill="${color}"/><circle cx="${p.last.x}" cy="${p.last.y}" r="10" fill="none" stroke="${color}" stroke-width="1.5" opacity=".35"/>`;
+  }
+  ['Mar','Apr','May','Jun','Now'].forEach((l,i)=>{const x=pad+(i/4)*(w-2*pad); inner+=`<text x="${x}" y="${h-4}" text-anchor="middle" font-size="10" fill="${tx}">${l}</text>`;});
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" role="img">${inner}</svg>`;
+}
+/* declarative chart mounts */
+function drawChartEl(el){
+  const t=el.dataset.chart;
+  if(t==='inout') el.innerHTML=inoutSVG(JSON.parse(el.dataset.v));
+  else if(t==='donut'){ const s=JSON.parse(el.dataset.v); el.innerHTML=donutSVG(s,el.dataset.size?+el.dataset.size:150,el.dataset.top||'',el.dataset.sub||''); }
+  else if(t==='nw') el.innerHTML=nwSVG(JSON.parse(el.dataset.v), el.dataset.color, el.dataset.type||'area');
+  else if(t==='spark') el.innerHTML=sparkSVG(JSON.parse(el.dataset.v));
+}
+const drawStyle=document.createElement('style'); drawStyle.textContent='@keyframes draw{to{stroke-dashoffset:0}}'; document.head.appendChild(drawStyle);
+
+/* ============================================================================
+   5 · DATA
+   ============================================================================ */
+const ACCOUNTS = [
+  { id:'chk', name:'Primary Checking', inst:'Chase', bal:'$8,450', meta:'$8,200 available', icon:'bank', cls:'', type:'Cash', spark:[7.9,8.1,8.3,8.0,8.2,8.45] },
+  { id:'sav', name:'High-Yield Savings', inst:'Ally', bal:'$24,680', meta:'4.20% APY', icon:'pig', cls:'pos', type:'Cash', spark:[22,22.6,23.1,23.7,24.2,24.68] },
+  { id:'brk', name:'Individual Brokerage', inst:'Fidelity', bal:'$112,340', meta:'+21.1% all-time', icon:'trend', cls:'violet', type:'Investment', spark:[96,99,101,105,109,112.3] },
+  { id:'ira', name:'Roth IRA', inst:'Vanguard', bal:'$48,920', meta:'Retirement', icon:'shield', cls:'info', type:'Investment', spark:[41,43,44,46,47.5,48.9] },
+  { id:'ccd', name:'Sapphire Reserve', inst:'Chase', bal:'−$2,210', meta:'Min $35 · due 4d', icon:'card', cls:'neg', type:'Credit', spark:[1.4,1.7,1.9,2.4,2.1,2.21] },
+  { id:'auto', name:'Auto Loan', inst:'Toyota Financial', bal:'−$18,400', meta:'6.49% APR', icon:'car', cls:'gold', type:'Loan', spark:[20,19.6,19.2,18.9,18.6,18.4] },
+];
+const ACCT_BY = {}; ACCOUNTS.forEach(a=>ACCT_BY[a.id]=a);
+
+const NW_SERIES = {
+  all:[212,215,214,219,223,228,231,236,240,247,252,258,263.8],
+  investments:[150,153,156,158,162,166,168,171,174,176,178,180,181],
+  cash:[30,31,31,32,33,34,34,35,36,36,37,38,38.4],
+  realestate:[300,301,302,303,305,306,307,308,309,310,311,312,312],
+  business:[80,82,83,85,87,88,89,90,91,92,93,94,95.2],
+  debt:[47,47,46.8,46.5,46.3,46.1,46,45.9,45.8,45.7,45.6,45.6,45.6],
+};
+const NW_META = {
+  all:{label:'Net worth',val:'$263,820',pct:'6.3%',amt:'+$15,732',up:true,color:'--c1'},
+  investments:{label:'Investments',val:'$181,029',pct:'6.1%',amt:'+$10,450',up:true,color:'--c4'},
+  cash:{label:'Cash & liquid',val:'$38,420',pct:'6.4%',amt:'+$2,320',up:true,color:'--c3'},
+  realestate:{label:'Real estate equity',val:'$112,000',pct:'2.8%',amt:'+$1,800',up:true,color:'--c2'},
+  business:{label:'Business net assets',val:'$95,200',pct:'4.5%',amt:'+$4,150',up:true,color:'--c5'},
+  debt:{label:'Debt & liabilities',val:'$45,629',pct:'2.2%',amt:'−$1,038',up:false,color:'--c6'},
+};
+const RANGE_SLICE = { '1W':2,'1M':4,'3M':7,'6M':10,'1Y':13,'All':13 };
+let nwFilter='all', nwType='area', nwRange='3M';
+
+const AI = [
+  { icon:'umbrella', cls:'gold', title:'Grow your emergency fund', body:'You hold 2.3 months of expenses. Reaching 3 months meaningfully raises your health score.', metric:'$4,350 to go', spark:[6,7,7,8,9,10,11] },
+  { icon:'card', cls:'neg', title:'Pay down the Sapphire balance', body:'At 22% APR, clearing the $2,210 balance saves an estimated $1,248 over the year.', metric:'Save $1,248', spark:[12,11,11,10,9,9,8] },
+  { icon:'flame', cls:'gold', title:'Dining is trending up', body:'$640 this month vs $492 last — weekend delivery drove most of the jump.', metric:'+30%', spark:[5,5,6,6,7,8,9] },
+  { icon:'home', cls:'pos', title:'Refinance worth a look', body:'Current rates sit below your 6.5% mortgage. A refi could trim your monthly payment.', metric:'~$210 / mo', spark:[9,8,8,7,7,6,6] },
+];
+
+const HOLDINGS = [
+  ['VTI','Vanguard Total Stock','$48,312','+21.1%','pos'],['VXUS',"Total Int'l Stock",'$26,281','+8.9%','pos'],
+  ['AAPL','Apple Inc.','$25,776','+56.5%','pos'],['MSFT','Microsoft','$25,926','+43.7%','pos'],
+  ['BND','Total Bond Market','$17,436','−3.5%','neg'],['SCHD','Schwab Dividend','$9,053','+20.8%','pos'],
+];
+
+/* Entity timelines (universal timeline data) */
+const TIMELINES = {
+  account:[
+    {name:'Balance synced',sub:'Just now · via Plaid',tone:''},
+    {name:'Payroll deposit +$4,250',sub:'May 30 · Acme Corp',badge:'Income',badgeCls:'pos'},
+    {name:'Recategorized 3 transactions',sub:'May 28 · AI auto-tag',tone:'muted'},
+    {name:'Statement available',sub:'May 1 · April 2026',tone:'muted'},
+  ],
+  investment:[
+    {name:'Bought AAPL',sub:'Jun 24 · 15 @ $214.80',badge:'Buy',badgeCls:'pos'},
+    {name:'Dividend · SCHD',sub:'Jun 18 · $182.40',badge:'+$182',badgeCls:'gold'},
+    {name:'Sold VTI',sub:'Jun 21 · 10 @ $268.40',badge:'Sell',badgeCls:'neg'},
+    {name:'Rebalanced to target',sub:'Jun 1 · AI suggested',tone:'muted'},
+  ],
+  business:[
+    {name:'Invoice paid · Northwind',sub:'Jun 12 · +$6,200',badge:'Paid',badgeCls:'pos'},
+    {name:'Invoice sent · Harbor Group',sub:'Jun 8 · $2,100',tone:'gold'},
+    {name:'Expense recorded · Adobe',sub:'Jun 11 · −$599',tone:'muted'},
+    {name:'Quarter closed',sub:'Apr 1 · Ledger verified',tone:'muted'},
+  ],
+  transaction:[
+    {name:'Cleared',sub:'Posted to Primary Checking',badge:'Cleared',badgeCls:'pos'},
+    {name:'Categorized · Groceries',sub:'AI auto-tag · high confidence',tone:'muted'},
+    {name:'Authorized',sub:'Whole Foods Market',tone:'muted'},
+  ],
+};
+
+/* ============================================================================
+   6 · TODAY — the flagship command deck
+   ============================================================================ */
+function renderToday(){
+  const host = $('#todayBody');
+  const acctStrip = carousel(ACCOUNTS.map(acctCard).join(''));
+  const aiStrip = carousel(AI.map(a=>`<div class="ai-card" role="listitem"><div class="ai-head"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="ai-title">${a.title}</div></div><div class="ai-body">${a.body}</div><div data-chart="spark" data-v="[${a.spark}]"></div><div class="row" style="justify-content:space-between;align-items:center"><span class="ai-metric">${a.metric}</span><button class="btn btn-ghost btn-sm" data-nav="ai">Review ${I('arr-r')}</button></div></div>`).join(''));
+
+  host.innerHTML = `
+    <div class="wshead">
+      <div>
+        <div class="eyebrow" id="greet-eyebrow">Today</div>
+        <h1 class="ws-title" id="greet-title">Good morning, Alex</h1>
+        <p class="ws-sub">Your net worth is up <strong style="color:var(--pos)">$15,732</strong> this month. Two things want your attention.</p>
+      </div>
+      <div class="row gap-2 wrap">
+        <span class="row gap-1 muted" style="font-size:var(--fs-xs)">${I('clock')} Updated just now</span>
+        <button class="btn btn-outline btn-sm">${I('download')} Export</button>
+        <button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Add account</button>
+      </div>
+    </div>
+
+    <div class="summary" id="summary"><div class="summary-track scroll">
+      <div class="scell"><div class="sc-label">Net worth</div><div class="sc-val num">$263,820</div></div>
+      <div class="scell"><div class="sc-label">Cash</div><div class="sc-val num">$38,420</div></div>
+      <div class="scell"><div class="sc-label">Income · mo</div><div class="sc-val num" style="color:var(--pos)">$7,900</div></div>
+      <div class="scell"><div class="sc-label">Expenses · mo</div><div class="sc-val num">$5,430</div></div>
+      <div class="scell"><div class="sc-label">Bills due</div><div class="sc-val num" style="color:var(--warn)">$2,130</div></div>
+      <div class="scell"><div class="sc-label">Health</div><div class="sc-val">78 · Good</div></div>
+    </div></div>
+
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      <div class="card lg c8" style="container-type:inline-size">
+        <div class="sec-head" style="align-items:flex-start">
+          <div>
+            <div class="eyebrow" id="nwLabel">Net worth</div>
+            <div class="row gap-3 wrap" style="align-items:baseline">
+              <div class="num" id="nwValue" style="font-family:var(--font-display);font-size:var(--fs-display-xl);line-height:1">$263,820</div>
+              <span class="delta up" id="nwDelta">${I('arr-ur')} 6.3% <span class="muted" style="font-weight:500">+$15,732 · 3M</span></span>
+            </div>
+          </div>
+          <div class="stack gap-2" style="align-items:flex-end">
+            <div class="seg" id="nwType" role="group" aria-label="Chart type">
+              <button class="active" data-t="area">Area</button><button data-t="line">Line</button><button data-t="bars">Bars</button>
+            </div>
+            <select class="chip" id="nwFilter" style="padding:6px 12px;font-weight:600" aria-label="Portfolio filter">
+              <option value="all">All · Net worth</option><option value="investments">Investments</option>
+              <option value="cash">Cash &amp; liquid</option><option value="realestate">Real estate equity</option>
+              <option value="business">Business</option><option value="debt">Debt &amp; liabilities</option>
+            </select>
+          </div>
+        </div>
+        <div id="nwChart" style="margin:var(--sp-2) 0 var(--sp-4)"></div>
+        <div class="seg" id="nwRange" role="group" aria-label="Range" style="margin-bottom:var(--sp-4)">
+          ${['1W','1M','3M','6M','1Y','All'].map(r=>`<button class="${r==='3M'?'active':''}" data-r="${r}">${r}</button>`).join('')}
+        </div>
+        <div class="stack gap-2"><div class="eyebrow">What moved it · 30d</div><div class="row gap-2 wrap">
+          <span class="badge pos">${I('arr-ur')} Investments +$10,450</span>
+          <span class="badge pos">${I('arr-ur')} Cash +$2,320</span>
+          <span class="badge pos">${I('arr-ur')} Real estate +$1,800</span>
+          <span class="badge neg">${I('arr-dr')} Credit cards −$1,038</span>
+        </div></div>
+      </div>
+
+      <div class="c4 stack gap-5">
+        <div class="card act" data-drawer="health" style="display:flex;gap:var(--sp-4);align-items:center">
+          <div class="ring" style="width:82px;height:82px;flex-shrink:0;background:conic-gradient(var(--accent) 281deg, var(--surface-3) 0)">
+            <div class="ring-inner" style="width:62px;height:62px"><div style="font-family:var(--font-display);font-size:1.6rem;line-height:1;color:var(--accent)">78</div><div style="font-size:9px;color:var(--ink-3)">/100</div></div>
+          </div>
+          <div><div class="eyebrow">Financial health</div><div class="sec-title" style="margin:2px 0 4px">Good — trending up</div><div class="muted" style="font-size:var(--fs-sm)">Build 3–6 months of expenses to reach “Strong”.</div></div>
+        </div>
+        <div class="card grow" style="display:flex;flex-direction:column">
+          <div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">Safe to spend</div><span class="badge neutral">Now</span></div>
+          <div class="num" style="font-family:var(--font-display);font-size:2rem">$11,240</div>
+          <div class="muted" style="font-size:var(--fs-xs);margin-top:2px">$12,480 cash − $1,240 scheduled bills</div>
+          <div class="bar" style="margin-top:var(--sp-4)"><i style="width:72%"></i></div>
+          <div class="row" style="justify-content:space-between;margin-top:6px;font-size:var(--fs-xs);color:var(--ink-3)"><span>Spent 68% of budget</span><span>12 days left</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:var(--sp-7)">
+      <div class="sec-head">
+        <div class="row gap-2">${I('sparkles')}<span class="sec-title">AI advisor</span><span class="badge gold">4</span></div>
+        <div class="row gap-1"><button class="iconbtn" data-ai-toggle aria-label="Pause">${I('pause')}</button><a class="more" data-nav="ai">Open advisor ${I('arr-r')}</a></div>
+      </div>
+      ${aiStrip}
+      <div class="ai-dots" id="aiDots"></div>
+    </div>
+
+    <div style="margin-bottom:var(--sp-7)">
+      <div class="sec-head"><div class="row gap-2"><span class="sec-title">Accounts</span><span class="badge neutral">6 linked · $173,780 net</span></div><a class="more" data-nav="accounts">All accounts ${I('arr-r')}</a></div>
+      ${acctStrip}
+    </div>
+
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      <div class="card c7">
+        <div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">Cash flow · last 6 months</div><div class="row gap-3" style="font-size:var(--fs-xs);color:var(--ink-3)"><span class="row gap-1"><span style="width:10px;height:10px;border-radius:3px;background:var(--pos)"></span> In</span><span class="row gap-1"><span style="width:10px;height:10px;border-radius:3px;background:var(--gold)"></span> Out</span><span class="badge pos">Net +$14,820</span></div></div>
+        <div data-chart="inout" data-v='[{"l":"Feb","i":6.4,"o":4.6},{"l":"Mar","i":6.9,"o":5.5},{"l":"Apr","i":6.0,"o":6.7},{"l":"May","i":7.3,"o":4.8},{"l":"Jun","i":6.7,"o":5.2},{"l":"Jul","i":8.3,"o":4.4}]'></div>
+        <div class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:var(--sp-4)"><div><div class="eyebrow">Avg in</div><div class="num" style="font-weight:700;color:var(--pos)">$7,900</div></div><div><div class="eyebrow">Avg out</div><div class="num" style="font-weight:700;color:var(--gold)">$5,430</div></div><div><div class="eyebrow">Avg net</div><div class="num" style="font-weight:700;color:var(--pos)">+$2,470</div></div></div>
+      </div>
+      <div class="card c5">
+        <div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">Upcoming bills</div><a class="more" data-nav="bills">View all ${I('arr-r')}</a></div>
+        <div class="rowlist">
+          <div class="rowitem"><div class="tile sm">${I('home')}</div><div class="grow"><div class="r-name">Mortgage</div><div class="r-sub">Due Jun 15 · Rocket</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$1,842.00</div><button class="btn btn-primary btn-sm">Pay</button></div></div>
+          <div class="rowitem"><div class="tile sm gold">${I('bolt')}</div><div class="grow"><div class="r-name">Electricity</div><div class="r-sub">Due Jun 17</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$87.64</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+          <div class="rowitem"><div class="tile sm info">${I('wifi')}</div><div class="grow"><div class="r-name">Internet</div><div class="r-sub">Due Jun 21</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$65.00</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+        </div>
+        <div class="row" style="justify-content:space-between;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border);font-weight:700"><span class="muted">Total due</span><span class="num">$2,130.14</span></div>
+      </div>
+    </div>
+
+    <div class="grid g12">
+      <div class="c5">
+        <div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">Goals</div><a class="more" data-nav="goals">All goals ${I('arr-r')}</a></div>
+        <div class="stack gap-3">
+          <div class="card act" data-drawer="goal" data-id="ef"><div class="row gap-3" style="margin-bottom:var(--sp-3)"><div class="tile gold">${I('umbrella')}</div><div class="grow"><div class="r-name">Emergency fund</div><div class="r-sub">$14,000 of $20,000</div></div><span class="badge gold">70%</span></div><div class="bar"><i style="width:70%;background:var(--gold)"></i></div></div>
+          <div class="card act" data-drawer="goal" data-id="house"><div class="row gap-3" style="margin-bottom:var(--sp-3)"><div class="tile">${I('home')}</div><div class="grow"><div class="r-name">House down payment</div><div class="r-sub">$17,000 of $80,000</div></div><span class="badge neutral">22%</span></div><div class="bar"><i style="width:22%"></i></div></div>
+        </div>
+      </div>
+      <div class="card c7">
+        <div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">Recent activity</div><a class="more" data-nav="transactions">View all ${I('arr-r')}</a></div>
+        <div class="rowlist">
+          ${richRow({icon:'bank',cls:'pos',name:'Payroll — Acme Corp',sub:'May 30 · Income',amt:'+$4,250.00',amtColor:'var(--pos)',entity:{type:'transaction',id:'t1'}})}
+          ${richRow({icon:'cart',cls:'',name:'Whole Foods Market',sub:'Jun 1 · Groceries',amt:'−$84.32',entity:{type:'transaction',id:'t2'}})}
+          ${richRow({icon:'car',cls:'gold',name:'Shell Station',sub:'May 31 · Transport',amt:'−$62.10',entity:{type:'transaction',id:'t3'}})}
+          ${richRow({icon:'fork',cls:'neg',name:'Uchi Restaurant',sub:'May 29 · Dining',amt:'−$127.40',entity:{type:'transaction',id:'t4'}})}
+        </div>
+      </div>
+    </div>
+
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-7)">${I('shield')} TerraVest V3 · Financial Operating System — Today, Accounts, Investments &amp; Business built to spec; every other workspace inherits this shell.</p>`;
+
+  // wire + draw
+  drawNW();
+  host.querySelectorAll('[data-carousel]').forEach(c=>{ if(!c.__init){ initCarousel(c); c.__init=true; } });
+  host.querySelectorAll('[data-chart]').forEach(drawChartEl);
+  buildAiDots(); startAi();
+  wireSummary();
+  greet();
+}
+function drawNW(){
+  const el=$('#nwChart'); if(!el) return;
+  const full=NW_SERIES[nwFilter], vals=full.slice(full.length-RANGE_SLICE[nwRange]), meta=NW_META[nwFilter];
+  el.innerHTML=nwSVG(vals,meta.color,nwType);
+  const L=$('#nwLabel'),V=$('#nwValue'),D=$('#nwDelta');
+  if(L)L.textContent=meta.label; if(V)V.textContent=meta.val;
+  if(D){D.className='delta '+(meta.up?'up':'down'); D.innerHTML=`${I(meta.up?'arr-ur':'arr-dr')} ${meta.pct} <span class="muted" style="font-weight:500">${meta.amt} · ${nwRange}</span>`;}
+}
+function greet(){
+  const h=new Date().getHours(), g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';
+  const t=$('#greet-title'); if(t)t.textContent=`${g}, Alex`;
+  const e=$('#greet-eyebrow'); if(e)e.textContent=new Date().toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'});
+}
+
+/* ============================================================================
+   7 · WORKSPACE REGISTRY  (Accounts · Investments · Business + placeholders)
+   ============================================================================ */
+const PAGES = {};
+
+PAGES.accounts = () => {
+  const groups=[
+    {name:'Cash & Banking',total:'$33,130',icon:'bank',cls:'',rows:['chk','sav']},
+    {name:'Investments',total:'$161,260',icon:'trend',cls:'violet',rows:['brk','ira']},
+    {name:'Credit Cards',total:'−$2,210',icon:'card',cls:'neg',rows:['ccd']},
+    {name:'Loans',total:'−$18,400',icon:'car',cls:'gold',rows:['auto']},
+  ];
+  return `${wshead('Money','Accounts','Everything you own and owe — grouped, synced, and one tap from the full story.',
+    `<button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Link account</button>`)}
+    ${actionBar(['All','Cash','Investments','Credit','Loans'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('scale','','Net position','$173,780','<span class="badge pos">'+I('arr-ur')+' +6.3% · 30d</span>')}
+      ${kpi('coins','pos','Total assets','$194,391','6 accounts')}
+      ${kpi('bank','info','Cash','$33,130','')}
+      ${kpi('trend','violet','Investments','$161,260','+21.6% all-time')}
+      ${kpi('card','neg','Total debt','$20,610','2 accounts')}
+    </div>
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      <div class="card c7">${sechead('Net worth · 6 months','<span class="badge pos">+$15,732</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[${NW_SERIES.all.slice(-10)}]"></div></div>
+      <div class="card c5">${sechead('Asset allocation')}<div class="row gap-5" style="align-items:center"><div data-chart="donut" data-size="150" data-top="$194k" data-sub="assets" data-v='[{"label":"Cash","val":33130,"color":"--c3"},{"label":"Investments","val":161260,"color":"--c1"}]'></div><div class="grow">${legend([{label:'Cash & banking',val:'$33,130',color:'--c3',pct:'17%'},{label:'Investments',val:'$161,260',color:'--c1',pct:'83%'}])}</div></div></div>
+    </div>
+    ${sechead('By type · click any account for its full drawer','<a class="more" data-nav="transactions">Transactions '+I('arr-r')+'</a>')}
+    ${groups.map(g=>`<div class="card" style="margin-bottom:var(--sp-4)">
+      <div class="sec-head"><div class="row gap-3"><div class="tile ${g.cls}">${I(g.icon)}</div><div><div class="sec-title" style="font-size:var(--fs-body)">${g.name}</div><div class="muted" style="font-size:var(--fs-xs)">${g.rows.length} account${g.rows.length>1?'s':''}</div></div></div><div class="num" style="font-weight:700">${g.total}</div></div>
+      <div class="rowlist">${g.rows.map(id=>{const a=ACCT_BY[id]; return richRow({icon:a.icon,cls:a.cls,name:a.name,sub:a.inst+' · '+a.meta,amt:a.bal,entity:{type:'account',id:a.id}});}).join('')}</div>
+    </div>`).join('')}
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-4)">${I('shield')} Read-only and secured by Plaid — credentials are never stored.</p>`;
+};
+
+PAGES.investments = () => {
+  const alloc=[{label:'US equity',val:58,color:'--c1',pct:'58%'},{label:'International',val:22,color:'--c3',pct:'22%'},{label:'Bonds',val:12,color:'--c2',pct:'12%'},{label:'Cash',val:8,color:'--c5',pct:'8%'}];
+  const holdRows=HOLDINGS.map(h=>richRow({icon:'trend',cls:h[4]==='neg'?'neg':'violet',name:h[0]+' · '+h[1],sub:'Long-term hold',amt:h[3],amtColor:`var(--${h[4]})`})).join('');
+  return `${wshead('Grow','Investments','Holdings, allocation and performance across every broker — with the advisor watching for drift.',
+    `<button class="btn btn-outline btn-sm">${I('refresh')} Refresh</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Link brokerage</button>`)}
+    ${actionBar(['Overview','Holdings','Performance','Allocation','Activity'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('coins','','Portfolio value','$161,260','')}
+      ${kpi('trend','pos','Total gain','+$28,680','+21.6% all-time')}
+      ${kpi('list','violet','Holdings','7','',{type:'investment',id:'port'})}
+      ${kpi('bank','info','Brokers','2','Fidelity · Vanguard')}
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:4px solid var(--accent);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>Advisor:</strong> your bond sleeve drifted 3% under target after the equity run-up. A $4,800 rebalance restores your risk profile.</div><button class="btn btn-ghost btn-sm mla" data-nav="ai">Discuss ${I('arr-r')}</button></div>
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      <div class="card c5">${sechead('Allocation')}<div class="row gap-5" style="align-items:center"><div data-chart="donut" data-size="150" data-top="Diversified" data-v='[{"label":"US","val":58,"color":"--c1"},{"label":"Intl","val":22,"color":"--c3"},{"label":"Bonds","val":12,"color":"--c2"},{"label":"Cash","val":8,"color":"--c5"}]'></div><div class="grow">${legend(alloc.map(a=>({label:a.label,val:a.pct,color:a.color})))}</div></div></div>
+      <div class="card c7">${sechead('Growth of $100k · 12 months','<span class="badge pos">+21.6%</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[100,103,101,107,110,114,113,120,124,130,138,161]"></div></div>
+    </div>
+    <div class="card">${sechead('Holdings','<span class="muted" style="font-size:var(--fs-sm)">7 positions · 2 brokers</span>')}<div class="rowlist">${holdRows}</div></div>`;
+};
+
+PAGES.business = () => {
+  const agingRow=(dot,label,val)=>`<div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(${dot})"></span> ${label}</span><span class="num">${val}</span></div>`;
+  const ledgerBadge=(t,c)=>`<span class="badge ${c}">${t}</span>`;
+  const overview=`<div class="grid g12">
+    <div class="card c7">${sechead('Cash flow · last 6 months','<span class="badge pos">Net +$41,300</span>')}<div data-chart="inout" data-v='[{"l":"Jan","i":6.0,"o":4.5},{"l":"Feb","i":8.5,"o":5.2},{"l":"Mar","i":6.0,"o":4.0},{"l":"Apr","i":9.5,"o":5.8},{"l":"May","i":8.0,"o":4.8},{"l":"Jun","i":10.0,"o":5.4}]'></div></div>
+    <div class="card c5">${sechead('P&amp;L snapshot','<span class="badge pos">'+I('shield')+' Ledger verified</span>')}<div class="rowlist">
+      ${richRow({icon:'arr-dl',cls:'pos',name:'Income',sub:'Trailing 6 months',amt:'$112,400',amtColor:'var(--pos)'})}
+      ${richRow({icon:'arr-ur',cls:'neg',name:'Expenses',sub:'Trailing 6 months',amt:'$71,100',amtColor:'var(--neg)'})}
+      ${richRow({icon:'scale',cls:'',name:'Net profit',sub:'Trailing 6 months',amt:'$41,300',amtColor:'var(--pos)'})}
+    </div></div>
+    <div class="card c12">${sechead('By business · click a row to open','<span class="badge neutral">This month</span>')}<div class="rowlist">
+      ${richRow({icon:'brief',cls:'',name:'Summit Contracting',sub:'Construction · net +$14,000',amt:'$31,200',entity:{type:'business',id:'summit'}})}
+      ${richRow({icon:'estate',cls:'gold',name:'Cedar Rentals LLC',sub:'Real estate · net +$5,680',amt:'$18,400',entity:{type:'business',id:'cedar'}})}
+    </div></div></div>`;
+  const transactions=`<div class="card">${sechead('Ledger transactions','<button class="btn btn-outline btn-sm">'+I('filter')+' Rules</button>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Set a rule (merchant contains “AWS” → Software) and apply it to every past match in one click.</p>
+    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Deposits</span><span class="chip">Payments</span><span class="chip">Transfers</span><span class="chip">Refunds</span></div>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm pos">${I('arr-dl')}</div><div class="grow"><div class="r-name">Client payment — Northwind ${ledgerBadge('Income','neutral')}</div><div class="r-sub">Operating Checking · ${ledgerBadge('Cleared','pos')}</div></div><div class="r-amt num" style="color:var(--pos)">+$6,200</div></div>
+      <div class="rowitem"><div class="tile sm">${I('repeat')}</div><div class="grow"><div class="r-name">Refund — Staples return ${ledgerBadge('Office','neutral')}</div><div class="r-sub">Amex Biz · ${ledgerBadge('Cleared','pos')}</div></div><div class="r-amt num" style="color:var(--pos)">+$142</div></div>
+      <div class="rowitem"><div class="tile sm violet">${I('cart')}</div><div class="grow"><div class="r-name">Adobe Creative Cloud ${ledgerBadge('Software','neutral')}</div><div class="r-sub">Amex Biz · ${ledgerBadge('Pending','warn')}</div></div><div class="r-amt num">−$599</div></div>
+      <div class="rowitem"><div class="tile sm gold">${I('home')}</div><div class="grow"><div class="r-name">WeWork — office rent ${ledgerBadge('Rent','neutral')}</div><div class="r-sub">Operating Checking · ${ledgerBadge('Reconciled','pos')}</div></div><div class="r-amt num">−$1,800</div></div>
+    </div></div>`;
+  const invoicing=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Invoices','<button class="btn btn-outline btn-sm">'+I('plus')+' Create invoice</button>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Draft → Sent → Viewed → Partially paid → Paid. Each carries an embedded Pay Now link that auto-reconciles.</p>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm pos">${I('invoice')}</div><div class="grow"><div class="r-name">Northwind Co. ${ledgerBadge('Paid','pos')}</div><div class="r-sub">40h design @ $150 + hosting</div></div><div class="r-amt num">$6,200</div></div>
+      <div class="rowitem"><div class="tile sm neg">${I('invoice')}</div><div class="grow"><div class="r-name">Pinecrest Studio ${ledgerBadge('Overdue','neg')} ${I('help','muted')}</div><div class="r-sub">Viewed Jun 12 · due May 20</div></div><div class="r-amt num">$3,450</div></div>
+      <div class="rowitem"><div class="tile sm gold">${I('invoice')}</div><div class="grow"><div class="r-name">Harbor Group ${ledgerBadge('Partially paid','warn')}</div><div class="r-sub">$900 of $2,100 remaining</div></div><div class="r-amt num">$2,100</div></div>
+    </div></div>
+    <div class="card">${sechead('Receivables aging','<span class="badge neutral">$4,650 open</span>')}
+      ${stackBar([{pct:64,color:'--pos'},{pct:22,color:'--gold'},{pct:14,color:'--neg'}])}
+      <div style="margin-top:10px">${agingRow('--pos','Current','$2,970')}${agingRow('--gold','1–30 days','$1,020')}${agingRow('--neg','30+ days overdue','$660')}</div>
+    </div>`;
+  const ap=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Bills & payables','<span class="badge warn">$4,180 owed</span>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Record a vendor bill and pay it in full or part — each posts to the ledger as an expense and accounts payable.</p>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm">${I('receipt')}</div><div class="grow"><div class="r-name">Staples ${ledgerBadge('Open','warn')}</div><div class="r-sub">Operating · due Aug 5</div></div><div class="row gap-3"><div class="r-amt num">$1,180</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+      <div class="rowitem"><div class="tile sm">${I('receipt')}</div><div class="grow"><div class="r-name">AWS ${ledgerBadge('Partially paid','warn')}</div><div class="r-sub">$1,500 of $3,000 due · Aug 12</div></div><div class="row gap-3"><div class="r-amt num">$3,000</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+      <div class="rowitem"><div class="tile sm pos">${I('receipt')}</div><div class="grow"><div class="r-name">City Utilities ${ledgerBadge('Paid','pos')}</div><div class="r-sub">Jul 28</div></div><div class="r-amt num">$420</div></div>
+    </div></div>
+    <div class="card">${sechead('Payables aging','<span class="badge neutral">$4,180 owed</span>')}
+      ${stackBar([{pct:70,color:'--pos'},{pct:20,color:'--gold'},{pct:10,color:'--neg'}])}
+      <div style="margin-top:10px">${agingRow('--pos','Current','$2,940')}${agingRow('--gold','1–30 days','$820')}${agingRow('--neg','90+ days','$420')}</div>
+    </div>`;
+  const statements=`<div class="card">${sechead('Financial statements','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('download')+' Excel</button><button class="btn btn-outline btn-sm">'+I('file')+' PDF</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Real double-entry P&amp;L, Balance Sheet and Cash Flow — computed from journal entries, not estimates.</p>
+    <div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">Profit &amp; Loss</button><button>Balance Sheet</button><button>Cash Flow</button></div>
+    <div class="row" style="justify-content:space-between;padding:5px 0 5px 16px"><span>4000 · Sales Income</span><span class="num">$42,100</span></div>
+    <div class="row" style="justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid var(--border)"><span>Total income</span><span class="num">$42,100</span></div>
+    <div class="row" style="justify-content:space-between;padding:5px 0 5px 16px"><span>6000 · Operating Expenses</span><span class="num">$18,300</span></div>
+    <div class="row" style="justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid var(--border)"><span>Total expenses</span><span class="num">$18,300</span></div>
+    <div class="row" style="justify-content:space-between;padding:8px 0;font-weight:700;border-top:2px solid var(--border)"><span>Net profit</span><span class="num" style="color:var(--pos)">$23,800</span></div></div>`;
+  const documents=`<div class="card">${sechead('Document center','<button class="btn btn-outline btn-sm">'+I('download')+' Add document</button>')}
+    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Invoice</span><span class="chip">Receipt</span><span class="chip">Contract</span><span class="chip">Tax</span></div>
+    <div class="rowlist">
+      ${richRow({icon:'invoice',cls:'info',name:'Invoice #1042 — Northwind Co.',sub:'Invoice · Jun 2026 · Summit Contracting',amt:''})}
+      ${richRow({icon:'receipt',cls:'pos',name:'AWS receipt — May',sub:'Receipt · May 2026',amt:''})}
+      ${richRow({icon:'file',cls:'violet',name:'Master services agreement',sub:'Contract · Harbor Group',amt:''})}
+      ${richRow({icon:'file',cls:'gold',name:'2025 Form 1120-S',sub:'Tax · 2025',amt:''})}
+    </div></div>`;
+  return `${wshead('Business & Real estate','My business','QuickBooks-grade bookkeeping, invoicing and payables — computed from a real double-entry ledger.',
+    `<button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} New invoice</button>`)}
+    ${actionBar(['This month','This year','Trailing 12mo','Summit','Cedar'])}
+    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:flex-end;justify-content:space-between">
+      <div><div class="eyebrow">Total business cash</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$49,600</div><div class="muted" style="font-size:var(--fs-xs)">2 cash accounts · $4,180 owed on 1 card</div></div>
+      <div class="row gap-6 wrap"><div><div class="eyebrow">Net position</div><div class="num" style="font-weight:700;color:var(--pos)">$45,420</div></div><div><div class="eyebrow">Net cash flow · 6mo</div><div class="num" style="font-weight:700;color:var(--pos)">+$41,300</div></div></div>
+    </div>
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('arr-ur','pos','Revenue','$51,800','this month')}
+      ${kpi('arr-dr','neg','Expenses','$32,120','this month')}
+      ${kpi('trend','','Net profit','$19,680','this month')}
+      ${kpi('invoice','gold','Outstanding (AR)','$4,650','as of today')}
+      ${kpi('receipt','neg','Bills due (AP)','$4,180','$420 overdue')}
+    </div>
+    ${tabsBlock([
+      {label:'Overview',icon:'grid',panel:overview},
+      {label:'Transactions',icon:'exchange',panel:transactions},
+      {label:'Invoicing & AR',icon:'invoice',panel:invoicing},
+      {label:'Bills & AP',icon:'receipt',panel:ap},
+      {label:'Statements',icon:'file',panel:statements},
+      {label:'Documents',icon:'folder',panel:documents},
+    ])}`;
+};
+
+PAGES.transactions = () => {
+  const cats=['All','Income','Groceries','Dining','Housing','Transport','Subscriptions','Shopping'];
+  const rows=[
+    {icon:'bank',cls:'pos',name:'Payroll — Acme Corp',sub:'Primary Checking · Income · May 30',amt:'+$4,250.00',amtColor:'var(--pos)',id:'t1'},
+    {icon:'home',cls:'',name:'Rent — Maple Apartments',sub:'Primary Checking · Housing · May 28',amt:'−$1,600.00'},
+    {icon:'cart',cls:'gold',name:'Whole Foods Market',sub:'Sapphire Reserve · Groceries · Jun 1',amt:'−$84.32',id:'t2'},
+    {icon:'car',cls:'gold',name:'Shell Station',sub:'Sapphire Reserve · Transport · May 31',amt:'−$62.10',id:'t3'},
+    {icon:'fork',cls:'neg',name:'Uchi Restaurant',sub:'Sapphire Reserve · Dining · May 29',amt:'−$127.40',id:'t4'},
+    {icon:'repeat',cls:'violet',name:'Spotify Premium',sub:'Sapphire Reserve · Subscriptions · May 26',amt:'−$9.99'},
+  ];
+  return `${wshead('Money','Transactions','Every movement across your linked accounts — searchable, filterable, one tap to the full story.',
+    `<button class="btn btn-outline btn-sm">${I('sort')} Sort</button><button class="btn btn-outline btn-sm">${I('download')} Export</button>`)}
+    ${actionBar(cats)}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('arr-dl','pos','Money in','$4,250.00','this period')}
+      ${kpi('arr-ur','neg','Money out','$1,883.81','this period')}
+      ${kpi('scale','','Net','+$2,366.19','6 transactions')}
+    </div>
+    <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="chip active">All accounts</span><span class="chip">Sapphire Reserve · 38</span><span class="chip">Primary Checking · 112</span></div>
+    <div class="card">${sechead('Activity','<span class="muted" style="font-size:var(--fs-sm)">Newest first</span>')}
+      <div class="rowlist">${rows.map(r=>richRow({icon:r.icon,cls:r.cls,name:r.name,sub:r.sub,amt:r.amt,amtColor:r.amtColor,entity:r.id?{type:'transaction',id:r.id}:null})).join('')}</div>
+    </div>`;
+};
+
+PAGES.cashflow = () => `
+  ${wshead('Money','Cash flow',"What's coming in, going out, and what's genuinely safe to spend right now.",
+    `<button class="btn btn-ghost btn-sm" data-nav="ai">${I('sparkles')} Forecast</button>`)}
+  ${actionBar(['1M','3M','6M','1Y','All'])}
+  <div class="card" style="margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4)">
+    <div class="tile" style="width:52px;height:52px;font-size:24px">${I('wallet')}</div>
+    <div class="grow"><div class="eyebrow">Safe to spend right now</div><div class="num" style="font-family:var(--font-display);font-size:2rem">$11,240</div><div class="muted" style="font-size:var(--fs-xs)">$12,480 cash − $1,240 scheduled bills</div></div>
+  </div>
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('arr-dl','pos','Avg money in','$7,900','/mo')}
+    ${kpi('arr-ur','gold','Avg money out','$5,430','/mo')}
+    ${kpi('scale','','Avg net','+$2,470','/mo')}
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Last 6 months','<div class="row gap-3" style="font-size:var(--fs-xs);color:var(--ink-3)"><span class="row gap-1"><span style="width:10px;height:10px;border-radius:3px;background:var(--pos)"></span> In</span><span class="row gap-1"><span style="width:10px;height:10px;border-radius:3px;background:var(--gold)"></span> Out</span></div>')}
+    <div data-chart="inout" data-v='[{"l":"Feb","i":6.4,"o":4.6},{"l":"Mar","i":6.9,"o":5.5},{"l":"Apr","i":6.0,"o":6.7},{"l":"May","i":7.3,"o":4.8},{"l":"Jun","i":6.7,"o":5.2},{"l":"Jul","i":8.3,"o":4.4}]'></div>
+  </div>
+  <div class="card" style="border-left:4px solid var(--accent);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>Advisor forecast:</strong> at your current pace you'll finish the month with about <strong style="color:var(--pos)">$13,700</strong> in checking — comfortably above your $5,000 buffer.</div></div>`;
+
+PAGES.bills = () => `
+  ${wshead('Money','Bills & payments','Pay a card, loan or biller — securely, with reminders so nothing surprises you.',
+    `<button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Pay someone</button>`)}
+  ${actionBar(['Upcoming','Scheduled','Paid','Recurring'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('receipt','warn','Due in 7 days','$2,130','3 bills')}
+    ${kpi('cal','','Next payment','Jun 15','Mortgage')}
+    ${kpi('repeat','violet','Recurring','$247','/mo · 9 charges')}
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Upcoming')}
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm">${I('home')}</div><div class="grow"><div class="r-name">Mortgage</div><div class="r-sub">Due Jun 15 · Rocket</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$1,842.00</div><button class="btn btn-primary btn-sm">Pay</button></div></div>
+      <div class="rowitem"><div class="tile sm gold">${I('bolt')}</div><div class="grow"><div class="r-name">Electricity</div><div class="r-sub">Due Jun 17 · City Power</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$87.64</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+      <div class="rowitem"><div class="tile sm info">${I('wifi')}</div><div class="grow"><div class="r-name">Internet</div><div class="r-sub">Due Jun 21 · Fiber Co.</div></div><div class="stack" style="align-items:flex-end;gap:6px"><div class="r-amt num">$65.00</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
+    </div>
+    <div class="row" style="justify-content:space-between;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border);font-weight:700"><span class="muted">Total due</span><span class="num">$2,130.14</span></div>
+  </div>
+  <div class="card">${sechead('Recent payments')}
+    <div class="rowlist">
+      ${richRow({icon:'card',cls:'',name:'Visa ···· 4242',sub:'Scheduled · Jun 6 · TV-9F3A21',amt:'$1,250.42'})}
+      ${richRow({icon:'bolt',cls:'pos',name:'City Power & Light',sub:'Completed · May 28 · TV-7C1B08',amt:'$87.64'})}
+      ${richRow({icon:'car',cls:'neg',name:'Toyota Financial',sub:'Failed · May 20 · TV-2A6F17',amt:'$420.00'})}
+    </div>
+  </div>`;
+
+PAGES.goals = () => {
+  const cards=[
+    {id:'ef',icon:'umbrella',cls:'gold',name:'Emergency fund',sub:'$14,000 of $20,000',pct:70,badge:'70%',bcls:'gold'},
+    {id:'house',icon:'home',cls:'',name:'House down payment',sub:'$17,000 of $80,000',pct:22,badge:'22%',bcls:'neutral'},
+    {icon:'car',cls:'pos',name:'New car',sub:'$22,000 of $20,000',pct:100,badge:'Reached',bcls:'pos'},
+    {icon:'coins',cls:'info',name:'Pay off 123 Oak St',sub:'$72,000 of $320,000',pct:22,badge:'22%',bcls:'neutral'},
+  ];
+  return `${wshead('Grow','Goals','Link accounts and watch progress update itself — or log by hand. Every goal opens its own plan.',
+    `<button class="btn btn-primary btn-sm" data-drawer="goal">${I('plus')} New goal</button>`)}
+    ${actionBar(['All','Savings','Debt','Purchase'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('target','','Goals','4','')}${kpi('pig','pos','Saved so far','$53,000','')}
+      ${kpi('flame','gold','Still needed','$69,000','')}${kpi('scale','info','Total target','$120,000','')}
+    </div>
+    ${sechead('Your goals · swipe')}
+    ${carousel(cards.map(g=>`<div class="card act" data-drawer="goal"${g.id?` data-id="${g.id}"`:''} style="width:280px"><div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="tile ${g.cls}">${I(g.icon)}</div><div class="grow"><div class="r-name">${g.name}</div><div class="r-sub">${g.sub}</div></div><span class="badge ${g.bcls}">${g.badge}</span></div><div class="bar"><i style="width:${Math.min(g.pct,100)}%;background:${g.pct>=100?'var(--pos)':g.cls==='gold'?'var(--gold)':'var(--accent)'}"></i></div></div>`).join(''))}
+    <div class="card" style="margin-top:var(--sp-6)">${sechead('Emergency fund · milestones')}
+      ${timeline([
+        {name:'1 month of expenses',sub:'$5,430',badge:'Reached',badgeCls:'pos'},
+        {name:'3 months of expenses',sub:'$3,810 to go · $16,290',tone:'muted'},
+        {name:'6 months of expenses',sub:'$20,100 to go · $32,580',tone:'muted'},
+      ])}
+    </div>`;
+};
+
+PAGES.debt = () => {
+  const strat=[['Avalanche','$4,120','pos','3y 10m','Mar 2029',90,'Cheapest'],['Snowball','$4,580','neg','4y 1m','Jun 2029',100,''],['Hybrid','$4,310','warn','3y 11m','Apr 2029',94,'']];
+  return `${wshead('Grow','Debt payoff','Compare strategies on your real balances and build a plan you can actually follow.',
+    `<button class="btn btn-outline btn-sm">${I('bank')} Import from accounts</button>`)}
+    ${actionBar(['Avalanche','Snowball','Hybrid','Custom'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('card','neg','Total debt','$49,300','4 accounts')}${kpi('percent','gold','Weighted APR','8.9%','')}
+      ${kpi('cal','','Min payments','$900','/mo')}${kpi('flame','neg','Highest APR','18.2%','Visa Card')}
+    </div>
+    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-3)">${I('sparkles')}<div style="font-size:var(--fs-sm)">Recommended: <strong>Avalanche</strong> — debt-free by <strong>Mar 2029</strong>, saving the most interest. Throw your extra $300/mo at the Visa first.</div><button class="btn btn-ghost btn-sm mla">Use plan</button></div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Your debts')}
+      <div class="rowlist">
+        ${richRow({icon:'card',cls:'neg',name:'Visa Card',sub:'18.24% APR · min $150',amt:'$6,250.00'})}
+        ${richRow({icon:'coins',cls:'gold',name:'Personal Loan',sub:'11.99% APR · min $200',amt:'$9,800.00'})}
+        ${richRow({icon:'car',cls:'',name:'Auto Loan',sub:'6.49% APR · min $300',amt:'$14,500.00'})}
+        ${richRow({icon:'coins',cls:'info',name:'Student Loan',sub:'5.25% APR · min $250',amt:'$18,750.00'})}
+      </div>
+    </div>
+    ${sechead('Compare strategies')}
+    <div class="grid g12">${strat.map((s,i)=>`<div class="card c4"${i===0?' style="border-left:4px solid var(--accent)"':''}><div class="row gap-2" style="margin-bottom:10px"><strong>${s[0]}</strong>${s[6]?`<span class="badge gold mla">${I('coins')} ${s[6]}</span>`:''}</div><div class="eyebrow">Total interest</div><div class="num" style="font-family:var(--font-display);font-size:1.3rem;color:var(--${s[2]})">${s[1]}</div><div class="minibar" style="margin:8px 0"><i style="width:${s[5]}%;background:var(--${s[2]})"></i></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-2)"><div><div class="eyebrow">Time</div><div class="num" style="font-weight:700">${s[3]}</div></div><div><div class="eyebrow">Debt-free</div><div class="num" style="font-weight:700">${s[4]}</div></div></div><button class="btn ${i===0?'btn-primary':'btn-outline'} btn-sm" style="width:100%;margin-top:var(--sp-3)">${i===0?'Current plan':'Set as plan'}</button></div>`).join('')}</div>`;
+};
+
+PAGES.properties = () => {
+  const props=[['1842 Elmwood Drive','Austin, TX','$187,000','$67,000','Primary','pos'],['903 Ridge View Ln','Round Rock, TX','$125,000','$45,000','Rental','gold']];
+  return `${wshead('Business & Real estate','Properties','Your real estate portfolio, its cash flow, and tax-ready expense tracking.',
+    `<button class="btn btn-outline btn-sm">${I('invoice')} Tax export</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Add property</button>`)}
+    ${actionBar(['All','Primary','Rental','Land'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">
+      ${kpi('estate','','Total value','$312,000','+2.8% · 30d')}
+      ${kpi('home','pos','Total equity','$112,000','+1.6% · 30d')}
+      ${kpi('coins','neg','Total mortgage','$200,000','−0.8% · 30d')}
+    </div>
+    ${sechead('Portfolio')}
+    ${carousel(props.map(p=>`<div class="acct-card" style="width:300px"><div style="height:118px;border-radius:var(--r-sm);display:grid;place-items:center;margin-bottom:var(--sp-3);background:linear-gradient(135deg,var(--accent-soft),var(--surface-3));color:var(--accent);font-size:34px">${I('estate')}</div><div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="acct-name">${p[0]}</div><div class="acct-inst">${p[1]}</div></div><span class="badge ${p[5]}">${p[4]}</span></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-2);margin-top:var(--sp-3)"><div><div class="eyebrow">Value</div><div class="num" style="font-weight:700">${p[2]}</div></div><div><div class="eyebrow">Equity</div><div class="num" style="font-weight:700;color:var(--pos)">${p[3]}</div></div></div></div>`).join(''))}
+    <div class="grid g12" style="margin-top:var(--sp-6)">
+      <div class="card c7">${sechead('903 Ridge View · income vs expenses · 2026')}<div data-chart="inout" data-v='[{"l":"Jan","i":2.1,"o":0.3},{"l":"Feb","i":2.1,"o":0.7},{"l":"Mar","i":2.1,"o":0.4},{"l":"Apr","i":2.1,"o":0.2},{"l":"May","i":2.1,"o":0.9},{"l":"Jun","i":2.1,"o":0.4}]'></div></div>
+      <div class="card c5">${sechead('Expense breakdown')}<div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="130" data-top="$3,240" data-v='[{"label":"Repairs","val":2010,"color":"--c6"},{"label":"Mgmt","val":690,"color":"--c2"},{"label":"Supplies","val":540,"color":"--c4"}]'></div><div class="grow">${legend([{label:'Repairs',val:'$2,010',color:'--c6'},{label:'Mgmt fees',val:'$690',color:'--c2'},{label:'Supplies',val:'$540',color:'--c4'}])}</div></div></div>
+    </div>`;
+};
+
+PAGES.taxes = () => `
+  ${wshead('Business & Real estate','Taxes','An educational estimate of your 2025 federal taxes — with a CPA a click away.',
+    `<button class="btn btn-primary btn-sm">${I('percent')} Recalculate</button>`)}
+  ${actionBar(['2025','2024','Estimate','Forms'])}
+  <div class="card" style="margin-bottom:var(--sp-6);background:var(--accent);color:var(--on-accent);border-color:var(--accent);display:flex;gap:var(--sp-4);align-items:center;flex-wrap:wrap">
+    ${I('users')}<div class="grow" style="min-width:180px"><div style="font-weight:700;font-size:var(--fs-title)">Work with a verified CPA</div><div style="opacity:.85;font-size:var(--fs-sm)">Browse vetted tax pros and connect right from your taxes.</div></div>
+    <button class="btn" style="background:var(--surface);color:var(--accent)">${I('arr-r')} Find a CPA</button>
+  </div>
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('invoice','','Estimated tax','$22,713','')}${kpi('flame','neg','Balance due','$7,003','')}
+    ${kpi('percent','','Effective rate','13.5%','')}${kpi('trend','info','Marginal bracket','22%','')}
+  </div>
+  <div class="card">${sechead('How we got there')}
+    ${[['Gross income (combined)','$168,400',0],['Adjusted gross income','$165,346',0],['Standard deduction (joint)','− $30,000',0],['QBI deduction (§199A)','− $5,090',0],['Taxable income','$130,256',1],['Income tax','$19,605',1],['Self-employment tax','$3,108',1]].map(r=>`<div class="row" style="justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);${r[2]?'font-weight:700':''}"><span class="${r[2]?'':'muted'}">${r[0]}</span><span class="num">${r[1]}</span></div>`).join('')}
+    <div class="row" style="justify-content:space-between;padding:9px 0;font-weight:700"><span>Total federal tax</span><span class="num">$22,713</span></div>
+  </div>
+  <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-4)">${I('help')} Educational estimate, not tax advice.</p>`;
+
+PAGES.ai = () => `
+  ${wshead('Grow','AI advisor','Ask about your money in plain language — grounded in your real numbers, never generic.',
+    `<div class="seg"><button>Concise</button><button class="active">Balanced</button><button>Detailed</button></div>`)}
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Portfolio scope','<div class="row gap-2"><button class="btn btn-ghost btn-sm">Select all</button><button class="btn btn-ghost btn-sm">Clear</button></div>')}
+    <div class="chiprow">${['Net worth','Cash & accounts','Investments','Real estate','Business','Debt','Budget','Transactions'].map((s,i)=>`<span class="chip${i<3||i===5?' active':''}">${s}</span>`).join('')}</div></div>
+  ${sechead('Recommendations','<span class="badge gold">4</span>')}
+  ${carousel(AI.map(a=>`<div class="ai-card" role="listitem"><div class="ai-head"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="ai-title">${a.title}</div></div><div class="ai-body">${a.body}</div><div data-chart="spark" data-v="[${a.spark}]"></div><div class="row" style="justify-content:space-between;align-items:center"><span class="ai-metric">${a.metric}</span><button class="btn btn-ghost btn-sm">Discuss ${I('arr-r')}</button></div></div>`).join(''))}
+  <div class="grid g12" style="margin-top:var(--sp-6)">
+    <div class="card c8">${sechead('Ask the advisor')}
+      <div class="stack gap-4">
+        <div style="align-self:flex-end;max-width:72%;background:var(--accent);color:var(--on-accent);padding:11px 16px;border-radius:14px 14px 4px 14px;font-size:var(--fs-sm)">How much did I spend on dining last month, and is it trending up?</div>
+        <div class="row gap-3"><div class="tile">${I('robot')}</div><div style="max-width:75%;background:var(--accent-soft);padding:12px 16px;border-radius:14px 14px 14px 4px;font-size:var(--fs-sm)">You spent <strong>$612</strong> on dining in May — <strong>+18%</strong> vs April and $112 over your $500 budget. Weekend delivery drove most of the increase.</div></div>
+      </div>
+      <hr class="divider">
+      <div class="omnibar" style="max-width:none"><span class="grow" style="text-align:left">Ask anything about your money…</span><button class="btn btn-primary btn-sm">Send</button></div>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">${I('help')} AI guidance — not financial advice. Only aggregate, PII-free data is shared.</p>
+    </div>
+    <div class="card c4">${sechead('Prompt library')}<div class="chiprow" style="flex-wrap:wrap;white-space:normal">${['Where can I cut $300/mo?','Which debt first?','Can I afford a $40k car?','Is my portfolio diversified?','Summarize my net worth'].map(p=>`<span class="chip">${p}</span>`).join('')}</div></div>
+  </div>`;
+
+PAGES.alerts = () => {
+  const al=[['flame','neg','Low balance','Plaid Checking is at $110.'],['repeat','neg','Possible duplicate charge','Uber charged $5 twice within 4 days.'],['flame','gold','Unusually large charge','Steakhouse — $220, well above your usual dining.'],['arr-ur','gold','Price went up','Spotify rose 30% to $13 vs your usual $10.']];
+  return `${wshead('Overview','Smart alerts','Unusual activity we spotted — before it costs you.','')}
+    ${actionBar(['All','Needs attention','Dismissed'])}
+    <p class="muted" style="margin-bottom:var(--sp-4)">4 alerts · 2 need attention</p>
+    ${al.map(a=>`<div class="card act" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);border-left:3px solid var(--${a[1]})"><div class="tile ${a[1]}">${I(a[0])}</div><div class="grow"><div class="r-name">${a[2]}</div><div class="r-sub">${a[3]}</div></div>${I('chev-r','muted')}</div>`).join('')}`;
+};
+
+PAGES['net-worth'] = () => `
+  ${wshead('Overview','Net worth','Everything you own minus everything you owe — and exactly what moved it.',
+    `<button class="btn btn-outline btn-sm">${I('download')} Statement</button>`)}
+  ${actionBar(['1W','1M','3M','6M','1Y','All'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('scale','','Net worth','$263,820','<span class="badge pos">'+I('arr-ur')+' +6.3% · 30d</span>')}
+    ${kpi('coins','pos','Total assets','$426,649','')}
+    ${kpi('card','neg','Total liabilities','$162,829','')}
+    ${kpi('trend','info','30-day change','+$15,732','')}
+  </div>
+  <div class="grid g12" style="margin-bottom:var(--sp-6)">
+    <div class="card c8">${sechead('Trend · 6 months','<span class="badge pos">+$15,732</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[${NW_SERIES.all.slice(-10)}]"></div></div>
+    <div class="card c4">${sechead('By asset class')}<div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="140" data-top="$427k" data-sub="assets" data-v='[{"label":"Investments","val":181029,"color":"--c4"},{"label":"Real estate","val":112000,"color":"--c2"},{"label":"Business","val":95200,"color":"--c5"},{"label":"Cash","val":38420,"color":"--c3"}]'></div><div class="grow">${legend([{label:'Investments',val:'$181k',color:'--c4'},{label:'Real estate',val:'$112k',color:'--c2'},{label:'Business',val:'$95k',color:'--c5'},{label:'Cash',val:'$38k',color:'--c3'}])}</div></div></div>
+  </div>
+  <div class="card">${sechead('What moved it · 30 days')}
+    <div class="rowlist">
+      ${richRow({icon:'trend',cls:'violet',name:'Investments',sub:'Market gains + contributions',amt:'+$10,450',amtColor:'var(--pos)'})}
+      ${richRow({icon:'bank',cls:'pos',name:'Cash & liquid',sub:'Net savings',amt:'+$2,320',amtColor:'var(--pos)'})}
+      ${richRow({icon:'estate',cls:'gold',name:'Real estate equity',sub:'Appraisal + principal paid',amt:'+$1,800',amtColor:'var(--pos)'})}
+      ${richRow({icon:'card',cls:'neg',name:'Credit cards',sub:'Balance grew',amt:'−$1,038',amtColor:'var(--neg)'})}
+    </div>
+  </div>`;
+
+PAGES.budgets = () => {
+  const cats=[['Groceries','$600','$410','$190','68','pos'],['Dining','$300','$350','−$50','117','neg'],['Rent','$1,500','$1,500','$0','100',''],['Utilities','$250','$180','$70','72','pos'],['Transportation','$350','$380','−$30','109','neg']];
+  return `${wshead('Money','Budgets','A living 50/30/20 plan that refreshes from your real spending — 12 days left in June.',
+    `<button class="btn btn-outline btn-sm">${I('bank')} Auto-fill</button><button class="btn btn-primary btn-sm">${I('check')} Save budget</button>`)}
+    ${actionBar(['50/30/20','50/20/30','50/40/10','Custom'])}
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      ${[['Needs · 50%','$2,410','96% of target','--accent',96],['Wants · 30%','$1,610','107% — over budget','--neg',100],['Savings · 20%','$900','90% of target','--gold',90]].map(t=>`<div class="card c4"><span class="badge neutral">${t[0]}</span><div class="num" style="font-weight:700;font-size:1.3rem;margin-top:8px;${t[3]==='--neg'?'color:var(--neg)':''}">${t[1]}</div><div class="bar" style="margin-top:8px"><i style="width:${t[4]}%;background:var(${t[3]})"></i></div><div class="muted" style="font-size:var(--fs-xs);margin-top:5px;${t[3]==='--neg'?'color:var(--neg)':''}">${t[2]}</div></div>`).join('')}
+    </div>
+    <div class="card" style="border-left:3px solid var(--neg);margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-3)">${I('flame')}<div style="font-size:var(--fs-sm)">You're projected to finish <strong>$60 over budget</strong>. <strong>Dining</strong> and <strong>Transportation</strong> are over their limits.</div></div>
+    <div class="card">${sechead('Category breakdown','<div class="seg"><button class="active">All</button><button>Essentials</button><button>Discretionary</button></div>')}
+      <div class="rowlist">${cats.map(r=>`<div class="rowitem"><div class="grow"><div class="r-name">${r[0]}</div><div class="row gap-2" style="margin-top:5px"><div class="minibar" style="width:120px"><i style="width:${Math.min(+r[4],100)}%;background:var(--${r[5]||'accent'})"></i></div><span class="muted" style="font-size:var(--fs-xs)">${r[4]}%</span></div></div><div class="stack" style="align-items:flex-end"><div class="r-amt num"${r[5]==='neg'?' style="color:var(--neg)"':''}>${r[2]} <span class="muted" style="font-weight:400">/ ${r[1]}</span></div><div class="r-sub"${r[5]==='pos'?' style="color:var(--pos)"':r[5]==='neg'?' style="color:var(--neg)"':''}>${r[3]} left</div></div></div>`).join('')}</div>
+    </div>`;
+};
+
+PAGES.household = () => `
+  ${wshead('Household','Household','Share goals and bills with a partner — without sharing everything.',
+    `<button class="btn btn-primary btn-sm">${I('plus')} Invite someone</button>`)}
+  ${actionBar(['Members','Shared','Invites'])}
+  <div class="card" style="margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4)"><div class="tile" style="width:52px;height:52px;font-size:24px">${I('users')}</div><div class="grow"><div class="sec-title" style="font-size:var(--fs-title)">Our home</div><div class="muted" style="font-size:var(--fs-sm)">2 members · you're the owner</div></div></div>
+  <div class="grid g12" style="margin-bottom:var(--sp-6)">
+    <div class="card c6">${sechead('Members')}<div class="rowlist"><div class="rowitem"><div class="avatar" style="width:34px;height:34px">A</div><div class="grow"><div class="r-name">Alex Morgan</div><div class="r-sub">Owner</div></div></div><div class="rowitem"><div class="avatar" style="width:34px;height:34px;background:linear-gradient(140deg,var(--c3),var(--info))">J</div><div class="grow"><div class="r-name">Jordan Lee</div><div class="r-sub">Member</div></div><button class="btn btn-outline btn-sm">Remove</button></div></div></div>
+    <div class="card c6">${sechead('Invite someone','<span class="badge pos">'+I('lock')+' Single-use</span>')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">One-click link, expires in 7 days, works only for the email you enter.</p><div class="row gap-2 wrap"><div class="omnibar" style="max-width:none;flex:1;min-width:160px"><span>their@email.com</span></div><button class="btn btn-primary">${I('arr-r')} Send</button></div></div>
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Share an account','<span class="badge neutral">'+I('lock')+' Default private</span>')}
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">Nothing is shared until you choose it here. Members see the account and its balance — never your other accounts.</p>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm pos">${I('users')}</div><div class="grow"><div class="r-name">Joint Checking</div><div class="r-sub">Shared with household · $12,480.00</div></div><button class="btn btn-outline btn-sm">Stop sharing</button></div>
+      <div class="rowitem"><div class="tile sm">${I('lock')}</div><div class="grow"><div class="r-name">Personal Savings</div><div class="r-sub">Private · $43,200.00</div></div><button class="btn btn-outline btn-sm">Share</button></div>
+      <div class="rowitem"><div class="tile sm">${I('lock')}</div><div class="grow"><div class="r-name">Brokerage</div><div class="r-sub">Private · $86,300.00</div></div><button class="btn btn-outline btn-sm">Share</button></div>
+    </div>
+  </div>
+  <div class="card">${sechead('Shared with you')}<div class="rowlist"><div class="rowitem"><div class="tile sm pos">${I('users')}</div><div class="grow"><div class="r-name">Jordan's Checking</div><div class="r-sub">Shared by Jordan Lee</div></div></div></div></div>`;
+
+PAGES.documents = () => `
+  ${wshead('Household','Documents','Your Document Center — organise, store, and securely share with a CPA.',
+    `<button class="btn btn-outline btn-sm">${I('link2')} Add link</button><button class="btn btn-primary btn-sm">${I('download')} Upload</button>`)}
+  ${actionBar(['All','Taxes','Business','Property','Unfiled'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('file','','Documents','18','across 4 folders')}${kpi('folder','pos','Folders','4','')}${kpi('users','gold','Active shares','2','1 to a CPA')}
+  </div>
+  <div class="grid g12">
+    <div class="card c4" style="align-self:start">${sechead('Folders')}<div class="rowlist">
+      <div class="rowitem act" style="background:var(--accent-soft);border-radius:var(--r-xs)"><div class="tile sm pos">${I('folder')}</div><div class="grow"><div class="r-name">All documents</div></div><span class="badge neutral">18</span></div>
+      <div class="rowitem act"><div class="tile sm gold">${I('folder')}</div><div class="grow"><div class="r-name">2025 Taxes</div></div><span class="badge neutral">6</span></div>
+      <div class="rowitem act"><div class="tile sm gold">${I('folder')}</div><div class="grow"><div class="r-name">Business Docs</div></div><span class="badge neutral">5</span></div>
+      <div class="rowitem act"><div class="tile sm gold">${I('folder')}</div><div class="grow"><div class="r-name">Property</div></div><span class="badge neutral">4</span></div>
+    </div></div>
+    <div class="card c8">${sechead('2025 Taxes','<span class="muted" style="font-size:var(--fs-sm)">6 items</span>')}
+      <div class="rowlist">
+        ${richRow({icon:'file',cls:'pos',name:'W-2 2025',sub:'w2-2025.pdf · 214 KB',amt:''})}
+        ${richRow({icon:'file',cls:'',name:'1099-NEC — Consulting',sub:'1099-nec.pdf · 96 KB',amt:''})}
+        ${richRow({icon:'file',cls:'info',name:'Mortgage interest 1098',sub:'1098.pdf · 88 KB',amt:''})}
+        ${richRow({icon:'file',cls:'gold',name:'Charitable receipts',sub:'Google Drive link',amt:''})}
+      </div>
+    </div>
+  </div>
+  <div class="grid g12" style="margin-top:var(--sp-6)">
+    <div class="card c6">${sechead('Share with your CPA','<span class="badge pos">'+I('lock')+' Secure link</span>')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">A revocable link — view-only or download, with expiry and an optional passcode. Every open is logged.</p><div class="seg" style="margin-bottom:var(--sp-3)"><button class="active">View only</button><button>Allow download</button></div><div class="card" style="background:var(--accent-soft);font-size:var(--fs-xs);word-break:break-all;margin-bottom:var(--sp-3)">https://app.terravest.app/shared/EPc05_k4zOiGYU…P9E</div><button class="btn btn-primary btn-sm">${I('link2')} Copy link</button></div>
+    <div class="card c6">${sechead('Access log · W-2 2025','<span class="badge neutral">2 views</span>')}
+      ${timeline([
+        {name:'Viewed',sub:'CPA · cpa@firm.com · 2 min ago',badge:'View',badgeCls:'pos'},
+        {name:'Opened link',sub:'98.4.x.x · Chrome · 2 min ago',tone:'muted'},
+        {name:'Passcode denied',sub:'Unknown · 71.9.x.x · yesterday',tone:'gold'},
+      ])}
+      <button class="btn btn-outline btn-sm" style="margin-top:var(--sp-3)">${I('x')} Revoke share</button>
+    </div>
+  </div>`;
+
+PAGES.security = () => `
+  ${wshead('System','Security','Protect your account and review recent activity.',
+    `<span class="badge pos">${I('shield')} Score: Good</span>`)}
+  ${actionBar(['Overview','2FA','Sessions','Activity'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('shield','','Security score','Good','2 of 3 enabled')}${kpi('lock','pos','Two-factor','On','')}${kpi('bell','neg','Login alerts','Off','')}
+  </div>
+  <div class="grid g12" style="margin-bottom:var(--sp-6)">
+    <div class="card c6">${sechead('Two-factor authentication','<span class="badge pos">Enabled</span>')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">A second step using an authenticator app.</p><div class="tglrow"><span style="font-weight:500">Require on every login</span><div class="tgl on" role="switch" aria-checked="true" tabindex="0"></div></div><div class="tglrow"><span style="font-weight:500">Login alerts by email</span><div class="tgl" role="switch" aria-checked="false" tabindex="0"></div></div></div>
+    <div class="card c6">${sechead('Password')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">Last changed 4 months ago.</p><button class="btn btn-primary">${I('lock')} Update password</button></div>
+  </div>
+  <div class="card">${sechead('Login history')}
+    ${timeline([
+      {name:'Signed in',sub:'Chrome on macOS · Austin, US · 2 min ago',badge:'Success',badgeCls:'pos'},
+      {name:'Sign-in attempt',sub:'Unknown device · 98.4.x.x · 3 min ago',badge:'Failure',badgeCls:'neg',tone:'gold'},
+      {name:'Signed in',sub:'TerraVest iOS · Austin, US · yesterday',tone:'muted'},
+    ])}
+  </div>`;
+
+PAGES.settings = () => {
+  const tgl=(label,on)=>`<div class="tglrow"><div class="r-name" style="font-weight:500">${label}</div><div class="tgl${on?' on':''}" role="switch" aria-checked="${!!on}" tabindex="0"></div></div>`;
+  return `${wshead('System','Settings','Manage your preferences, notifications and data.','')}
+    <div class="setgrid">
+      <div class="setnav">
+        <div class="setlink active" data-set="0">${I('shield')} Profile</div>
+        <div class="setlink" data-set="1">${I('bell')} Notifications</div>
+        <div class="setlink" data-set="2">${I('sun')} Appearance</div>
+        <div class="setlink" data-set="3">${I('lock')} Security</div>
+        <div class="setlink" data-set="4">${I('folder')} Data & privacy</div>
+      </div>
+      <div id="setPanels">
+        <div class="card" data-setpanel="0"><div class="row gap-4" style="margin-bottom:var(--sp-4)"><div class="avatar" style="width:52px;height:52px;font-size:19px">AK</div><div class="grow"><div class="sec-title">Alex Kim</div><div class="muted" style="font-size:var(--fs-sm)">alex.kim@example.com · 6 linked accounts</div></div><span class="badge gold">${I('shield')} Verified</span></div><div class="tglrow"><span class="muted">Account type</span><strong>Individual</strong></div><div class="tglrow"><span class="muted">MFA channel</span><div class="seg"><button class="active">${I('msg')} Email</button><button>SMS</button></div></div></div>
+        <div class="card" data-setpanel="1" style="display:none">${sechead('Notifications')}${tgl('Email notifications',1)}${tgl('Push notifications',1)}${tgl('Weekly summary',0)}${tgl('Budget alerts',1)}${tgl('Payment alerts',1)}</div>
+        <div class="card" data-setpanel="2" style="display:none">${sechead('Appearance')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">Use the theme switch in the top bar for light / dark / system.</p>${tgl('Compact mode',0)}${tgl('Reduced motion',0)}</div>
+        <div class="card" data-setpanel="3" style="display:none">${sechead('Security')}${tgl('Two-factor authentication',1)}${tgl('Login alerts',0)}<button class="btn btn-outline btn-sm" style="margin-top:var(--sp-4)">${I('lock')} Change password</button></div>
+        <div class="card" data-setpanel="4" style="display:none">${sechead('Data & privacy')}<div class="stack gap-2"><button class="btn btn-ghost" style="justify-content:flex-start">${I('download')} Export my data</button><button class="btn btn-ghost" style="justify-content:flex-start">${I('file')} Download statements</button><button class="btn btn-ghost" style="justify-content:flex-start;color:var(--neg)">${I('x')} Delete account</button></div></div>
+      </div>
+    </div>`;
+};
+
+/* ---- Component gallery (Phase 6 documentation deliverable) ---- */
+PAGES.components = () => {
+  const spec=(t,note,demo)=>`<div class="card" style="margin-bottom:var(--sp-5)"><div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">${t}</div><span class="muted" style="font-size:var(--fs-xs);max-width:46ch;text-align:right">${note}</span></div>${demo}</div>`;
+  return `${wshead('System','Component library','Every reusable part of the operating system, with its states and usage — the single source of truth for building new screens.',
+    `<span class="badge neutral">${I('grid')} 14 components</span>`)}
+    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>Rule:</strong> a new screen composes these parts — it never invents one-offs. If an interaction is genuinely new, it becomes a component here first, then gets used.</div></div>
+
+    ${spec('Buttons','Primary for the single main action per view; ghost/outline for secondary; sizes sm + default.',
+      `<div class="row gap-2 wrap"><button class="btn btn-primary">${I('plus')} Primary</button><button class="btn btn-ghost">Ghost</button><button class="btn btn-outline">Outline</button><button class="btn btn-gold">Gold</button><button class="btn btn-primary btn-sm">${I('check')} Small</button><button class="iconbtn" style="border:1px solid var(--border)">${I('bell')}</button></div>`)}
+
+    ${spec('Chips & filters','Smart filters scroll horizontally; active state uses the accent. Never a dropdown where chips fit.',
+      `<div class="chiprow">${['Today','Week','Month','Quarter','Year','Income','Expense','Custom'].map((c,i)=>`<span class="chip${i===2?' active':''}">${c}</span>`).join('')}</div>`)}
+
+    ${spec('Badges & deltas','Status encoded in colour + shape, not text alone, so it reads at a glance. Semantic colours are separate from the brand accent.',
+      `<div class="row gap-2 wrap"><span class="badge pos">${I('check')} Paid</span><span class="badge warn">Pending</span><span class="badge neg">Overdue</span><span class="badge info">Info</span><span class="badge gold">Trial</span><span class="badge neutral">Cleared</span><span class="delta up">${I('arr-ur')} 6.3%</span><span class="delta down">${I('arr-dr')} 2.2%</span></div>`)}
+
+    ${spec('KPI card','Hoverable; optional entity link opens the drawer. Label, big number, and a foot for context or a badge.',
+      `<div class="kpirow">${kpi('scale','','Net worth','$263,820','<span class="badge pos">'+I('arr-ur')+' +6.3%</span>',{type:'account',id:'chk'})}${kpi('coins','pos','Assets','$426,649','click ↗ opens drawer',{type:'account',id:'brk'})}${kpi('card','neg','Liabilities','$162,829','')}</div>`)}
+
+    ${spec('Rich list row','Replaces dense tables. Icon tile + name/sub + amount; entity rows open the universal drawer.',
+      `<div class="rowlist">${richRow({icon:'bank',cls:'pos',name:'Payroll — Acme Corp',sub:'May 30 · Income',amt:'+$4,250.00',amtColor:'var(--pos)',entity:{type:'transaction',id:'t1'}})}${richRow({icon:'fork',cls:'neg',name:'Uchi Restaurant',sub:'May 29 · Dining',amt:'−$127.40',entity:{type:'transaction',id:'t4'}})}</div>`)}
+
+    ${spec('Scrollable context tabs','The primary way to reveal depth without leaving a workspace. Remembers position; keyboard + touch.',
+      tabsBlock([
+        {label:'Overview',icon:'grid',panel:'<p class="muted" style="font-size:var(--fs-sm)">Panel one — the default view.</p>'},
+        {label:'Performance',icon:'trend',panel:'<p class="muted" style="font-size:var(--fs-sm)">Panel two — swapped with no reload.</p>'},
+        {label:'Documents',icon:'folder',panel:'<p class="muted" style="font-size:var(--fs-sm)">Panel three.</p>'},
+        {label:'Activity',icon:'clock',panel:'<p class="muted" style="font-size:var(--fs-sm)">Panel four.</p>'},
+      ]))}
+
+    ${spec('Universal timeline','One component for every entity’s history — accounts, invoices, shares, logins. Dots carry tone.',
+      timeline([{name:'Balance synced',sub:'Just now',badge:'Live',badgeCls:'pos'},{name:'Recategorized 3 transactions',sub:'May 28',tone:'muted'},{name:'Passcode denied',sub:'Yesterday',tone:'gold'}]))}
+
+    ${spec('AI advisor card','Appears wherever guidance helps. Title, plain-language body, a sparkline, and one action.',
+      carousel(AI.slice(0,2).map(a=>`<div class="ai-card" role="listitem"><div class="ai-head"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="ai-title">${a.title}</div></div><div class="ai-body">${a.body}</div><div data-chart="spark" data-v="[${a.spark}]"></div><div class="row" style="justify-content:space-between;align-items:center"><span class="ai-metric">${a.metric}</span><button class="btn btn-ghost btn-sm">Review ${I('arr-r')}</button></div></div>`).join('')))}
+
+    ${spec('Toggles & segmented','Boolean settings use the switch; mutually-exclusive options use the segmented control.',
+      `<div style="max-width:360px"><div class="tglrow"><span style="font-weight:500">Email notifications</span><div class="tgl on" role="switch" aria-checked="true" tabindex="0"></div></div><div class="tglrow"><span style="font-weight:500">Weekly summary</span><div class="tgl" role="switch" aria-checked="false" tabindex="0"></div></div></div><div class="seg" style="margin-top:var(--sp-3)"><button class="active">Concise</button><button>Balanced</button><button>Detailed</button></div>`)}
+
+    ${spec('Charts','Hand-rolled, theme-aware SVG on one palette: net-worth line/area/bars, in/out bars, donut, sparkline.',
+      `<div class="grid g12"><div class="card c7" style="box-shadow:none;border-style:dashed"><div data-chart="nw" data-color="--c1" data-type="area" data-v="[100,103,101,107,110,114,113,120,124,130,138,161]"></div></div><div class="card c5" style="box-shadow:none;border-style:dashed"><div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="130" data-top="Mix" data-v='[{"label":"A","val":58,"color":"--c1"},{"label":"B","val":22,"color":"--c3"},{"label":"C","val":20,"color":"--c2"}]'></div><div class="grow">${legend([{label:'US equity',val:'58%',color:'--c1'},{label:'Intl',val:'22%',color:'--c3'},{label:'Bonds',val:'20%',color:'--c2'}])}</div></div></div></div>`)}
+
+    ${spec('Severity / aging bar','Encodes proportion + risk in one glance — AR/AP aging, budget pace, allocation drift.',
+      stackBar([{pct:64,color:'--pos'},{pct:22,color:'--gold'},{pct:14,color:'--neg'}])+`<div class="row gap-4 wrap" style="margin-top:10px;font-size:var(--fs-sm)"><span class="legend-item"><span class="legend-dot" style="background:var(--pos)"></span> Current 64%</span><span class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 1–30d 22%</span><span class="legend-item"><span class="legend-dot" style="background:var(--neg)"></span> 30+ 14%</span></div>`)}
+
+    ${spec('Empty & skeleton','Empty states name the next action; every list has a loading shape so the layout never jumps.',
+      `<div class="empty" style="padding:var(--sp-6)"><div class="e-ic">${I('folder')}</div><h3>Nothing here yet</h3><p style="max-width:380px;margin:0 auto var(--sp-3)">Link an account and this fills automatically.</p><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Link account</button></div>`)}
+
+    ${spec('Overlays','Command palette (⌘K), the universal right drawer, the FAB, and toasts — all globally available.',
+      `<div class="row gap-2 wrap"><button class="btn btn-outline btn-sm" id="galleryCmdk">${I('search')} Open ⌘K</button><button class="btn btn-outline btn-sm" data-drawer="account" data-id="brk">${I('ext')} Open a drawer</button><button class="btn btn-outline btn-sm" data-drawer="link">${I('plus')} Action drawer</button></div>`)}
+
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-6)">${I('shield')} Every workspace in TerraVest V3 is assembled from exactly these parts.</p>`;
+};
+
+/* placeholder inherits the same shell */
+function placeholder(id){
+  const label=LABELS[id]||'Workspace', group=(IA.find(g=>g.items.some(i=>i.id===id))||{}).group||'', icon=ICONS[id]||'grid';
+  return `${wshead(group,label,'Built on the V3 operating-system shell — same tokens, drawers, timeline and advisor. High-fidelity build lands in a later pass.',
+    `<button class="btn btn-outline btn-sm" data-nav="today">${I('arr-l')} Today</button>`)}
+    ${actionBar()}
+    <div class="card"><div class="empty"><div class="e-ic">${I(icon)}</div><h3>${label} · designed next</h3><p style="max-width:520px;margin:0 auto var(--sp-4)">This workspace inherits every pattern proven on Today, Accounts, Investments and Business — the universal drawer, scrollable context tabs, rich list rows and the AI advisor stream.</p><button class="btn btn-outline btn-sm" data-nav="today">${I('sparkles')} See the flagship</button></div></div>`;
+}
+
+/* ============================================================================
+   8 · UNIVERSAL DRAWER  (any entity → Overview · Timeline · Documents · AI)
+   ============================================================================ */
+const TX = {
+  t1:{icon:'bank',cls:'pos',title:'Payroll — Acme Corp',sub:'Primary Checking · May 30',amt:'+$4,250.00',pos:true,cat:'Income'},
+  t2:{icon:'cart',cls:'',title:'Whole Foods Market',sub:'Sapphire Reserve · Jun 1',amt:'−$84.32',cat:'Groceries'},
+  t3:{icon:'car',cls:'gold',title:'Shell Station',sub:'Sapphire Reserve · May 31',amt:'−$62.10',cat:'Transport'},
+  t4:{icon:'fork',cls:'neg',title:'Uchi Restaurant',sub:'Sapphire Reserve · May 29',amt:'−$127.40',cat:'Dining'},
+};
+const GOALS={ef:{icon:'umbrella',cls:'gold',title:'Emergency fund',sub:'Safety net · target Dec 2026',pct:70,have:'$14,000',target:'$20,000'},house:{icon:'home',cls:'',title:'House down payment',sub:'Real estate · target Aug 2028',pct:22,have:'$17,000',target:'$80,000'}};
+const BIZ={summit:{icon:'brief',cls:'',title:'Summit Contracting',sub:'LLC · Construction',rev:'$42,000',net:'+$14,000',cash:'$31,200'},cedar:{icon:'estate',cls:'gold',title:'Cedar Rentals LLC',sub:'LLC · Real estate',rev:'$9,800',net:'+$5,680',cash:'$18,400'}};
+
+const drawer=$('#drawer'), scrim=$('#scrim');
+function actionRows(list){ return `<div class="eyebrow" style="margin:var(--sp-4) 0 var(--sp-2)">Quick actions</div><div class="stack gap-2">${list.map(a=>`<button class="btn btn-outline" style="justify-content:flex-start">${I(a[0])} ${a[1]}</button>`).join('')}</div>`; }
+function docRows(){ return `<div class="rowlist">
+  ${richRow({icon:'file',cls:'',name:'2026 statement',sub:'PDF · 214 KB',amt:''})}
+  ${richRow({icon:'file',cls:'gold',name:'Tax summary',sub:'PDF · 96 KB',amt:''})}
+  ${richRow({icon:'file',cls:'info',name:'Agreement',sub:'PDF · 88 KB',amt:''})}
+</div><button class="btn btn-outline btn-sm" style="margin-top:var(--sp-4)">${I('download')} Upload document</button>`; }
+function aiPanel(text){ return `<div class="ai-card" style="width:auto"><div class="ai-head"><div class="tile">${I('robot')}</div><div class="ai-title">Advisor summary</div></div><div class="ai-body">${text}</div><button class="btn btn-ghost btn-sm" data-nav="ai" style="align-self:flex-start">Open advisor ${I('arr-r')}</button></div>`; }
+
+function entityDrawer(type,id){
+  if(type==='account'){ const a=ACCT_BY[id]||ACCOUNTS[0]; return {icon:a.icon,cls:a.cls,title:a.name,sub:a.inst+' · '+a.type,tl:'account',
+    overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Balance</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">${a.bal}</div><div class="muted" style="font-size:var(--fs-xs)">${a.meta}</div><div data-chart="spark" data-v="[${a.spark}]" style="margin-top:var(--sp-3)"></div></div>${actionRows([['exchange','View transactions'],['refresh','Sync now'],['tag','Rename & categorize'],['x','Unlink account']])}`,
+    ai:aiPanel(`Over the last 6 months this account trended toward ${a.bal}. Cash flow into it is positive and no unusual activity was flagged.`)}; }
+  if(type==='investment') return {icon:'trend',cls:'violet',title:'Portfolio',sub:'Fidelity · Vanguard · 7 positions',tl:'investment',
+    overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Value</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$161,260</div><div class="delta up" style="margin-top:4px">${I('arr-ur')} +$28,680 · +21.6%</div></div><div class="card">${sechead('Top holdings')}<div class="rowlist">${HOLDINGS.slice(0,3).map(h=>richRow({icon:'trend',cls:'violet',name:h[0],sub:h[1],amt:h[3],amtColor:'var(--pos)'})).join('')}</div></div>`,
+    ai:aiPanel('Concentration is healthy but your bond allocation drifted 3% under target. A $4,800 rebalance restores your risk profile without triggering short-term gains.')};
+  if(type==='business'){ const b=BIZ[id]||BIZ.summit; return {icon:b.icon,cls:b.cls,title:b.title,sub:b.sub,tl:'business',
+    overview:`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-ur','pos','Revenue',b.rev,'this month')}${kpi('trend','','Net',b.net,'this month')}${kpi('bank','info','Cash',b.cash,'')}</div><div class="card">${sechead('Receivables')}<div class="rowlist">${richRow({icon:'invoice',cls:'gold',name:'Open invoices',sub:'2 customers',amt:'$4,650'})}</div></div>`,
+    ai:aiPanel(`${b.title} is cash-flow positive this quarter. One invoice is 12 days overdue — sending a reminder now typically recovers payment within a week.`)}; }
+  if(type==='transaction'){ const t=TX[id]||TX.t1; return {icon:t.icon,cls:t.cls,title:t.title,sub:t.sub,tl:'transaction',
+    overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Amount</div><div class="num" style="font-family:var(--font-display);font-size:2rem;${t.pos?'color:var(--pos)':''}">${t.amt}</div><div class="row gap-2" style="margin-top:8px"><span class="badge neutral">${t.cat}</span><span class="badge pos">${I('check')} Cleared</span></div></div>${actionRows([['tag','Recategorize'],['exchange','Split transaction'],['clip','Attach receipt'],['search','Find similar']])}`,
+    ai:aiPanel(`This is a typical ${t.cat.toLowerCase()} charge for you. It fits your usual pattern and no duplicate was detected.`)}; }
+  if(type==='goal'){ const g=GOALS[id]||GOALS.ef; return {icon:g.icon,cls:g.cls,title:g.title,sub:g.sub,tl:null,
+    overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="row" style="justify-content:space-between;align-items:baseline"><div class="num" style="font-family:var(--font-display);font-size:2rem">${g.have}</div><span class="muted">of ${g.target}</span></div><div class="bar" style="margin:var(--sp-3) 0 6px"><i style="width:${g.pct}%;background:${g.cls==='gold'?'var(--gold)':'var(--accent)'}"></i></div><div class="muted" style="font-size:var(--fs-xs)">${g.pct}% funded</div></div>${actionRows([['plus','Add funds'],['link2','Link an account'],['tag','Edit goal']])}`,
+    ai:aiPanel('Saving $650/month keeps this goal on schedule. Rounding up card purchases could add roughly $40/month with no effort.')}; }
+  return {icon:'wallet',cls:'',title:LABELS[type]||'Detail',sub:'',tl:null,overview:'<div class="empty"><p>No detail available.</p></div>',ai:aiPanel('No insight yet.')};
+}
+const ACTION_DRAWERS={
+  link:{icon:'bank',title:'Link an account',sub:'Securely via Plaid',body:`<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-4)">Connect a bank, card, brokerage or loan. Read-only and encrypted — we never store your credentials.</p><div class="rowlist">${['Chase','Bank of America','Ally','Fidelity','Vanguard','American Express'].map(b=>`<div class="rowitem act"><div class="tile sm">${I('bank')}</div><div class="grow"><div class="r-name">${b}</div><div class="r-sub">Search 12,000+ institutions</div></div>${I('chev-r','muted')}</div>`).join('')}</div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-5)">${I('lock')} Continue with Plaid</button>`},
+  goal:{icon:'target',title:'New goal',sub:'Link accounts or track by hand',body:`<div class="stack gap-4"><div><label class="eyebrow">Name</label><div class="omnibar" style="max-width:none;margin-top:6px">Vacation fund</div></div><div><label class="eyebrow">Target amount</label><div class="omnibar" style="max-width:none;margin-top:6px">$10,000</div></div><div><label class="eyebrow">Fund from</label><div class="row gap-2 wrap" style="margin-top:6px"><span class="chip active">${I('check')} Ally Savings · $24,680</span><span class="chip">Chase · $8,450</span></div></div></div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-6)">${I('plus')} Create goal</button>`},
+  profile:{icon:'shield',title:'Alex Kim',sub:'Accredited investor',body:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="row gap-2" style="justify-content:space-between"><span class="muted">Identity</span><span class="badge pos">${I('shield')} Verified</span></div></div>${actionRows([['settings','Settings'],['shield','Security'],['x','Sign out']])}`},
+  health:{icon:'target',title:'Financial health · 78',sub:'Good — trending up',body:`<div class="card" style="display:flex;flex-direction:column;align-items:center;margin-bottom:var(--sp-4)"><div class="ring" style="width:110px;height:110px;background:conic-gradient(var(--accent) 281deg,var(--surface-3) 0)"><div class="ring-inner" style="width:84px;height:84px"><div style="font-family:var(--font-display);font-size:2.2rem;color:var(--accent)">78</div><div style="font-size:10px;color:var(--ink-3)">/100</div></div></div></div>${[['Savings rate','Great',88,'pos','31% of income kept'],['Emergency fund','Fair',44,'gold','2.3 months saved'],['Debt load','Good',78,'pos','22% of assets'],['Net worth','Great',90,'pos','Trending up']].map(f=>`<div style="margin-bottom:var(--sp-3)"><div class="row" style="justify-content:space-between;font-size:var(--fs-sm)"><strong>${f[0]}</strong><span style="color:var(--${f[3]});font-weight:700">${f[1]}</span></div><div class="minibar" style="margin:5px 0"><i style="width:${f[2]}%;background:var(--${f[3]})"></i></div><div class="muted" style="font-size:var(--fs-xs)">${f[4]}</div></div>`).join('')}`},
+};
+
+let drawerTabState=0;
+function openDrawer(type,id){
+  const action=ACTION_DRAWERS[type];
+  $('#drawerIcon').className='tile '+(action?'':entityDrawer(type,id).cls);
+  const tabsEl=$('#drawerTabs'), body=$('#drawerBody');
+  if(action){
+    $('#drawerIcon').innerHTML=I(action.icon); $('#drawerTitle').textContent=action.title; $('#drawerSub').textContent=action.sub;
+    tabsEl.style.display='none'; body.innerHTML=action.body;
+  } else {
+    const d=entityDrawer(type,id);
+    $('#drawerIcon').innerHTML=I(d.icon); $('#drawerTitle').textContent=d.title; $('#drawerSub').textContent=d.sub;
+    const tabs=['Overview', ...(d.tl?['Timeline']:[]),'Documents','AI'];
+    tabsEl.style.display=''; drawerTabState=0;
+    tabsEl.innerHTML=tabs.map((t,i)=>`<button class="drawer-tab${i===0?' active':''}" data-dtab="${i}">${t}</button>`).join('');
+    const panels={0:d.overview};
+    let k=1; if(d.tl){panels[k]=`<div class="card">${sechead('Timeline')}${timeline(TIMELINES[d.tl]||[])}</div>`; k++;}
+    panels[k]=`<div class="card">${sechead('Documents')}${docRows()}</div>`; k++;
+    panels[k]=d.ai;
+    body.dataset.panels=JSON.stringify(Object.keys(panels));
+    body.__panels=panels;
+    body.innerHTML=panels[0];
+  }
+  drawer.classList.add('show'); scrim.classList.add('show');
+  body.querySelectorAll('[data-chart]').forEach(drawChartEl);
+}
+function closeDrawer(){ drawer.classList.remove('show'); if(!$('#cmdk').classList.contains('show')) scrim.classList.remove('show'); }
+
+/* ============================================================================
+   9 · CAROUSELS
+   ============================================================================ */
+function initCarousel(car){
+  const track=car.querySelector('.carousel-track');
+  const update=()=>{ car.dataset.start=track.scrollLeft<=2; car.dataset.end=track.scrollLeft+track.clientWidth>=track.scrollWidth-2; };
+  track.addEventListener('scroll',update,{passive:true});
+  car.querySelectorAll('[data-arrow]').forEach(b=>b.addEventListener('click',()=>track.scrollBy({left:parseInt(b.dataset.arrow)*Math.min(track.clientWidth*0.8,560),behavior:'smooth'})));
+  track.addEventListener('keydown',e=>{ if(e.key==='ArrowRight'){track.scrollBy({left:280,behavior:'smooth'});e.preventDefault();} if(e.key==='ArrowLeft'){track.scrollBy({left:-280,behavior:'smooth'});e.preventDefault();} });
+  new ResizeObserver(update).observe(track); update();
+}
+
+/* ============================================================================
+   10 · AI ADVISOR auto-rotate
+   ============================================================================ */
+let aiTimer=null, aiIdx=0, aiPlaying=true;
+function aiTrackEl(){ const d=$('#aiDots'); return d?d.previousElementSibling.querySelector('.carousel-track'):null; }
+function buildAiDots(){
+  const dots=$('#aiDots'); if(!dots) return;
+  dots.innerHTML=AI.map((_,i)=>`<button aria-label="Card ${i+1}" data-dot="${i}"></button>`).join('');
+  aiIdx=0; [...dots.children].forEach((d,i)=>d.classList.toggle('active',i===0));
+}
+function aiGo(i){ const tr=aiTrackEl(); if(!tr) return; aiIdx=(i+AI.length)%AI.length; const c=tr.children[aiIdx]; if(c) tr.scrollTo({left:c.offsetLeft-tr.offsetLeft,behavior:'smooth'}); const dots=$('#aiDots'); if(dots)[...dots.children].forEach((d,di)=>d.classList.toggle('active',di===aiIdx)); }
+function startAi(){ if(aiTimer)clearInterval(aiTimer); aiTimer=setInterval(()=>{ if(aiPlaying)aiGo(aiIdx+1); },6000); }
+
+/* ============================================================================
+   11 · STICKY SUMMARY shadow
+   ============================================================================ */
+let summaryObs=null;
+function wireSummary(){
+  const bar=$('#summary'); if(!bar) return;
+  if(summaryObs) summaryObs.disconnect();
+  const sent=document.createElement('div'); sent.setAttribute('aria-hidden','true'); sent.style.cssText='height:1px;margin-bottom:-1px';
+  bar.parentNode.insertBefore(sent,bar);
+  summaryObs=new IntersectionObserver(([e])=>bar.classList.toggle('stuck',!e.isIntersecting),{root:viewport,threshold:0});
+  summaryObs.observe(sent);
+}
+
+/* ============================================================================
+   12 · COMMAND PALETTE
+   ============================================================================ */
+const cmdk=$('#cmdk'), cmdkInput=$('#cmdkInput'), cmdkList=$('#cmdkList');
+const CMDS=[
+  ...IA.flatMap(g=>g.items.map(i=>({type:'Go to',label:i.label,icon:i.icon,hint:'Workspace',run:()=>navigate(i.id)}))),
+  ...ACCOUNTS.map(a=>({type:'Open',label:a.name,icon:a.icon,hint:a.inst,run:()=>openDrawer('account',a.id)})),
+  {type:'Action',label:'Link an account',icon:'bank',hint:'⌘N',run:()=>openDrawer('link')},
+  {type:'Action',label:'Create a goal',icon:'target',run:()=>openDrawer('goal')},
+  {type:'Action',label:'Ask the advisor',icon:'robot',run:()=>navigate('ai')},
+  {type:'Action',label:'Toggle theme',icon:'moon',run:()=>{themePref=root.getAttribute('data-theme')==='dark'?'light':'dark';applyTheme(themePref);}},
+];
+let cmdkActive=0, cmdkFiltered=CMDS;
+function renderCmdk(q=''){
+  cmdkFiltered=CMDS.filter(c=>(c.type+' '+c.label+' '+(c.hint||'')).toLowerCase().includes(q.toLowerCase())); cmdkActive=0;
+  let html='',last='';
+  cmdkFiltered.forEach((c,i)=>{ if(c.type!==last){html+=`<div class="cmdk-grp">${c.type}</div>`;last=c.type;} html+=`<div class="cmdk-item${i===0?' active':''}" data-i="${i}">${I(c.icon)}<span>${c.label}</span>${c.hint?`<span class="cmdk-hint">${c.hint}</span>`:''}</div>`; });
+  cmdkList.innerHTML=html||`<div class="empty" style="padding:var(--sp-6)"><p>No matches</p></div>`;
+}
+function openCmdk(){ renderCmdk(); cmdk.classList.add('show'); scrim.classList.add('show'); cmdkInput.value=''; cmdkInput.focus(); }
+function closeCmdk(){ cmdk.classList.remove('show'); if(!drawer.classList.contains('show')) scrim.classList.remove('show'); }
+function runCmdk(i){ const c=cmdkFiltered[i]; if(c){ closeCmdk(); c.run(); } }
+$('#omni').addEventListener('click',openCmdk);
+cmdkInput.addEventListener('input',e=>renderCmdk(e.target.value));
+cmdkList.addEventListener('click',e=>{ const it=e.target.closest('[data-i]'); if(it)runCmdk(+it.dataset.i); });
+cmdkInput.addEventListener('keydown',e=>{
+  const items=[...cmdkList.querySelectorAll('.cmdk-item')];
+  if(e.key==='ArrowDown'){cmdkActive=Math.min(cmdkActive+1,items.length-1);e.preventDefault();}
+  else if(e.key==='ArrowUp'){cmdkActive=Math.max(cmdkActive-1,0);e.preventDefault();}
+  else if(e.key==='Enter'){runCmdk(cmdkActive);return;} else return;
+  items.forEach((it,i)=>it.classList.toggle('active',i===cmdkActive)); items[cmdkActive]?.scrollIntoView({block:'nearest'});
+});
+
+/* ============================================================================
+   13 · THEME
+   ============================================================================ */
+const root=document.documentElement, mq=window.matchMedia('(prefers-color-scheme:dark)');
+function applyTheme(mode){
+  const eff=mode==='system'?(mq.matches?'dark':'light'):mode;
+  root.setAttribute('data-theme',eff);
+  $$('[data-theme-set]').forEach(b=>b.classList.toggle('active',b.dataset.themeSet===mode));
+  try{localStorage.setItem('tv3-theme',mode);}catch(e){}
+  if(CURRENT==='today') renderToday(); else mountPage(CURRENT);
+}
+let themePref=(()=>{try{return localStorage.getItem('tv3-theme')||'system';}catch(e){return 'system';}})();
+$$('[data-theme-set]').forEach(b=>b.addEventListener('click',()=>{themePref=b.dataset.themeSet;applyTheme(themePref);}));
+mq.addEventListener('change',()=>{ if(themePref==='system') applyTheme('system'); });
+
+/* ============================================================================
+   14 · SHELL WIRING + GLOBAL DELEGATION
+   ============================================================================ */
+$('#collapse').addEventListener('click',()=>app.classList.toggle('rail-min'));
+$('#hamb').addEventListener('click',()=>app.classList.toggle('rail-open'));
+const fab=$('#fab');
+$('#fabBtn').addEventListener('click',()=>{ const o=fab.classList.toggle('open'); $('#fabBtn').setAttribute('aria-expanded',o); });
+function toast(msg,icon='check'){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=`${I(icon)} ${msg}`; $('#toasts').appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(12px)';setTimeout(()=>t.remove(),320);},2600); }
+$('#notif').addEventListener('click',()=>toast('2 alerts need your attention','bell'));
+
+document.addEventListener('click',e=>{
+  const nav=e.target.closest('[data-nav]'); if(nav){ e.preventDefault(); navigate(nav.dataset.nav); return; }
+  const dr=e.target.closest('[data-drawer]'); if(dr){ e.preventDefault(); openDrawer(dr.dataset.drawer,dr.dataset.id); return; }
+  if(e.target.closest('[data-close-drawer]')){ closeDrawer(); return; }
+  const dtab=e.target.closest('[data-dtab]'); if(dtab){ const body=$('#drawerBody'); $$('#drawerTabs .drawer-tab').forEach(t=>t.classList.toggle('active',t===dtab)); body.innerHTML=body.__panels[+dtab.dataset.dtab]; body.querySelectorAll('[data-chart]').forEach(drawChartEl); return; }
+  const nwt=e.target.closest('#nwType [data-t]'); if(nwt){ nwType=nwt.dataset.t; $$('#nwType button').forEach(b=>b.classList.toggle('active',b===nwt)); drawNW(); return; }
+  const nwr=e.target.closest('#nwRange [data-r]'); if(nwr){ nwRange=nwr.dataset.r; $$('#nwRange button').forEach(b=>b.classList.toggle('active',b===nwr)); drawNW(); return; }
+  const dot=e.target.closest('#aiDots [data-dot]'); if(dot){ aiGo(+dot.dataset.dot); return; }
+  const aip=e.target.closest('[data-ai-toggle]'); if(aip){ aiPlaying=!aiPlaying; aip.innerHTML=aiPlaying?I('pause'):I('play'); return; }
+  if(e.target.closest('#galleryCmdk')){ openCmdk(); return; }
+  const tg=e.target.closest('.tgl'); if(tg){ tg.classList.toggle('on'); tg.setAttribute('aria-checked',tg.classList.contains('on')); return; }
+  const set=e.target.closest('.setlink[data-set]'); if(set){ $$('.setlink').forEach(x=>x.classList.toggle('active',x===set)); $$('#setPanels [data-setpanel]').forEach(p=>p.style.display=p.dataset.setpanel===set.dataset.set?'':'none'); return; }
+  const tab=e.target.closest('.tab[data-tabidx]'); if(tab){ const block=tab.closest('.tabs-block'); if(!block) return; const idx=tab.dataset.tabidx;
+    block.querySelectorAll(':scope > .tabs .tab').forEach(t=>t.classList.toggle('active',t===tab));
+    block.querySelectorAll(':scope > .tabpanel').forEach(p=>p.style.display=p.dataset.tabidx===idx?'':'none');
+    tab.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+    block.querySelectorAll(`:scope > .tabpanel[data-tabidx="${idx}"] [data-chart]`).forEach(drawChartEl);
+    block.querySelectorAll(`:scope > .tabpanel[data-tabidx="${idx}"] [data-carousel]`).forEach(c=>{ if(!c.__init){ initCarousel(c); c.__init=true; } });
+    return; }
+});
+document.addEventListener('change',e=>{ if(e.target.id==='nwFilter'){ nwFilter=e.target.value; drawNW(); } });
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); cmdk.classList.contains('show')?closeCmdk():openCmdk(); }
+  if(e.key==='Escape'){ closeCmdk(); closeDrawer(); fab.classList.remove('open'); app.classList.remove('rail-open'); }
+});
+scrim.addEventListener('click',()=>{ closeCmdk(); closeDrawer(); app.classList.remove('rail-open'); });
+
+/* ============================================================================
+   15 · BOOT
+   ============================================================================ */
+applyTheme(themePref);   /* also renders Today (via mount) */
+</script>
+
+
+</body>
+</html>
