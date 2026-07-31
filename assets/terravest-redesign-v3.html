@@ -420,6 +420,30 @@ input,select,textarea{font:inherit;color:inherit}
 .setlink .ic{font-size:17px}
 .setlink.active{background:var(--accent-soft);color:var(--accent)}
 @media(max-width:720px){.setgrid{grid-template-columns:1fr}.setnav{flex-direction:row;overflow-x:auto;scrollbar-width:none;position:static}}
+/* data table (financial parity: invoices, POs, statements) */
+.table-scroll{width:100%;overflow-x:auto}
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.table th{text-align:left;font-size:var(--fs-xs);font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-3);padding:9px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.table td{padding:11px 12px;border-bottom:1px solid var(--border);white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table tbody tr{transition:background var(--d1)}
+.table tbody tr:hover td{background:var(--surface-2)}
+.table .num{font-variant-numeric:tabular-nums}
+/* form fields */
+.flabel{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--ink-2);margin-bottom:5px}
+.finput{width:100%;height:38px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);padding:0 12px;font-size:var(--fs-sm)}
+.finput:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+select.finput{cursor:pointer;appearance:none}
+.fgrid{display:grid;gap:var(--sp-4)}.fgrid-2{grid-template-columns:1fr 1fr}.fgrid-3{grid-template-columns:1fr 1fr 1fr}
+.subcard{background:var(--accent-soft);border-radius:var(--r-sm);padding:var(--sp-3);font-size:var(--fs-sm)}
+.flow-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)}
+.flow-row.strong{font-weight:700}
+@media(max-width:720px){.fgrid-2,.fgrid-3{grid-template-columns:1fr}}
+@keyframes flashcard{0%{box-shadow:0 0 0 3px var(--accent)}100%{box-shadow:var(--sh1)}}
+.flash{animation:flashcard 1.3s var(--ease)}
+.prop-card{width:300px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border);background:var(--surface);box-shadow:var(--sh1);transition:box-shadow var(--d2),transform var(--d2)}
+.prop-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+.prop-photo{height:120px;display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,var(--accent-soft),var(--surface-3));color:var(--accent)}
 
 /* ---- 16 · MOBILE --------------------------------------------------------- */
 .mobnav{display:none}.hamb{display:none}
@@ -1102,58 +1126,107 @@ PAGES.investments = () => {
 
 PAGES.business = () => {
   const agingRow=(dot,label,val)=>`<div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(${dot})"></span> ${label}</span><span class="num">${val}</span></div>`;
-  const ledgerBadge=(t,c)=>`<span class="badge ${c}">${t}</span>`;
+  const B=(t,c)=>`<span class="badge ${c}">${t}</span>`;
+  const T=(cols,rows)=>`<div class="table-scroll"><table class="table"><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  const rt=' style="text-align:right"';
   const overview=`<div class="grid g12">
-    <div class="card c7">${sechead('Cash flow · last 6 months','<span class="badge pos">Net +$41,300</span>')}<div data-chart="inout" data-v='[{"l":"Jan","i":6.0,"o":4.5},{"l":"Feb","i":8.5,"o":5.2},{"l":"Mar","i":6.0,"o":4.0},{"l":"Apr","i":9.5,"o":5.8},{"l":"May","i":8.0,"o":4.8},{"l":"Jun","i":10.0,"o":5.4}]'></div></div>
-    <div class="card c5">${sechead('P&amp;L snapshot','<span class="badge pos">'+I('shield')+' Ledger verified</span>')}<div class="rowlist">
+    <div class="card c6">${sechead('P&amp;L snapshot','<span class="badge neutral">Last 6 months</span>')}<div class="rowlist">
       ${richRow({icon:'arr-dl',cls:'pos',name:'Income',sub:'Trailing 6 months',amt:'$112,400',amtColor:'var(--pos)'})}
       ${richRow({icon:'arr-ur',cls:'neg',name:'Expenses',sub:'Trailing 6 months',amt:'$71,100',amtColor:'var(--neg)'})}
       ${richRow({icon:'scale',cls:'',name:'Net profit',sub:'Trailing 6 months',amt:'$41,300',amtColor:'var(--pos)'})}
     </div></div>
-    <div class="card c12">${sechead('By business · click a row to open','<span class="badge neutral">This month</span>')}<div class="rowlist">
-      ${richRow({icon:'brief',cls:'',name:'Summit Contracting',sub:'Construction · net +$14,000',amt:'$31,200',entity:{type:'business',id:'summit'}})}
-      ${richRow({icon:'estate',cls:'gold',name:'Cedar Rentals LLC',sub:'Real estate · net +$5,680',amt:'$18,400',entity:{type:'business',id:'cedar'}})}
+    <div class="card c6">${sechead('Top vendors','<span class="badge neutral">By spend</span>')}
+      ${[['WeWork','$10,800',100],['Gusto Payroll','$8,400',78],['Adobe','$3,594',33],['Delta Airlines','$2,510',23]].map(v=>`<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:var(--fs-sm);margin-bottom:3px"><span style="font-weight:500">${v[0]}</span><span class="num" style="font-weight:700">${v[1]}</span></div><div class="minibar"><i style="width:${v[2]}%;background:var(--accent)"></i></div></div>`).join('')}
+    </div>
+    <div class="card c12">${sechead('Accounts receivable','<button class="btn btn-outline btn-sm">'+I('invoice')+' New invoice</button>')}<div class="rowlist">
+      ${richRow({icon:'invoice',cls:'neg',name:'Pinecrest Studio',sub:'Overdue · due May 20',amt:'$3,450'})}
+      ${richRow({icon:'invoice',cls:'gold',name:'Harbor Group',sub:'Open · due Jun 28',amt:'$2,100'})}
+      ${richRow({icon:'invoice',cls:'pos',name:'Northwind Co.',sub:'Paid · Jun 12',amt:'$6,200',amtColor:'var(--pos)'})}
     </div></div></div>`;
-  const transactions=`<div class="card">${sechead('Ledger transactions','<button class="btn btn-outline btn-sm">'+I('filter')+' Rules</button>')}
+  const transactions=`<div class="card">${sechead('Ledger transactions','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('filter')+' Rules</button><button class="btn btn-outline btn-sm">'+I('download')+' Export</button></div>')}
     <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Set a rule (merchant contains “AWS” → Software) and apply it to every past match in one click.</p>
-    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Deposits</span><span class="chip">Payments</span><span class="chip">Transfers</span><span class="chip">Refunds</span></div>
-    <div class="rowlist">
-      <div class="rowitem"><div class="tile sm pos">${I('arr-dl')}</div><div class="grow"><div class="r-name">Client payment — Northwind ${ledgerBadge('Income','neutral')}</div><div class="r-sub">Operating Checking · ${ledgerBadge('Cleared','pos')}</div></div><div class="r-amt num" style="color:var(--pos)">+$6,200</div></div>
-      <div class="rowitem"><div class="tile sm">${I('repeat')}</div><div class="grow"><div class="r-name">Refund — Staples return ${ledgerBadge('Office','neutral')}</div><div class="r-sub">Amex Biz · ${ledgerBadge('Cleared','pos')}</div></div><div class="r-amt num" style="color:var(--pos)">+$142</div></div>
-      <div class="rowitem"><div class="tile sm violet">${I('cart')}</div><div class="grow"><div class="r-name">Adobe Creative Cloud ${ledgerBadge('Software','neutral')}</div><div class="r-sub">Amex Biz · ${ledgerBadge('Pending','warn')}</div></div><div class="r-amt num">−$599</div></div>
-      <div class="rowitem"><div class="tile sm gold">${I('home')}</div><div class="grow"><div class="r-name">WeWork — office rent ${ledgerBadge('Rent','neutral')}</div><div class="r-sub">Operating Checking · ${ledgerBadge('Reconciled','pos')}</div></div><div class="r-amt num">−$1,800</div></div>
-    </div></div>`;
-  const invoicing=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Invoices','<button class="btn btn-outline btn-sm">'+I('plus')+' Create invoice</button>')}
-    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Draft → Sent → Viewed → Partially paid → Paid. Each carries an embedded Pay Now link that auto-reconciles.</p>
-    <div class="rowlist">
-      <div class="rowitem"><div class="tile sm pos">${I('invoice')}</div><div class="grow"><div class="r-name">Northwind Co. ${ledgerBadge('Paid','pos')}</div><div class="r-sub">40h design @ $150 + hosting</div></div><div class="r-amt num">$6,200</div></div>
-      <div class="rowitem"><div class="tile sm neg">${I('invoice')}</div><div class="grow"><div class="r-name">Pinecrest Studio ${ledgerBadge('Overdue','neg')} ${I('help','muted')}</div><div class="r-sub">Viewed Jun 12 · due May 20</div></div><div class="r-amt num">$3,450</div></div>
-      <div class="rowitem"><div class="tile sm gold">${I('invoice')}</div><div class="grow"><div class="r-name">Harbor Group ${ledgerBadge('Partially paid','warn')}</div><div class="r-sub">$900 of $2,100 remaining</div></div><div class="r-amt num">$2,100</div></div>
-    </div></div>
-    <div class="card">${sechead('Receivables aging','<span class="badge neutral">$4,650 open</span>')}
-      ${stackBar([{pct:64,color:'--pos'},{pct:22,color:'--gold'},{pct:14,color:'--neg'}])}
-      <div style="margin-top:10px">${agingRow('--pos','Current','$2,970')}${agingRow('--gold','1–30 days','$1,020')}${agingRow('--neg','30+ days overdue','$660')}</div>
-    </div>`;
-  const ap=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Bills & payables','<span class="badge warn">$4,180 owed</span>')}
+    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Deposits</span><span class="chip">Payments</span><span class="chip">Transfers</span><span class="chip">Refunds</span><span class="chip">Tax</span></div>
+    ${T(`<th>Description</th><th>Account</th><th>Category</th><th>Type</th><th>Status</th><th${rt}>Amount</th>`,
+      [['<strong>Client payment — Northwind</strong>','Operating Checking','Income',B('Income','neutral'),B('Cleared','pos'),'<span class="num" style="color:var(--pos)">+$6,200</span>'],
+       ['<strong>Refund — Staples return</strong>','Amex Biz','Office',B('Refund','info'),B('Cleared','pos'),'<span class="num" style="color:var(--pos)">+$142</span>'],
+       ['<strong>Adobe Creative Cloud</strong>','Amex Biz','Software',B('Expense','info'),B('Pending','warn'),'<span class="num">−$599</span>'],
+       ['<strong>Card payment — Amex</strong>','Amex Biz','Transfer',B('Card Pmt','info'),B('Reconciled','pos'),'<span class="num" style="color:var(--pos)">+$2,000</span>'],
+       ['<strong>WeWork — office rent</strong>','Operating Checking','Rent',B('Vendor Pmt','info'),B('Cleared','pos'),'<span class="num">−$1,800</span>']]
+      .map(r=>`<tr>${r.map((c,i)=>`<td${i===5?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
+  const expenses=`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('receipt','','Total tracked','$18,420','24 expenses')}${kpi('file','info','Standalone','$4,180','not in ledger')}${kpi('link2','','Linked','$14,240','to ledger tx')}${kpi('flame','gold','Missing receipts','6','chase before filing')}</div>
+    <div class="card">${sechead('Expenses','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-drawer="expexport">'+I('download')+' Export</button><button class="btn btn-primary btn-sm">'+I('plus')+' Add expense</button></div>')}
+      ${T(`<th>Description</th><th>Category</th><th>Vendor</th><th>Status</th><th>Receipt</th><th${rt}>Amount</th>`,
+        [['<strong>AWS — May usage</strong> '+B('2 linked','neutral'),'Software','AWS',B('Approved','pos'),B('Yes','pos'),'<span class="num">$1,430.00</span>'],
+         ['<strong>Client lunch — Northwind</strong>','Meals','Osteria',B('Needs receipt','gold'),B('Missing','gold'),'<span class="num">$182.40</span>'],
+         ['<strong>Gusto — payroll run</strong>','Payroll','Gusto',B('Approved','pos'),B('N/A','neutral'),'<span class="num">$8,400.00</span>']]
+        .map(r=>`<tr>${r.map((c,i)=>`<td${i===5?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">${I('help')} “Standalone vs linked” keeps linked expenses from double-counting the ledger-derived P&amp;L.</p></div>`;
+  const invoicing=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Pending payments <span class="badge warn">$5,550 due</span>','<span class="badge pos">'+I('bell')+' Auto-reminders on</span>')}
+      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Email/SMS reminders 3 days before due · on due date · 7 days overdue. Skips paid/void, never sends twice.</p>
+      <div class="rowlist">
+        <div class="rowitem"><div class="tile sm neg">${I('invoice')}</div><div class="grow"><div class="r-name">Pinecrest Studio ${B('Overdue','neg')}</div><div class="r-sub">Due May 20</div></div><div class="row gap-3"><div class="r-amt num">$3,450</div><button class="btn btn-ghost btn-sm">${I('check')} Mark paid</button></div></div>
+        <div class="rowitem"><div class="tile sm gold">${I('invoice')}</div><div class="grow"><div class="r-name">Harbor Group ${B('Open','warn')}</div><div class="r-sub">Due Jun 28</div></div><div class="row gap-3"><div class="r-amt num">$2,100</div><button class="btn btn-ghost btn-sm">${I('check')} Mark paid</button></div></div>
+      </div></div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Invoices','<button class="btn btn-outline btn-sm">'+I('plus')+' Create invoice</button>')}
+      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Draft → Sent → Viewed → Partially paid → Paid → Void. Embedded Pay Now link (card/ACH) auto-reconciles.</p>
+      ${T(`<th>Customer</th><th${rt}>Amount</th><th>Status</th><th>Source</th><th>Docs</th>`,
+        [['Northwind Co.','<span class="num">$6,200</span>',B('Paid','pos'),B('Manual','neutral'),'<button class="btn btn-ghost btn-sm">'+I('clip')+' 2</button>'],
+         ['Pinecrest Studio','<span class="num">$3,450</span>',B('Overdue','neg')+' '+I('help','muted'),B('QuickBooks','pos'),'—'],
+         ['Harbor Group','<span class="num">$2,100</span> <span class="muted">$900 due</span>',B('Partially paid','warn'),B('Manual','neutral'),'<button class="btn btn-ghost btn-sm">'+I('link2')+'</button>']]
+        .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+    <div class="grid g12" style="margin-bottom:var(--sp-4)">
+      <div class="card c6">${sechead('<span>'+I('list')+' Purchase orders</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New PO</button>')}
+        <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 8px">Issue a PO, then convert to a bill on approval — one click drops it into Bills &amp; payables.</p>
+        ${T(`<th>Vendor</th><th${rt}>Amount</th><th>Status</th><th></th>`,
+          [['Acme Supply','<span class="num">$1,200</span>',B('Approved','neutral'),'<button class="btn btn-primary btn-sm">Convert</button>'],
+           ['Metro Print','<span class="num">$640</span>',B('Converted','pos'),'<span class="muted">Billed</span>']]
+          .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+      <div class="card c6">${sechead('<span>'+I('file')+' Quotes &amp; estimates</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New quote</button>')}
+        <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 8px">When the customer accepts, convert to an invoice (with line items) in one click.</p>
+        ${T(`<th>Customer</th><th${rt}>Amount</th><th>Status</th><th></th>`,
+          [['Blue Harbor LLC','<span class="num">$4,800</span>',B('Sent','neutral'),'<button class="btn btn-primary btn-sm">Convert</button>']]
+          .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('<span>'+I('trend')+' Projects &amp; milestone billing</span>')}
+      <div><strong>Website build</strong> <span class="muted">· Blue Harbor · $3,000 of $10,000 billed</span><div class="bar" style="margin:8px 0"><i style="width:30%"></i></div>
+      ${T(`<th>Milestone</th><th${rt}>Amount</th><th>Status</th><th></th>`,
+        [['Deposit · 30%','<span class="num">$3,000</span>',B('Invoiced','pos'),'—'],
+         ['Midpoint · 40%','<span class="num">$4,000</span>',B('Pending','warn'),'<button class="btn btn-primary btn-sm">Bill</button>'],
+         ['Completion · 30%','<span class="num">$3,000</span>',B('Pending','warn'),'<button class="btn btn-primary btn-sm">Bill</button>']]
+        .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div></div>
+    <div class="card">${sechead('<span>'+I('repeat')+' Recurring invoices</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New schedule</button>')}
+      ${T(`<th>Customer</th><th>Every</th><th${rt}>Amount</th><th>Next run</th><th>Status</th>`,
+        [['Northwind Co.','Monthly','<span class="num">$2,500</span>','Aug 1',B('Active','pos')],
+         ['Harbor Group','Quarterly','<span class="num">$6,000</span>','Sep 30',B('Paused','warn')]]
+        .map(r=>`<tr>${r.map((c,i)=>`<td${i===2?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
+  const ap=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Bills &amp; payables <span class="badge warn">$4,180 owed</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New bill</button>')}
     <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Record a vendor bill and pay it in full or part — each posts to the ledger as an expense and accounts payable.</p>
-    <div class="rowlist">
-      <div class="rowitem"><div class="tile sm">${I('receipt')}</div><div class="grow"><div class="r-name">Staples ${ledgerBadge('Open','warn')}</div><div class="r-sub">Operating · due Aug 5</div></div><div class="row gap-3"><div class="r-amt num">$1,180</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
-      <div class="rowitem"><div class="tile sm">${I('receipt')}</div><div class="grow"><div class="r-name">AWS ${ledgerBadge('Partially paid','warn')}</div><div class="r-sub">$1,500 of $3,000 due · Aug 12</div></div><div class="row gap-3"><div class="r-amt num">$3,000</div><button class="btn btn-ghost btn-sm">Pay</button></div></div>
-      <div class="rowitem"><div class="tile sm pos">${I('receipt')}</div><div class="grow"><div class="r-name">City Utilities ${ledgerBadge('Paid','pos')}</div><div class="r-sub">Jul 28</div></div><div class="r-amt num">$420</div></div>
-    </div></div>
+    ${T(`<th>Vendor</th><th>Category</th><th${rt}>Amount</th><th>Due</th><th>Status</th><th></th>`,
+      [['Staples','Operating','<span class="num">$1,180</span>','Aug 5',B('Open','warn'),'<button class="btn btn-ghost btn-sm">'+I('receipt')+' Pay</button>'],
+       ['AWS','Software','<span class="num">$3,000</span> <span class="muted">$1,500 due</span>','Aug 12',B('Partially paid','warn'),'<button class="btn btn-ghost btn-sm">'+I('receipt')+' Pay</button>'],
+       ['City Utilities','Utilities','<span class="num">$420</span>','Jul 28',B('Paid','pos'),'<span class="muted">—</span>']]
+      .map(r=>`<tr>${r.map((c,i)=>`<td${i===2?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
     <div class="card">${sechead('Payables aging','<span class="badge neutral">$4,180 owed</span>')}
       ${stackBar([{pct:70,color:'--pos'},{pct:20,color:'--gold'},{pct:10,color:'--neg'}])}
       <div style="margin-top:10px">${agingRow('--pos','Current','$2,940')}${agingRow('--gold','1–30 days','$820')}${agingRow('--neg','90+ days','$420')}</div>
     </div>`;
-  const statements=`<div class="card">${sechead('Financial statements','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('download')+' Excel</button><button class="btn btn-outline btn-sm">'+I('file')+' PDF</button></div>')}
+  const statements=`<div class="card">${sechead('Financial statements <span class="badge pos">'+I('shield')+' Ledger verified</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('download')+' Excel</button><button class="btn btn-outline btn-sm">'+I('file')+' PDF</button></div>')}
     <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Real double-entry P&amp;L, Balance Sheet and Cash Flow — computed from journal entries, not estimates.</p>
     <div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">Profit &amp; Loss</button><button>Balance Sheet</button><button>Cash Flow</button></div>
-    <div class="row" style="justify-content:space-between;padding:5px 0 5px 16px"><span>4000 · Sales Income</span><span class="num">$42,100</span></div>
-    <div class="row" style="justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid var(--border)"><span>Total income</span><span class="num">$42,100</span></div>
-    <div class="row" style="justify-content:space-between;padding:5px 0 5px 16px"><span>6000 · Operating Expenses</span><span class="num">$18,300</span></div>
-    <div class="row" style="justify-content:space-between;padding:5px 0;font-weight:700;border-top:1px solid var(--border)"><span>Total expenses</span><span class="num">$18,300</span></div>
-    <div class="row" style="justify-content:space-between;padding:8px 0;font-weight:700;border-top:2px solid var(--border)"><span>Net profit</span><span class="num" style="color:var(--pos)">$23,800</span></div></div>`;
-  const documents=`<div class="card">${sechead('Document center','<button class="btn btn-outline btn-sm">'+I('download')+' Add document</button>')}
+    <div class="flow-row" style="padding-left:16px"><span>4000 · Sales Income</span><span class="num">$42,100</span></div>
+    <div class="flow-row strong"><span>Total income</span><span class="num">$42,100</span></div>
+    <div class="flow-row" style="padding-left:16px"><span>6000 · Operating Expenses</span><span class="num">$18,300</span></div>
+    <div class="flow-row strong"><span>Total expenses</span><span class="num">$18,300</span></div>
+    <div class="flow-row strong" style="border-top:2px solid var(--border)"><span>Net profit</span><span class="num" style="color:var(--pos)">$23,800</span></div></div>`;
+  const customers=`<div class="card">${sechead('<span>'+I('users')+' Customers</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('invoice')+' Tax rates</button><button class="btn btn-outline btn-sm">'+I('plus')+' Add</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Saved billing parties reused across invoices — contact, tax ID, preferred payment, addresses. Pick one to auto-fill details <strong>and apply their location’s sales-tax rate</strong>.</p>
+    ${T(`<th>Name</th><th>Contact</th><th>Tax ID</th><th>Pays by</th><th${rt}>Outstanding</th>`,
+      [['Northwind Co.','billing@northwind.co','82-1746003',B('ACH','neutral'),'<span class="muted">—</span>'],
+       ['Harbor Group','ap@harbor.group','91-3300012',B('Card','neutral'),'<span class="num">$2,100</span>'],
+       ['Pinecrest Studio','owner@pinecrest.io','—',B('Card','neutral'),'<span class="num">$3,450</span>']]
+      .map(r=>`<tr>${r.map((c,i)=>`<td${i===4?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
+  const documents=`<div class="card">${sechead('Document center <span class="badge neutral">5</span>','<button class="btn btn-outline btn-sm">'+I('download')+' Add document</button>')}
+    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All businesses</span><span class="chip">Summit Contracting</span><span class="chip">Cedar Rentals</span></div>
     <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Invoice</span><span class="chip">Receipt</span><span class="chip">Contract</span><span class="chip">Tax</span></div>
     <div class="rowlist">
       ${richRow({icon:'invoice',cls:'info',name:'Invoice #1042 — Northwind Co.',sub:'Invoice · Jun 2026 · Summit Contracting',amt:''})}
@@ -1161,13 +1234,16 @@ PAGES.business = () => {
       ${richRow({icon:'file',cls:'violet',name:'Master services agreement',sub:'Contract · Harbor Group',amt:''})}
       ${richRow({icon:'file',cls:'gold',name:'2025 Form 1120-S',sub:'Tax · 2025',amt:''})}
     </div></div>`;
-  return `${wshead('Business & Real estate','My business','QuickBooks-grade bookkeeping, invoicing and payables — computed from a real double-entry ledger.',
+  return `${wshead('Business & Real estate','My business','QuickBooks-grade bookkeeping, invoicing, payables and docs — computed from a real double-entry ledger.',
     `<button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} New invoice</button>`)}
-    ${actionBar(['This month','This year','Trailing 12mo','Summit','Cedar'])}
+    <div class="card" style="border-color:var(--pos);margin-bottom:var(--sp-4)"><div class="rowitem" style="border:0;padding:0"><div class="tile sm pos">${I('check')}</div><div class="grow"><div class="r-name" style="font-weight:500">Invoice for $6,200 to Northwind Co. created.</div></div><button class="iconbtn">${I('x')}</button></div></div>
+    <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="chip active">${I('grid')} All businesses</span><span class="chip">${I('brief')} Summit Contracting</span><span class="chip">${I('estate')} Cedar Rentals</span><span class="chip">${I('plus')} Add</span></div>
+    <div class="card" style="border-left:4px solid var(--gold);margin-bottom:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3)">${I('link2')}<div class="grow" style="font-size:var(--fs-sm)"><strong>Connect QuickBooks</strong> <span class="badge neutral">optional</span> — only to auto-sync revenue, expenses and invoices. Manual &amp; linked tracking works without it.</div><button class="btn btn-outline btn-sm">Connect</button><button class="iconbtn">${I('x')}</button></div>
     <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:flex-end;justify-content:space-between">
       <div><div class="eyebrow">Total business cash</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$49,600</div><div class="muted" style="font-size:var(--fs-xs)">2 cash accounts · $4,180 owed on 1 card</div></div>
       <div class="row gap-6 wrap"><div><div class="eyebrow">Net position</div><div class="num" style="font-weight:700;color:var(--pos)">$45,420</div></div><div><div class="eyebrow">Net cash flow · 6mo</div><div class="num" style="font-weight:700;color:var(--pos)">+$41,300</div></div></div>
     </div>
+    <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="muted" style="font-size:var(--fs-xs);font-weight:600;align-self:center">${I('cal')} Period</span><span class="chip active">This month</span><span class="chip">This year</span><span class="chip">Trailing 12mo</span><span class="chip">Custom</span></div>
     <div class="kpirow" style="margin-bottom:var(--sp-6)">
       ${kpi('arr-ur','pos','Revenue','$51,800','this month')}
       ${kpi('arr-dr','neg','Expenses','$32,120','this month')}
@@ -1175,12 +1251,26 @@ PAGES.business = () => {
       ${kpi('invoice','gold','Outstanding (AR)','$4,650','as of today')}
       ${kpi('receipt','neg','Bills due (AP)','$4,180','$420 overdue')}
     </div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Cash flow · last 6 months','<span class="badge pos">Net +$41,300</span>')}<div data-chart="inout" data-v='[{"l":"Jan","i":6.0,"o":4.5},{"l":"Feb","i":8.5,"o":5.2},{"l":"Mar","i":6.0,"o":4.0},{"l":"Apr","i":9.5,"o":5.8},{"l":"May","i":8.0,"o":4.8},{"l":"Jun","i":10.0,"o":5.4}]'></div></div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('By business · click a row to open','<span class="badge neutral">This month</span>')}
+      ${T(`<th>Business</th><th${rt}>Revenue</th><th${rt}>Expenses</th><th${rt}>Net</th><th${rt}>Cash</th><th${rt}>Outstanding</th>`,
+        [['<strong>Summit Contracting</strong><div class="r-sub muted">Construction</div>','<span class="num">$42,000</span>','<span class="num" style="color:var(--neg)">$28,000</span>','<span class="num" style="color:var(--pos)">$14,000</span>','<span class="num">$31,200</span>','<span class="num">$3,450</span>'],
+         ['<strong>Cedar Rentals LLC</strong><div class="r-sub muted">Real estate</div>','<span class="num">$9,800</span>','<span class="num" style="color:var(--neg)">$4,120</span>','<span class="num" style="color:var(--pos)">$5,680</span>','<span class="num">$18,400</span>','<span class="num">$1,200</span>']]
+        .map(r=>`<tr data-drawer="business" data-id="${r[0].includes('Summit')?'summit':'cedar'}" style="cursor:pointer">${r.map((c,i)=>`<td${i>0?rt:''}>${c}</td>`).join('')}</tr>`).join('')+
+        `<tr style="font-weight:700;border-top:2px solid var(--border)"><td>All businesses</td><td${rt}><span class="num">$51,800</span></td><td${rt}><span class="num">$32,120</span></td><td${rt}><span class="num">$19,680</span></td><td${rt}><span class="num">$49,600</span></td><td${rt}><span class="num">$4,650</span></td></tr>`)}
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Connected accounts','<div class="row gap-2"><button class="btn btn-primary btn-sm" data-drawer="link">'+I('link2')+' Link</button><button class="btn btn-outline btn-sm">'+I('plus')+' Manual</button></div>')}
+      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">${I('refresh')} Business accounts are auto-detected and sync automatically.</p>
+      ${carousel([['Operating Checking ··4021','Chase','$24,800','Checking','bank',''],['Business Savings ··8890','Chase','$6,400','Savings','pig','pos'],['Amex Biz Platinum ··1007','American Express','−$4,180','Credit · 21% used','card','gold']].map(a=>`<div class="acct-card"><div class="acct-top"><div class="tile ${a[5]==='gold'?'gold':a[5]}">${I(a[4])}</div><div class="grow"><div class="acct-name">${a[0]}</div><div class="acct-inst">${a[1]}</div></div></div><div class="acct-bal num">${a[2]}</div><div class="acct-meta">${a[3]}</div></div>`).join(''))}
+    </div>
     ${tabsBlock([
       {label:'Overview',icon:'grid',panel:overview},
       {label:'Transactions',icon:'exchange',panel:transactions},
-      {label:'Invoicing & AR',icon:'invoice',panel:invoicing},
+      {label:'Expenses',icon:'receipt',panel:expenses},
+      {label:'Invoicing & POs',icon:'invoice',panel:invoicing},
       {label:'Bills & AP',icon:'receipt',panel:ap},
       {label:'Statements',icon:'file',panel:statements},
+      {label:'Customers',icon:'users',panel:customers},
       {label:'Documents',icon:'folder',panel:documents},
     ])}`;
 };
@@ -1301,20 +1391,80 @@ PAGES.debt = () => {
 
 PAGES.properties = () => {
   const props=[['1842 Elmwood Drive','Austin, TX','$187,000','$67,000','Primary','pos'],['903 Ridge View Ln','Round Rock, TX','$125,000','$45,000','Rental','gold']];
-  return `${wshead('Business & Real estate','Properties','Your real estate portfolio, its cash flow, and tax-ready expense tracking.',
+  const rt=' style="text-align:right"';
+  const T=(cols,rows)=>`<div class="table-scroll"><table class="table"><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table></div>`;
+  const overview=`<div class="card">${sechead('903 Ridge View Ln · rental')}<div class="kpirow">${kpi('coins','pos','Rent','$1,650','/mo')}${kpi('percent','','Cap rate','10.8%','')}${kpi('arr-ur','pos','Cash flow','+$370','/mo')}${kpi('bank','','Depreciation','$5,091','/yr · $424/mo')}</div></div>`;
+  const tracker=`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-dl','pos','Income 2026','$25,200','')}${kpi('arr-ur','','Expenses 2026','$3,240','')}${kpi('scale','pos','Net cash flow','+$21,960','')}${kpi('flame','gold','Missing receipts','2','')}</div>
+    <div class="grid g12" style="margin-bottom:var(--sp-4)">
+      <div class="card c7">${sechead('Monthly income vs expenses · 2026')}<div data-chart="inout" data-v='[{"l":"Jan","i":2.1,"o":0.3},{"l":"Feb","i":2.1,"o":0.7},{"l":"Mar","i":2.1,"o":0.4},{"l":"Apr","i":2.1,"o":0.2},{"l":"May","i":2.1,"o":0.9},{"l":"Jun","i":2.1,"o":0.4}]'></div></div>
+      <div class="card c5">${sechead('Expense breakdown')}<div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="130" data-top="$3,240" data-v='[{"label":"Repairs","val":2010,"color":"--c6"},{"label":"Mgmt","val":690,"color":"--c2"},{"label":"Supplies","val":540,"color":"--c4"}]'></div><div class="grow">${legend([{label:'Repairs',val:'$2,010',color:'--c6'},{label:'Mgmt fees',val:'$690',color:'--c2'},{label:'Supplies',val:'$540',color:'--c4'}])}</div></div></div>
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Ledger','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('coins')+' Add income</button><button class="btn btn-primary btn-sm">'+I('plus')+' Add expense</button></div>')}
+      ${T(`<th>Date</th><th>Category</th><th>Vendor</th><th${rt}>Total</th><th>Receipt</th>`,
+        [['Feb 01','<span style="color:var(--pos)">'+I('arr-dl')+' Rental Income</span>','Unit 3B tenant','<span class="num" style="color:var(--pos)">+$2,100.00</span>','<span class="badge pos">Income</span>'],
+         ['Feb 11','Repairs','Ace Hardware','<span class="num">$182.60</span>','<span class="badge pos">RCPT-1017</span>'],
+         ['Jan 12','Supplies','Home Depot','<span class="num">$34.18</span>','<span class="badge gold">Missing</span>']]
+        .map(r=>`<tr>${r.map((c,i)=>`<td${i===3?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Year-end summary · 2026')}
+      ${[['Rental income','$25,200','pos'],['Total operating expenses','−$3,240',''],['Net cash flow (income − expenses)','+$21,960','pos strong'],['Less depreciation (non-cash)','−$5,091','muted'],['Taxable net','$16,869','strong']].map(r=>`<div class="flow-row ${r[2].includes('strong')?'strong':''}"><span class="${r[2].includes('muted')?'muted':''}" ${r[2].includes('pos')?'style="color:var(--pos)"':''}>${r[0]}</span><span class="num" ${r[2].includes('pos')?'style="color:var(--pos)"':''}>${r[1]}</span></div>`).join('')}</div>
+    <div class="card">${sechead('<span>'+I('folder')+' Document vault</span>','<button class="btn btn-primary btn-sm">'+I('download')+' Upload</button>')}
+      <div class="rowlist">
+        ${richRow({icon:'file',cls:'',name:'2026 Form 1098 — 903 Ridge View',sub:'1098 · property-level',amt:''})}
+        ${richRow({icon:'file',cls:'info',name:"Homeowner's policy 2026",sub:'Insurance',amt:''})}
+        ${richRow({icon:'receipt',cls:'pos',name:'Ace Hardware receipt.pdf',sub:'Receipt · Repairs · Feb 11',amt:''})}
+      </div>
+      <div class="row" style="justify-content:flex-end;gap:var(--sp-2);margin-top:var(--sp-4)"><button class="btn btn-outline btn-sm">${I('download')} Download summary</button><button class="btn btn-primary btn-sm">${I('folder')} Save to Documents</button></div>
+    </div>`;
+  const taxexport=`<div class="card">${sechead('<span>'+I('invoice')+' Tax export · all properties</span>','<span class="badge neutral">Schedule E</span>')}
+    <div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-dl','pos','Income 2026','$63,900','')}${kpi('arr-ur','','Expenses 2026','$9,180','')}${kpi('scale','pos','Net cash flow','+$54,720','')}${kpi('flame','gold','Missing receipts','4','')}</div>
+    ${T(`<th>Property</th><th${rt}>Income</th><th${rt}>Expenses</th><th${rt}>Net</th><th>Receipts</th>`,
+      [['903 Ridge View','<span class="num" style="color:var(--pos)">$25,200</span>','<span class="num">$3,240</span>','<span class="num" style="color:var(--pos)">+$21,960</span>','<span class="badge gold">2 missing</span>'],
+       ['456 Oak Ave','<span class="num" style="color:var(--pos)">$21,600</span>','<span class="num">$3,910</span>','<span class="num" style="color:var(--pos)">+$17,690</span>','<span class="badge gold">2 missing</span>'],
+       ['1842 Elmwood','<span class="num" style="color:var(--pos)">$17,100</span>','<span class="num">$2,030</span>','<span class="num" style="color:var(--pos)">+$15,070</span>','<span class="badge pos">Complete</span>']]
+      .map(r=>`<tr>${r.map((c,i)=>`<td${i>0&&i<4?rt:''}>${c}</td>`).join('')}</tr>`).join('')+
+      `<tr style="font-weight:700"><td>Grand total</td><td${rt}><span class="num" style="color:var(--pos)">$63,900</span></td><td${rt}><span class="num">$9,180</span></td><td${rt}><span class="num" style="color:var(--pos)">+$54,720</span></td><td></td></tr>`)}
+    <div class="row" style="justify-content:flex-end;gap:var(--sp-2);margin-top:var(--sp-4)"><button class="btn btn-outline btn-sm">${I('download')} Download</button><button class="btn btn-primary btn-sm">${I('folder')} Save to Documents</button></div></div>`;
+  const addform=`<div class="card">${sechead('Add a property','<button class="btn btn-outline btn-sm">'+I('sparkles')+' Auto-fill</button>')}
+    <div class="fgrid fgrid-3">
+      <div style="grid-column:span 2"><label class="flabel">Address (only the address is required)</label><input class="finput" placeholder="Start typing an address…"></div>
+      <div><label class="flabel">Type</label><select class="finput"><option>Primary residence</option><option>Rental property</option><option>Land</option></select></div>
+      <div><label class="flabel">Purchase price</label><input class="finput" placeholder="$0"></div>
+      <div><label class="flabel">Land value (non-depreciable)</label><input class="finput" placeholder="$0"></div>
+      <div><label class="flabel">Current value</label><input class="finput" placeholder="auto if blank"></div>
+      <div><label class="flabel">Mortgage balance</label><input class="finput" placeholder="$0"></div>
+      <div><label class="flabel">APR (%)</label><input class="finput" placeholder="—"></div>
+      <div><label class="flabel">Monthly rent (rentals)</label><input class="finput" placeholder="$0"></div>
+    </div>
+    <div class="muted" style="font-size:var(--fs-xs);margin-top:8px">${I('bank')} Depreciation ≈ $5,091/yr · $424/mo (÷ 27.5 yr)</div>
+    <div class="row" style="justify-content:flex-end;margin-top:var(--sp-4)"><button class="btn btn-primary">${I('check')} Save property</button></div></div>`;
+  const maintenance=`<div class="card">${sechead('Maintenance')}${timeline([
+    {name:'HVAC service',sub:'Feb 11 · $182.60 · Ace Hardware',badge:'Done',badgeCls:'pos'},
+    {name:'Gutter cleaning',sub:'Scheduled Sep',tone:'muted'},
+    {name:'Roof inspection',sub:'Scheduled Nov',tone:'muted'},
+  ])}</div>`;
+  return `${wshead('Business & Real estate','Properties','Your portfolio, its cash flow, and tax-ready expense tracking — one combined Schedule E when you file.',
     `<button class="btn btn-outline btn-sm">${I('invoice')} Tax export</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Add property</button>`)}
     ${actionBar(['All','Primary','Rental','Land'])}
+    <div class="card" id="prop-edit" style="display:none;border-left:4px solid var(--accent);margin-bottom:var(--sp-6)">
+      <div class="sec-title" style="font-size:var(--fs-body);display:flex;align-items:center;gap:8px;flex-wrap:wrap">${I('note')} Edit property <span class="badge pos" id="prop-edit-name"></span></div>
+      <div class="muted" style="font-size:var(--fs-xs);margin:4px 0 var(--sp-4)">Update any detail and save your changes.</div>
+      <div class="fgrid fgrid-3"><div style="grid-column:span 2"><label class="flabel">Address</label><input class="finput" id="prop-edit-addr"></div><div><label class="flabel">Type</label><select class="finput"><option>Primary residence</option><option>Rental property</option><option>Land</option></select></div><div><label class="flabel">Current value</label><input class="finput" value="$187,000"></div><div><label class="flabel">Mortgage balance</label><input class="finput" value="$120,000"></div><div><label class="flabel">APR (%)</label><input class="finput" value="6.25"></div></div>
+      <div class="row" style="justify-content:flex-end;gap:8px;margin-top:var(--sp-4)"><button class="btn btn-outline" data-editprop-cancel>${I('x')} Cancel</button><button class="btn btn-primary">${I('check')} Update property</button></div>
+    </div>
     <div class="kpirow" style="margin-bottom:var(--sp-6)">
       ${kpi('estate','','Total value','$312,000','+2.8% · 30d')}
       ${kpi('home','pos','Total equity','$112,000','+1.6% · 30d')}
       ${kpi('coins','neg','Total mortgage','$200,000','−0.8% · 30d')}
     </div>
     ${sechead('Portfolio')}
-    ${carousel(props.map(p=>`<div class="acct-card" style="width:300px"><div style="height:118px;border-radius:var(--r-sm);display:grid;place-items:center;margin-bottom:var(--sp-3);background:linear-gradient(135deg,var(--accent-soft),var(--surface-3));color:var(--accent);font-size:34px">${I('estate')}</div><div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="acct-name">${p[0]}</div><div class="acct-inst">${p[1]}</div></div><span class="badge ${p[5]}">${p[4]}</span></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-2);margin-top:var(--sp-3)"><div><div class="eyebrow">Value</div><div class="num" style="font-weight:700">${p[2]}</div></div><div><div class="eyebrow">Equity</div><div class="num" style="font-weight:700;color:var(--pos)">${p[3]}</div></div></div></div>`).join(''))}
-    <div class="grid g12" style="margin-top:var(--sp-6)">
-      <div class="card c7">${sechead('903 Ridge View · income vs expenses · 2026')}<div data-chart="inout" data-v='[{"l":"Jan","i":2.1,"o":0.3},{"l":"Feb","i":2.1,"o":0.7},{"l":"Mar","i":2.1,"o":0.4},{"l":"Apr","i":2.1,"o":0.2},{"l":"May","i":2.1,"o":0.9},{"l":"Jun","i":2.1,"o":0.4}]'></div></div>
-      <div class="card c5">${sechead('Expense breakdown')}<div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="130" data-top="$3,240" data-v='[{"label":"Repairs","val":2010,"color":"--c6"},{"label":"Mgmt","val":690,"color":"--c2"},{"label":"Supplies","val":540,"color":"--c4"}]'></div><div class="grow">${legend([{label:'Repairs',val:'$2,010',color:'--c6'},{label:'Mgmt fees',val:'$690',color:'--c2'},{label:'Supplies',val:'$540',color:'--c4'}])}</div></div></div>
-    </div>`;
+    ${carousel(props.map(p=>`<div class="prop-card"><div class="prop-photo">${I('estate')}</div><div style="padding:var(--sp-4)"><div class="row" style="justify-content:space-between;align-items:flex-start"><div><div class="r-name">${p[0]}</div><div class="r-sub">${p[1]}</div></div><span class="badge ${p[5]}">${p[4]}</span></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-2);margin-top:var(--sp-3)"><div><div class="eyebrow">Value</div><div class="num" style="font-weight:700">${p[2]}</div></div><div><div class="eyebrow">Equity</div><div class="num" style="font-weight:700;color:var(--pos)">${p[3]}</div></div></div><div class="row gap-2" style="margin-top:var(--sp-3)"><button class="btn btn-ghost btn-sm" data-editprop="${p[0]}">${I('note')} Edit</button><button class="btn btn-ghost btn-sm">${I('receipt')} Expenses</button></div></div></div>`).join(''))}
+    <div style="margin-top:var(--sp-6)">${tabsBlock([
+      {label:'Overview',icon:'home',panel:overview},
+      {label:'Income & expenses',icon:'receipt',panel:tracker},
+      {label:'Tax export · all properties',icon:'invoice',panel:taxexport},
+      {label:'Add / edit',icon:'plus',panel:addform},
+      {label:'Maintenance',icon:'settings',panel:maintenance},
+    ])}</div>`;
 };
 
 PAGES.taxes = () => `
@@ -1597,6 +1747,7 @@ function entityDrawer(type,id){
   return {icon:'wallet',cls:'',title:LABELS[type]||'Detail',sub:'',tl:null,overview:'<div class="empty"><p>No detail available.</p></div>',ai:aiPanel('No insight yet.')};
 }
 const ACTION_DRAWERS={
+  expexport:{icon:'download',title:'Export expenses',sub:'Download or file in Documents',body:`<label class="flabel">Scope</label><div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">This business</button><button>All businesses</button></div><label class="flabel">Format</label><div class="chiprow" style="margin:6px 0 var(--sp-5)"><span class="chip active">PDF</span><span class="chip">Excel</span><span class="chip">CSV</span><span class="chip">Executive summary</span></div><div class="row gap-2"><button class="btn btn-outline" style="flex:1">${I('download')} Download</button><button class="btn btn-primary" style="flex:1">${I('folder')} Save to Documents</button></div>`},
   link:{icon:'bank',title:'Link an account',sub:'Securely via Plaid',body:`<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-4)">Connect a bank, card, brokerage or loan. Read-only and encrypted — we never store your credentials.</p><div class="rowlist">${['Chase','Bank of America','Ally','Fidelity','Vanguard','American Express'].map(b=>`<div class="rowitem act"><div class="tile sm">${I('bank')}</div><div class="grow"><div class="r-name">${b}</div><div class="r-sub">Search 12,000+ institutions</div></div>${I('chev-r','muted')}</div>`).join('')}</div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-5)">${I('lock')} Continue with Plaid</button>`},
   goal:{icon:'target',title:'New goal',sub:'Link accounts or track by hand',body:`<div class="stack gap-4"><div><label class="eyebrow">Name</label><div class="omnibar" style="max-width:none;margin-top:6px">Vacation fund</div></div><div><label class="eyebrow">Target amount</label><div class="omnibar" style="max-width:none;margin-top:6px">$10,000</div></div><div><label class="eyebrow">Fund from</label><div class="row gap-2 wrap" style="margin-top:6px"><span class="chip active">${I('check')} Ally Savings · $24,680</span><span class="chip">Chase · $8,450</span></div></div></div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-6)">${I('plus')} Create goal</button>`},
   profile:{icon:'shield',title:'Alex Kim',sub:'Accredited investor',body:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="row gap-2" style="justify-content:space-between"><span class="muted">Identity</span><span class="badge pos">${I('shield')} Verified</span></div></div>${actionRows([['settings','Settings'],['shield','Security'],['x','Sign out']])}`},
@@ -1736,6 +1887,8 @@ document.addEventListener('click',e=>{
   const dot=e.target.closest('#aiDots [data-dot]'); if(dot){ aiGo(+dot.dataset.dot); return; }
   const aip=e.target.closest('[data-ai-toggle]'); if(aip){ aiPlaying=!aiPlaying; aip.innerHTML=aiPlaying?I('pause'):I('play'); return; }
   if(e.target.closest('#galleryCmdk')){ openCmdk(); return; }
+  const ed=e.target.closest('[data-editprop]'); if(ed){ const c=$('#prop-edit'); if(c){ c.style.display=''; const nm=$('#prop-edit-name'); if(nm)nm.textContent=ed.dataset.editprop; const ad=$('#prop-edit-addr'); if(ad)ad.value=ed.dataset.editprop; c.scrollIntoView({behavior:'smooth',block:'center'}); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } return; }
+  if(e.target.closest('[data-editprop-cancel]')){ const c=$('#prop-edit'); if(c) c.style.display='none'; return; }
   const tg=e.target.closest('.tgl'); if(tg){ tg.classList.toggle('on'); tg.setAttribute('aria-checked',tg.classList.contains('on')); return; }
   const set=e.target.closest('.setlink[data-set]'); if(set){ $$('.setlink').forEach(x=>x.classList.toggle('active',x===set)); $$('#setPanels [data-setpanel]').forEach(p=>p.style.display=p.dataset.setpanel===set.dataset.set?'':'none'); return; }
   const tab=e.target.closest('.tab[data-tabidx]'); if(tab){ const block=tab.closest('.tabs-block'); if(!block) return; const idx=tab.dataset.tabidx;
