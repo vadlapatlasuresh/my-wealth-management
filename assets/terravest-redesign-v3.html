@@ -547,6 +547,9 @@ select.finput{cursor:pointer;appearance:none}
   <symbol id="i-link2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 005.7 0l3-3A4 4 0 0013 5.3l-1.5 1.5M14 10a4 4 0 00-5.7 0l-3 3A4 4 0 0011 18.7l1.5-1.5"/></symbol>
   <symbol id="i-percent" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 5L5 19"/><circle cx="7.5" cy="7.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></symbol>
   <symbol id="i-invoice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l3 3v15l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3L6 21z"/><path d="M9 8h5M9 12h6M9 16h4"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.2 5.2-5.2 2.2 2.2-5.2z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-6.5-4.2-9-8.2C1.5 9 3 5.5 6.2 5.5c1.9 0 3 1.2 3.8 2.3.8-1.1 1.9-2.3 3.8-2.3 3.2 0 4.7 3.5 3.2 6.3C18.5 15.8 12 20 12 20z"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16M4 18l-1.2-9L8 13l4-7 4 7 5.2-4L20 18"/></symbol>
 </svg>
 
 <!-- ===================== APP SHELL ===================== -->
@@ -655,27 +658,48 @@ const IA = [
   { group:'Money', items:[
     { id:'accounts', label:'Accounts', icon:'wallet' },
     { id:'transactions', label:'Transactions', icon:'exchange' },
+    { id:'spending', label:'Spending', icon:'cart' },
+    { id:'budgets', label:'Budgets', icon:'grid' },
     { id:'cashflow', label:'Cash flow', icon:'repeat' },
     { id:'bills', label:'Bills & payments', icon:'receipt', badge:'3' },
-    { id:'budgets', label:'Budgets', icon:'grid' },
+    { id:'recurring', label:'Recurring', icon:'repeat' },
   ]},
   { group:'Grow', items:[
     { id:'investments', label:'Investments', icon:'trend' },
     { id:'goals', label:'Goals', icon:'target' },
     { id:'debt', label:'Debt payoff', icon:'percent' },
+    { id:'retirement', label:'Retirement', icon:'pig' },
+    { id:'calculators', label:'Calculators', icon:'percent' },
     { id:'ai', label:'AI advisor', icon:'robot', badge:'4' },
   ]},
-  { group:'Business & Real estate', items:[
-    { id:'business', label:'My business', icon:'brief' },
-    { id:'properties', label:'Properties', icon:'estate' },
-    { id:'taxes', label:'Taxes', icon:'invoice' },
-  ]},
-  { group:'Household', items:[
+  { group:'Shared', items:[
     { id:'household', label:'Household', icon:'users' },
-    { id:'documents', label:'Documents', icon:'folder' },
+    { id:'sharedmoney', label:'Shared goals & bills', icon:'coins' },
+    { id:'family', label:'Family', icon:'heart' },
   ]},
-  { group:'System', items:[
+  { group:'Business & Tax', items:[
+    { id:'business', label:'My business', icon:'brief' },
+    { id:'taxes', label:'Taxes', icon:'invoice' },
+    { id:'cpa', label:'Find a CPA', icon:'users' },
+  ]},
+  { group:'Real estate', items:[
+    { id:'properties', label:'Properties', icon:'estate' },
+    { id:'dealroom', label:'Deal Room', icon:'map' },
+    { id:'fractional', label:'Fractional LLC', icon:'coins' },
+  ]},
+  { group:'Planning', items:[
+    { id:'planning', label:'Coach', icon:'compass' },
+    { id:'healthscore', label:'Health score', icon:'heart' },
+    { id:'emergencyfund', label:'Emergency fund', icon:'umbrella' },
+    { id:'benchmarks', label:'Benchmarks', icon:'trend' },
+    { id:'reports', label:'Reports', icon:'file' },
+  ]},
+  { group:'More', items:[
+    { id:'documents', label:'Documents', icon:'folder' },
+    { id:'messages', label:'Messages', icon:'msg', badge:'2' },
     { id:'security', label:'Security', icon:'shield' },
+    { id:'subscription', label:'Subscription', icon:'crown' },
+    { id:'profile', label:'Profile', icon:'users' },
     { id:'settings', label:'Settings', icon:'settings' },
     { id:'components', label:'Components', icon:'grid' },
   ]},
@@ -1121,7 +1145,18 @@ PAGES.investments = () => {
       <div class="card c5">${sechead('Allocation')}<div class="row gap-5" style="align-items:center"><div data-chart="donut" data-size="150" data-top="Diversified" data-v='[{"label":"US","val":58,"color":"--c1"},{"label":"Intl","val":22,"color":"--c3"},{"label":"Bonds","val":12,"color":"--c2"},{"label":"Cash","val":8,"color":"--c5"}]'></div><div class="grow">${legend(alloc.map(a=>({label:a.label,val:a.pct,color:a.color})))}</div></div></div>
       <div class="card c7">${sechead('Growth of $100k · 12 months','<span class="badge pos">+21.6%</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[100,103,101,107,110,114,113,120,124,130,138,161]"></div></div>
     </div>
-    <div class="card">${sechead('Holdings','<span class="muted" style="font-size:var(--fs-sm)">7 positions · 2 brokers</span>')}<div class="rowlist">${holdRows}</div></div>`;
+    <div class="card">${sechead('Holdings','<span class="muted" style="font-size:var(--fs-sm)">7 positions · 2 brokers</span>')}<div class="rowlist">${holdRows}</div></div>
+    <div class="card" style="margin-top:var(--sp-6)">${sechead('Alternatives','<button class="btn btn-outline btn-sm">'+I('plus')+' Add alternative</button>')}
+      <div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('coins','gold','Total alt value','$84,500','')}${kpi('list','','Holdings','3','')}${kpi('grid','violet','Categories','3','Land · PE · Crypto')}</div>
+      <div class="table-scroll"><table class="table"><thead><tr><th>Type</th><th>Name</th><th style="text-align:right">Value</th><th>Ownership</th><th>Notes</th></tr></thead><tbody>
+        <tr><td><span class="badge neutral">Land</span></td><td>Willow Creek Land LLC</td><td style="text-align:right" class="num">$45,000</td><td>15%</td><td class="muted">Bozeman, MT</td></tr>
+        <tr><td><span class="badge neutral">Private Equity</span></td><td>Cedar Fund II</td><td style="text-align:right" class="num">$25,000</td><td class="muted">—</td><td class="muted">Committed 2024</td></tr>
+        <tr><td><span class="badge neutral">Crypto</span></td><td>BTC / ETH</td><td style="text-align:right" class="num">$14,500</td><td>100%</td><td class="muted">Cold storage</td></tr>
+      </tbody></table></div></div>
+    <div class="grid g12" style="margin-top:var(--sp-6)">
+      <div class="card c6">${sechead('Your brokerages')}<div class="rowlist">${richRow({icon:'bank',cls:'violet',name:'Individual Brokerage',sub:'Fidelity ····4892 · 3 positions',amt:'$60,755'})}${richRow({icon:'bank',cls:'violet',name:'Roth IRA',sub:'Vanguard ····1130 · 4 positions',amt:'$100,505'})}</div></div>
+      <div class="card c6">${sechead('Recent activity','<span class="muted" style="font-size:var(--fs-sm)">4 transactions</span>')}<div class="rowlist">${richRow({icon:'arr-dl',cls:'pos',name:'Buy · AAPL',sub:'Fidelity · Jun 24 · 15 @ $214.80',amt:'$3,222.00'})}${richRow({icon:'arr-ur',cls:'neg',name:'Sell · VTI',sub:'Vanguard · Jun 21 · 10 @ $268.40',amt:'$2,684.00'})}${richRow({icon:'coins',cls:'gold',name:'Dividend · SCHD',sub:'Fidelity · Jun 18',amt:'$182.40'})}</div></div>
+    </div>`;
 };
 
 PAGES.business = () => {
@@ -1294,6 +1329,21 @@ PAGES.transactions = () => {
       ${kpi('scale','','Net','+$2,366.19','6 transactions')}
     </div>
     <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="chip active">All accounts</span><span class="chip">Sapphire Reserve · 38</span><span class="chip">Primary Checking · 112</span></div>
+    <div class="card" style="margin-bottom:var(--sp-4)">
+      <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">
+        <div class="ab-search" style="flex:1;min-width:200px">${I('search')}<span>Search description or category…</span></div>
+        <select class="finput" style="width:auto" aria-label="Account"><option>All accounts</option><optgroup label="Cards"><option>Sapphire Reserve</option></optgroup><optgroup label="Bank"><option>Primary Checking</option></optgroup></select>
+        <select class="finput" style="width:auto" aria-label="Category"><option>All categories</option><option>Groceries</option><option>Housing</option><option>Income</option></select>
+        <div class="seg"><button class="active">All</button><button>Income</button><button>Spending</button></div>
+      </div>
+      <div class="row gap-2 wrap">
+        <select class="finput" style="width:auto" aria-label="Date range"><option>All time</option><option>Last 1 day</option><option>1 week</option><option>1 month</option><option>3 months</option><option>1 year</option><option>Custom range…</option></select>
+        <input class="finput" style="width:120px" placeholder="Min $" inputmode="decimal">
+        <input class="finput" style="width:120px" placeholder="Max $" inputmode="decimal">
+        <button class="btn btn-outline btn-sm">${I('x')} Clear</button>
+        <button class="btn btn-outline btn-sm mla">${I('sort')} Sort: Newest</button>
+      </div>
+    </div>
     <div class="card">${sechead('Activity','<span class="muted" style="font-size:var(--fs-sm)">Newest first</span>')}
       <div class="rowlist">${rows.map(r=>richRow({icon:r.icon,cls:r.cls,name:r.name,sub:r.sub,amt:r.amt,amtColor:r.amtColor,entity:r.id?{type:'transaction',id:r.id}:null})).join('')}</div>
     </div>`;
@@ -1334,6 +1384,22 @@ PAGES.bills = () => `
     </div>
     <div class="row" style="justify-content:space-between;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border);font-weight:700"><span class="muted">Total due</span><span class="num">$2,130.14</span></div>
   </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Who are you paying?')}
+    ${[['Credit Cards','card',[['Quicksilver ····4321','Capital One · Due Jul 5','$1,284.00'],['Sapphire Reserve ····7788','Chase · Due Jul 13','$2,210.45']]],['Mortgage','home',[['Home Loan ····9012','Rocket · Due Jul 10','$2,148.00']]],['Student Loans','file',[['Grad Unsubsidized ····5540','Nelnet · Due Jul 17','$310.00']]],['Auto / Car Loans','car',[['Auto Loan ····2277','Toyota Financial · Due Jul 22','$489.60']]]].map(g=>`<div style="margin-bottom:var(--sp-3)"><div class="eyebrow" style="margin-bottom:6px">${I(g[1])} ${g[0]} <span class="badge neutral" style="margin-left:4px">${g[2].length}</span></div>${g[2].map(p=>`<div class="rowitem act"><div class="tile sm">${I(g[1])}</div><div class="grow"><div class="r-name">${p[0]}</div><div class="r-sub">${p[1]}</div></div><div class="r-amt num">${p[2]}</div>${I('chev-r','muted')}</div>`).join('')}</div>`).join('')}
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Make a payment · review','<span class="badge gold">Step 3 of 4</span>')}
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-4)">${['Payee','Amount','Review','Done'].map((s,i)=>`<div class="row gap-2" style="align-items:center"><span style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:var(--fs-xs);background:${i<2?'var(--accent)':i===2?'var(--gold)':'var(--surface-3)'};color:${i<3?'var(--on-accent)':'var(--ink-3)'}">${i<2?'✓':i+1}</span><span style="font-size:var(--fs-sm);font-weight:600;color:${i<=2?'var(--ink)':'var(--ink-3)'}">${s}</span>${i<3?I('chev-r','muted'):''}</div>`).join('')}</div>
+    <div class="rowlist">
+      ${richRow({icon:'card',cls:'info',name:'Pay from',sub:'',amt:'Visa ···· 4242'})}
+      ${richRow({icon:'coins',cls:'pos',name:'Payment amount',sub:'',amt:'$1,250.42'})}
+      ${richRow({icon:'bank',cls:'',name:'Fund from',sub:'Available $5,678.90',amt:'Chase ···· 9921'})}
+      ${richRow({icon:'cal',cls:'violet',name:'Est. settlement',sub:'3 business days',amt:'Fri, Jun 6'})}
+      ${richRow({icon:'crown',cls:'gold',name:'Estimated rewards',sub:'',amt:'+125 pts',amtColor:'var(--gold)'})}
+    </div>
+    <div class="row" style="justify-content:space-between;font-weight:700;font-size:var(--fs-title);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)"><span>Total payment</span><span class="num" style="font-family:var(--font-display)">$1,250.42</span></div>
+    <div class="row gap-2" style="margin-top:var(--sp-4)"><button class="btn btn-outline">${I('arr-l')} Back</button><button class="btn btn-primary grow">${I('lock')} Confirm payment</button></div>
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-3)">${I('shield')} 256-bit encrypted · idempotency-protected</p>
+  </div>
   <div class="card">${sechead('Recent payments')}
     <div class="rowlist">
       ${richRow({icon:'card',cls:'',name:'Visa ···· 4242',sub:'Scheduled · Jun 6 · TV-9F3A21',amt:'$1,250.42'})}
@@ -1356,6 +1422,20 @@ PAGES.goals = () => {
       ${kpi('target','','Goals','4','')}${kpi('pig','pos','Saved so far','$53,000','')}
       ${kpi('flame','gold','Still needed','$69,000','')}${kpi('scale','info','Total target','$120,000','')}
     </div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('New goal')}
+      <div class="fgrid fgrid-3">
+        <div><label class="flabel">Name</label><input class="finput" placeholder="e.g. Vacation fund"></div>
+        <div><label class="flabel">Type</label><select class="finput"><option>Savings</option><option>Net worth</option><option>Debt payoff</option><option>Custom</option></select></div>
+        <div><label class="flabel">Target amount</label><input class="finput" placeholder="$10,000"></div>
+        <div><label class="flabel">Starting balance <span class="muted">(manual base)</span></label><input class="finput" placeholder="$0"></div>
+        <div><label class="flabel">Target date</label><input class="finput" type="date"></div>
+        <div><label class="flabel">Tracking</label><select class="finput"><option>Account balance</option><option>Growth since linking</option><option>Manual only</option></select></div>
+      </div>
+      <div style="margin-top:var(--sp-4)"><label class="flabel">Fund from accounts <span class="muted">(optional — pick any)</span></label>
+        <div class="chiprow"><span class="chip active">${I('check')} Ally Savings · $24,680</span><span class="chip">Chase Checking · $8,450</span><span class="chip">Vanguard Cash · $6,500</span></div>
+        <div style="font-size:var(--fs-sm);margin-top:8px">${I('pig')} <strong>$24,680</strong> from 1 account will count toward this goal.</div></div>
+      <div class="row" style="justify-content:flex-end;margin-top:var(--sp-4)"><button class="btn btn-primary btn-sm">${I('plus')} Create goal</button></div>
+    </div>
     ${sechead('Your goals · swipe')}
     ${carousel(cards.map(g=>`<div class="card act" data-drawer="goal"${g.id?` data-id="${g.id}"`:''} style="width:280px"><div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="tile ${g.cls}">${I(g.icon)}</div><div class="grow"><div class="r-name">${g.name}</div><div class="r-sub">${g.sub}</div></div><span class="badge ${g.bcls}">${g.badge}</span></div><div class="bar"><i style="width:${Math.min(g.pct,100)}%;background:${g.pct>=100?'var(--pos)':g.cls==='gold'?'var(--gold)':'var(--accent)'}"></i></div></div>`).join(''))}
     <div class="card" style="margin-top:var(--sp-6)">${sechead('Emergency fund · milestones')}
@@ -1364,6 +1444,16 @@ PAGES.goals = () => {
         {name:'3 months of expenses',sub:'$3,810 to go · $16,290',tone:'muted'},
         {name:'6 months of expenses',sub:'$20,100 to go · $32,580',tone:'muted'},
       ])}
+    </div>
+    <div class="card" style="margin-top:var(--sp-5)">
+      <div class="row gap-3" style="margin-bottom:var(--sp-3)"><div class="tile">${I('home')}</div><div class="grow"><div class="r-name">Pay off 123 Oak St</div><div class="r-sub">Mortgage payoff · 6.5% APR · $2,400/mo</div></div><div style="text-align:right"><div class="eyebrow">Balance left</div><div class="num" style="font-family:var(--font-display);font-size:1.2rem">$248,000</div></div></div>
+      <div class="row" style="justify-content:space-between;font-size:var(--fs-sm);margin-bottom:6px"><strong>$72,000 paid off</strong><span class="muted">of $320,000 · 22%</span></div>
+      <div class="bar"><i style="width:22%"></i></div>
+      <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">
+        <div style="font-size:var(--fs-sm)">Debt-free <strong>Nov 2038</strong><span class="muted"> · 13y 4m left · $135,600 interest</span></div>
+        <div class="row gap-2 wrap" style="margin-top:10px;align-items:center"><span class="muted" style="font-size:var(--fs-xs)">Extra / mo</span><input class="finput" type="number" value="500" style="height:34px;width:110px"><div class="row gap-2"><button class="btn btn-outline btn-sm">+$100</button><button class="btn btn-outline btn-sm">+$250</button><button class="btn btn-outline btn-sm">+$500</button></div></div>
+        <div style="font-size:var(--fs-sm);margin-top:8px;color:var(--pos)">${I('bolt')} Paying <strong>$500/mo</strong> extra → debt-free <strong>Jun 2034</strong> (4y 5m sooner), saving <strong>$61,400</strong> in interest.</div>
+      </div>
     </div>`;
 };
 
@@ -1384,6 +1474,16 @@ PAGES.debt = () => {
         ${richRow({icon:'car',cls:'',name:'Auto Loan',sub:'6.49% APR · min $300',amt:'$14,500.00'})}
         ${richRow({icon:'coins',cls:'info',name:'Student Loan',sub:'5.25% APR · min $250',amt:'$18,750.00'})}
       </div>
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Payoff timeline · avalanche')}
+      <div class="table-scroll"><table class="table"><thead><tr><th>#</th><th>Debt</th><th>Paid off</th><th style="text-align:right">Interest</th><th style="text-align:right">Total paid</th></tr></thead><tbody>
+        <tr><td class="muted">1</td><td>Visa Card <span class="muted">· 18.24%</span></td><td><strong>Oct 2026</strong></td><td style="text-align:right" class="num">$720.00</td><td style="text-align:right" class="num">$6,970.00</td></tr>
+        <tr><td class="muted">2</td><td>Personal Loan <span class="muted">· 11.99%</span></td><td><strong>Sep 2027</strong></td><td style="text-align:right" class="num">$1,340.00</td><td style="text-align:right" class="num">$11,140.00</td></tr>
+        <tr><td class="muted">3</td><td>Auto Loan <span class="muted">· 6.49%</span></td><td><strong>Jun 2028</strong></td><td style="text-align:right" class="num">$1,760.00</td><td style="text-align:right" class="num">$16,260.00</td></tr>
+        <tr><td class="muted">4</td><td>Student Loan <span class="muted">· 5.25%</span></td><td><strong>Mar 2029</strong></td><td style="text-align:right" class="num">$2,300.00</td><td style="text-align:right" class="num">$21,050.00</td></tr>
+        <tr style="font-weight:700"><td></td><td>All debts</td><td><strong>Mar 2029</strong></td><td style="text-align:right" class="num">$6,120.00</td><td style="text-align:right" class="num">$55,420.00</td></tr>
+      </tbody></table></div>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">${I('bolt')} Your extra $300/mo on avalanche saves <strong style="color:var(--pos)">$3,180</strong> in interest and gets you debt-free 1y 4m sooner than paying only minimums.</p>
     </div>
     ${sechead('Compare strategies')}
     <div class="grid g12">${strat.map((s,i)=>`<div class="card c4"${i===0?' style="border-left:4px solid var(--accent)"':''}><div class="row gap-2" style="margin-bottom:10px"><strong>${s[0]}</strong>${s[6]?`<span class="badge gold mla">${I('coins')} ${s[6]}</span>`:''}</div><div class="eyebrow">Total interest</div><div class="num" style="font-family:var(--font-display);font-size:1.3rem;color:var(--${s[2]})">${s[1]}</div><div class="minibar" style="margin:8px 0"><i style="width:${s[5]}%;background:var(--${s[2]})"></i></div><div class="grid" style="grid-template-columns:1fr 1fr;gap:var(--sp-2)"><div><div class="eyebrow">Time</div><div class="num" style="font-weight:700">${s[3]}</div></div><div><div class="eyebrow">Debt-free</div><div class="num" style="font-weight:700">${s[4]}</div></div></div><button class="btn ${i===0?'btn-primary':'btn-outline'} btn-sm" style="width:100%;margin-top:var(--sp-3)">${i===0?'Current plan':'Set as plan'}</button></div>`).join('')}</div>`;
@@ -1483,11 +1583,25 @@ PAGES.taxes = () => `
     ${[['Gross income (combined)','$168,400',0],['Adjusted gross income','$165,346',0],['Standard deduction (joint)','− $30,000',0],['QBI deduction (§199A)','− $5,090',0],['Taxable income','$130,256',1],['Income tax','$19,605',1],['Self-employment tax','$3,108',1]].map(r=>`<div class="row" style="justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);${r[2]?'font-weight:700':''}"><span class="${r[2]?'':'muted'}">${r[0]}</span><span class="num">${r[1]}</span></div>`).join('')}
     <div class="row" style="justify-content:space-between;padding:9px 0;font-weight:700"><span>Total federal tax</span><span class="num">$22,713</span></div>
   </div>
-  <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-4)">${I('help')} Educational estimate, not tax advice.</p>`;
+  <div class="grid g12" style="margin-top:var(--sp-6);margin-bottom:var(--sp-6)">
+    <div class="card c6">${sechead('Deductions — lower taxable income')}${[['Mortgage interest','1098','Interest on up to $750k of home-acquisition debt.'],['SALT','capped $10k','State/local income + property taxes.'],['Student-loan interest','1098-E','Up to $2,500 above-the-line.']].map(d=>`<div style="border-left:2px solid var(--sage);padding-left:10px;font-size:var(--fs-sm);margin-bottom:8px"><strong>${d[0]}</strong> <span class="badge neutral">${d[1]}</span><div class="muted">${d[2]}</div></div>`).join('')}</div>
+    <div class="card c6">${sechead('Credits — dollar-for-dollar')}${[['Child tax credit','','Up to $2,000 per child under 17.'],['Education credit','1098-T','American Opportunity / Lifetime Learning.'],["Saver's credit",'','For retirement contributions under the limit.']].map(d=>`<div style="border-left:2px solid var(--gold);padding-left:10px;font-size:var(--fs-sm);margin-bottom:8px"><strong>${d[0]}</strong> ${d[1]?`<span class="badge neutral">${d[1]}</span>`:''}<div class="muted">${d[2]}</div></div>`).join('')}</div>
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Upload your tax forms')}<p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 10px">Drop in W-2, 1099-*, 1098, 1098-E/T for everyone in your household. We read each figure into the right field; parsed in-session, <strong>never stored</strong>.</p>
+    <button class="btn btn-outline btn-sm" style="margin-bottom:var(--sp-3)">${I('download')} Choose files</button>
+    ${[['You','w2-acme.pdf','W-2','Wages $84,200 · Withheld $9,310'],['You','1099-nec.pdf','1099-NEC','Self-employment $22,000'],['Spouse','w2-globex.pdf','W-2','Wages $61,000 · Withheld $6,400'],['Household','1098-mortgage.pdf','1098','Mortgage interest $12,840']].map(f=>`<div class="rowitem"><div class="tile sm">${I('file')}</div><div class="grow"><div class="r-name">${f[1]} <span class="badge neutral">${f[2]}</span> <span class="badge neutral">${f[0]}</span></div><div class="r-sub">${f[3]} — applied</div></div><button class="btn btn-ghost btn-sm" style="color:var(--neg)">${I('x')}</button></div>`).join('')}</div>
+  <div class="grid g12" style="margin-bottom:var(--sp-6)">
+    <div class="card c6">${sechead('Rental properties (Schedule E)','<span class="num" style="font-weight:700">net $3,464</span>')}<div class="fgrid fgrid-3" style="margin-bottom:var(--sp-3)"><div><label class="flabel">Gross rents</label><input class="finput" value="$36,000"></div><div><label class="flabel">Cost basis</label><input class="finput" value="$400,000"></div><div><label class="flabel">Land value</label><input class="finput" value="$80,000"></div></div><div class="subcard"><div class="flow-row"><span class="muted">− Expenses</span><span class="num">$20,900</span></div><div class="flow-row"><span class="muted">− Depreciation (($400k−$80k)÷27.5)</span><span class="num">$11,636</span></div><div class="flow-row strong"><span>Net rental income</span><span class="num">$3,464</span></div></div></div>
+    <div class="card c6">${sechead('Jointly vs separately')}<div class="flow-row strong"><span>Jointly — total</span><span class="num">$22,713</span></div><div class="flow-row"><span class="muted">Separately — combined</span><span class="num">$23,700</span></div><div class="subcard" style="margin-top:8px">${I('check')} <strong>Filing jointly saves $987.</strong> Stay joint.</div>
+      <div class="eyebrow" style="margin:var(--sp-4) 0 6px">Quarterly estimated taxes</div><div class="kpirow">${kpi('cal','','Each quarter','$1,575','')}${kpi('scale','','Annual','$6,300','')}</div></div>
+  </div>
+  <div class="card" style="margin-bottom:var(--sp-6);border-color:var(--gold)">${sechead('Ways to maximize your refund')}${[['estate','Rental depreciation is working for you','$11,636/yr turns a cash-positive rental into a ~$3.5k taxable figure.'],['pig','Max out tax-advantaged accounts','A couple can defer ~$47,000 across two 401(k)s — every $1,000 pre-tax saves ~$220.'],['percent','20% QBI deduction applied','A $5,090 QBI deduction on your rental/self-employment income.']].map(t=>`<div class="row gap-3" style="padding:10px 12px;border-radius:var(--r-sm);background:var(--gold-soft);margin-bottom:8px"><span style="color:var(--gold)">${I(t[0])}</span><div><div style="font-weight:600;font-size:var(--fs-sm)">${t[1]}</div><div class="muted" style="font-size:var(--fs-xs)">${t[2]}</div></div></div>`).join('')}</div>
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Your tax history')}<div class="table-scroll"><table class="table"><thead><tr><th>Year</th><th>Filing</th><th style="text-align:right">AGI</th><th style="text-align:right">Tax</th><th style="text-align:right">Refund / Owed</th></tr></thead><tbody><tr><td><strong>2025</strong></td><td>Married joint</td><td style="text-align:right" class="num">$165,346</td><td style="text-align:right" class="num">$22,713</td><td style="text-align:right;color:var(--neg);font-weight:700">− $7,003</td></tr><tr><td><strong>2024</strong></td><td>Married joint</td><td style="text-align:right" class="num">$151,200</td><td style="text-align:right" class="num">$19,540</td><td style="text-align:right;color:var(--pos);font-weight:700">+ $1,180</td></tr></tbody></table></div></div>
+  <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-4)">${I('help')} Educational estimate, not tax advice — includes self-employment tax; omits AMT, NIIT.</p>`;
 
 PAGES.ai = () => `
   ${wshead('Grow','AI advisor','Ask about your money in plain language — grounded in your real numbers, never generic.',
-    `<div class="seg"><button>Concise</button><button class="active">Balanced</button><button>Detailed</button></div>`)}
+    `<select class="finput" style="height:34px;width:auto"><option>Auto — best model per question</option><option>Claude (Anthropic)</option><option>Gemini (Google)</option><option>ChatGPT (OpenAI)</option></select><div class="seg"><button>Concise</button><button class="active">Balanced</button><button>Detailed</button></div>`)}
   <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Portfolio scope','<div class="row gap-2"><button class="btn btn-ghost btn-sm">Select all</button><button class="btn btn-ghost btn-sm">Clear</button></div>')}
     <div class="chiprow">${['Net worth','Cash & accounts','Investments','Real estate','Business','Debt','Budget','Transactions'].map((s,i)=>`<span class="chip${i<3||i===5?' active':''}">${s}</span>`).join('')}</div></div>
   ${sechead('Recommendations','<span class="badge gold">4</span>')}
@@ -1545,6 +1659,17 @@ PAGES.budgets = () => {
       ${[['Needs · 50%','$2,410','96% of target','--accent',96],['Wants · 30%','$1,610','107% — over budget','--neg',100],['Savings · 20%','$900','90% of target','--gold',90]].map(t=>`<div class="card c4"><span class="badge neutral">${t[0]}</span><div class="num" style="font-weight:700;font-size:1.3rem;margin-top:8px;${t[3]==='--neg'?'color:var(--neg)':''}">${t[1]}</div><div class="bar" style="margin-top:8px"><i style="width:${t[4]}%;background:var(${t[3]})"></i></div><div class="muted" style="font-size:var(--fs-xs);margin-top:5px;${t[3]==='--neg'?'color:var(--neg)':''}">${t[2]}</div></div>`).join('')}
     </div>
     <div class="card" style="border-left:3px solid var(--neg);margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-3)">${I('flame')}<div style="font-size:var(--fs-sm)">You're projected to finish <strong>$60 over budget</strong>. <strong>Dining</strong> and <strong>Transportation</strong> are over their limits.</div></div>
+    <div class="card" style="margin-bottom:var(--sp-6);border:1px solid var(--accent)">${sechead('<span>'+I('bank')+' Auto-fill your budget</span>','<span class="badge neutral">June · 3 accounts</span>')}
+      <p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 12px">Reads your recent spending into categories. Fix anything miscategorized — nothing is saved until you Apply, then Save.</p>
+      <div class="seg" style="margin-bottom:var(--sp-4)"><button>Replace my budget</button><button class="active">Merge into it</button><button>Ask each time</button></div>
+      <div style="max-width:220px;margin-bottom:var(--sp-4)"><label class="flabel">Detected income (monthly)</label><input class="finput" value="$5,420"></div>
+      <div class="rowlist">
+        ${richRow({icon:'home',cls:'',name:'Rent & Utilities',sub:'4 transactions · 3 recurring',amt:'$1,850'})}
+        ${richRow({icon:'cart',cls:'gold',name:'Food & Drink',sub:'14 transactions',amt:'$612'})}
+        ${richRow({icon:'wallet',cls:'violet',name:'Shopping',sub:'7 transactions · 1 large one-off $210',amt:'$330'})}
+      </div>
+      <div class="row" style="justify-content:space-between;align-items:center;margin-top:var(--sp-4)"><span class="muted" style="font-size:var(--fs-xs)">11 of 12 included</span><div class="row gap-2"><button class="btn btn-outline btn-sm">Cancel</button><button class="btn btn-primary btn-sm">${I('check')} Apply to budget</button></div></div>
+    </div>
     <div class="card">${sechead('Category breakdown','<div class="seg"><button class="active">All</button><button>Essentials</button><button>Discretionary</button></div>')}
       <div class="rowlist">${cats.map(r=>`<div class="rowitem"><div class="grow"><div class="r-name">${r[0]}</div><div class="row gap-2" style="margin-top:5px"><div class="minibar" style="width:120px"><i style="width:${Math.min(+r[4],100)}%;background:var(--${r[5]||'accent'})"></i></div><span class="muted" style="font-size:var(--fs-xs)">${r[4]}%</span></div></div><div class="stack" style="align-items:flex-end"><div class="r-amt num"${r[5]==='neg'?' style="color:var(--neg)"':''}>${r[2]} <span class="muted" style="font-weight:400">/ ${r[1]}</span></div><div class="r-sub"${r[5]==='pos'?' style="color:var(--pos)"':r[5]==='neg'?' style="color:var(--neg)"':''}>${r[3]} left</div></div></div>`).join('')}</div>
     </div>`;
@@ -1643,6 +1768,221 @@ PAGES.settings = () => {
       </div>
     </div>`;
 };
+
+/* ---- MONEY · Spending ---- */
+PAGES.spending = () => {
+  const bycat=[{label:'Housing',val:2060,color:'--c1',pct:'38%'},{label:'Dining',val:1303,color:'--c2',pct:'24%'},{label:'Transport',val:869,color:'--c3',pct:'16%'},{label:'Groceries',val:652,color:'--c4',pct:'12%'},{label:'Entertainment',val:546,color:'--c6',pct:'10%'}];
+  const merch=[['Whole Foods','9 charges','$412.90'],['Amazon','14 charges','$388.14'],['Uber','22 charges','$204.60'],['Shell','5 charges','$188.40']];
+  return `${wshead('Money','Spending','Where your money actually goes — and what changed.','')}
+    ${actionBar(['30 days','90 days','12 months'])}
+    <div class="card" style="margin-bottom:var(--sp-5);display:flex;align-items:center;justify-content:space-between;gap:var(--sp-4);flex-wrap:wrap"><div><div class="eyebrow">Total spent · last 30 days</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$5,430</div></div><div class="seg"><button class="active">30 days</button><button>90 days</button><button>12 months</button></div></div>
+    <div class="grid g12" style="margin-bottom:var(--sp-5)">
+      <div class="card c6">${sechead('What changed vs last month')}<div class="rowlist">
+        ${richRow({icon:'arr-ur',cls:'neg',name:'Dining up 30%',sub:'$640 vs $492',amt:''})}
+        ${richRow({icon:'arr-dr',cls:'pos',name:'Travel down 44%',sub:'$210 vs $375',amt:''})}
+        ${richRow({icon:'plus',cls:'gold',name:'Fitness is new',sub:'$80 this month',amt:''})}
+      </div></div>
+      <div class="card c6">${sechead('By category')}<div class="row gap-5" style="align-items:center"><div data-chart="donut" data-size="150" data-top="$5,430" data-sub="spent" data-v='${JSON.stringify(bycat.map(c=>({label:c.label,val:c.val,color:c.color})))}'></div><div class="grow">${legend(bycat.map(c=>({label:c.label,val:'$'+c.val.toLocaleString(),color:c.color,pct:c.pct})))}</div></div></div>
+    </div>
+    ${sechead('Top merchants')}
+    ${carousel(merch.map((m,i)=>`<div class="card" style="width:200px"><div class="tile ${['','gold','info','violet'][i]}" style="margin-bottom:var(--sp-3);font-weight:700">${i+1}</div><div class="r-name">${m[0]}</div><div class="r-sub">${m[1]}</div><div class="num" style="font-weight:700;font-size:1.2rem;margin-top:var(--sp-2)">${m[2]}</div></div>`).join(''))}`;
+};
+
+/* ---- MONEY · Recurring radar ---- */
+PAGES.recurring = () => {
+  const subs=[['Adobe Creative Cloud','Monthly · seen 12× · next Aug 3','$54.99','in 3 days','neg'],['Spotify Family','Monthly · seen 11× · next Aug 9','$16.99','in 19 days',''],['Planet Fitness','Monthly · seen 13× · next Aug 1','$24.99','Due today','neg'],['iCloud+ Storage','Monthly · seen 12× · next Aug 14','$9.99','in 24 days',''],['The Times','Yearly · seen 2× · next Feb 2','$120.00','in 196 days','']];
+  return `${wshead('Money','Recurring & subscriptions','Every repeating charge we found — so nothing bills you by surprise.','')}
+    ${actionBar(['All','Monthly','Yearly','Due soon'])}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">${kpi('repeat','gold','About','$247','/mo on 9 charges')}${kpi('cal','violet',"That's",'$2,964','/yr')}</div>
+    <div class="card" style="padding:0;overflow:hidden">${subs.map(s=>`<div class="rowitem" style="padding:var(--sp-4)"><div class="tile sm gold">${I('repeat')}</div><div class="grow"><div class="r-name">${s[0]}</div><div class="r-sub">${s[1]}</div></div><div class="stack" style="align-items:flex-end"><div class="r-amt num">${s[2]}</div><span style="font-size:var(--fs-xs);font-weight:600;${s[4]==='neg'?'color:var(--neg)':'color:var(--ink-3)'}">${s[3]}</span></div></div>`).join('')}</div>
+    <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">Detected from transaction history. Amounts are the typical (median) charge; a cancelled subscription drops off once it stops appearing.</p>`;
+};
+
+/* ---- GROW · Retirement ---- */
+PAGES.retirement = () => `
+  ${wshead('Grow','Retirement','Projections, scenarios and contribution optimizers.','')}
+  ${actionBar(['Projection','Scenarios','Accounts'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">${kpi('umbrella','','Projected at 65','$2.4M','on track')}${kpi('pig','pos','Saved so far','$149,425','401(k) + IRA')}${kpi('percent','gold','Savings rate','18%','of income')}${kpi('cal','info','Years to go','24','')}</div>
+  <div class="card" style="margin-bottom:var(--sp-5)">${sechead('Projected balance','<span class="badge pos">On track for your goal</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[150,210,290,410,560,760,1010,1320,1690,2130,2400]"></div></div>
+  <div class="card" style="border-left:4px solid var(--gold);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)">Increasing contributions by <strong>$300/mo</strong> could add roughly <strong style="color:var(--pos)">$310,000</strong> by age 65 thanks to compounding.</div></div>`;
+
+/* ---- GROW · Calculators ---- */
+PAGES.calculators = () => `
+  ${wshead('Grow','Calculators','Model payoffs, growth and interest scenarios.','')}
+  <div class="tabs" style="margin-bottom:var(--sp-5)"><div class="tabs-track"><button class="tab active">Mortgage payoff</button><button class="tab">Compound interest</button><button class="tab">Simple interest</button></div></div>
+  <div class="grid g12">
+    <div class="card c5">${sechead('Mortgage details')}<div class="fgrid">
+      <div><label class="flabel">Use a linked property</label><select class="finput"><option>123 Oak St — $360,000 owed</option><option>Enter manually…</option></select></div>
+      <div><label class="flabel">Balance owed</label><input class="finput" value="$360,000"></div>
+      <div class="fgrid fgrid-2"><div><label class="flabel">Interest rate</label><input class="finput" value="6.5%"></div><div><label class="flabel">Monthly payment</label><input class="finput" value="$2,400"></div></div>
+      <div><label class="flabel">Extra each month</label><input class="finput" value="$300"></div>
+    </div></div>
+    <div class="card c7">${sechead('Results')}<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('cal','','Payoff (current)','Apr 2041','')}${kpi('check','pos','Payoff (with extra)','Oct 2034','')}${kpi('clock','pos','Time saved','6y 4m','')}${kpi('coins','pos','Interest saved','$84,210','')}</div><div class="card" style="background:var(--pos-soft);border-left:3px solid var(--pos);font-size:var(--fs-sm)">Paying <strong>$300 extra</strong> each month pays your loan off <strong>6y 4m sooner</strong> and saves <strong>$84,210</strong> in interest.</div></div>
+  </div>`;
+
+/* ---- BUSINESS & TAX · Find a CPA ---- */
+PAGES.cpa = () => {
+  const cpas=[['Maria Gonzalez','CPA, MST · Gonzalez & Co.','4.8 (27)',['Small Business','Self Employed'],'Austin, TX · 14 yrs · Flat fee','M'],['David Chen','CPA · Chen Tax Advisory','4.6 (41)',['Real Estate','Small Business'],'San Diego, CA · 11 yrs · Hourly','D'],['Sarah Olsen','CPA, CFP · Olsen Advisory','4.7 (52)',['Self Employed','Real Estate'],'Denver, CO · 18 yrs · Hourly','S']];
+  return `${wshead('Business & Tax','Find a CPA','Connect with a verified tax professional.',`<button class="btn btn-outline btn-sm" data-nav="taxes">${I('arr-l')} Taxes</button>`)}
+    <div class="card" style="margin-bottom:var(--sp-5);display:flex;gap:var(--sp-3);flex-wrap:wrap;align-items:center"><div class="ab-search" style="flex:1;min-width:220px">${I('search')}<span>Search by name or specialty…</span></div><select class="finput" style="max-width:220px"><option>All specialties</option><option>Self-employed</option><option>Real estate</option><option>Crypto</option></select><button class="btn btn-primary btn-sm">Search</button></div>
+    <div class="grid g12">${cpas.map(c=>`<div class="card c4"><div class="row gap-3" style="margin-bottom:var(--sp-2)"><div class="avatar" style="width:44px;height:44px">${c[5]}</div><div class="grow"><div class="r-name">${c[0]}</div><div class="r-sub">${c[1]}</div></div><span class="badge pos">${I('check')}</span></div><div class="row gap-2" style="margin-bottom:8px"><span style="color:var(--gold)">★★★★★</span><span class="muted" style="font-size:var(--fs-sm)">${c[2]}</span></div><div class="row gap-2 wrap" style="margin-bottom:8px">${c[3].map(s=>`<span class="badge neutral">${s}</span>`).join('')}</div><div class="muted" style="font-size:var(--fs-xs);margin-bottom:var(--sp-3)">${I('map')} ${c[4]}</div><button class="btn btn-outline btn-sm" style="width:100%">View profile</button></div>`).join('')}</div>`;
+};
+
+/* ---- REAL ESTATE · Deal Room ---- */
+PAGES.dealroom = () => {
+  const list=[['The Melissa Property','Melissa, Texas','Multifamily','Development site with zoning potential near historic downtown.'],['Mansfield Sports District','Mansfield, Texas','Mixed Use','Expansive parcel with concept plans for sports, retail and hospitality.'],['Willow Creek Land','Bozeman, Montana','Land','120 acres of entitled residential land with utility stubs.']];
+  return `${wshead('Real estate','Deal Room','An informational directory for posting and browsing projects.',`<button class="btn btn-primary btn-sm">${I('plus')} Post a listing</button>`)}
+    <div class="card" style="margin-bottom:var(--sp-5);border-left:4px solid var(--neg);background:var(--neg-soft);color:var(--neg);font-size:var(--fs-sm);line-height:1.6"><strong>MANDATORY DISCLAIMER:</strong> This platform is an informational directory only. TerraVest is <strong>not a registered broker-dealer or investment advisor</strong>, does not facilitate securities transactions, and provides no investment advice. We do not verify or endorse any property listed. All discussions occur offline, at your own risk.</div>
+    <div class="grid g12">${list.map(l=>`<div class="card c4"><div class="prop-photo" style="border-radius:var(--r-sm);margin-bottom:var(--sp-3)">${I('estate')}</div><div class="row" style="justify-content:space-between;margin-bottom:6px"><strong>${l[0]}</strong><span class="badge pos">Open</span></div><span class="badge neutral">Real Estate · ${l[2]}</span><div class="muted" style="font-size:var(--fs-xs);margin:8px 0">${I('map')} ${l[1]}</div><p style="font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:var(--sp-4)">${l[3]}</p><button class="btn btn-outline btn-sm" style="width:100%">${I('msg')} Request contact info</button></div>`).join('')}</div>`;
+};
+
+/* ---- SHARED · Shared goals & bills ---- */
+PAGES.sharedmoney = () => `
+  ${wshead('Shared','Shared goals & bills',"What you're saving for together — and who actually paid.",'')}
+  ${actionBar(['Goals','Bills','Income'])}
+  <div class="kpirow" style="margin-bottom:var(--sp-6)">${kpi('coins','pos','Income / month','$9,200','')}${kpi('receipt','gold','Bills / month','$3,850','')}${kpi('pig','','Left over / month','$5,350','')}</div>
+  <div class="card" style="margin-bottom:var(--sp-4)"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><div class="r-name">House deposit</div><div class="muted" style="font-size:var(--fs-sm)">$18,400 of $40,000</div></div><div class="bar" style="margin:var(--sp-3) 0"><i style="width:46%;background:var(--gold)"></i></div><div class="muted" style="font-size:var(--fs-xs)"><strong>Alex</strong> $11,200 · <strong>Jordan</strong> $7,200</div></div>
+  <div class="card"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><div class="r-name">Rent</div><div class="r-sub">$2,400 · monthly</div></div><div class="muted" style="font-size:var(--fs-sm)">$7,200 paid to date</div></div><div class="rowitem" style="margin-top:var(--sp-3)">${I('check')}<div class="grow" style="margin-left:8px"><strong>Jordan</strong> paid $2,400.00</div><span class="muted" style="font-size:var(--fs-xs)">2026-07-01</span></div></div>`;
+
+/* ---- SHARED · Family ---- */
+PAGES.family = () => {
+  const jar=(ic,l,v)=>`<div><div class="eyebrow">${I(ic)} ${l}</div><div class="num" style="font-weight:700;font-size:1.3rem">${v}</div></div>`;
+  const child=`
+    <div class="card" style="margin-bottom:var(--sp-4)">
+      <div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="avatar" style="width:42px;height:42px">R</div><div class="grow"><div class="sec-title" style="font-size:var(--fs-title)">Robin</div><div class="muted" style="font-size:var(--fs-sm)">11 years old · $10.00 weekly · next Sat 4 Jul</div></div><button class="btn btn-primary btn-sm">${I('coins')} Pay allowance</button></div>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:var(--sp-4)">${jar('wallet','Spend','$42.50')}${jar('pig','Save','$66.00')}${jar('heart','Give','$14.00')}${jar('scale','Total','$122.50')}</div>
+      <div class="sec-title" style="font-size:var(--fs-body);margin:var(--sp-4) 0 var(--sp-2)">Chores</div>
+      <div class="rowitem"><div class="tile sm gold">${I('clock')}</div><div class="grow"><div class="r-name">Dishes</div></div><span class="muted" style="font-size:var(--fs-sm)">$2.50</span><button class="btn btn-outline btn-sm">Mark done</button></div>
+      <div class="rowitem"><div class="tile sm pos">${I('check')}</div><div class="grow"><div class="r-name" style="text-decoration:line-through">Homework</div></div><span class="muted" style="font-size:var(--fs-sm)">$5.00</span></div>
+      <div class="sec-title" style="font-size:var(--fs-body);margin:var(--sp-4) 0 var(--sp-2)">Ledger</div>
+      ${richRow({icon:'arr-dl',cls:'pos',name:'Weekly allowance · SAVE',sub:'2026-07-04',amt:'+$3.00',amtColor:'var(--pos)'})}
+      ${richRow({icon:'cart',cls:'neg',name:'Comics · SPEND',sub:'2026-06-29',amt:'−$6.00',amtColor:'var(--neg)'})}
+    </div>
+    <div class="card"><div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="avatar" style="width:42px;height:42px">S</div><div class="grow"><div class="sec-title" style="font-size:var(--fs-title)">Sam</div><div class="muted" style="font-size:var(--fs-sm)">14 years old · $40.00 monthly · next 15 Jul</div></div><button class="btn btn-primary btn-sm">${I('coins')} Pay allowance</button></div>
+      <div class="grid" style="grid-template-columns:repeat(4,1fr);gap:var(--sp-4)">${jar('wallet','Spend','$28.00')}${jar('pig','Save','$28.00')}${jar('heart','Give','$5.60')}${jar('scale','Total','$61.60')}</div></div>`;
+  const cards=`
+    <div class="card" style="margin-bottom:var(--sp-4);display:flex;align-items:center;gap:var(--sp-4);flex-wrap:wrap"><div class="grow"><div class="eyebrow">Family spending this month</div><div class="num" style="font-family:var(--font-display);font-size:1.8rem">$318</div></div><button class="btn btn-primary">${I('refresh')} Sync linked cards</button></div>
+    <div class="grid g12" style="margin-bottom:var(--sp-4)">
+      <div class="card c6">${sechead("Who's spending")}<div class="muted" style="font-size:var(--fs-xs);margin:-8px 0 10px">This month, by child</div>${legend([{label:'Robin',val:'$186',color:'--c1'},{label:'Sam',val:'$132',color:'--c2'}])}</div>
+      <div class="card c6">${sechead('Where it goes')}<div class="muted" style="font-size:var(--fs-xs);margin:-8px 0 10px">This month, by category</div>${legend([{label:'Food',val:'$140',color:'--c1'},{label:'Fun',val:'$96',color:'--c2'},{label:'Transport',val:'$82',color:'--c3'}])}</div>
+    </div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Budgets')}<p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 12px">A monthly cap per child or for the whole family.</p><div class="row gap-6 wrap"><div style="text-align:center"><div class="num" style="font-weight:800;font-size:1.4rem;color:var(--gold)">83%</div><div style="font-weight:700">Food</div><div class="muted" style="font-size:var(--fs-xs)">Robin · $50 / $60</div></div><div style="text-align:center"><div class="num" style="font-weight:800;font-size:1.4rem;color:var(--pos)">40%</div><div style="font-weight:700">Fun</div><div class="muted" style="font-size:var(--fs-xs)">Whole family · $48 / $120</div></div></div></div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Cards','<span class="badge pos">'+I('lock')+' Your cards only</span>')}<p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 10px">Link one of your own cards to a child, or track a card by hand.</p>
+      <div class="rowlist">${richRow({icon:'card',cls:'pos',name:"Robin's debit ····4821",sub:'Robin · Linked to your account',amt:''})}${richRow({icon:'card',cls:'',name:"Sam's cash card",sub:'Sam · Manual',amt:''})}</div>
+      <button class="btn btn-outline btn-sm" style="margin-top:var(--sp-3)">${I('link2')} Link one of my cards</button></div>
+    <div class="card">${sechead('Location rules')}<p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 10px">Send spending at a place to a child — even on a shared card.</p>
+      <div class="rowitem"><div class="tile sm">${I('map')}</div><div class="grow"><div class="r-name">Spending matching “Bookstore” → Sam</div></div><button class="btn btn-outline btn-sm">Remove</button></div></div>`;
+  return `${wshead('Shared','Family','Allowance, chores and a spend / save / give jar for each child — with a ledger behind every number.',`<button class="btn btn-primary btn-sm">${I('plus')} Add a child</button>`)}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">${kpi('users','','Children','2','')}${kpi('pig','pos','Held for them','$184','')}${kpi('coins','gold','Allowance / year','$1,000','')}</div>
+    ${tabsBlock([{label:'Children',icon:'users',panel:child},{label:'Cards & spending',icon:'card',panel:cards}])}`;
+};
+
+/* ---- REAL ESTATE · Fractional LLC ---- */
+PAGES.fractional = () => {
+  const holdings=[['Cedar Ridge Land LLC','Ridge Capital · Bozeman, MT','LLC · Land','12.5%','$140,000','$75,000','$32,000'],['Harborview Apartments LP','Harbor Group · Tampa, FL','LP · Multifamily','5.0%','$45,000','$45,000','$9,000']];
+  const holdingsPanel=`
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Concentration')}<div class="grid g12">${[['By sponsor',[['Ridge Capital','62.5%'],['Harbor Group','37.5%']]],['By asset type',[['Land','62.5%'],['Multifamily','37.5%']]],['By location',[['Bozeman, MT','62.5%'],['Tampa, FL','37.5%']]]].map(b=>`<div class="c4"><div class="eyebrow" style="margin-bottom:8px">${b[0]}</div>${b[1].map(r=>`<div style="margin-bottom:8px"><div class="row" style="justify-content:space-between;font-size:var(--fs-sm)"><span>${r[0]}</span><strong>${r[1]}</strong></div><div class="minibar"><i style="width:${r[1]};background:var(--accent)"></i></div></div>`).join('')}</div>`).join('')}</div></div>
+    <div class="grid g12">${holdings.map(h=>`<div class="card c6"><div class="row" style="justify-content:space-between"><div style="font-family:var(--font-display);font-size:1.1rem">${h[0]}</div><span class="badge pos">Active</span></div><div class="row gap-2" style="margin:8px 0"><span class="badge neutral">${h[2]}</span><span class="badge info">${h[3]} owned</span></div><div class="muted" style="font-size:var(--fs-xs);margin-bottom:var(--sp-3)">${I('brief')} ${h[1]}</div><div class="grid" style="grid-template-columns:1fr 1fr 1fr;gap:var(--sp-3)"><div><div class="eyebrow">Value</div><div class="num" style="font-weight:700">${h[4]}</div></div><div><div class="eyebrow">Contributed</div><div class="num" style="font-weight:700">${h[5]}</div></div><div><div class="eyebrow">Distributed</div><div class="num" style="font-weight:700">${h[6]}</div></div></div></div>`).join('')}</div>
+    <div class="card" style="margin-top:var(--sp-4)">${sechead('Cedar Ridge · capital account & ledger')}<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--sp-3);margin-bottom:var(--sp-4)">${[['Committed','$100,000'],['Contributed','$75,000'],['Uncalled','$25,000'],['Capital returned','$20,000'],['Income received','$12,000'],['Still at risk','$55,000']].map(m=>`<div><div class="eyebrow">${m[0]}</div><div class="num" style="font-weight:700">${m[1]}</div></div>`).join('')}</div>
+      ${timeline([{name:'Rental Income',sub:'2026-01-15',badge:'+$12,000',badgeCls:'pos'},{name:'Return of Capital',sub:'2025-08-01',badge:'+$20,000',badgeCls:'neutral'},{name:'Capital Call',sub:'2025-02-10',badge:'−$25,000',badgeCls:'neutral',tone:'muted'}])}
+    </div>`;
+  const k1Panel=`
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Filing readiness','<button class="btn btn-outline btn-sm">'+I('ext')+' Share with CPA</button>')}
+      <div class="card" style="background:var(--neg-soft);color:var(--neg);font-size:var(--fs-sm);margin-bottom:var(--sp-3)">${I('flame')} <strong>Waiting on 1 K-1 for 2025.</strong> 1 is past the Apr 15 deadline — an extension may be needed.</div>
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:var(--sp-3)">${[['Received','1'],['Still waiting','1'],['Not issued','0'],['Rental income (box 2)','$12,000'],['Distributions (box 19)','$9,000']].map(m=>`<div><div class="eyebrow">${m[0]}</div><div class="num" style="font-weight:700">${m[1]}</div></div>`).join('')}</div></div>
+    <div class="card">${sechead('K-1s for 2025')}
+      <div class="rowitem"><div class="tile sm">${I('file')}</div><div class="grow"><div class="r-name">Cedar Ridge Land LLC</div><div class="r-sub">Ridge Capital · received 2026-03-02</div></div><span class="badge pos">Received</span><span class="muted" style="font-size:var(--fs-sm)">Box 2 <strong>$12,000</strong></span></div>
+      <div class="rowitem"><div class="tile sm gold">${I('file')}</div><div class="grow"><div class="r-name">Harborview Apartments LP</div><div class="r-sub">Harbor Group</div></div><span class="badge neg">Overdue</span><button class="btn btn-ghost btn-sm">${I('msg')} Chase sponsor</button></div>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">Uploaded K-1s are filed in the Document Center as “2025 K-1 — &lt;entity&gt;”, so a whole year can be handed to a CPA through one secure link.</p></div>`;
+  return `${wshead('Real estate','Fractional LLC','LLCs and syndications you co-own — capital in, distributions out, K-1s.',`<button class="btn btn-primary btn-sm">${I('plus')} Add holding</button>`)}
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">${kpi('scale','','In your net worth','$185,000','1 valued')}${kpi('arr-ur','','Contributed','$120,000','2 holdings')}${kpi('coins','pos','Distributed','$32,000','0.27× of capital')}${kpi('flame','gold','Uncalled','$25,000','still callable')}</div>
+    ${tabsBlock([{label:'Holdings',icon:'coins',panel:holdingsPanel},{label:'Schedule K-1s',icon:'file',panel:k1Panel}])}`;
+};
+
+/* ---- PLANNING · Coach ---- */
+PAGES.planning = () => {
+  const grp=(title,sub,items)=>`<div style="margin-bottom:var(--sp-6)"><div class="sec-title" style="font-size:var(--fs-body)">${title}</div><div class="muted" style="font-size:var(--fs-xs);margin-bottom:var(--sp-3)">${sub}</div>${items.map(it=>`<div class="card act" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);border-left:3px solid var(--${it[3]})"><div class="tile ${it[3]==='neg'?'neg':it[3]==='gold'?'gold':'pos'}">${I(it[0])}</div><div class="grow"><div class="r-name">${it[1]}</div><div class="r-sub">${it[2]}</div></div><button class="btn btn-ghost btn-sm">${it[4]}</button></div>`).join('')}</div>`;
+  return `${wshead('Planning','Your money coach','What to do next, ranked — from your real numbers.','')}
+    <div class="card" style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-6)"><div class="tile neg">${I('flame')}</div><div class="grow"><div class="r-name">2 things need you now</div><div class="r-sub">7 recommendations in total</div></div></div>
+    ${grp('Do this now','Costs you money if ignored',[['flame','Low balance','Plaid Checking is at $110.','neg','Review'],['arr-dr',"You're spending more than you earn",'Averaging $5,430 out vs $4,900 in — a $530/mo gap.','neg','See cash flow']])}
+    ${grp('Worth doing soon','Moves your score and margin',[['umbrella','Build your emergency fund','2.3 months covered. Save $1,675/mo to reach 6 months.','gold','Open coach'],['arr-ur','Dining spending jumped','Up 30% — $640 vs $492 last month.','gold','See spending']])}
+    ${grp('Opportunities','Easy wins when you have a minute',[['repeat','Review your subscriptions','Recurring charges are the easiest money to get back.','pos','Open radar'],['sparkles','Refinance opportunity','Compare current rates against your mortgage.','pos','Ask AI']])}`;
+};
+
+/* ---- PLANNING · Health score ---- */
+PAGES.healthscore = () => {
+  const f=[['Savings rate','Great','31% of income kept',88,'pos','trend'],['Emergency fund','Fair','2.3 months saved',44,'gold','umbrella'],['Debt load','Good','Debt is 22% of assets',78,'pos','percent'],['Net worth','Great','Trending up',90,'pos','scale']];
+  return `${wshead('Planning','Financial health score','One number for where you stand — and the moves that raise it.','')}
+    <div class="card" style="display:flex;flex-direction:column;align-items:center;margin-bottom:var(--sp-5)"><div class="ring" style="width:120px;height:120px;background:conic-gradient(var(--accent) 281deg, var(--surface-3) 0)"><div class="ring-inner" style="width:92px;height:92px"><div style="font-family:var(--font-display);font-size:2.4rem;line-height:1;color:var(--accent)">78</div><div style="font-size:11px;color:var(--ink-3)">out of 100</div></div></div><div style="font-size:var(--fs-title);font-weight:700;color:var(--accent);margin-top:var(--sp-2)">Good</div><div class="muted" style="font-size:var(--fs-sm)">Based on 4 factors from your linked accounts.</div></div>
+    <div class="card">${sechead("What's driving it")}${f.map(x=>`<div class="rowitem"><div class="tile sm ${x[4]}">${I(x[5])}</div><div class="grow"><div class="row" style="justify-content:space-between"><div class="r-name">${x[0]}</div><span style="color:var(--${x[4]});font-weight:700">${x[1]}</span></div><div class="r-sub">${x[2]}</div><div class="minibar" style="margin:6px 0"><i style="width:${x[3]}%;background:var(--${x[4]})"></i></div></div></div>`).join('')}</div>`;
+};
+
+/* ---- PLANNING · Emergency fund ---- */
+PAGES.emergencyfund = () => `
+  ${wshead('Planning','Emergency fund','A cushion sized to your real expenses — and how to get there.','')}
+  <div class="card" style="margin-bottom:var(--sp-5)"><div class="row" style="justify-content:space-between;flex-wrap:wrap"><div><div class="eyebrow">Saved so far</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$12,480</div></div><div style="text-align:right"><div class="eyebrow">Target · 6 months</div><div class="num" style="font-weight:700;font-size:1.3rem">$32,580</div></div></div><div class="bar" style="margin:var(--sp-4) 0 8px;height:12px"><i style="width:38%;background:var(--gold)"></i></div><div class="row" style="justify-content:space-between;flex-wrap:wrap"><span style="font-weight:600;color:var(--gold)">2.3 months covered · Getting started</span><span class="muted" style="font-size:var(--fs-sm)">$20,100 to go</span></div></div>
+  <div class="card" style="margin-bottom:var(--sp-5)">${sechead('Your target')}
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-4)"><div class="seg"><button>3 months</button><button class="active">6 months</button><button>12 months</button></div><span class="muted" style="font-size:var(--fs-xs)">Based on $5,430/mo of real spending.</span></div>
+    <div class="eyebrow" style="margin-bottom:var(--sp-2)">Get there in</div><div class="seg" style="margin-bottom:var(--sp-4)"><button>6 months</button><button class="active">12 months</button><button>24 months</button></div>
+    <div class="card" style="background:var(--gold-soft);border:1px solid var(--gold);display:flex;align-items:center;gap:var(--sp-3)">${I('target')}<div><div style="font-weight:700;font-size:var(--fs-title)">Save $1,675/month</div><div class="muted" style="font-size:var(--fs-sm)">to reach 6 months of expenses in 12 months.</div></div></div></div>
+  <div class="card">${sechead('Milestones')}${timeline([{name:'1 month of expenses',sub:'$5,430',badge:'Reached',badgeCls:'pos'},{name:'3 months of expenses',sub:'$3,810 to go · $16,290',tone:'muted'},{name:'6 months of expenses',sub:'$20,100 to go · $32,580',tone:'muted'}])}</div>`;
+
+/* ---- PLANNING · Benchmarks ---- */
+PAGES.benchmarks = () => `
+  ${wshead('Planning','How you compare','Your numbers — and, if you want it, where they sit against people like you.','')}
+  <div class="card" style="margin-bottom:var(--sp-5)"><div class="row gap-3 wrap" style="align-items:center">${I('users')}<div class="grow" style="min-width:240px"><div style="font-weight:700;font-size:var(--fs-title)">Compare me to people like me</div><div class="muted" style="font-size:var(--fs-sm)">Shows aggregate percentile curves next to your figures. It does <strong>not</strong> add your data to anyone else's comparison, and nothing is ever sold.</div></div><button class="btn btn-primary">Turn on</button></div><div class="row gap-2 wrap" style="margin-top:var(--sp-4)"><select class="finput" style="width:auto"><option>35–44</option></select><select class="finput" style="width:auto"><option>$100k–$200k</option></select><select class="finput" style="width:auto"><option>US · West</option></select></div></div>
+  <div class="grid g12">
+    <div class="card c6"><div class="row" style="justify-content:space-between;align-items:baseline;flex-wrap:wrap"><div><strong>Net worth</strong><div class="muted" style="font-size:var(--fs-xs)">Everything you own minus everything you owe.</div></div><div class="num" style="font-family:var(--font-display);font-size:1.6rem">$123,000</div></div><div class="row gap-2 wrap" style="margin-top:10px"><span class="badge neutral">62nd percentile</span><span class="muted" style="font-size:var(--fs-sm)">Above the middle</span><span class="muted mla" style="font-size:var(--fs-sm)">Median $91,300</span></div><div style="position:relative;height:10px;border-radius:6px;background:var(--surface-3);margin-top:12px"><div style="position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:6px;background:var(--accent);opacity:.55"></div><div style="position:absolute;left:62%;top:-4px;width:3px;height:18px;margin-left:-1.5px;border-radius:2px;background:var(--gold)"></div></div><div class="muted" style="font-size:var(--fs-xs);margin-top:10px">Federal Reserve, Survey of Consumer Finances · 1,340 people</div></div>
+    <div class="card c6"><div class="row" style="justify-content:space-between;align-items:baseline"><div><strong>Emergency fund</strong><div class="muted" style="font-size:var(--fs-xs)">Months your liquid cash covers.</div></div><div class="num" style="font-family:var(--font-display);font-size:1.6rem">7.2 mo</div></div><div class="muted" style="font-size:var(--fs-sm);margin-top:10px">${I('help')} The dataset doesn't cover this cohort yet.</div></div>
+  </div>
+  <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-4)">Percentiles come from published, aggregate datasets — never from other TerraVest users' records. Educational, not advice.</p>`;
+
+/* ---- PLANNING · Reports ---- */
+PAGES.reports = () => {
+  const rep=[['Monthly summary','June 2026','cal'],['Net worth statement','As of Jun 30','scale'],['Spending by category','Q2 2026','cart'],['Investment performance','YTD','trend'],['Tax package','2025','invoice'],['Cash flow','Trailing 12mo','exchange']];
+  return `${wshead('Planning','Reports','A library of statements and AI-written summaries.',`<button class="btn btn-primary btn-sm">${I('plus')} New report</button>`)}
+    <div class="tabs" style="margin-bottom:var(--sp-5)"><div class="tabs-track">${['All','Monthly','Quarterly','Annual','Tax','Investment','Business','Custom'].map((c,i)=>`<button class="tab${i===0?' active':''}">${c}</button>`).join('')}</div></div>
+    <div class="card" style="margin-bottom:var(--sp-5);border-left:4px solid var(--accent)"><div class="row gap-3">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>AI summary · June:</strong> Net worth rose $15,732 (+6.3%), driven by investments. Spending held steady but dining is trending up. You're on track for two of four goals.</div></div></div>
+    ${sechead('Saved reports')}
+    ${carousel(rep.map(r=>`<div class="card" style="width:230px"><div class="tile" style="margin-bottom:var(--sp-3)">${I(r[2])}</div><div class="r-name">${r[0]}</div><div class="r-sub">${r[1]}</div><div class="row gap-2" style="margin-top:var(--sp-3)"><button class="btn btn-ghost btn-sm">${I('ext')}</button><button class="btn btn-ghost btn-sm">${I('download')}</button></div></div>`).join(''))}`;
+};
+
+/* ---- MORE · Messages ---- */
+PAGES.messages = () => {
+  const M=[['Budget alert: Dining over limit','trend','gold',"You've spent $612 on Dining this month — $112 over your $500 budget. Most of the increase came from weekend delivery orders.",'Jun 7 · 8:02 AM',1],['Payment scheduled','receipt','','Your mortgage of $1,842 is scheduled for Jun 15 from Chase Checking.','Jun 6',1],['Account synced','wallet','info','Chase Checking balance updated.','2d',0],['Welcome to TerraVest','settings','violet','Take the guided tour to get started.','5d',0]];
+  return `${wshead('More','Messages','Notifications, alerts and updates.',`<button class="btn btn-outline btn-sm">${I('check')} Mark all read</button>`)}
+    <div class="row gap-2" style="margin-bottom:var(--sp-4)"><div class="ab-search" style="flex:1">${I('search')}<span>Search messages…</span></div><div class="seg"><button class="active">All</button><button>Unread</button><button>Read</button></div></div>
+    <div class="grid g12">
+      <div class="card c4" style="padding:0;overflow:hidden;align-self:start">${M.map((m,i)=>`<div class="rowitem act" style="padding:12px 14px${i===0?';background:var(--accent-soft)':''}"><div class="tile sm ${m[2]}">${I(m[1])}</div><div class="grow" style="min-width:0"><div class="r-name" style="${m[5]?'font-weight:700':''}">${m[0]}</div><div class="r-sub" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m[3]}</div></div>${m[5]?'<span style="width:8px;height:8px;background:var(--gold);border-radius:50%;flex-shrink:0"></span>':''}</div>`).join('')}</div>
+      <div class="card c8"><div class="sec-head"><div class="row gap-3"><div class="tile gold">${I('trend')}</div><div><div class="sec-title" style="font-size:var(--fs-body)">${M[0][0]}</div><div class="muted" style="font-size:var(--fs-xs)">${M[0][4]}</div></div></div><button class="btn btn-outline btn-sm">Mark unread</button></div><div class="row gap-2" style="margin-bottom:var(--sp-4)"><span class="badge gold">Alert</span><span class="badge neutral">Push</span></div><p style="font-size:var(--fs-sm);color:var(--ink-2);line-height:1.7">${M[0][3]}</p></div>
+    </div>`;
+};
+
+/* ---- MORE · Subscription ---- */
+PAGES.subscription = () => {
+  const feat=f=>`<li class="row gap-2" style="align-items:flex-start"><span style="color:var(--accent)">${I('check')}</span><span>${f}</span></li>`;
+  return `${wshead('More','Subscription','Choose a plan, start a 7-day free trial, switch anytime.','')}
+    <div class="card" style="margin-bottom:var(--sp-5);display:flex;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-3)"><div><div class="row gap-2" style="margin-bottom:6px"><span class="badge neutral">Free trial</span><strong>Individual</strong></div><div class="muted" style="font-size:var(--fs-sm)">${I('clock')} 5 days left — subscribe below to keep access.</div></div><button class="btn btn-outline btn-sm">Cancel subscription</button></div>
+    <div class="row" style="justify-content:center;margin-bottom:var(--sp-5)"><div class="seg"><button class="active">Monthly</button><button>Annual <span class="badge gold" style="margin-left:6px">Save</span></button></div></div>
+    <div class="grid g12">
+      <div class="card c6" style="border-color:var(--accent);position:relative"><span class="badge pos" style="position:absolute;top:14px;right:14px">Current</span><span class="badge neutral">Individual</span><p class="muted" style="margin:8px 0;font-size:var(--fs-sm)">Personal wealth, fully organized</p><div class="row" style="align-items:baseline;gap:6px"><span style="font-size:1.9rem;font-weight:700">$9.99</span><span class="muted">/mo</span></div><ul style="list-style:none;padding:0;margin:var(--sp-3) 0;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">${['Net-worth tracking','Budgets & cash flow','Bill pay & reminders','Savings goals','Debt payoff lab'].map(feat).join('')}</ul><button class="btn btn-primary" style="width:100%">Subscribe now</button></div>
+      <div class="card c6"><span class="badge gold">Business</span><p class="muted" style="margin:8px 0;font-size:var(--fs-sm)">Run every entity from one place</p><div class="row" style="align-items:baseline;gap:6px"><span style="font-size:1.9rem;font-weight:700">$29.99</span><span class="muted">/mo</span></div><ul style="list-style:none;padding:0;margin:var(--sp-3) 0;display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">${['Everything in Individual','Multi-business dashboards','Invoicing & payments','Deal Room & marketplace','CPA secure sharing'].map(feat).join('')}</ul><button class="btn btn-outline" style="width:100%">Switch to Business</button></div>
+    </div>`;
+};
+
+/* ---- MORE · Profile ---- */
+PAGES.profile = () => `
+  ${wshead('More','Profile','Manage your account, security and preferences.','')}
+  <div class="card" style="margin-bottom:var(--sp-5);display:flex;align-items:center;gap:var(--sp-4)"><div class="avatar" style="width:52px;height:52px;font-size:19px">AK</div><div class="grow"><div class="sec-title">alex.kim@example.com</div><div class="muted" style="font-size:var(--fs-sm)">6 linked accounts</div></div><span class="badge gold">${I('crown')} Member</span></div>
+  <div class="card" style="margin-bottom:var(--sp-5)">${sechead('Personal details','<span class="badge pos">'+I('shield')+' Identity verified</span>')}
+    <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:var(--sp-3)">${[['First name','Alex'],['Last name','Kim'],['Date of birth','Mar 14, 1989'],['Email','alex.kim@example.com'],['Phone','(415) 555-0142'],['Account type','Individual']].map(d=>`<div class="card" style="padding:var(--sp-3);box-shadow:none"><div class="eyebrow">${d[0]}</div><div style="font-weight:500">${d[1]}</div></div>`).join('')}</div>
+    <hr class="divider">
+    <div class="tglrow"><div><div class="r-name" style="font-weight:500">Social Security Number</div><div class="muted" style="font-size:var(--fs-xs)">Encrypted at rest — only the last 4 are ever shown.</div></div><div class="row gap-3"><span class="num" id="ssnval" style="font-weight:600;letter-spacing:1px">•••-••-••••</span><button class="btn btn-outline btn-sm" data-ssn>${I('lock')} Show</button></div></div>
+    <div class="tglrow"><div><div class="r-name" style="font-weight:500">MFA channel</div><div class="muted" style="font-size:var(--fs-xs)">Where we send your login verification code.</div></div><div class="seg"><button class="active">${I('msg')} Email</button><button>SMS</button></div></div></div>
+  <div class="grid g12">
+    <div class="card c6">${sechead('Preferences')}<div class="tglrow"><span style="font-weight:500">Email notifications</span><div class="tgl on" role="switch" aria-checked="true" tabindex="0"></div></div><div class="tglrow"><span style="font-weight:500">Push notifications</span><div class="tgl on" role="switch" aria-checked="true" tabindex="0"></div></div><div class="tglrow"><span style="font-weight:500">Weekly summary</span><div class="tgl" role="switch" aria-checked="false" tabindex="0"></div></div></div>
+    <div class="card c6">${sechead('Security')}<div class="tglrow"><div><div style="font-weight:500">Two-factor</div><div class="muted" style="font-size:var(--fs-xs)">Enabled</div></div><button class="btn btn-outline btn-sm" data-nav="security">Manage</button></div><div class="tglrow"><span style="font-weight:500">Password</span><button class="btn btn-outline btn-sm" data-nav="security">Change</button></div><hr class="divider"><button class="btn btn-outline" style="color:var(--neg)">${I('x')} Sign out</button></div>
+  </div>`;
 
 /* ---- Component gallery (Phase 6 documentation deliverable) ---- */
 PAGES.components = () => {
@@ -1889,6 +2229,7 @@ document.addEventListener('click',e=>{
   if(e.target.closest('#galleryCmdk')){ openCmdk(); return; }
   const ed=e.target.closest('[data-editprop]'); if(ed){ const c=$('#prop-edit'); if(c){ c.style.display=''; const nm=$('#prop-edit-name'); if(nm)nm.textContent=ed.dataset.editprop; const ad=$('#prop-edit-addr'); if(ad)ad.value=ed.dataset.editprop; c.scrollIntoView({behavior:'smooth',block:'center'}); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } return; }
   if(e.target.closest('[data-editprop-cancel]')){ const c=$('#prop-edit'); if(c) c.style.display='none'; return; }
+  const ssn=e.target.closest('[data-ssn]'); if(ssn){ const el=$('#ssnval'); if(el){ const shown=el.textContent.includes('6789'); el.textContent=shown?'•••-••-••••':'•••-••-6789'; ssn.innerHTML=(shown?I('lock')+' Show':I('lock')+' Hide'); } return; }
   const tg=e.target.closest('.tgl'); if(tg){ tg.classList.toggle('on'); tg.setAttribute('aria-checked',tg.classList.contains('on')); return; }
   const set=e.target.closest('.setlink[data-set]'); if(set){ $$('.setlink').forEach(x=>x.classList.toggle('active',x===set)); $$('#setPanels [data-setpanel]').forEach(p=>p.style.display=p.dataset.setpanel===set.dataset.set?'':'none'); return; }
   const tab=e.target.closest('.tab[data-tabidx]'); if(tab){ const block=tab.closest('.tabs-block'); if(!block) return; const idx=tab.dataset.tabidx;
