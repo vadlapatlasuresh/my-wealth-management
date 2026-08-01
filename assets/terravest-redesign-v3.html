@@ -6,10 +6,10 @@
 <title>TerraVest V3 — Financial Operating System</title>
 <meta name="color-scheme" content="light dark">
 <!--
-  TerraVest V3 — Financial Operating System (standalone prototype)
-  Self-contained, no build step. Brand fonts (DM Serif Display + DM Sans) load
-  from Google Fonts for local viewing; icons are an inline SVG sprite. The
-  Artifact twin uses a system-font fallback under the claude.ai CSP.
+  TerraVest V3 — Financial Operating System (standalone prototype, final)
+  Self-contained, no build step. Brand fonts (DM Serif Display + DM Sans) from
+  Google Fonts for local viewing; icons are an inline SVG sprite. The Artifact
+  twin uses a system-font fallback under the claude.ai CSP.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -476,6 +476,9 @@ select.finput{cursor:pointer;appearance:none}
   .md.show-detail .md-detail{display:block}
   .md.show-detail .md-back{display:inline-flex}
 }
+/* skeleton loading */
+.skel{background:linear-gradient(90deg,var(--surface-3) 25%,var(--surface-2) 37%,var(--surface-3) 63%);background-size:400% 100%;border-radius:var(--r-xs);animation:shimmer 1.3s ease infinite}
+@keyframes shimmer{from{background-position:100% 0}to{background-position:-100% 0}}
 
 /* ---- 16 · MOBILE --------------------------------------------------------- */
 .mobnav{display:none}.hamb{display:none}
@@ -823,7 +826,7 @@ function actionBar(chips){
 }
 function sechead(t, right){ return `<div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">${t}</div>${right||''}</div>`; }
 function kpi(icon, cls, label, val, foot, entity){
-  return `<div class="kpi${entity?' act':''}"${entity?` data-drawer="${entity.type}" data-id="${entity.id}"`:''}>
+  return `<div class="kpi${entity?' act':''}" title="As of just now${entity?' · click for detail':''}"${entity?` data-drawer="${entity.type}" data-id="${entity.id}"`:''}>
     <div class="kpi-top"><div class="kpi-ic tile ${cls}" style="width:30px;height:30px;font-size:15px">${I(icon)}</div><div class="kpi-label">${label}</div>${entity?I('chev-r','kpi-chev'):''}</div>
     <div class="kpi-val num">${val}</div>${foot?`<div class="kpi-foot">${foot}</div>`:''}</div>`;
 }
@@ -861,6 +864,13 @@ function tabsBlock(tabs){
 }
 /* stacked severity bar (AR/AP aging, budgets) */
 function stackBar(segs){ return `<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--surface-3)">${segs.map(s=>`<div style="width:${s.pct}%;background:var(${s.color})"></div>`).join('')}</div>`; }
+/* skeleton loading state (rendered into #wsHost during sync / slow loads) */
+function skeletonHTML(){
+  const kp=Array(4).fill('<div class="kpi"><div class="skel" style="height:12px;width:55%"></div><div class="skel" style="height:26px;width:80%;margin-top:12px"></div></div>').join('');
+  return `<div class="skel" style="height:32px;width:260px;margin:6px 0 22px"></div>
+    <div class="kpirow" style="margin-bottom:var(--sp-6)">${kp}</div>
+    <div class="card"><div class="skel" style="height:16px;width:40%;margin-bottom:16px"></div><div class="skel" style="height:170px"></div></div>`;
+}
 
 /* ============================================================================
    4 · CHART ENGINE  (hand-rolled SVG, theme-aware, one palette)
@@ -1026,6 +1036,14 @@ function renderToday(host){
       <div class="scell"><div class="sc-label">Health</div><div class="sc-val">78 · Good</div></div>
     </div></div>
 
+    <div class="card" style="margin-bottom:var(--sp-6);border-left:4px solid var(--neg)">
+      <div class="sec-head"><div class="row gap-2">${I('flame')}<span class="sec-title">Needs your attention</span><span class="badge neg">2</span></div><a class="more" data-nav="alerts">All alerts ${I('arr-r')}</a></div>
+      <div class="rowlist">
+        <div class="rowitem"><div class="tile sm neg">${I('wallet')}</div><div class="grow"><div class="r-name">Plaid Checking is low</div><div class="r-sub">Balance <span class="money">$110</span> · covers 1 scheduled bill</div></div><button class="btn btn-outline btn-sm" data-nav="accounts">Review</button></div>
+        <div class="rowitem"><div class="tile sm gold">${I('receipt')}</div><div class="grow"><div class="r-name">Mortgage due in 2 days</div><div class="r-sub"><span class="money">$1,842</span> · Rocket</div></div><button class="btn btn-primary btn-sm" data-nav="bills">Pay</button></div>
+      </div>
+    </div>
+
     <div class="grid g12" style="margin-bottom:var(--sp-6)">
       <div class="card lg c8" style="container-type:inline-size">
         <div class="sec-head" style="align-items:flex-start">
@@ -1155,6 +1173,25 @@ function greet(){
    ============================================================================ */
 const PAGES = {};
 
+/* transaction evidence pane (Transactions master-detail) */
+function txnDetailHTML(id){
+  const t=TX[id]||TX.t1, pos=(t.amt||'').trim().startsWith('+'), parts=(t.sub||'').split(' · ');
+  return `<button class="btn btn-ghost btn-sm md-back" data-md-back>${I('arr-l')} Transactions</button>
+    <div class="card" style="margin-top:var(--sp-2)">
+      <div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="tile ${t.cls}">${I(t.icon)}</div><div class="grow"><div class="sec-title">${t.title}</div><div class="muted" style="font-size:var(--fs-sm)">${t.sub}</div></div></div>
+      <div class="eyebrow">Amount</div><div class="r-amt num" style="font-family:var(--font-display);font-size:2rem;${pos?'color:var(--pos)':''}">${t.amt}</div>
+      <div class="row gap-2 wrap" style="margin-top:8px"><span class="badge neutral">${t.cat}</span><span class="badge pos">${I('check')} Cleared</span></div>
+      <hr class="divider">
+      <div class="eyebrow" style="margin-bottom:6px">Evidence</div>
+      <div class="rowlist">
+        ${richRow({icon:'bank',cls:'',name:'Account',sub:'',amt:parts[0]||''})}
+        ${richRow({icon:'cal',cls:'',name:'Date',sub:'',amt:parts[1]||''})}
+        ${richRow({icon:'tag',cls:'',name:'Category',sub:'AI auto-tagged · high confidence',amt:t.cat})}
+        ${richRow({icon:'shield',cls:'pos',name:'Status',sub:'Idempotency-protected',amt:'Cleared'})}
+      </div>
+      <div class="row gap-2 wrap" style="margin-top:var(--sp-4)"><button class="btn btn-outline btn-sm">${I('tag')} Recategorize</button><button class="btn btn-outline btn-sm">${I('exchange')} Split</button><button class="btn btn-outline btn-sm">${I('clip')} Attach receipt</button><button class="btn btn-primary btn-sm" data-drawer="transaction" data-id="${id}">${I('ext')} Full drawer</button></div>
+    </div>`;
+}
 /* master–detail: right-hand pane renders the selected account (reused by the
    list clicks; the same entity also opens the full universal drawer). */
 function acctDetailHTML(id){
@@ -1414,8 +1451,9 @@ PAGES.transactions = () => {
         <button class="btn btn-outline btn-sm mla">${I('sort')} Sort: Newest</button>
       </div>
     </div>
-    <div class="card">${sechead('Activity','<span class="muted" style="font-size:var(--fs-sm)">Newest first</span>')}
-      <div class="rowlist">${rows.map(r=>richRow({icon:r.icon,cls:r.cls,name:r.name,sub:r.sub,amt:r.amt,amtColor:r.amtColor,entity:r.id?{type:'transaction',id:r.id}:null})).join('')}</div>
+    <div class="md" id="txnMD">
+      <div class="md-list" role="listbox" aria-label="Transactions">${TXN_LIST.map((id,i)=>{const t=TX[id];const pos=(t.amt||'').trim().startsWith('+');return `<div class="md-item${i===0?' active':''}" data-txn="${id}" role="option" aria-selected="${i===0}" tabindex="0"><div class="tile sm ${t.cls}">${I(t.icon)}</div><div class="grow"><div class="r-name">${t.title}</div><div class="r-sub">${t.sub} · ${t.cat}</div></div><div class="num money" style="font-weight:700;font-size:var(--fs-sm)${pos?';color:var(--pos)':''}">${t.amt}</div></div>`;}).join('')}</div>
+      <div class="md-detail" id="txnDetail">${txnDetailHTML(TXN_LIST[0])}</div>
     </div>`;
 };
 
@@ -1697,6 +1735,7 @@ PAGES.ai = () => `
       <div class="stack gap-4">
         <div style="align-self:flex-end;max-width:72%;background:var(--accent);color:var(--on-accent);padding:11px 16px;border-radius:14px 14px 4px 14px;font-size:var(--fs-sm)">How much did I spend on dining last month, and is it trending up?</div>
         <div class="row gap-3"><div class="tile">${I('robot')}</div><div style="max-width:75%;background:var(--accent-soft);padding:12px 16px;border-radius:14px 14px 14px 4px;font-size:var(--fs-sm)">You spent <strong>$612</strong> on dining in May — <strong>+18%</strong> vs April and $112 over your $500 budget. Weekend delivery drove most of the increase.</div></div>
+        <div class="row gap-2 wrap" style="margin-left:54px"><span class="badge pos">${I('check')} Confidence: High</span><span class="badge neutral">Basis: 90 days of linked transactions</span><span class="badge neutral">Assumes pending excluded</span></div>
       </div>
       <hr class="divider">
       <div class="omnibar" style="max-width:none"><span class="grow" style="text-align:left">Ask anything about your money…</span><button class="btn btn-primary btn-sm">Send</button></div>
@@ -2141,7 +2180,12 @@ const TX = {
   t2:{icon:'cart',cls:'',title:'Whole Foods Market',sub:'Sapphire Reserve · Jun 1',amt:'−$84.32',cat:'Groceries'},
   t3:{icon:'car',cls:'gold',title:'Shell Station',sub:'Sapphire Reserve · May 31',amt:'−$62.10',cat:'Transport'},
   t4:{icon:'fork',cls:'neg',title:'Uchi Restaurant',sub:'Sapphire Reserve · May 29',amt:'−$127.40',cat:'Dining'},
+  t5:{icon:'home',cls:'',title:'Rent — Maple Apartments',sub:'Primary Checking · May 28',amt:'−$1,600.00',cat:'Housing'},
+  t6:{icon:'repeat',cls:'violet',title:'Spotify Premium',sub:'Sapphire Reserve · May 26',amt:'−$9.99',cat:'Subscriptions'},
+  t7:{icon:'bolt',cls:'gold',title:'City Power & Light',sub:'Primary Checking · May 24',amt:'−$87.64',cat:'Utilities'},
+  t8:{icon:'coins',cls:'pos',title:'Dividend — SCHD',sub:'Roth IRA · May 22',amt:'+$182.40',pos:true,cat:'Income'},
 };
+const TXN_LIST=['t1','t5','t2','t3','t4','t7','t6','t8'];
 const GOALS={ef:{icon:'umbrella',cls:'gold',title:'Emergency fund',sub:'Safety net · target Dec 2026',pct:70,have:'$14,000',target:'$20,000'},house:{icon:'home',cls:'',title:'House down payment',sub:'Real estate · target Aug 2028',pct:22,have:'$17,000',target:'$80,000'}};
 const BIZ={summit:{icon:'brief',cls:'',title:'Summit Contracting',sub:'LLC · Construction',rev:'$42,000',net:'+$14,000',cash:'$31,200'},cedar:{icon:'estate',cls:'gold',title:'Cedar Rentals LLC',sub:'LLC · Real estate',rev:'$9,800',net:'+$5,680',cash:'$18,400'}};
 
@@ -2344,6 +2388,7 @@ setInterval(()=>{ if(!syncBtn.classList.contains('syncing')&&freshTxt) freshTxt.
 syncBtn.addEventListener('click',()=>{
   if(syncBtn.classList.contains('syncing'))return;
   syncBtn.classList.add('syncing'); if(freshTxt) freshTxt.textContent='Syncing…';
+  const host=$('#wsHost'); if(host) host.innerHTML=skeletonHTML();
   setTimeout(()=>{ syncBtn.classList.remove('syncing'); freshAt=Date.now(); if(freshTxt) freshTxt.textContent='Synced just now'; toast('Accounts synced','check'); rerender(); }, 900);
 });
 
@@ -2353,6 +2398,7 @@ $('#connBtn').addEventListener('click',()=>openDrawer('connections'));
 document.addEventListener('click',e=>{
   const hs=e.target.closest('.hub-tab[data-sub]'); if(hs){ $$('#hubBar .hub-tab').forEach(x=>{const on=x===hs;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); renderSub(hs.dataset.sub); pushRoute(hs.dataset.sub); viewport.scrollTop=0; return; }
   const mdi=e.target.closest('.md-item[data-acct]'); if(mdi){ const wrap=mdi.closest('.md'); wrap.querySelectorAll('.md-item').forEach(x=>{const on=x===mdi;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); wrap.classList.add('show-detail'); const d=$('#acctDetail'); if(d){ d.innerHTML=acctDetailHTML(mdi.dataset.acct); d.querySelectorAll('[data-chart]').forEach(drawChartEl); } return; }
+  const mdt=e.target.closest('.md-item[data-txn]'); if(mdt){ const wrap=mdt.closest('.md'); wrap.querySelectorAll('.md-item').forEach(x=>{const on=x===mdt;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); wrap.classList.add('show-detail'); const d=$('#txnDetail'); if(d){ d.innerHTML=txnDetailHTML(mdt.dataset.txn); d.querySelectorAll('[data-chart]').forEach(drawChartEl); } return; }
   if(e.target.closest('[data-md-back]')){ const wrap=e.target.closest('.md'); if(wrap) wrap.classList.remove('show-detail'); return; }
   const nav=e.target.closest('[data-nav]'); if(nav){ e.preventDefault(); navigate(nav.dataset.nav); return; }
   const dr=e.target.closest('[data-drawer]'); if(dr){ e.preventDefault(); openDrawer(dr.dataset.drawer,dr.dataset.id); return; }
