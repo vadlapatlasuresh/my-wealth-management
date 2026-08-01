@@ -336,6 +336,14 @@ input,select,textarea{font:inherit;color:inherit}
 .bar>i{display:block;height:100%;border-radius:var(--r-full);background:var(--accent);transition:width var(--d4) var(--ease)}
 .minibar{height:6px;border-radius:var(--r-full);background:var(--surface-3);overflow:hidden}
 .minibar>i{display:block;height:100%;border-radius:var(--r-full)}
+/* expandable per-entity accordion (reuses .rowitem/.card vocabulary) */
+.acc{border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;margin-bottom:var(--sp-3)}
+.acc[open]{box-shadow:var(--sh1)}
+.acc>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4)}
+.acc>summary::-webkit-details-marker{display:none}
+.acc>summary .acc-chev{transition:transform var(--d2)}
+.acc[open]>summary .acc-chev{transform:rotate(90deg)}
+.acc-body{border-top:1px solid var(--border);padding:var(--sp-4)}
 .ring{display:grid;place-items:center;border-radius:50%}
 .ring-inner{border-radius:50%;background:var(--surface);display:grid;place-items:center;text-align:center}
 .legend{display:flex;flex-direction:column;gap:var(--sp-2)}
@@ -436,6 +444,16 @@ input,select,textarea{font:inherit;color:inherit}
 .table tbody tr{transition:background var(--d1)}
 .table tbody tr:hover td{background:var(--surface-2)}
 .table .num{font-variant-numeric:tabular-nums}
+/* Business dense-table row actions — compact, and revealed on hover/focus so the action column stays quiet while scanning (scoped to #bizPanel to leave other workspaces untouched) */
+#bizPanel .table tbody td .iconbtn{width:30px;height:30px;font-size:16px}
+@media (hover:hover) and (pointer:fine){
+  #bizPanel .table tbody td .iconbtn{opacity:0;transition:opacity var(--d2)}
+  #bizPanel .table tbody tr:hover td .iconbtn,#bizPanel .table tbody tr:focus-within td .iconbtn{opacity:1}
+}
+/* Business workspace — one vertical rhythm for every stacked section; the gap
+   supersedes each card's own bottom margin so the whole column breathes evenly */
+.biz-flow{display:flex;flex-direction:column;gap:var(--sp-5)}
+.biz-flow>*{margin-bottom:0!important}
 /* form fields */
 .flabel{display:block;font-size:var(--fs-xs);font-weight:600;color:var(--ink-2);margin-bottom:5px}
 .finput{width:100%;height:38px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface);color:var(--ink);padding:0 12px;font-size:var(--fs-sm)}
@@ -742,6 +760,7 @@ const NAV = [
     { id:'profile', label:'Profile', icon:'users' },
     { id:'messages', label:'Messages', icon:'msg', badge:'2' },
     { id:'security', label:'Security', icon:'shield' },
+    { id:'identity', label:'Identity & KYC', icon:'lock' },
     { id:'subscription', label:'Subscription', icon:'crown' },
     { id:'documents', label:'Documents', icon:'folder' },
     { id:'settings', label:'Preferences', icon:'settings' },
@@ -754,6 +773,8 @@ NAV.forEach(h => {
   else { LABELS[h.id] = h.label; ICONS[h.id] = h.icon; }
 });
 LABELS['components'] = 'Components'; ICONS['components'] = 'grid';
+LABELS['flowmap'] = 'UI flow map'; ICONS['flowmap'] = 'map'; /* parity: reachable non-primary workspace */
+LABELS['business-onboarding'] = 'Set up a business'; ICONS['business-onboarding'] = 'brief';
 
 /* build rail — flat primary workspaces */
 const railNav = $('#railNav');
@@ -804,6 +825,9 @@ function renderSub(sub){
   host.innerHTML = (PAGES[sub] ? PAGES[sub]() : placeholder(sub));
   host.querySelectorAll('[data-carousel]').forEach(c => { if(!c.__init){ initCarousel(c); c.__init=true; } });
   host.querySelectorAll('[data-chart]').forEach(drawChartEl);
+  // BEGIN PARITY ADDITION — net-worth workspace reuses the interactive drawNW system
+  if (sub === 'net-worth'){ const f=$('#nwFilter'); if(f) f.value=nwFilter; drawNW(); }
+  // END PARITY ADDITION
 }
 function rerender(){ if (CURRENT === 'today') renderToday($('#wsHost')); else renderSub(CURRENT); }
 
@@ -1266,157 +1290,701 @@ PAGES.investments = () => {
     </div>`;
 };
 
-PAGES.business = () => {
-  const agingRow=(dot,label,val)=>`<div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(${dot})"></span> ${label}</span><span class="num">${val}</span></div>`;
-  const B=(t,c)=>`<span class="badge ${c}">${t}</span>`;
-  const T=(cols,rows)=>`<div class="table-scroll"><table class="table"><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table></div>`;
-  const rt=' style="text-align:right"';
-  const overview=`<div class="grid g12">
-    <div class="card c6">${sechead('P&amp;L snapshot','<span class="badge neutral">Last 6 months</span>')}<div class="rowlist">
-      ${richRow({icon:'arr-dl',cls:'pos',name:'Income',sub:'Trailing 6 months',amt:'$112,400',amtColor:'var(--pos)'})}
-      ${richRow({icon:'arr-ur',cls:'neg',name:'Expenses',sub:'Trailing 6 months',amt:'$71,100',amtColor:'var(--neg)'})}
-      ${richRow({icon:'scale',cls:'',name:'Net profit',sub:'Trailing 6 months',amt:'$41,300',amtColor:'var(--pos)'})}
+/* ============================================================================
+   BUSINESS MODULE — data-driven, context-aware (All vs individual business)
+   Central state → one selectedBusinessId drives every tab, KPI, table & chart.
+   ============================================================================ */
+const businessState = {
+  selectedBusinessId: 'all',
+  selectedPeriod: 'month',
+  activeTab: 'overview',
+  expandedBusinessIds: ['summit'],
+  bannerDismissed: false,
+  qbDismissed: false,
+  filters: { txnDir:'all', txnStatus:'all', expStatus:'all', billStatus:'all', docType:'all', docYear:'all' },
+  businesses: [
+    { id:'summit', name:'Summit Contracting', legalName:'Summit Contracting LLC', dba:'', entity:'LLC', status:'Active',
+      industry:'Construction', ein:'12-3456789', formationState:'Texas', formationDate:'Mar 2024',
+      fiscalYearStart:'January', accountingMethod:'Accrual', currency:'USD',
+      address:'400 Congress Ave, Austin, TX 78701', phone:'+1 (512) 555-0142', email:'ap@summitcontracting.co',
+      website:'summitcontracting.co', owner:'Alex Kim', ownership:'100% — Alex Kim', logo:'brief', cls:'', lastSync:'2 min ago',
+      kpi:{ rev:42000, exp:28000, net:14000, cash:31200, ar:3450, ap:3760, deposits:18600 },
+      aging:{ current:2540, d1_30:820, d31_60:0, d61_90:0, over90:400 },
+      cashflow:[{l:'Jan',i:6.0,o:4.5},{l:'Feb',i:8.5,o:5.2},{l:'Mar',i:6.0,o:4.0},{l:'Apr',i:9.5,o:5.8},{l:'May',i:8.0,o:4.8},{l:'Jun',i:10.0,o:5.4}],
+      integrations:{ quickbooks:'connected', plaid:'connected', stripe:'connected', square:'', paypal:'' } },
+    { id:'cedar', name:'Cedar Rentals LLC', legalName:'Cedar Rentals LLC', dba:'Cedar Holdings', entity:'LLC', status:'Active',
+      industry:'Real estate', ein:'98-7654321', formationState:'Texas', formationDate:'Jan 2023',
+      fiscalYearStart:'January', accountingMethod:'Cash', currency:'USD',
+      address:'1200 Barton Springs Rd, Austin, TX 78704', phone:'+1 (512) 555-0177', email:'billing@cedarrentals.co',
+      website:'cedarrentals.co', owner:'Alex Kim', ownership:'60% Alex Kim · 40% J. Rivera', logo:'estate', cls:'gold', lastSync:'18 min ago',
+      kpi:{ rev:9800, exp:4120, net:5680, cash:18400, ar:1200, ap:420, deposits:9800 },
+      aging:{ current:420, d1_30:0, d31_60:0, d61_90:0, over90:0 },
+      cashflow:[{l:'Jan',i:2.1,o:0.8},{l:'Feb',i:2.1,o:0.7},{l:'Mar',i:2.1,o:1.4},{l:'Apr',i:2.1,o:0.6},{l:'May',i:2.1,o:0.9},{l:'Jun',i:2.1,o:0.7}],
+      integrations:{ quickbooks:'', plaid:'connected', stripe:'', square:'', paypal:'connected' } },
+  ],
+  accounts: [
+    { id:'a1', businessId:'summit', name:'Operating Checking ··4021', institution:'Chase', type:'Checking', mask:'4021', balance:24800, available:24800, status:'connected', primary:true, lastSync:'2 min ago' },
+    { id:'a2', businessId:'summit', name:'Business Savings ··8890', institution:'Chase', type:'Savings', balance:6400, available:6400, status:'connected', primary:false, lastSync:'2 min ago' },
+    { id:'a3', businessId:'summit', name:'Amex Biz Platinum ··1007', institution:'American Express', type:'Credit Card', balance:-4180, limit:20000, status:'connected', primary:false, lastSync:'5 min ago' },
+    { id:'a4', businessId:'cedar', name:'Rent Deposits ··5510', institution:'Chase', type:'Checking', balance:18400, available:18400, status:'connected', primary:true, lastSync:'18 min ago' },
+    { id:'a5', businessId:'cedar', name:'Fuel Card ··2213', institution:'WEX', type:'Credit Card', balance:-310, limit:3000, status:'manual', primary:false, lastSync:'manual' },
+  ],
+  transactions: [
+    { id:'t1', businessId:'summit', account:'Operating Checking', desc:'Client payment — Northwind', merchant:'Northwind Co.', category:'Income', type:'Income', dir:'in', status:'reconciled', date:'Jun 12', amount:6200 },
+    { id:'t2', businessId:'summit', account:'Amex Biz', desc:'Refund — Staples return', merchant:'Staples', category:'Office', type:'Refund', dir:'in', status:'categorized', date:'Jun 11', amount:142 },
+    { id:'t3', businessId:'summit', account:'Amex Biz', desc:'Adobe Creative Cloud', merchant:'Adobe Inc.', category:'Software', type:'Expense', dir:'out', status:'needs-review', date:'Jun 11', amount:-599 },
+    { id:'t4', businessId:'summit', account:'Amex Biz', desc:'Card payment — Amex', merchant:'American Express', category:'Transfer', type:'Card Payment', dir:'transfer', status:'reconciled', date:'Jun 9', amount:2000 },
+    { id:'t5', businessId:'summit', account:'Operating Checking', desc:'WeWork — office rent', merchant:'WeWork', category:'Rent', type:'Vendor Payment', dir:'out', status:'categorized', date:'Jun 1', amount:-1800 },
+    { id:'t6', businessId:'cedar', account:'Rent Deposits', desc:'Unit 4B rent', merchant:'Tenant — Unit 4B', category:'Rental income', type:'Income', dir:'in', status:'reconciled', date:'Jun 1', amount:2100 },
+    { id:'t7', businessId:'cedar', account:'Fuel Card', desc:'Home Depot — supplies', merchant:'Home Depot', category:'Repairs', type:'Expense', dir:'out', status:'needs-review', date:'Jun 5', amount:-184 },
+  ],
+  expenses: [
+    { id:'e1', businessId:'summit', desc:'AWS — May usage', category:'Software', vendor:'AWS', date:'May 31', status:'approved', receipt:true, amount:1430, linked:2 },
+    { id:'e2', businessId:'summit', desc:'Client lunch — Northwind', category:'Meals', vendor:'Osteria', date:'May 18', status:'missing-receipt', receipt:false, amount:182.4, linked:0 },
+    { id:'e3', businessId:'summit', desc:'Gusto — payroll run', category:'Payroll', vendor:'Gusto', date:'May 28', status:'approved', receipt:true, amount:8400, linked:1 },
+    { id:'e4', businessId:'cedar', desc:'Ace Hardware — repairs', category:'Repairs', vendor:'Ace Hardware', date:'May 22', status:'submitted', receipt:true, amount:264, linked:0 },
+  ],
+  invoices: [
+    { id:'i1', businessId:'summit', customer:'Northwind Co.', number:'1042', issue:'Jun 12', due:'Jun 20', status:'paid', amount:6200, paid:6200, source:'Manual' },
+    { id:'i2', businessId:'summit', customer:'Pinecrest Studio', number:'1039', issue:'May 05', due:'May 20', status:'overdue', amount:3450, paid:0, source:'QuickBooks' },
+    { id:'i3', businessId:'summit', customer:'Harbor Group', number:'1041', issue:'Jun 01', due:'Jun 28', status:'partial', amount:2100, paid:1200, source:'Manual' },
+    { id:'i4', businessId:'summit', customer:'Cedar & Co.', number:'1043', issue:'Jun 14', due:'Jul 14', status:'sent', amount:1800, paid:0, source:'Manual' },
+    { id:'i5', businessId:'cedar', customer:'Tenant — Unit 4B', number:'C-220', issue:'Jun 01', due:'Jun 05', status:'paid', amount:2100, paid:2100, source:'Manual' },
+    { id:'i6', businessId:'cedar', customer:'Tenant — Unit 2A', number:'C-221', issue:'Jun 01', due:'Jun 05', status:'sent', amount:1200, paid:0, source:'Manual' },
+  ],
+  purchaseOrders: [
+    { id:'po1', businessId:'summit', vendor:'Acme Supply', category:'COGS', amount:1200, expected:'Aug 8', status:'approved' },
+    { id:'po2', businessId:'summit', vendor:'Metro Print', category:'Operating', amount:640, expected:'—', status:'converted' },
+  ],
+  quotes: [
+    { id:'q1', businessId:'summit', customer:'Blue Harbor LLC', amount:4800, status:'sent', expires:'Aug 15' },
+    { id:'q2', businessId:'summit', customer:'Cedar & Co.', amount:1250, status:'converted', expires:'—' },
+  ],
+  projects: [
+    { id:'pr1', businessId:'summit', name:'Website build', customer:'Blue Harbor LLC', budget:10000, billed:3000, status:'active',
+      milestones:[{name:'Deposit · 30%',amount:3000,due:'—',status:'invoiced'},{name:'Midpoint · 40%',amount:4000,due:'Sep 15',status:'pending'},{name:'Completion · 30%',amount:3000,due:'Oct 30',status:'pending'}] },
+  ],
+  recurring: [
+    { id:'r1', businessId:'summit', customer:'Northwind Co.', every:'Monthly', amount:2500, next:'Aug 1', status:'active' },
+    { id:'r2', businessId:'summit', customer:'Harbor Group', every:'Quarterly', amount:6000, next:'Sep 30', status:'paused' },
+    { id:'r3', businessId:'cedar', customer:'Tenant — Unit 4B', every:'Monthly', amount:2100, next:'Aug 1', status:'active' },
+  ],
+  bills: [
+    { id:'b1', businessId:'summit', vendor:'Staples', category:'Operating', amount:1180, paid:0, due:'Aug 5', status:'open' },
+    { id:'b2', businessId:'summit', vendor:'AWS', category:'Software', amount:3000, paid:1500, due:'Aug 12', status:'partial' },
+    { id:'b3', businessId:'summit', vendor:'City Utilities', category:'Utilities', amount:420, paid:420, due:'Jul 28', status:'paid' },
+    { id:'b4', businessId:'cedar', vendor:'Barton Landscaping', category:'Maintenance', amount:420, paid:0, due:'Jul 30', status:'overdue' },
+  ],
+  customers: [
+    { id:'c1', businessId:'summit', name:'Northwind Co.', email:'billing@northwind.co', phone:'+1 555 0110', taxId:'82-1746003', pays:'ACH', terms:'Net 15', outstanding:0, lifetime:74400 },
+    { id:'c2', businessId:'summit', name:'Harbor Group', email:'ap@harbor.group', phone:'+1 555 0142', taxId:'91-3300012', pays:'Card', terms:'Net 30', outstanding:900, lifetime:18600 },
+    { id:'c3', businessId:'summit', name:'Pinecrest Studio', email:'owner@pinecrest.io', phone:'—', taxId:'—', pays:'Card', terms:'Due on receipt', outstanding:3450, lifetime:12900 },
+    { id:'c4', businessId:'cedar', name:'Tenant — Unit 4B', email:'unit4b@resident.co', phone:'—', taxId:'—', pays:'ACH', terms:'Net 5', outstanding:0, lifetime:25200 },
+  ],
+  vendors: [
+    { id:'v1', businessId:'summit', name:'AWS', contact:'Billing', email:'aws-billing@amazon.com', phone:'—', taxId:'91-1646860', terms:'Net 30', category:'Software', outstanding:1500, spend:17160 },
+    { id:'v2', businessId:'summit', name:'Gusto', contact:'Support', email:'help@gusto.com', phone:'—', taxId:'—', terms:'Auto', category:'Payroll', outstanding:0, spend:50400 },
+    { id:'v3', businessId:'summit', name:'WeWork', contact:'Leasing', email:'billing@wework.com', phone:'—', taxId:'—', terms:'Net 1', category:'Rent', outstanding:0, spend:21600 },
+    { id:'v4', businessId:'cedar', name:'Ace Hardware', contact:'Store 214', email:'—', phone:'+1 555 0190', taxId:'—', terms:'Due on receipt', category:'Repairs', outstanding:0, spend:3160 },
+  ],
+  documents: [
+    { id:'d1', businessId:'summit', name:'Invoice #1042 — Northwind Co.', category:'Invoice', year:'2026', added:'Jun 12', size:'', link:true },
+    { id:'d2', businessId:'summit', name:'AWS receipt — May', category:'Receipt', year:'2026', added:'Jun 03', size:'', link:true },
+    { id:'d3', businessId:'summit', name:'Master services agreement', category:'Contract', year:'2026', added:'May 28', size:'88 KB', link:false },
+    { id:'d4', businessId:'summit', name:'2025 Form 1120-S', category:'Tax', year:'2025', added:'Apr 15', size:'214 KB', link:false },
+    { id:'d5', businessId:'cedar', name:'Signed lease — Unit 4B.pdf', category:'Contract', year:'2026', added:'Jun 14', size:'820 KB', link:false },
+  ],
+  team: [
+    { id:'m1', businessId:'all', name:'Alex Kim', email:'alex@terravest.app', role:'Owner', access:'All businesses', status:'active', last:'now', invite:'' },
+    { id:'m2', businessId:'summit', name:'Jordan Lee', email:'jordan@summit.co', role:'Accountant', access:'Summit Contracting', status:'active', last:'2h ago', invite:'' },
+    { id:'m3', businessId:'summit', name:'Sam Rivera', email:'sam@summit.co', role:'Bookkeeper', access:'Summit Contracting', status:'active', last:'1d ago', invite:'' },
+    { id:'m4', businessId:'cedar', name:'Pat Morgan', email:'pat@cedar.co', role:'Manager', access:'Cedar Rentals LLC', status:'invited', last:'—', invite:'pending' },
+  ],
+  activities: [
+    { id:'ac1', businessId:'summit', ts:'Jun 12 · 2:14pm', user:'Alex Kim', action:'Invoice created', record:'#1042 — Northwind Co.', status:'ok' },
+    { id:'ac2', businessId:'summit', ts:'Jun 12 · 2:10pm', user:'Alex Kim', action:'Payment recorded', record:'$6,200 — Northwind Co.', status:'ok' },
+    { id:'ac3', businessId:'summit', ts:'Jun 11 · 9:02am', user:'Jordan Lee', action:'Transaction categorized', record:'Adobe Creative Cloud → Software', status:'ok' },
+    { id:'ac4', businessId:'cedar', ts:'Jun 10 · 4:40pm', user:'Pat Morgan', action:'Member invited', record:'pat@cedar.co', status:'pending' },
+    { id:'ac5', businessId:'summit', ts:'Jun 09 · 11:20am', user:'System', action:'Account linked', record:'Amex Biz Platinum ··1007', status:'ok' },
+    { id:'ac6', businessId:'summit', ts:'Jun 03 · 8:15am', user:'Sam Rivera', action:'Document uploaded', record:'AWS receipt — May', status:'ok' },
+    { id:'ac7', businessId:'cedar', ts:'Jun 01 · 7:00am', user:'System', action:'Recurring invoice run', record:'C-220 — Unit 4B', status:'ok' },
+  ],
+};
+let bizSeq = 100;
+let pendingConfirm = null;
+
+/* ---- selectors & scoping ------------------------------------------------- */
+function bizFind(id){ return businessState.businesses.find(b=>b.id===id); }
+function getSelectedBusiness(){ return businessState.selectedBusinessId==='all'?null:bizFind(businessState.selectedBusinessId); }
+function bizBusinesses(){ return businessState.selectedBusinessId==='all'?businessState.businesses:[bizFind(businessState.selectedBusinessId)].filter(Boolean); }
+function getBusinessScopedData(coll){ const id=businessState.selectedBusinessId; return id==='all'?coll:coll.filter(r=>r.businessId===id); }
+function bizName(id){ const b=bizFind(id); return b?b.name:(id==='all'?'All businesses':'—'); }
+function maskEin(ein){ return ein?'••-•••'+ein.slice(-4):'—'; }
+function bizMoney(n,sign){ const neg=n<0; const s=neg?'−':(sign&&n>0?'+':''); return s+'$'+Math.abs(Math.round(n)).toLocaleString('en-US'); }
+const BIZ_PERIODS=[['month','This month'],['quarter','This quarter'],['ytd','Year to date'],['ttm','Last 12 months'],['custom','Custom']];
+const BIZ_PERIOD_MULT={month:1,quarter:3,ytd:7,ttm:12,custom:1};
+function bizPeriodLabel(){ return ({month:'this month',quarter:'this quarter',ytd:'year to date',ttm:'last 12 months',custom:'custom range'})[businessState.selectedPeriod]; }
+
+/* ---- derived aggregates -------------------------------------------------- */
+function bizKpis(){ const list=bizBusinesses(); const m=BIZ_PERIOD_MULT[businessState.selectedPeriod]||1; const sum=k=>list.reduce((a,b)=>a+(b.kpi[k]||0),0);
+  return { rev:sum('rev')*m, exp:sum('exp')*m, net:sum('net')*m, cash:sum('cash'), ar:sum('ar'), ap:sum('ap'), deposits:sum('deposits')*m }; }
+function bizAging(){ const list=bizBusinesses(); const keys=['current','d1_30','d31_60','d61_90','over90']; const a={};
+  keys.forEach(k=>a[k]=list.reduce((s,b)=>s+(b.aging[k]||0),0)); a.total=keys.reduce((s,k)=>s+a[k],0); return a; }
+function bizCashflow(){ const list=bizBusinesses(); const months=['Jan','Feb','Mar','Apr','May','Jun'];
+  return months.map((l,idx)=>{ let i=0,o=0; list.forEach(b=>{ const mm=b.cashflow[idx]; if(mm){i+=mm.i;o+=mm.o;} }); return {l,i:+i.toFixed(1),o:+o.toFixed(1)}; }); }
+
+/* ---- shared bits --------------------------------------------------------- */
+const TXN_STATUS={ 'categorized':['Categorized','neutral'],'needs-review':['Needs review','gold'],'pending':['Pending','warn'],'reconciled':['Reconciled','pos'],'excluded':['Excluded','neutral'] };
+const INV_STATUS={ draft:['Draft','neutral'],sent:['Sent','neutral'],viewed:['Viewed','info'],partial:['Partially paid','warn'],paid:['Paid','pos'],overdue:['Overdue','neg'],void:['Void','neutral'] };
+const BILL_STATUS={ draft:['Draft','neutral'],awaiting:['Awaiting approval','warn'],approved:['Approved','info'],scheduled:['Scheduled','info'],open:['Open','warn'],partial:['Partially paid','warn'],paid:['Paid','pos'],overdue:['Overdue','neg'],void:['Void','neutral'] };
+const EXP_STATUS={ draft:['Draft','neutral'],submitted:['Submitted','info'],approved:['Approved','pos'],rejected:['Rejected','neg'],reimbursed:['Reimbursed','pos'],linked:['Linked','neutral'],'missing-receipt':['Needs receipt','gold'] };
+function bb(pair){ return pair?`<span class="badge ${pair[1]}">${pair[0]}</span>`:''; }
+function bizTable(cols,rows,id){ return `<div class="table-scroll"><table class="table"${id?` id="${id}"`:''}><thead><tr>${cols}</tr></thead><tbody>${rows}</tbody></table></div>`; }
+function iact(icon,action,id,label){ return `<button class="iconbtn" data-bizact="${action}"${id?` data-id="${id}"`:''} aria-label="${label}" title="${label}">${I(icon)}</button>`; }
+function iacts(){ return `<div class="row gap-1" style="justify-content:flex-end">${[...arguments].join('')}</div>`; }
+const RT=' style="text-align:right"';
+function bizSearchBox(ph,targetSel){ return `<div class="row" data-bizsearch="${targetSel}" style="flex:1;min-width:200px;height:38px;align-items:center;gap:8px;padding:0 12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface)">${I('search')}<input type="text" placeholder="${ph}" style="border:0;background:transparent;outline:none;color:inherit;font-size:var(--fs-sm);width:100%"></div>`; }
+function bizSelect(key,opts){ return `<select class="finput" style="width:auto" data-bizfilter="${key}">${opts.map(o=>`<option value="${o[0]}"${businessState.filters[key]===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>`; }
+function bizEmpty(msg,icon,action){ return `<div class="empty" style="padding:var(--sp-6) var(--sp-4)"><div class="e-ic" style="width:46px;height:46px;font-size:21px;border-radius:var(--r-md);margin-bottom:var(--sp-3)">${I(icon||'search')}</div><p class="muted" style="max-width:36ch;margin:0 auto">${msg}</p>${action?`<div style="margin-top:var(--sp-4)">${action}</div>`:''}</div>`; }
+function bizAttrCol(){ return businessState.selectedBusinessId==='all'; }
+
+/* ============================================================================
+   WORKSPACE SHELL
+   ============================================================================ */
+function renderBusinessWorkspace(){
+  if(!businessState.businesses.length) return PAGES['business-onboarding']();
+  const biz=getSelectedBusiness(), k=bizKpis();
+  const count=businessState.businesses.length;
+  const eyebrow=biz?'Business workspace':'Consolidated portfolio';
+  const title=biz?biz.name:'All businesses';
+  const sub=biz?`${biz.entity} · ${biz.industry} · EIN ${maskEin(biz.ein)}`:`${count} ${count===1?'business':'businesses'} · combined double-entry ledger across every entity`;
+  return `${wshead(eyebrow,title,sub,
+      `<button class="btn btn-outline btn-sm" data-bizact="sync">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-bizact="createInvoice">${I('plus')} New invoice</button>`)}
+    <div class="biz-flow">
+    ${bizBanner()}
+    ${bizSelectorChips()}
+    ${biz?bizProfileCard(biz):''}
+    ${businessState.qbDismissed||(biz&&biz.integrations.quickbooks==='connected')?'':bizQbBanner()}
+    ${bizHeroCard(k)}
+    ${bizPeriodControl()}
+    ${bizKpiRow(k)}
+    ${bizPayablesAging()}
+    ${bizCashflowCard()}
+    ${biz?'':bizByBusinessCard()+bizBusinessesAccordion()}
+    ${bizAccountsCard()}
+    ${bizTabBar()}
+    <div id="bizPanel">${bizPanelHTML()}</div>
+    </div>`;
+}
+
+function bizBanner(){ if(businessState.bannerDismissed) return '';
+  return `<div class="card" style="border-left:4px solid var(--pos);margin-bottom:var(--sp-4)"><div class="rowitem" style="border:0;padding:0"><div class="tile sm pos">${I('check')}</div><div class="grow"><div class="r-name" style="font-weight:500">Invoice for $6,200 to Northwind Co. created.</div></div><button class="iconbtn" data-bizact="dismissBanner" aria-label="Dismiss">${I('x')}</button></div></div>`; }
+
+function bizSelectorChips(){ const cur=businessState.selectedBusinessId;
+  const chip=(sel,active,inner,label)=>`<span class="chip${active?' active':''}" data-bizsel="${sel}" tabindex="0" role="button" aria-pressed="${!!active}" aria-label="${label}">${inner}</span>`;
+  let c=`<div class="chiprow" style="margin-bottom:var(--sp-4)">${chip('all',cur==='all',I('grid')+' All businesses','View all businesses')}`;
+  businessState.businesses.forEach(b=>c+=chip(b.id,cur===b.id,I(b.logo)+' '+b.name,'View '+b.name));
+  c+=chip('add',false,I('plus')+' Add','Add a business')+`</div>`; return c; }
+
+function bizProfileCard(b){ const intg=Object.entries(b.integrations).filter(([,v])=>v==='connected').map(([k])=>k);
+  const row=(label,val)=>`<div><div class="sc-label">${label}</div><div style="font-weight:600;font-size:var(--fs-sm);margin-top:3px">${val}</div></div>`;
+  return `<div class="card" style="margin-bottom:var(--sp-4)">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:var(--sp-3);flex-wrap:wrap">
+      <div class="row gap-3" style="align-items:center"><div class="tile ${b.cls}">${I(b.logo)}</div><div><div class="r-name" style="font-weight:600">${b.legalName}${b.dba?` <span class="muted">· dba ${b.dba}</span>`:''}</div><div class="r-sub">${b.entity} · ${b.industry} · ${b.status} · Formed ${b.formationState}, ${b.formationDate}</div></div></div>
+      <div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="editBusiness" data-id="${b.id}">${I('tag')} Edit</button><button class="btn btn-outline btn-sm" data-bizact="settings">${I('settings')} Settings</button><button class="iconbtn" data-bizact="removeBusiness" data-id="${b.id}" aria-label="Remove business">${I('x')}</button></div>
+    </div>
+    <div class="grid g12" style="margin-top:var(--sp-4);row-gap:var(--sp-3)">
+      ${[row('EIN',maskEin(b.ein)),row('Fiscal year',b.fiscalYearStart),row('Accounting',b.accountingMethod),row('Owner',b.owner)].map(r=>`<div class="c3">${r}</div>`).join('')}
+    </div>
+    <div class="row gap-2 wrap" style="margin-top:var(--sp-4);align-items:center">
+      <span class="badge pos">${I('refresh')} Synced ${b.lastSync}</span>
+      ${intg.length?intg.map(x=>`<span class="badge neutral">${I('link2')} ${x[0].toUpperCase()+x.slice(1)}</span>`).join(''):'<span class="badge gold">No integrations connected</span>'}
+      <span class="muted" style="font-size:var(--fs-xs);margin-left:auto">${b.address} · ${b.phone}</span>
+    </div></div>`; }
+
+function bizQbBanner(){ return `<div class="card" style="border-left:4px solid var(--gold);margin-bottom:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3)">${I('link2')}<div class="grow" style="font-size:var(--fs-sm)"><strong>Connect QuickBooks</strong> <span class="badge neutral">optional</span> — only to auto-sync revenue, expenses and invoices. Manual &amp; linked tracking works without it.</div><button class="btn btn-outline btn-sm" data-bizact="connectQuickBooks">Connect</button><button class="iconbtn" data-bizact="dismissQb" aria-label="Dismiss">${I('x')}</button></div>`; }
+
+function bizHeroCard(k){ return `<div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:flex-end;justify-content:space-between">
+    <div><div class="eyebrow">Total business cash</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">${bizMoney(k.cash)}</div><div class="muted" style="font-size:var(--fs-xs)">${bizBusinesses().length} ${bizBusinesses().length===1?'business':'businesses'} · ${bizMoney(k.ap)} owed</div></div>
+    <div class="row gap-6 wrap"><div><div class="eyebrow">Net position</div><div class="num" style="font-weight:700;color:var(--pos)">${bizMoney(k.cash-k.ap)}</div></div><div><div class="eyebrow">Deposits · ${bizPeriodLabel()}</div><div class="num" style="font-weight:700">${bizMoney(k.deposits)}</div></div><div><div class="eyebrow">Net cash flow · ${bizPeriodLabel()}</div><div class="num" style="font-weight:700;color:var(--pos)">${bizMoney(k.net,true)}</div></div></div></div>`; }
+
+function bizPeriodControl(){ return `<div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="muted" style="font-size:var(--fs-xs);font-weight:600;align-self:center">${I('cal')} Period</span>${BIZ_PERIODS.map(p=>`<span class="chip${businessState.selectedPeriod===p[0]?' active':''}" data-bizperiod="${p[0]}">${p[1]}</span>`).join('')}</div>`; }
+
+function bizKpiRow(k){ return `<div class="kpirow" style="margin-bottom:var(--sp-6)">
+    ${kpi('arr-ur','pos','Revenue',bizMoney(k.rev),bizPeriodLabel())}
+    ${kpi('arr-dr','neg','Expenses',bizMoney(k.exp),bizPeriodLabel())}
+    ${kpi('trend','','Net profit',bizMoney(k.net),bizPeriodLabel())}
+    ${kpi('invoice','gold','Outstanding (AR)',bizMoney(k.ar),'as of today')}
+    ${kpi('receipt','neg','Bills due (AP)',bizMoney(k.ap),'as of today')}
+  </div>`; }
+
+function bizPayablesAging(){ const a=bizAging(); const pct=v=>a.total?Math.round(v/a.total*100):0;
+  const row=(color,label,val)=>`<div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(${color})"></span> ${label}</span><span class="row gap-3"><span class="muted" style="font-size:var(--fs-xs)">${pct(val)}%</span><span class="num">${bizMoney(val)}</span></span></div>`;
+  const overdue=a.d1_30+a.d31_60+a.d61_90+a.over90;
+  return `<div class="card" style="margin-bottom:var(--sp-6)">${sechead('Payables aging '+(overdue>0?`<span class="badge neg">${bizMoney(overdue)} overdue</span>`:'<span class="badge pos">All current</span>'),`<button class="btn btn-ghost btn-sm" data-biztab="bills">Bills &amp; AP ${I('arr-r')}</button>`)}
+    ${stackBar([{pct:pct(a.current),color:'--pos'},{pct:pct(a.d1_30),color:'--gold'},{pct:pct(a.d31_60),color:'--gold'},{pct:pct(a.d61_90),color:'--neg'},{pct:pct(a.over90),color:'--neg'}])}
+    <div style="margin-top:10px">${row('--pos','Current',a.current)}${row('--gold','1–30 days',a.d1_30)}${row('--gold','31–60 days',a.d31_60)}${row('--neg','61–90 days',a.d61_90)}${row('--neg','90+ days',a.over90)}</div>
+    <div class="flow-row strong" style="border-top:2px solid var(--border);margin-top:6px"><span>Total outstanding</span><span class="num">${bizMoney(a.total)}</span></div></div>`; }
+
+function bizCashflowCard(){ const cf=bizCashflow(); const k=bizKpis();
+  return `<div class="card" style="margin-bottom:var(--sp-6)">${sechead('Cash flow · last 6 months',`<span class="badge pos">Net ${bizMoney(k.net,true)}</span>`)}<div data-chart="inout" data-v='${JSON.stringify(cf)}'></div></div>`; }
+
+function bizByBusinessCard(){ const rows=businessState.businesses.map(b=>`<tr data-drawer="business" data-id="${b.id}" style="cursor:pointer"><td><strong>${b.name}</strong><div class="r-sub muted">${b.industry}</div></td><td${RT}><span class="num">${bizMoney(b.kpi.rev)}</span></td><td${RT}><span class="num" style="color:var(--neg)">${bizMoney(b.kpi.exp)}</span></td><td${RT}><span class="num" style="color:var(--pos)">${bizMoney(b.kpi.net)}</span></td><td${RT}><span class="num">${bizMoney(b.kpi.cash)}</span></td><td${RT}><span class="num">${bizMoney(b.kpi.ar)}</span></td></tr>`).join('');
+  const t=businessState.businesses.reduce((a,b)=>({rev:a.rev+b.kpi.rev,exp:a.exp+b.kpi.exp,net:a.net+b.kpi.net,cash:a.cash+b.kpi.cash,ar:a.ar+b.kpi.ar}),{rev:0,exp:0,net:0,cash:0,ar:0});
+  return `<div class="card" style="margin-bottom:var(--sp-6)">${sechead('By business','<span class="badge neutral">This month</span>')}
+    ${bizTable(`<th>Business</th><th${RT}>Revenue</th><th${RT}>Expenses</th><th${RT}>Net</th><th${RT}>Cash</th><th${RT}>Outstanding</th>`,rows+`<tr style="font-weight:700;border-top:2px solid var(--border)"><td>All businesses</td><td${RT}><span class="num">${bizMoney(t.rev)}</span></td><td${RT}><span class="num">${bizMoney(t.exp)}</span></td><td${RT}><span class="num">${bizMoney(t.net)}</span></td><td${RT}><span class="num">${bizMoney(t.cash)}</span></td><td${RT}><span class="num">${bizMoney(t.ar)}</span></td></tr>`)}</div>`; }
+
+function bizBusinessesAccordion(){ const exp=businessState.expandedBusinessIds;
+  const cards=businessState.businesses.map(b=>{ const open=exp.includes(b.id); const accts=businessState.accounts.filter(a=>a.businessId===b.id);
+    const txns=businessState.transactions.filter(t=>t.businessId===b.id).slice(0,2);
+    return `<details class="acc"${open?' open':''}><summary>${I('chev-r','acc-chev muted')}<div class="tile sm ${b.cls}">${I(b.logo)}</div><div class="grow"><div class="r-name">${b.name}</div><div class="r-sub">${b.entity} · ${b.industry} · ${accts.length} accounts</div></div><div style="text-align:right"><div class="num" style="font-weight:700">${bizMoney(b.kpi.cash)}</div><div class="r-sub">Net <span style="color:var(--pos)">${bizMoney(b.kpi.net,true)}</span> · this month</div></div></summary>
+      <div class="acc-body">
+        <div class="kpirow" style="margin-bottom:var(--sp-3)">${kpi('arr-ur','pos','Revenue',bizMoney(b.kpi.rev),'')}${kpi('arr-dr','neg','Expenses',bizMoney(b.kpi.exp),'')}${kpi('bank','info','Cash',bizMoney(b.kpi.cash),'')}${kpi('invoice','gold','Outstanding',bizMoney(b.kpi.ar),'')}</div>
+        <div class="eyebrow" style="margin:var(--sp-3) 0 var(--sp-2)">Connected accounts</div>
+        <div class="rowlist">${accts.map(a=>richRow({icon:a.type==='Credit Card'?'card':a.type==='Savings'?'pig':'bank',cls:a.balance<0?'gold':'',name:a.name,sub:a.institution+' · '+a.type,amt:bizMoney(a.balance),amtColor:a.balance<0?'var(--neg)':''})).join('')}</div>
+        <div class="eyebrow" style="margin:var(--sp-4) 0 var(--sp-2)">Recent transactions</div>
+        <div class="rowlist">${txns.map(t=>richRow({icon:t.amount>0?'arr-dl':'arr-ur',cls:t.amount>0?'pos':'neg',name:t.desc,sub:t.category+' · '+t.date,amt:bizMoney(t.amount,true),amtColor:t.amount>0?'var(--pos)':''})).join('')||bizEmpty('No transactions.')}</div>
+        <div class="row gap-2 wrap" style="margin-top:var(--sp-4)">
+          <button class="btn btn-outline btn-sm" data-drawer="business" data-id="${b.id}">${I('arr-r')} View business</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="editBusiness" data-id="${b.id}">${I('tag')} Edit</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="addTransaction" data-id="${b.id}">${I('plus')} Transaction</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="addExpense" data-id="${b.id}">${I('receipt')} Expense</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="createInvoice" data-id="${b.id}">${I('invoice')} Invoice</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="addBill" data-id="${b.id}">${I('receipt')} Bill</button>
+          <button class="btn btn-ghost btn-sm" data-bizact="uploadDocument" data-id="${b.id}">${I('download')} Document</button>
+        </div></div></details>`; }).join('');
+  return `<div class="card" style="margin-bottom:var(--sp-6)">${sechead('Businesses <span class="badge neutral">'+businessState.businesses.length+'</span>',`<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizexpand="all">Expand all</button><button class="btn btn-outline btn-sm" data-bizexpand="none">Collapse all</button></div>`)}${cards}</div>`; }
+
+function bizAccountsCard(){ const accts=getBusinessScopedData(businessState.accounts);
+  const badge=s=>({connected:['Connected','pos'],manual:['Manual','neutral'],'needs-attention':['Needs attention','gold'],syncing:['Syncing','warn'],disconnected:['Disconnected','neg']})[s]||['—','neutral'];
+  const cards=accts.map(a=>`<div class="acct-card" data-bizact="editAccount" data-id="${a.id}" style="cursor:pointer"><div class="acct-top"><div class="tile ${a.balance<0?'gold':''}">${I(a.type==='Credit Card'?'card':a.type==='Savings'?'pig':'bank')}</div><div class="grow"><div class="acct-name">${a.name}</div><div class="acct-inst">${a.institution}</div></div>${a.primary?'<span class="badge pos" style="font-size:10px">Primary</span>':''}</div><div class="acct-bal num"${a.balance<0?' style="color:var(--neg)"':''}>${bizMoney(a.balance)}</div><div class="row" style="justify-content:space-between;align-items:center;margin-top:6px"><span class="acct-meta">${a.type}${a.limit?' · '+Math.round(Math.abs(a.balance)/a.limit*100)+'% used':''}</span>${bb(badge(a.status))}</div></div>`).join('');
+  return `<div class="card" style="margin-bottom:var(--sp-6)">${sechead('Connected accounts','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="addManualAccount">'+I('plus')+' Manual</button><button class="btn btn-primary btn-sm" data-bizact="linkAccount">'+I('link2')+' Link</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">${I('refresh')} Business accounts are auto-detected and sync automatically.</p>
+    ${accts.length?carousel(cards):bizEmpty('No business accounts linked yet — link a bank, card or loan to auto-track cash.','bank','<button class="btn btn-primary btn-sm" data-bizact="linkAccount">'+I('link2')+' Link account</button>')}</div>`; }
+
+/* ---- tabs ---------------------------------------------------------------- */
+const BIZ_TABS=[
+  {key:'overview',label:'Overview',icon:'grid'},
+  {key:'transactions',label:'Transactions',icon:'exchange'},
+  {key:'expenses',label:'Expenses',icon:'receipt'},
+  {key:'invoicing',label:'Invoicing & sales',icon:'invoice'},
+  {key:'bills',label:'Bills & AP',icon:'receipt'},
+  {key:'statements',label:'Statements',icon:'file'},
+  {key:'customers',label:'Customers',icon:'users'},
+  {key:'vendors',label:'Vendors',icon:'brief'},
+  {key:'documents',label:'Documents',icon:'folder'},
+  {key:'settings',label:'Settings',icon:'settings'},
+  {key:'team',label:'Team & access',icon:'users'},
+  {key:'activity',label:'Activity',icon:'repeat'},
+];
+function bizTabBar(){ return `<div class="tabs" style="margin-bottom:var(--sp-4)"><div class="tabs-track">${BIZ_TABS.map(t=>`<button class="tab${businessState.activeTab===t.key?' active':''}" data-biztab="${t.key}">${I(t.icon)}${t.label}</button>`).join('')}</div></div>`; }
+function bizPanelHTML(){ const t=BIZ_TABS.find(x=>x.key===businessState.activeTab)||BIZ_TABS[0]; return ({
+    overview:panelOverview, transactions:panelTransactions, expenses:panelExpenses, invoicing:panelInvoicing,
+    bills:panelBills, statements:panelStatements, customers:panelCustomers, vendors:panelVendors,
+    documents:panelDocuments, settings:panelSettings, team:panelTeam, activity:panelActivity })[t.key](); }
+
+/* ============================================================================
+   PANELS
+   ============================================================================ */
+function panelOverview(){ const k=bizKpis(); const inv=getBusinessScopedData(businessState.invoices);
+  const ar=inv.filter(i=>i.status!=='paid'&&i.status!=='void');
+  const vend=getBusinessScopedData(businessState.vendors).slice().sort((a,b)=>b.spend-a.spend).slice(0,4); const maxSpend=vend.length?vend[0].spend:1;
+  const act=getBusinessScopedData(businessState.activities).slice(0,4);
+  return `<div class="grid g12">
+    <div class="card c6">${sechead('P&amp;L snapshot','<span class="badge neutral">'+bizPeriodLabel()+'</span>')}<div class="rowlist">
+      ${richRow({icon:'arr-dl',cls:'pos',name:'Income',sub:'Revenue',amt:bizMoney(k.rev),amtColor:'var(--pos)'})}
+      ${richRow({icon:'arr-ur',cls:'neg',name:'Expenses',sub:'Operating',amt:bizMoney(k.exp),amtColor:'var(--neg)'})}
+      ${richRow({icon:'scale',cls:'',name:'Net profit',sub:bizPeriodLabel(),amt:bizMoney(k.net),amtColor:'var(--pos)'})}
     </div></div>
     <div class="card c6">${sechead('Top vendors','<span class="badge neutral">By spend</span>')}
-      ${[['WeWork','$10,800',100],['Gusto Payroll','$8,400',78],['Adobe','$3,594',33],['Delta Airlines','$2,510',23]].map(v=>`<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:var(--fs-sm);margin-bottom:3px"><span style="font-weight:500">${v[0]}</span><span class="num" style="font-weight:700">${v[1]}</span></div><div class="minibar"><i style="width:${v[2]}%;background:var(--accent)"></i></div></div>`).join('')}
-    </div>
-    <div class="card c12">${sechead('Accounts receivable','<button class="btn btn-outline btn-sm">'+I('invoice')+' New invoice</button>')}<div class="rowlist">
-      ${richRow({icon:'invoice',cls:'neg',name:'Pinecrest Studio',sub:'Overdue · due May 20',amt:'$3,450'})}
-      ${richRow({icon:'invoice',cls:'gold',name:'Harbor Group',sub:'Open · due Jun 28',amt:'$2,100'})}
-      ${richRow({icon:'invoice',cls:'pos',name:'Northwind Co.',sub:'Paid · Jun 12',amt:'$6,200',amtColor:'var(--pos)'})}
-    </div></div></div>`;
-  const transactions=`<div class="card">${sechead('Ledger transactions','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('filter')+' Rules</button><button class="btn btn-outline btn-sm">'+I('download')+' Export</button></div>')}
-    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Set a rule (merchant contains “AWS” → Software) and apply it to every past match in one click.</p>
-    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Deposits</span><span class="chip">Payments</span><span class="chip">Transfers</span><span class="chip">Refunds</span><span class="chip">Tax</span></div>
-    ${T(`<th>Description</th><th>Account</th><th>Category</th><th>Type</th><th>Status</th><th${rt}>Amount</th>`,
-      [['<strong>Client payment — Northwind</strong>','Operating Checking','Income',B('Income','neutral'),B('Cleared','pos'),'<span class="num" style="color:var(--pos)">+$6,200</span>'],
-       ['<strong>Refund — Staples return</strong>','Amex Biz','Office',B('Refund','info'),B('Cleared','pos'),'<span class="num" style="color:var(--pos)">+$142</span>'],
-       ['<strong>Adobe Creative Cloud</strong>','Amex Biz','Software',B('Expense','info'),B('Pending','warn'),'<span class="num">−$599</span>'],
-       ['<strong>Card payment — Amex</strong>','Amex Biz','Transfer',B('Card Pmt','info'),B('Reconciled','pos'),'<span class="num" style="color:var(--pos)">+$2,000</span>'],
-       ['<strong>WeWork — office rent</strong>','Operating Checking','Rent',B('Vendor Pmt','info'),B('Cleared','pos'),'<span class="num">−$1,800</span>']]
-      .map(r=>`<tr>${r.map((c,i)=>`<td${i===5?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
-  const expenses=`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('receipt','','Total tracked','$18,420','24 expenses')}${kpi('file','info','Standalone','$4,180','not in ledger')}${kpi('link2','','Linked','$14,240','to ledger tx')}${kpi('flame','gold','Missing receipts','6','chase before filing')}</div>
-    <div class="card">${sechead('Expenses','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-drawer="expexport">'+I('download')+' Export</button><button class="btn btn-primary btn-sm">'+I('plus')+' Add expense</button></div>')}
-      ${T(`<th>Description</th><th>Category</th><th>Vendor</th><th>Status</th><th>Receipt</th><th${rt}>Amount</th>`,
-        [['<strong>AWS — May usage</strong> '+B('2 linked','neutral'),'Software','AWS',B('Approved','pos'),B('Yes','pos'),'<span class="num">$1,430.00</span>'],
-         ['<strong>Client lunch — Northwind</strong>','Meals','Osteria',B('Needs receipt','gold'),B('Missing','gold'),'<span class="num">$182.40</span>'],
-         ['<strong>Gusto — payroll run</strong>','Payroll','Gusto',B('Approved','pos'),B('N/A','neutral'),'<span class="num">$8,400.00</span>']]
-        .map(r=>`<tr>${r.map((c,i)=>`<td${i===5?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}
-      <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">${I('help')} “Standalone vs linked” keeps linked expenses from double-counting the ledger-derived P&amp;L.</p></div>`;
-  const invoicing=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Pending payments <span class="badge warn">$5,550 due</span>','<span class="badge pos">'+I('bell')+' Auto-reminders on</span>')}
-      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Email/SMS reminders 3 days before due · on due date · 7 days overdue. Skips paid/void, never sends twice.</p>
-      <div class="rowlist">
-        <div class="rowitem"><div class="tile sm neg">${I('invoice')}</div><div class="grow"><div class="r-name">Pinecrest Studio ${B('Overdue','neg')}</div><div class="r-sub">Due May 20</div></div><div class="row gap-3"><div class="r-amt num">$3,450</div><button class="btn btn-ghost btn-sm">${I('check')} Mark paid</button></div></div>
-        <div class="rowitem"><div class="tile sm gold">${I('invoice')}</div><div class="grow"><div class="r-name">Harbor Group ${B('Open','warn')}</div><div class="r-sub">Due Jun 28</div></div><div class="row gap-3"><div class="r-amt num">$2,100</div><button class="btn btn-ghost btn-sm">${I('check')} Mark paid</button></div></div>
-      </div></div>
-    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Invoices','<button class="btn btn-outline btn-sm">'+I('plus')+' Create invoice</button>')}
-      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Draft → Sent → Viewed → Partially paid → Paid → Void. Embedded Pay Now link (card/ACH) auto-reconciles.</p>
-      ${T(`<th>Customer</th><th${rt}>Amount</th><th>Status</th><th>Source</th><th>Docs</th>`,
-        [['Northwind Co.','<span class="num">$6,200</span>',B('Paid','pos'),B('Manual','neutral'),'<button class="btn btn-ghost btn-sm">'+I('clip')+' 2</button>'],
-         ['Pinecrest Studio','<span class="num">$3,450</span>',B('Overdue','neg')+' '+I('help','muted'),B('QuickBooks','pos'),'—'],
-         ['Harbor Group','<span class="num">$2,100</span> <span class="muted">$900 due</span>',B('Partially paid','warn'),B('Manual','neutral'),'<button class="btn btn-ghost btn-sm">'+I('link2')+'</button>']]
-        .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+      ${vend.length?vend.map(v=>`<div style="margin-bottom:12px"><div class="row" style="justify-content:space-between;font-size:var(--fs-sm);margin-bottom:3px"><span style="font-weight:500">${v.name}</span><span class="num" style="font-weight:700">${bizMoney(v.spend)}</span></div><div class="minibar"><i style="width:${Math.round(v.spend/maxSpend*100)}%;background:var(--accent)"></i></div></div>`).join(''):bizEmpty('No vendors.')}</div>
+    <div class="card c6">${sechead('Accounts receivable','<button class="btn btn-outline btn-sm" data-bizact="createInvoice">'+I('invoice')+' New invoice</button>')}<div class="rowlist">
+      ${ar.length?ar.map(i=>richRow({icon:'invoice',cls:i.status==='overdue'?'neg':'gold',name:i.customer,sub:bb(INV_STATUS[i.status])+' · due '+i.due,amt:bizMoney(i.amount-i.paid)})).join(''):bizEmpty('Nothing outstanding — all receivables are collected.','check')}</div></div>
+    <div class="card c6">${sechead('Recent activity','<button class="btn btn-ghost btn-sm" data-biztab="activity">All '+I('arr-r')+'</button>')}<div class="rowlist">
+      ${act.map(a=>richRow({icon:'repeat',cls:a.status==='pending'?'gold':'',name:a.action,sub:a.record+' · '+a.user,amt:''})).join('')}</div></div>
+    <div class="card c12" style="border-left:4px solid var(--accent);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>Advisor:</strong> ${getSelectedBusiness()?getSelectedBusiness().name:'Your portfolio'} is cash-flow positive ${bizPeriodLabel()}. One invoice is 12 days overdue — a reminder now typically recovers payment within a week.</div><button class="btn btn-ghost btn-sm mla" data-nav="ai">Discuss ${I('arr-r')}</button></div>
+  </div>`; }
+
+function panelTransactions(){ const f=businessState.filters; let rows=getBusinessScopedData(businessState.transactions);
+  if(f.txnDir!=='all') rows=rows.filter(t=>t.dir===f.txnDir);
+  if(f.txnStatus!=='all') rows=rows.filter(t=>t.status===f.txnStatus);
+  const tin=rows.filter(t=>t.amount>0).reduce((a,t)=>a+t.amount,0), tout=rows.filter(t=>t.amount<0).reduce((a,t)=>a-t.amount,0);
+  const dirs=[['all','All'],['in','Money in'],['out','Money out'],['transfer','Transfers']];
+  const attr=bizAttrCol();
+  const body=rows.length?rows.map(t=>`<tr><td><strong>${t.desc}</strong>${attr?`<div class="r-sub muted">${bizName(t.businessId)}</div>`:''}</td><td>${t.account}</td><td>${t.category}</td><td>${bb([t.type,'info'])}</td><td>${bb(TXN_STATUS[t.status])}</td><td class="muted">${t.date}</td><td${RT}><span class="num"${t.amount>0?' style="color:var(--pos)"':''}>${bizMoney(t.amount,true)}</span></td><td${RT}>${iacts(iact('search','viewTxn',t.id,'View'),iact('tag','recatTxn',t.id,'Categorize'),iact('link2','linkTxn',t.id,'Link'),iact('check','reconcileTxn',t.id,'Reconcile'))}</td></tr>`).join(''):`<tr><td colspan="8">${bizEmpty('No transactions match these filters.')}</td></tr>`;
+  return `<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-dl','pos','Money in',bizMoney(tin),bizPeriodLabel())}${kpi('arr-ur','neg','Money out',bizMoney(tout),bizPeriodLabel())}${kpi('scale','','Net',bizMoney(tin-tout,true),rows.length+' transactions')}</div>
+    <div class="card">${sechead('Ledger transactions','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="txnRules">'+I('filter')+' Rules</button><button class="btn btn-outline btn-sm" data-bizact="exportCsv" data-coll="transactions">'+I('download')+' Export</button><button class="btn btn-primary btn-sm" data-bizact="addTransaction">'+I('plus')+' Add manual</button></div>')}
+    <div class="chiprow" style="margin-bottom:var(--sp-3)">${dirs.map(d=>`<span class="chip${f.txnDir===d[0]?' active':''}" data-bizfilter="txnDir" data-val="${d[0]}">${d[1]}</span>`).join('')}</div>
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search description, merchant or category…','#bizTxnTable')}${bizSelect('txnStatus',[['all','All statuses'],['categorized','Categorized'],['needs-review','Needs review'],['pending','Pending'],['reconciled','Reconciled'],['excluded','Excluded']])}</div>
+    ${bizTable(`<th>Description</th><th>Account</th><th>Category</th><th>Type</th><th>Status</th><th>Date</th><th${RT}>Amount</th><th></th>`,body,'bizTxnTable')}</div>`; }
+
+function panelExpenses(){ const f=businessState.filters; let rows=getBusinessScopedData(businessState.expenses);
+  if(f.expStatus!=='all') rows=rows.filter(e=>e.status===f.expStatus);
+  const tot=rows.reduce((a,e)=>a+e.amount,0), linked=rows.filter(e=>e.linked>0).reduce((a,e)=>a+e.amount,0), miss=rows.filter(e=>!e.receipt).length;
+  const attr=bizAttrCol();
+  const body=rows.length?rows.map(e=>`<tr><td><strong>${e.desc}</strong>${e.linked?' '+bb([e.linked+' linked','neutral']):''}${attr?`<div class="r-sub muted">${bizName(e.businessId)}</div>`:''}</td><td>${e.category}</td><td>${e.vendor}</td><td class="muted">${e.date}</td><td>${bb(EXP_STATUS[e.status])}</td><td>${bb(e.receipt?['Yes','pos']:['Missing','gold'])}</td><td${RT}><span class="num">${bizMoney(e.amount)}</span></td><td${RT}>${iacts(iact('link2','linkTxn',e.id,'Link transaction'),iact('check','approveExp',e.id,'Approve'),iact('tag','editExp',e.id,'Edit'),iact('x','deleteExp',e.id,'Delete'))}</td></tr>`).join(''):`<tr><td colspan="8">${bizEmpty('No expenses match these filters.')}</td></tr>`;
+  return `<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('receipt','','Total tracked',bizMoney(tot),rows.length+' expenses')}${kpi('file','info','Linked',bizMoney(linked),'documents ledger tx')}${kpi('flame','gold','Missing receipts',String(miss),'chase before filing')}</div>
+    <div class="card">${sechead('Expenses','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="linkTxn">'+I('link2')+' Link transactions</button><button class="btn btn-outline btn-sm" data-bizact="exportExpenses">'+I('download')+' Export</button><button class="btn btn-primary btn-sm" data-bizact="addExpense">'+I('plus')+' Add expense</button></div>')}
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search description, vendor or category…','#bizExpTable')}${bizSelect('expStatus',[['all','All statuses'],['approved','Approved'],['submitted','Submitted'],['missing-receipt','Needs receipt'],['reimbursed','Reimbursed']])}</div>
+    ${bizTable(`<th>Description</th><th>Category</th><th>Vendor</th><th>Date</th><th>Status</th><th>Receipt</th><th${RT}>Amount</th><th></th>`,body,'bizExpTable')}
+    <p class="muted" style="font-size:var(--fs-xs);margin-top:10px">${I('help')} “Linked” expenses document an existing ledger transaction and are excluded from the ledger-derived P&amp;L to prevent double-counting.</p></div>`; }
+
+function panelInvoicing(){ const inv=getBusinessScopedData(businessState.invoices); const attr=bizAttrCol();
+  const pend=inv.filter(i=>i.status==='overdue'||i.status==='partial'||i.status==='sent');
+  const pendHtml=pend.length?pend.map(i=>`<div class="rowitem"><div class="tile sm ${i.status==='overdue'?'neg':'gold'}">${I('invoice')}</div><div class="grow"><div class="r-name">${i.customer} ${bb(INV_STATUS[i.status])}</div><div class="r-sub">Due ${i.due}${attr?' · '+bizName(i.businessId):''}</div></div><div class="row gap-3"><div class="r-amt num">${bizMoney(i.amount-i.paid)}</div><button class="btn btn-ghost btn-sm" data-bizact="markPaidInvoice" data-id="${i.id}">${I('check')} Mark paid</button></div></div>`).join(''):bizEmpty('No pending payments — every invoice is settled.','check');
+  const invRows=inv.map(i=>`<tr><td>${i.customer}${attr?`<div class="r-sub muted">${bizName(i.businessId)}</div>`:''}</td><td${RT}><span class="num">${bizMoney(i.amount)}</span>${i.paid>0&&i.paid<i.amount?` <span class="muted">${bizMoney(i.amount-i.paid)} due</span>`:''}</td><td>${bb(INV_STATUS[i.status])}</td><td>${bb([i.source,i.source==='QuickBooks'?'pos':'neutral'])}</td><td${RT}>${iacts(iact('search','viewInvoice',i.id,'View'),iact('link2','sendInvoice',i.id,'Send'),iact('check','markPaidInvoice',i.id,'Mark paid'),iact('download','downloadInvoice',i.id,'Download'))}</td></tr>`).join('');
+  const po=getBusinessScopedData(businessState.purchaseOrders), qt=getBusinessScopedData(businessState.quotes);
+  const pr=getBusinessScopedData(businessState.projects), rec=getBusinessScopedData(businessState.recurring);
+  const poRows=po.length?po.map(p=>`<tr><td>${p.vendor}</td><td class="muted">${p.category}</td><td${RT}><span class="num">${bizMoney(p.amount)}</span></td><td class="muted">${p.expected}</td><td>${bb([p.status==='converted'?'Converted':'Approved',p.status==='converted'?'pos':'neutral'])}</td><td${RT}>${p.status==='converted'?'<span class="muted">Billed</span>':`<button class="btn btn-primary btn-sm" data-bizact="convertPO" data-id="${p.id}">Convert</button>`}</td></tr>`).join(''):`<tr><td colspan="6">${bizEmpty('No purchase orders.')}</td></tr>`;
+  const qtRows=qt.length?qt.map(q=>`<tr><td>${q.customer}</td><td${RT}><span class="num">${bizMoney(q.amount)}</span></td><td>${bb([q.status==='converted'?'Converted':'Sent',q.status==='converted'?'pos':'neutral'])}</td><td class="muted">${q.expires}</td><td${RT}>${q.status==='converted'?'<span class="muted">Invoiced</span>':`<button class="btn btn-primary btn-sm" data-bizact="convertQuote" data-id="${q.id}">Convert</button>`}</td></tr>`).join(''):`<tr><td colspan="5">${bizEmpty('No quotes.')}</td></tr>`;
+  const recRows=rec.length?rec.map(r=>`<tr><td>${r.customer}${attr?`<div class="r-sub muted">${bizName(r.businessId)}</div>`:''}</td><td>${r.every}</td><td${RT}><span class="num">${bizMoney(r.amount)}</span></td><td class="muted">${r.next}</td><td>${bb([r.status==='active'?'Active':'Paused',r.status==='active'?'pos':'warn'])}</td><td${RT}>${iacts(iact('repeat','runRecurring',r.id,'Run now'),iact(r.status==='active'?'pause':'play',r.status==='active'?'pauseRecurring':'resumeRecurring',r.id,r.status==='active'?'Pause':'Resume'))}</td></tr>`).join(''):`<tr><td colspan="6">${bizEmpty('No recurring schedules.')}</td></tr>`;
+  const projHtml=pr.length?pr.map(p=>`<div><div class="row" style="justify-content:space-between;align-items:center"><div><strong>${p.name}</strong> <span class="muted">· ${p.customer} · ${bizMoney(p.billed)} of ${bizMoney(p.budget)} billed</span></div><span class="badge neutral">${p.status==='active'?'Active':'Done'}</span></div><div class="bar" style="margin:8px 0"><i style="width:${Math.round(p.billed/p.budget*100)}%"></i></div><div class="muted" style="font-size:var(--fs-xs);margin-bottom:8px">${bizMoney(p.budget-p.billed)} remaining</div>${bizTable(`<th>Milestone</th><th${RT}>Amount</th><th>Due</th><th>Status</th><th></th>`,p.milestones.map((m,mi)=>`<tr><td>${m.name}</td><td${RT}><span class="num">${bizMoney(m.amount)}</span></td><td class="muted">${m.due}</td><td>${bb(m.status==='invoiced'?['Invoiced','pos']:['Pending','warn'])}</td><td${RT}>${m.status==='invoiced'?'<span class="muted">Invoiced</span>':`<button class="btn btn-primary btn-sm" data-bizact="billMilestone" data-id="${p.id}:${mi}">Bill</button>`}</td></tr>`).join(''))}</div>`).join(''):bizEmpty('No projects.');
+  return `<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Pending payments <span class="badge warn">'+bizMoney(pend.reduce((a,i)=>a+(i.amount-i.paid),0))+' due</span>','<span class="badge pos">'+I('bell')+' Auto-reminders on</span>')}<div class="rowlist">${pendHtml}</div></div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Invoices','<button class="btn btn-outline btn-sm" data-bizact="createInvoice">'+I('plus')+' Create invoice</button>')}
+      ${bizTable(`<th>Customer</th><th${RT}>Amount</th><th>Status</th><th>Source</th><th></th>`,invRows||`<tr><td colspan="5">${bizEmpty('No invoices.')}</td></tr>`)}
+      <div style="margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)"><div class="eyebrow" style="margin-bottom:6px">Northwind Co. · itemized</div><div class="flow-row"><span>Design services · 40h @ $150</span><span class="num">$6,000</span></div><div class="flow-row"><span>Hosting · 1 @ $200</span><span class="num">$200</span></div><div class="flow-row"><span class="muted">Subtotal</span><span class="num muted">$6,200</span></div><div class="flow-row"><span class="muted">Tax (0%)</span><span class="num muted">$0</span></div><div class="flow-row strong"><span>Total</span><span class="num">$6,200</span></div></div></div>
     <div class="grid g12" style="margin-bottom:var(--sp-4)">
-      <div class="card c6">${sechead('<span>'+I('list')+' Purchase orders</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New PO</button>')}
-        <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 8px">Issue a PO, then convert to a bill on approval — one click drops it into Bills &amp; payables.</p>
-        ${T(`<th>Vendor</th><th${rt}>Amount</th><th>Status</th><th></th>`,
-          [['Acme Supply','<span class="num">$1,200</span>',B('Approved','neutral'),'<button class="btn btn-primary btn-sm">Convert</button>'],
-           ['Metro Print','<span class="num">$640</span>',B('Converted','pos'),'<span class="muted">Billed</span>']]
-          .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
-      <div class="card c6">${sechead('<span>'+I('file')+' Quotes &amp; estimates</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New quote</button>')}
-        <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 8px">When the customer accepts, convert to an invoice (with line items) in one click.</p>
-        ${T(`<th>Customer</th><th${rt}>Amount</th><th>Status</th><th></th>`,
-          [['Blue Harbor LLC','<span class="num">$4,800</span>',B('Sent','neutral'),'<button class="btn btn-primary btn-sm">Convert</button>']]
-          .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
+      <div class="card c6">${sechead('Purchase orders','<button class="btn btn-outline btn-sm" data-bizact="newPO">'+I('plus')+' New PO</button>')}${bizTable(`<th>Vendor</th><th>Category</th><th${RT}>Amount</th><th>Expected</th><th>Status</th><th></th>`,poRows)}</div>
+      <div class="card c6">${sechead('Quotes &amp; estimates','<button class="btn btn-outline btn-sm" data-bizact="newQuote">'+I('plus')+' New quote</button>')}${bizTable(`<th>Customer</th><th${RT}>Amount</th><th>Status</th><th>Expires</th><th></th>`,qtRows)}</div>
     </div>
-    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('<span>'+I('trend')+' Projects &amp; milestone billing</span>')}
-      <div><strong>Website build</strong> <span class="muted">· Blue Harbor · $3,000 of $10,000 billed</span><div class="bar" style="margin:8px 0"><i style="width:30%"></i></div>
-      ${T(`<th>Milestone</th><th${rt}>Amount</th><th>Status</th><th></th>`,
-        [['Deposit · 30%','<span class="num">$3,000</span>',B('Invoiced','pos'),'—'],
-         ['Midpoint · 40%','<span class="num">$4,000</span>',B('Pending','warn'),'<button class="btn btn-primary btn-sm">Bill</button>'],
-         ['Completion · 30%','<span class="num">$3,000</span>',B('Pending','warn'),'<button class="btn btn-primary btn-sm">Bill</button>']]
-        .map(r=>`<tr>${r.map((c,i)=>`<td${i===1?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div></div>
-    <div class="card">${sechead('<span>'+I('repeat')+' Recurring invoices</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New schedule</button>')}
-      ${T(`<th>Customer</th><th>Every</th><th${rt}>Amount</th><th>Next run</th><th>Status</th>`,
-        [['Northwind Co.','Monthly','<span class="num">$2,500</span>','Aug 1',B('Active','pos')],
-         ['Harbor Group','Quarterly','<span class="num">$6,000</span>','Sep 30',B('Paused','warn')]]
-        .map(r=>`<tr>${r.map((c,i)=>`<td${i===2?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
-  const ap=`<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Bills &amp; payables <span class="badge warn">$4,180 owed</span>','<button class="btn btn-outline btn-sm">'+I('plus')+' New bill</button>')}
-    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Record a vendor bill and pay it in full or part — each posts to the ledger as an expense and accounts payable.</p>
-    ${T(`<th>Vendor</th><th>Category</th><th${rt}>Amount</th><th>Due</th><th>Status</th><th></th>`,
-      [['Staples','Operating','<span class="num">$1,180</span>','Aug 5',B('Open','warn'),'<button class="btn btn-ghost btn-sm">'+I('receipt')+' Pay</button>'],
-       ['AWS','Software','<span class="num">$3,000</span> <span class="muted">$1,500 due</span>','Aug 12',B('Partially paid','warn'),'<button class="btn btn-ghost btn-sm">'+I('receipt')+' Pay</button>'],
-       ['City Utilities','Utilities','<span class="num">$420</span>','Jul 28',B('Paid','pos'),'<span class="muted">—</span>']]
-      .map(r=>`<tr>${r.map((c,i)=>`<td${i===2?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>
-    <div class="card">${sechead('Payables aging','<span class="badge neutral">$4,180 owed</span>')}
-      ${stackBar([{pct:70,color:'--pos'},{pct:20,color:'--gold'},{pct:10,color:'--neg'}])}
-      <div style="margin-top:10px">${agingRow('--pos','Current','$2,940')}${agingRow('--gold','1–30 days','$820')}${agingRow('--neg','90+ days','$420')}</div>
+    <div class="card" style="margin-bottom:var(--sp-4)">${sechead('Projects &amp; milestone billing','<button class="btn btn-outline btn-sm" data-bizact="newProject">'+I('plus')+' New project</button>')}${projHtml}</div>
+    <div class="card">${sechead('Recurring invoices','<button class="btn btn-outline btn-sm" data-bizact="newRecurring">'+I('plus')+' New schedule</button>')}${bizTable(`<th>Customer</th><th>Every</th><th${RT}>Amount</th><th>Next run</th><th>Status</th><th></th>`,recRows)}</div>`; }
+
+function panelBills(){ const f=businessState.filters; let rows=getBusinessScopedData(businessState.bills);
+  if(f.billStatus!=='all') rows=rows.filter(b=>b.status===f.billStatus);
+  const owed=rows.reduce((a,b)=>a+(b.amount-b.paid),0); const attr=bizAttrCol();
+  const body=rows.length?rows.map(b=>`<tr><td>${b.vendor}${attr?`<div class="r-sub muted">${bizName(b.businessId)}</div>`:''}</td><td class="muted">${b.category}</td><td${RT}><span class="num">${bizMoney(b.amount)}</span>${b.paid>0&&b.paid<b.amount?` <span class="muted">${bizMoney(b.amount-b.paid)} due</span>`:''}</td><td class="muted">${b.due}</td><td>${bb(BILL_STATUS[b.status])}</td><td${RT}>${b.status==='paid'?'<span class="muted">—</span>':iacts(iact('receipt','payBill',b.id,'Pay'),iact('check','approveBill',b.id,'Approve'),iact('tag','editBill',b.id,'Edit'))}</td></tr>`).join(''):`<tr><td colspan="6">${bizEmpty('No bills match these filters.')}</td></tr>`;
+  const a=bizAging(); const pct=v=>a.total?Math.round(v/a.total*100):0;
+  return `<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Bills &amp; payables <span class="badge warn">'+bizMoney(owed)+' owed</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="exportCsv" data-coll="bills">'+I('download')+' Export</button><button class="btn btn-primary btn-sm" data-bizact="addBill">'+I('plus')+' New bill</button></div>')}
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search vendor or category…','#bizBillTable')}${bizSelect('billStatus',[['all','All statuses'],['open','Open'],['partial','Partially paid'],['paid','Paid'],['overdue','Overdue']])}</div>
+    ${bizTable(`<th>Vendor</th><th>Category</th><th${RT}>Amount</th><th>Due</th><th>Status</th><th></th>`,body,'bizBillTable')}</div>
+    <div class="card">${sechead('Payables aging','<span class="badge neutral">'+bizMoney(a.total)+' owed</span>')}${stackBar([{pct:pct(a.current),color:'--pos'},{pct:pct(a.d1_30),color:'--gold'},{pct:pct(a.d31_60),color:'--gold'},{pct:pct(a.d61_90),color:'--neg'},{pct:pct(a.over90),color:'--neg'}])}
+    <div style="margin-top:10px"><div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(--pos)"></span> Current</span><span class="num">${bizMoney(a.current)}</span></div><div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(--gold)"></span> 1–60 days</span><span class="num">${bizMoney(a.d1_30+a.d31_60)}</span></div><div class="row" style="justify-content:space-between;padding:5px 0"><span class="legend-item"><span class="legend-dot" style="background:var(--neg)"></span> 61+ days</span><span class="num">${bizMoney(a.d61_90+a.over90)}</span></div></div></div>`; }
+
+function panelStatements(){ const k=bizKpis();
+  return `<div class="card">${sechead('Financial statements <span class="badge pos">'+I('shield')+' Ledger verified</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="exportStatement" data-fmt="excel">'+I('download')+' Excel</button><button class="btn btn-outline btn-sm" data-bizact="exportStatement" data-fmt="pdf">'+I('file')+' PDF</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Real double-entry P&amp;L, Balance Sheet and Cash Flow — computed from journal entries, ${bizPeriodLabel()}.</p>
+    <div class="seg" style="margin-bottom:var(--sp-4)"><button class="active" data-bizstmt="pnl">Profit &amp; Loss</button><button data-bizstmt="bs">Balance Sheet</button><button data-bizstmt="cf">Cash Flow</button></div>
+    <div class="flow-row"><span style="color:var(--ink-3);font-weight:600">Income</span><span></span></div>
+    <div class="flow-row" style="padding-left:16px"><span>4000 · Sales Income</span><span class="num">${bizMoney(k.rev)}</span></div>
+    <div class="flow-row strong"><span>Total income</span><span class="num">${bizMoney(k.rev)}</span></div>
+    <div class="flow-row"><span style="color:var(--ink-3);font-weight:600">Expenses</span><span></span></div>
+    <div class="flow-row" style="padding-left:16px"><span>6000 · Operating Expenses</span><span class="num">${bizMoney(k.exp)}</span></div>
+    <div class="flow-row strong"><span>Total expenses</span><span class="num">${bizMoney(k.exp)}</span></div>
+    <div class="flow-row strong" style="border-top:2px solid var(--border)"><span>Net profit</span><span class="num" style="color:var(--pos)">${bizMoney(k.net)}</span></div>
+    <div class="row gap-2" style="justify-content:flex-end;margin-top:var(--sp-4)"><button class="btn btn-outline btn-sm" data-bizact="saveReportDoc">${I('folder')} Save to Documents</button></div></div>`; }
+
+function panelCustomers(){ const cust=getBusinessScopedData(businessState.customers); const attr=bizAttrCol();
+  const body=cust.length?cust.map(c=>`<tr><td><strong>${c.name}</strong>${attr?`<div class="r-sub muted">${bizName(c.businessId)}</div>`:''}</td><td class="muted">${c.email}</td><td class="muted">${c.taxId}</td><td>${bb([c.pays,'neutral'])}</td><td class="muted">${c.terms}</td><td${RT}>${c.outstanding?`<span class="num">${bizMoney(c.outstanding)}</span>`:'<span class="muted">—</span>'}</td><td${RT}>${iacts(iact('invoice','createInvoice',c.id,'Invoice'),iact('tag','editCustomer',c.id,'Edit'),iact('x','archiveCustomer',c.id,'Archive'))}</td></tr>`).join(''):`<tr><td colspan="7">${bizEmpty('No customers.')}</td></tr>`;
+  return `<div class="card">${sechead('Customers','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="taxRates">'+I('invoice')+' Tax rates</button><button class="btn btn-outline btn-sm" data-bizact="exportCsv" data-coll="customers">'+I('download')+' Export</button><button class="btn btn-primary btn-sm" data-bizact="addCustomer">'+I('plus')+' Add</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Saved billing parties reused across invoices — pick one to auto-fill contact, tax ID &amp; <strong>apply their location’s sales-tax rate</strong>.</p>
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search customers…','#bizCustTable')}</div>
+    ${bizTable(`<th>Name</th><th>Contact</th><th>Tax ID</th><th>Pays by</th><th>Terms</th><th${RT}>Outstanding</th><th></th>`,body,'bizCustTable')}</div>`; }
+
+function panelVendors(){ const vend=getBusinessScopedData(businessState.vendors); const attr=bizAttrCol();
+  const body=vend.length?vend.map(v=>`<tr><td><strong>${v.name}</strong>${attr?`<div class="r-sub muted">${bizName(v.businessId)}</div>`:''}</td><td class="muted">${v.email}</td><td class="muted">${v.taxId}</td><td>${bb([v.category,'neutral'])}</td><td class="muted">${v.terms}</td><td${RT}>${v.outstanding?`<span class="num">${bizMoney(v.outstanding)}</span>`:'<span class="muted">—</span>'}</td><td${RT}><span class="num">${bizMoney(v.spend)}</span></td><td${RT}>${iacts(iact('receipt','addBill',v.id,'New bill'),iact('tag','editVendor',v.id,'Edit'),iact('x','archiveVendor',v.id,'Archive'))}</td></tr>`).join(''):`<tr><td colspan="8">${bizEmpty('No vendors.')}</td></tr>`;
+  return `<div class="card">${sechead('Vendors','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="exportCsv" data-coll="vendors">'+I('download')+' Export</button><button class="btn btn-primary btn-sm" data-bizact="addVendor">'+I('plus')+' Add vendor</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Saved payees reused across bills &amp; POs — with default category, payment terms and running spend.</p>
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search vendors…','#bizVendTable')}</div>
+    ${bizTable(`<th>Name</th><th>Contact</th><th>Tax ID</th><th>Category</th><th>Terms</th><th${RT}>Open bills</th><th${RT}>Total spend</th><th></th>`,body,'bizVendTable')}</div>`; }
+
+function panelDocuments(){ const f=businessState.filters; let docs=getBusinessScopedData(businessState.documents);
+  if(f.docType!=='all') docs=docs.filter(d=>d.category===f.docType);
+  if(f.docYear!=='all') docs=docs.filter(d=>d.year===f.docYear);
+  const types=[['all','All'],['Invoice','Invoice'],['Receipt','Receipt'],['Contract','Contract'],['Tax','Tax']];
+  const years=[['all','All years'],['2026','2026'],['2025','2025']];
+  const icon=c=>({Invoice:'invoice',Receipt:'receipt',Contract:'file',Tax:'file'})[c]||'file';
+  const groups={}; docs.forEach(d=>{ (groups[d.businessId]=groups[d.businessId]||[]).push(d); });
+  const grouped=businessState.selectedBusinessId==='all';
+  let list='';
+  if(grouped){ Object.keys(groups).forEach(bid=>{ const b=bizFind(bid); list+=`<div class="row gap-2" style="align-items:center;margin:var(--sp-3) 0 8px"><div class="tile sm ${b?b.cls:''}">${I('folder')}</div><span style="font-weight:600">${bizName(bid)}</span><span class="badge neutral">${groups[bid].length}</span></div><div class="rowlist">${groups[bid].map(d=>docRow(d,icon)).join('')}</div>`; }); if(!docs.length) list=bizEmpty('No documents match these filters.'); }
+  else { list=docs.length?`<div class="rowlist">${docs.map(d=>docRow(d,icon)).join('')}</div>`:bizEmpty('No documents match these filters.'); }
+  return `<div class="card">${sechead('Document center <span class="badge neutral">'+docs.length+'</span>','<button class="btn btn-primary btn-sm" data-bizact="uploadDocument">'+I('download')+' Add document</button>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Upload files &amp; images or paste a share link — filed under their business, by year. Export flows also save here.</p>
+    <div class="seg" style="margin-bottom:var(--sp-3)"><button class="active" data-bizact="uploadDocument">${I('download')} Upload file</button><button data-bizact="addDocLink">${I('link2')} Add link</button></div>
+    <div class="chiprow" style="margin-bottom:var(--sp-3)">${types.map(t=>`<span class="chip${f.docType===t[0]?' active':''}" data-bizfilter="docType" data-val="${t[0]}">${t[1]}</span>`).join('')}</div>
+    <div class="chiprow" style="margin-bottom:var(--sp-4)">${years.map(y=>`<span class="chip${f.docYear===y[0]?' active':''}" data-bizfilter="docYear" data-val="${y[0]}">${y[1]}</span>`).join('')}</div>
+    ${list}</div>`; }
+function docRow(d,icon){ return `<div class="rowitem"><div class="tile sm ${d.category==='Tax'?'gold':d.category==='Contract'?'violet':d.category==='Receipt'?'pos':'info'}">${I(icon(d.category))}</div><div class="grow"><div class="r-name">${d.name}</div><div class="r-sub">${d.category} · ${d.year}${d.size?' · '+d.size:''} · added ${d.added}</div></div><div class="row gap-1">${iact('search','previewDoc',d.id,'Preview')}${iact('download','downloadDoc',d.id,'Download')}${iact('x','deleteDoc',d.id,'Delete')}</div></div>`; }
+
+function panelSettings(){ const b=getSelectedBusiness();
+  if(!b) return `<div class="card">${sechead('Business settings')}<p class="muted" style="font-size:var(--fs-sm)">Select an individual business above to edit its profile, accounting, tax, payment and integration settings.</p><div class="chiprow" style="margin-top:var(--sp-3)">${businessState.businesses.map(x=>`<span class="chip" data-bizsel="${x.id}">${I(x.logo)} ${x.name}</span>`).join('')}</div></div>`;
+  const fld=(label,val)=>`<div><label class="flabel">${label}</label><input class="finput" value="${val}"></div>`;
+  const sel=(label,opts,cur)=>`<div><label class="flabel">${label}</label><select class="finput">${opts.map(o=>`<option${o===cur?' selected':''}>${o}</option>`).join('')}</select></div>`;
+  const intgRow=(name,key)=>{ const st=b.integrations[key]; return `<div class="rowitem"><div class="tile sm ${st==='connected'?'pos':''}">${I('link2')}</div><div class="grow"><div class="r-name">${name}</div><div class="r-sub">${st==='connected'?'Connected · synced '+b.lastSync:'Not connected'}</div></div>${st==='connected'?`<div class="row gap-2"><button class="btn btn-ghost btn-sm" data-bizact="configIntegration" data-id="${key}">Configure</button><button class="btn btn-outline btn-sm" data-bizact="disconnectIntegration" data-id="${key}">Disconnect</button></div>`:`<button class="btn btn-outline btn-sm" data-bizact="connectIntegration" data-id="${key}">Connect</button>`}</div>`; };
+  return `<div class="stack gap-4">
+    <div class="card">${sechead('Business profile')}<div class="grid g12" style="row-gap:var(--sp-3)">
+      <div class="c6">${fld('Legal name',b.legalName)}</div><div class="c6">${fld('DBA',b.dba||'—')}</div>
+      <div class="c4">${sel('Entity type',['LLC','S-Corp','C-Corp','Sole proprietor','Partnership'],b.entity)}</div><div class="c4">${fld('EIN',b.ein)}</div><div class="c4">${fld('Formation state',b.formationState)}</div>
+      <div class="c6">${fld('Industry',b.industry)}</div><div class="c6">${fld('Formation date',b.formationDate)}</div>
+      <div class="c12">${fld('Address',b.address)}</div>
+      <div class="c4">${fld('Phone',b.phone)}</div><div class="c4">${fld('Email',b.email)}</div><div class="c4">${fld('Website',b.website)}</div>
+    </div><div class="row" style="justify-content:flex-end;margin-top:var(--sp-4)"><button class="btn btn-primary btn-sm" data-bizact="saveSettings">${I('check')} Save profile</button></div></div>
+    <div class="card">${sechead('Accounting')}<div class="grid g12" style="row-gap:var(--sp-3)">
+      <div class="c4">${sel('Method',['Accrual','Cash'],b.accountingMethod)}</div><div class="c4">${sel('Fiscal year start',['January','April','July','October'],b.fiscalYearStart)}</div><div class="c4">${sel('Currency',['USD','CAD','EUR','GBP'],b.currency)}</div>
+      <div class="c6">${fld('Invoice numbering','INV-{0000}')}</div><div class="c6">${fld('Default payment terms','Net 30')}</div>
+    </div></div>
+    <div class="card">${sechead('Taxes')}<div class="grid g12" style="row-gap:var(--sp-3)">
+      <div class="c6">${sel('Federal classification',['S-Corporation','C-Corporation','Partnership','Disregarded entity'],'S-Corporation')}</div><div class="c6">${fld('State tax registration',b.formationState+' · active')}</div>
+      <div class="c6">${sel('Sales-tax nexus',['Single state','Multi-state','None'],'Single state')}</div><div class="c6">${fld('Tax ID (masked)',maskEin(b.ein))}</div>
+    </div><div class="row" style="justify-content:flex-end;margin-top:var(--sp-3)"><button class="btn btn-outline btn-sm" data-bizact="taxRates">${I('invoice')} Manage tax rates</button></div></div>
+    <div class="card">${sechead('Payments')}<div class="grid g12" style="row-gap:var(--sp-3)">
+      <div class="c6">${sel('Default deposit account',businessState.accounts.filter(a=>a.businessId===b.id&&a.type!=='Credit Card').map(a=>a.name).concat(['—']),'')}</div><div class="c6">${sel('Default bill-payment account',businessState.accounts.filter(a=>a.businessId===b.id).map(a=>a.name).concat(['—']),'')}</div>
+      <div class="c12"><label class="flabel">Accepted payment methods</label><div class="chiprow"><span class="chip active">Card</span><span class="chip active">ACH</span><span class="chip">Wire</span><span class="chip">Check</span></div></div>
+    </div></div>
+    <div class="card">${sechead('Integrations')}<div class="rowlist">${intgRow('QuickBooks Online','quickbooks')}${intgRow('Plaid','plaid')}${intgRow('Stripe','stripe')}${intgRow('Square','square')}${intgRow('PayPal','paypal')}</div></div>
+    <div class="card" style="border-color:var(--neg)">${sechead('<span style="color:var(--neg)">Danger zone</span>')}<div class="stack gap-2">
+      <div class="rowitem"><div class="grow"><div class="r-name">Deactivate business</div><div class="r-sub">Hide from dashboards without deleting records</div></div><button class="btn btn-outline btn-sm" data-bizact="deactivateBusiness" data-id="${b.id}">Deactivate</button></div>
+      <div class="rowitem"><div class="grow"><div class="r-name">Transfer ownership</div><div class="r-sub">Assign the Owner role to another member</div></div><button class="btn btn-outline btn-sm" data-bizact="transferOwnership" data-id="${b.id}">Transfer</button></div>
+      <div class="rowitem"><div class="grow"><div class="r-name" style="color:var(--neg)">Delete business</div><div class="r-sub">Permanently remove this business and its records</div></div><button class="btn btn-outline btn-sm" style="color:var(--neg)" data-bizact="removeBusiness" data-id="${b.id}">Delete</button></div>
+    </div></div></div>`; }
+
+const BIZ_ROLES=['Owner','Administrator','Manager','Accountant','Bookkeeper','Billing Manager','Approver','Employee','Viewer','Custom'];
+function panelTeam(){ const id=businessState.selectedBusinessId; const members=businessState.team.filter(m=>id==='all'||m.businessId===id||m.businessId==='all');
+  const body=members.map(m=>`<tr><td><strong>${m.name}</strong><div class="r-sub muted">${m.email}</div></td><td>${bb([m.role,m.role==='Owner'?'pos':'neutral'])}</td><td class="muted">${m.access}</td><td>${bb(m.status==='active'?['Active','pos']:['Invited','warn'])}</td><td class="muted">${m.last}</td><td${RT}>${m.role==='Owner'?'<span class="muted">—</span>':iacts(m.status==='invited'?iact('link2','resendInvite',m.id,'Resend invite'):iact('shield','managePermissions',m.id,'Permissions'),iact('tag','changeRole',m.id,'Change role'),iact('x','removeMember',m.id,'Remove'))}</td></tr>`).join('');
+  return `<div class="card" style="margin-bottom:var(--sp-4)">${sechead('Team &amp; access <span class="badge neutral">'+members.length+'</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="permissionsMatrix">'+I('shield')+' Roles &amp; permissions</button><button class="btn btn-primary btn-sm" data-bizact="inviteMember">'+I('plus')+' Invite member</button></div>')}
+    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Invite teammates and scope their access to all businesses, selected businesses, or one — with role-based or custom permissions.</p>
+    ${bizTable(`<th>Member</th><th>Role</th><th>Business access</th><th>Status</th><th>Last active</th><th></th>`,body)}</div>
+    <div class="card">${sechead('Roles')}<div class="chiprow" style="flex-wrap:wrap">${BIZ_ROLES.map(r=>`<span class="chip" data-bizact="viewRole" data-id="${r}">${r}</span>`).join('')}</div>
+    <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">${I('help')} Custom roles use a per-permission matrix (view balances, categorize, approve payments, manage invoices, manage team, manage settings, …).</p></div>`; }
+
+function panelActivity(){ const acts=getBusinessScopedData(businessState.activities); const attr=bizAttrCol();
+  const body=acts.length?acts.map(a=>`<tr><td class="muted">${a.ts}</td><td>${a.user}</td><td><strong>${a.action}</strong></td><td class="muted">${a.record}</td>${attr?`<td class="muted">${bizName(a.businessId)}</td>`:''}<td>${bb(a.status==='pending'?['Pending','warn']:['Done','pos'])}</td></tr>`).join(''):`<tr><td colspan="${attr?6:5}">${bizEmpty('No activity yet.')}</td></tr>`;
+  return `<div class="card">${sechead('Business activity','<div class="row gap-2"><button class="btn btn-outline btn-sm" data-bizact="exportCsv" data-coll="activities">'+I('download')+' Export</button></div>')}
+    <div class="row gap-2 wrap" style="margin-bottom:var(--sp-3)">${bizSearchBox('Search activity…','#bizActTable')}</div>
+    ${bizTable(`<th>When</th><th>User</th><th>Action</th><th>Record</th>${attr?'<th>Business</th>':''}<th>Status</th>`,body,'bizActTable')}</div>`; }
+
+/* ============================================================================
+   RE-RENDER
+   ============================================================================ */
+function rerenderBusiness(){ if(typeof CURRENT!=='undefined'&&CURRENT!=='business') return; const host=$('#wsHost'); if(!host) return;
+  host.innerHTML=renderBusinessWorkspace();
+  host.querySelectorAll('[data-carousel]').forEach(c=>{ if(!c.__init){ initCarousel(c); c.__init=true; } });
+  host.querySelectorAll('[data-chart]').forEach(drawChartEl); }
+function rerenderBizPanel(){ const p=$('#bizPanel'); if(!p){ rerenderBusiness(); return; } p.innerHTML=bizPanelHTML();
+  p.querySelectorAll('[data-carousel]').forEach(c=>{ if(!c.__init){ initCarousel(c); c.__init=true; } });
+  p.querySelectorAll('[data-chart]').forEach(drawChartEl); }
+
+/* ============================================================================
+   DRAWERS / FORMS / CONFIRM  (reuse the universal #drawer)
+   ============================================================================ */
+function bizDrawerShow(icon,title,sub,bodyHtml){
+  $('#drawerIcon').className='tile'; $('#drawerIcon').innerHTML=I(icon);
+  $('#drawerTitle').textContent=title; $('#drawerSub').textContent=sub;
+  const tabsEl=$('#drawerTabs'); if(tabsEl) tabsEl.style.display='none';
+  const body=$('#drawerBody'); body.__panels=null; body.innerHTML=bodyHtml;
+  lastFocused=document.activeElement; drawer.classList.add('show'); scrim.classList.add('show');
+  body.querySelectorAll('[data-chart]').forEach(drawChartEl); trapFocus(drawer);
+  setTimeout(()=>{ const f=drawer.querySelector('input,select,textarea,[data-close-drawer]'); if(f) f.focus(); },60);
+}
+function fld(name,label,val,ph){ return `<div style="margin-bottom:var(--sp-3)"><label class="flabel">${label}</label><input class="finput" name="${name}" value="${val||''}" placeholder="${ph||''}"></div>`; }
+function selField(name,label,opts,cur){ return `<div style="margin-bottom:var(--sp-3)"><label class="flabel">${label}</label><select class="finput" name="${name}">${opts.map(o=>`<option value="${o[0]}"${o[0]===cur?' selected':''}>${o[1]}</option>`).join('')}</select></div>`; }
+function bizBusinessOptions(){ return businessState.businesses.map(b=>[b.id,b.name]); }
+function formFooter(kind,label){ return `<div class="row gap-2" style="margin-top:var(--sp-5)"><button class="btn btn-outline" style="flex:1" data-close-drawer>Cancel</button><button class="btn btn-primary" style="flex:1" data-bizsubmit="${kind}">${I('check')} ${label}</button></div>`; }
+function defBiz(id){ return id&&bizFind(id)?id:(getSelectedBusiness()?getSelectedBusiness().id:businessState.businesses[0].id); }
+
+function openBizDrawer(kind,id){
+  const B=bizBusinessOptions();
+  switch(kind){
+    case 'business': { const b=id?bizFind(id):null;
+      return bizDrawerShow(b?'tag':'plus',b?'Edit business':'Add a business',b?b.name:'Track a new entity separately',
+        fld('name','Business name',b?b.name:'','Acme Studio LLC')+selField('entity','Entity type',[['LLC','LLC'],['S-Corp','S-Corp'],['C-Corp','C-Corp'],['Sole','Sole proprietor']],b?b.entity:'LLC')+fld('industry','Industry',b?b.industry:'')+fld('ein','EIN',b?b.ein:'','12-3456789')+fld('state','Formation state',b?b.formationState:'')+formFooter(b?'editBusiness':'addBusiness',b?'Save changes':'Add business')+ (b?'':'')); }
+    case 'transaction': return bizDrawerShow('exchange','Add manual transaction','Post to the ledger',
+      selField('businessId','Business',B,defBiz(id))+fld('desc','Description','','Client payment')+fld('amount','Amount','','$0.00')+selField('dir','Direction',[['in','Money in'],['out','Money out'],['transfer','Transfer']],'out')+fld('category','Category','','Software')+formFooter('addTransaction','Add transaction'));
+    case 'expense': return bizDrawerShow('receipt','Add expense','Track a business expense',
+      selField('businessId','Business',B,defBiz(id))+fld('desc','Description','','Client lunch')+fld('vendor','Vendor','')+fld('category','Category','','Meals')+fld('amount','Amount','','$0.00')+formFooter('addExpense','Add expense'));
+    case 'invoice': return bizDrawerShow('invoice','New invoice','Bill a customer',
+      selField('businessId','Business',B,defBiz(id))+fld('customer','Customer','')+fld('amount','Amount','','$0.00')+fld('due','Due date','','Jul 30')+selField('terms','Payment terms',[['Net 15','Net 15'],['Net 30','Net 30'],['Due on receipt','Due on receipt']],'Net 30')+formFooter('addInvoice','Create invoice'));
+    case 'bill': { const v=id?getBusinessScopedData(businessState.vendors).find(x=>x.id===id):null;
+      return bizDrawerShow('receipt','New bill','Record a vendor bill',
+        selField('businessId','Business',B,defBiz(v?v.businessId:id))+fld('vendor','Vendor',v?v.name:'')+fld('category','Category',v?v.category:'')+fld('amount','Amount','','$0.00')+fld('due','Due date','','Aug 5')+formFooter('addBill','Add bill')); }
+    case 'customer': return bizDrawerShow('users','Add customer','Reusable billing party',
+      selField('businessId','Business',B,defBiz(id))+fld('name','Name','')+fld('email','Email','')+fld('taxId','Tax ID','')+selField('pays','Pays by',[['ACH','ACH'],['Card','Card'],['Check','Check']],'ACH')+formFooter('addCustomer','Add customer'));
+    case 'vendor': return bizDrawerShow('brief','Add vendor','Reusable payee',
+      selField('businessId','Business',B,defBiz(id))+fld('name','Name','')+fld('email','Email','')+fld('category','Default category','')+selField('terms','Terms',[['Net 30','Net 30'],['Net 15','Net 15'],['Due on receipt','Due on receipt']],'Net 30')+formFooter('addVendor','Add vendor'));
+    case 'document': return bizDrawerShow('folder','Add document','Upload or link a file',
+      `<div class="seg" style="margin-bottom:var(--sp-3)"><button class="active">${I('download')} Upload file</button><button>${I('link2')} Add link</button></div>`+selField('businessId','Business',B,defBiz(id))+fld('name','File name','','Contract.pdf')+selField('category','Category',[['Invoice','Invoice'],['Receipt','Receipt'],['Contract','Contract'],['Tax','Tax'],['Other','Other']],'Receipt')+selField('year','Tax year',[['2026','2026'],['2025','2025']],'2026')+`<p class="muted" style="font-size:var(--fs-xs);margin-top:6px">${I('help')} Cloud persistence (Google Cloud Storage) is simulated in this prototype.</p>`+formFooter('addDocument','Add document'));
+    case 'invite': return bizDrawerShow('users','Invite member','Grant scoped access',
+      fld('name','Name','')+fld('email','Email','','name@company.com')+selField('role','Role',BIZ_ROLES.map(r=>[r,r]),'Accountant')+selField('access','Business access',[['all','All businesses'],...B],businessState.selectedBusinessId==='all'?'all':businessState.selectedBusinessId)+formFooter('addInvite','Send invite'));
+    case 'permissions': { const perms=['View balances','View transactions','Categorize transactions','Reconcile accounts','Manage expenses','Approve expenses','Manage bills','Approve payments','Manage invoices','Manage customers','Manage vendors','View reports','Export reports','Manage documents','Manage integrations','Manage team','Manage business settings'];
+      return bizDrawerShow('shield','Role permissions',id&&bizFind(id)?'':'Custom role matrix',
+        `<div class="stack gap-2">${perms.map((p,i)=>`<div class="tglrow"><span style="font-weight:500">${p}</span><button class="tgl${i<12?' on':''}" role="switch" aria-checked="${i<12}"></button></div>`).join('')}</div><div class="row gap-2" style="margin-top:var(--sp-4)"><button class="btn btn-outline" style="flex:1" data-close-drawer>Cancel</button><button class="btn btn-primary" style="flex:1" data-bizsubmit="savePermissions">${I('check')} Save permissions</button></div>`); }
+    case 'role': { const m=businessState.team.find(x=>x.id===id);
+      return bizDrawerShow('tag','Change role',m?m.name:'',selField('role','Role',BIZ_ROLES.map(r=>[r,r]),m?m.role:'Viewer')+selField('access','Business access',[['All businesses','All businesses'],...businessState.businesses.map(b=>[b.name,b.name])],m?m.access:'')+`<input type="hidden" name="mid" value="${id}">`+formFooter('saveRole','Save role')); }
+    case 'taxRates': return bizDrawerShow('invoice','Tax rates','Manage sales-tax rates',
+      `<div class="rowlist">${[['TX State','6.25%','Texas','Default'],['Austin local','2.00%','Travis County',''],['Exempt','0.00%','Resale','']].map(r=>`<div class="rowitem"><div class="grow"><div class="r-name">${r[0]} ${r[3]?bb([r[3],'pos']):''}</div><div class="r-sub">${r[2]}</div></div><div class="num">${r[1]}</div></div>`).join('')}</div><button class="btn btn-outline" style="width:100%;margin-top:var(--sp-4)" data-bizact="addTaxRate">${I('plus')} New tax rate</button>`);
+    case 'account': { const a=businessState.accounts.find(x=>x.id===id); if(!a) return;
+      return bizDrawerShow(a.type==='Credit Card'?'card':'bank',a.name,a.institution+' · '+a.type,
+        `<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Current balance</div><div class="num" style="font-family:var(--font-display);font-size:2rem"${a.balance<0?' style="color:var(--neg)"':''}>${bizMoney(a.balance)}</div><div class="muted" style="font-size:var(--fs-xs)">${bb(a.status==='connected'?['Connected','pos']:['Manual','neutral'])} · synced ${a.lastSync}</div></div>`+actionRows([['refresh','Sync now'],['tag','Rename & recategorize'],['brief','Reassign to business'],['check','Mark as primary'],['x','Disconnect account']]).replace(/data-drawer[^>]*/g,'')+`<div class="row gap-2" style="margin-top:var(--sp-4)"><button class="btn btn-primary" style="flex:1" data-close-drawer>${I('check')} Done</button></div>`); }
+  }
+}
+function bizConfirm(title,msg,okLabel,cb){ pendingConfirm=cb;
+  bizDrawerShow('flame',title,'Please confirm',`<p style="font-size:var(--fs-sm);margin-bottom:var(--sp-5)">${msg}</p><div class="row gap-2"><button class="btn btn-outline" style="flex:1" data-close-drawer>Cancel</button><button class="btn btn-primary" style="flex:1;background:var(--neg);border-color:var(--neg)" data-bizconfirm-ok>${okLabel}</button></div>`); }
+
+/* ---- form reading + mutations ------------------------------------------- */
+function readForm(){ const o={}; drawer.querySelectorAll('[name]').forEach(el=>o[el.getAttribute('name')]=el.value); return o; }
+function parseAmt(v){ const n=parseFloat(String(v||'').replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; }
+
+/* ============================================================================
+   EVENT HANDLERS (delegated, business-scoped attributes only)
+   ============================================================================ */
+function bizHandleAction(action,el){
+  const id=el.getAttribute('data-id');
+  switch(action){
+    case 'dismissBanner': businessState.bannerDismissed=true; rerenderBusiness(); return;
+    case 'dismissQb': businessState.qbDismissed=true; rerenderBusiness(); return;
+    case 'sync': toast('All accounts synced','check'); return;
+    case 'connectQuickBooks': { const b=getSelectedBusiness(); if(b) b.integrations.quickbooks='connected'; businessState.qbDismissed=true; toast('QuickBooks connected','check'); rerenderBusiness(); return; }
+    case 'linkAccount': case 'addManualAccount': openDrawer('link'); return;
+    case 'editAccount': openBizDrawer('account',id); return;
+    case 'settings': businessState.activeTab='settings'; if(!getSelectedBusiness()) businessState.selectedBusinessId=businessState.businesses[0].id; rerenderBusiness(); return;
+    case 'createInvoice': openBizDrawer('invoice',id); return;
+    case 'addTransaction': openBizDrawer('transaction',id); return;
+    case 'addExpense': openBizDrawer('expense',id); return;
+    case 'addBill': openBizDrawer('bill',id); return;
+    case 'addCustomer': openBizDrawer('customer',id); return;
+    case 'addVendor': openBizDrawer('vendor',id); return;
+    case 'uploadDocument': case 'addDocLink': openBizDrawer('document',id); return;
+    case 'newPO': openBizDrawer('bill',id); toast('Draft a PO for a vendor',I('list')); return;
+    case 'newQuote': openBizDrawer('invoice',id); return;
+    case 'newProject': toast('New project — add customer & budget','trend'); return;
+    case 'newRecurring': openBizDrawer('invoice',id); return;
+    case 'editBusiness': openBizDrawer('business',id); return;
+    case 'addBusiness': openBizDrawer('business'); return;
+    case 'taxRates': case 'addTaxRate': openBizDrawer('taxRates'); return;
+    case 'linkTxn': openDrawer('txnlink'); return;
+    case 'exportExpenses': openDrawer('expexport'); return;
+    case 'inviteMember': openBizDrawer('invite'); return;
+    case 'permissionsMatrix': case 'managePermissions': case 'viewRole': openBizDrawer('permissions',id); return;
+    case 'changeRole': openBizDrawer('role',id); return;
+    case 'configIntegration': toast('Opening integration settings','link2'); return;
+    case 'txnRules': toast('Categorization rules','filter'); return;
+    case 'saveReportDoc': toast('Report saved to Documents','folder'); return;
+    case 'exportStatement': downloadBizCsv('statement'); return;
+    case 'exportCsv': downloadBizCsv(el.getAttribute('data-coll')); return;
+    case 'viewTxn': { const t=businessState.transactions.find(x=>x.id===id); if(t) toast('Opening '+t.desc,'search'); return; }
+    case 'viewInvoice': { const i=businessState.invoices.find(x=>x.id===id); if(i) toast('Opening invoice for '+i.customer,'search'); return; }
+    case 'downloadInvoice': toast('Invoice downloaded','download'); return;
+    case 'sendInvoice': toast('Invoice sent','link2'); return;
+    case 'downloadDoc': toast('Downloading document','download'); return;
+    case 'previewDoc': toast('Opening preview','search'); return;
+    case 'recatTxn': toast('Recategorize transaction','tag'); return;
+    case 'reconcileTxn': { const t=businessState.transactions.find(x=>x.id===id); if(t){ t.status='reconciled'; toast('Marked reconciled','check'); rerenderBizPanel(); } return; }
+    case 'approveExp': { const e=businessState.expenses.find(x=>x.id===id); if(e){ e.status='approved'; toast('Expense approved','check'); rerenderBizPanel(); } return; }
+    case 'editExp': openBizDrawer('expense',id); return;
+    case 'editBill': openBizDrawer('bill',id); return;
+    case 'editCustomer': openBizDrawer('customer',id); return;
+    case 'editVendor': openBizDrawer('vendor',id); return;
+    case 'deleteExp': bizConfirm('Delete expense','This removes the expense from tracking.','Delete',()=>{ businessState.expenses=businessState.expenses.filter(x=>x.id!==id); toast('Expense deleted','x'); rerenderBizPanel(); }); return;
+    case 'deleteDoc': bizConfirm('Delete document','This removes the document from this business.','Delete',()=>{ businessState.documents=businessState.documents.filter(x=>x.id!==id); toast('Document deleted','x'); rerenderBizPanel(); }); return;
+    case 'archiveCustomer': businessState.customers=businessState.customers.filter(x=>x.id!==id); toast('Customer archived','check'); rerenderBizPanel(); return;
+    case 'archiveVendor': businessState.vendors=businessState.vendors.filter(x=>x.id!==id); toast('Vendor archived','check'); rerenderBizPanel(); return;
+    case 'markPaidInvoice': { const i=businessState.invoices.find(x=>x.id===id); if(i){ i.paid=i.amount; i.status='paid'; toast('Invoice marked paid','check'); rerenderBusiness(); } return; }
+    case 'payBill': { const b=businessState.bills.find(x=>x.id===id); if(b) bizConfirm('Pay bill',`Schedule payment of ${bizMoney(b.amount-b.paid)} to ${b.vendor}?`,'Pay',()=>{ b.paid=b.amount; b.status='paid'; toast('Payment scheduled','check'); rerenderBusiness(); }); return; }
+    case 'approveBill': { const b=businessState.bills.find(x=>x.id===id); if(b){ b.status='approved'; toast('Bill approved','check'); rerenderBizPanel(); } return; }
+    case 'convertPO': { const p=businessState.purchaseOrders.find(x=>x.id===id); if(p){ p.status='converted'; businessState.bills.push({id:'b'+(++bizSeq),businessId:p.businessId,vendor:p.vendor,category:p.category,amount:p.amount,paid:0,due:'Aug 20',status:'open'}); toast('PO converted to a bill','check'); rerenderBusiness(); } return; }
+    case 'convertQuote': { const q=businessState.quotes.find(x=>x.id===id); if(q){ q.status='converted'; businessState.invoices.push({id:'i'+(++bizSeq),businessId:q.businessId,customer:q.customer,number:String(1100+bizSeq),issue:'Jul 01',due:'Jul 31',status:'sent',amount:q.amount,paid:0,source:'Manual'}); toast('Quote converted to an invoice','check'); rerenderBusiness(); } return; }
+    case 'billMilestone': { const [pid,mi]=String(id).split(':'); const p=businessState.projects.find(x=>x.id===pid); if(p&&p.milestones[mi]){ p.milestones[mi].status='invoiced'; p.billed+=p.milestones[mi].amount; toast('Milestone billed','check'); rerenderBizPanel(); } return; }
+    case 'runRecurring': toast('Invoice generated from schedule','check'); return;
+    case 'pauseRecurring': { const r=businessState.recurring.find(x=>x.id===id); if(r){ r.status='paused'; toast('Schedule paused','pause'); rerenderBizPanel(); } return; }
+    case 'resumeRecurring': { const r=businessState.recurring.find(x=>x.id===id); if(r){ r.status='active'; toast('Schedule resumed','play'); rerenderBizPanel(); } return; }
+    case 'resendInvite': toast('Invite resent','link2'); return;
+    case 'removeMember': bizConfirm('Remove member','They will lose access to this business immediately.','Remove',()=>{ businessState.team=businessState.team.filter(x=>x.id!==id); toast('Member removed','x'); rerenderBizPanel(); }); return;
+    case 'transferOwnership': bizConfirm('Transfer ownership','The selected member becomes the Owner. You keep Administrator access.','Transfer',()=>{ toast('Ownership transferred','check'); }); return;
+    case 'connectIntegration': { const b=getSelectedBusiness(); if(b){ b.integrations[id]='connected'; toast((id[0].toUpperCase()+id.slice(1))+' connected','check'); rerenderBizPanel(); } return; }
+    case 'disconnectIntegration': { const b=getSelectedBusiness(); if(b) bizConfirm('Disconnect '+id,'Syncing stops until you reconnect.','Disconnect',()=>{ b.integrations[id]=''; toast('Disconnected','x'); rerenderBizPanel(); }); return; }
+    case 'saveSettings': toast('Business settings saved','check'); return;
+    case 'deactivateBusiness': { const b=bizFind(id); if(b) bizConfirm('Deactivate '+b.name,'It is hidden from dashboards but records are kept.','Deactivate',()=>{ b.status='Inactive'; toast('Business deactivated','check'); rerenderBusiness(); }); return; }
+    case 'removeBusiness': { const b=bizFind(id); if(b) bizConfirm('Delete '+b.name,'This permanently removes the business and its scoped records.','Delete',()=>{ businessState.businesses=businessState.businesses.filter(x=>x.id!==id); ['accounts','transactions','expenses','invoices','purchaseOrders','quotes','projects','recurring','bills','customers','vendors','documents'].forEach(c=>businessState[c]=businessState[c].filter(r=>r.businessId!==id)); if(businessState.selectedBusinessId===id) businessState.selectedBusinessId='all'; toast('Business deleted','x'); rerenderBusiness(); }); return; }
+    default: toast('Action: '+action,'sparkles'); return;
+  }
+}
+function bizHandleSubmit(kind){ const d=readForm();
+  switch(kind){
+    case 'addBusiness': businessState.businesses.push({id:'biz'+(++bizSeq),name:d.name||'New business',legalName:d.name||'New business',dba:'',entity:d.entity||'LLC',status:'Active',industry:d.industry||'—',ein:d.ein||'00-0000000',formationState:d.state||'—',formationDate:'2026',fiscalYearStart:'January',accountingMethod:'Accrual',currency:'USD',address:'—',phone:'—',email:'—',website:'—',owner:'Alex Kim',ownership:'100% — Alex Kim',logo:'brief',cls:'',lastSync:'just now',kpi:{rev:0,exp:0,net:0,cash:0,ar:0,ap:0,deposits:0},aging:{current:0,d1_30:0,d31_60:0,d61_90:0,over90:0},cashflow:[{l:'Jan',i:0,o:0},{l:'Feb',i:0,o:0},{l:'Mar',i:0,o:0},{l:'Apr',i:0,o:0},{l:'May',i:0,o:0},{l:'Jun',i:0,o:0}],integrations:{quickbooks:'',plaid:'',stripe:'',square:'',paypal:''}}); toast('Business added','check'); break;
+    case 'editBusiness': { const b=getSelectedBusiness()||businessState.businesses[0]; if(b){ b.name=d.name||b.name; b.legalName=d.name||b.legalName; b.entity=d.entity||b.entity; b.industry=d.industry||b.industry; b.ein=d.ein||b.ein; b.formationState=d.state||b.formationState; } toast('Business updated','check'); break; }
+    case 'addTransaction': { let amt=parseAmt(d.amount); if(d.dir==='out'&&amt>0) amt=-amt; businessState.transactions.unshift({id:'t'+(++bizSeq),businessId:d.businessId,account:'Operating Checking',desc:d.desc||'Transaction',merchant:d.desc||'',category:d.category||'Uncategorized',type:d.dir==='in'?'Income':'Expense',dir:d.dir,status:'needs-review',date:'Jul 01',amount:amt}); toast('Transaction added','check'); break; }
+    case 'addExpense': businessState.expenses.unshift({id:'e'+(++bizSeq),businessId:d.businessId,desc:d.desc||'Expense',category:d.category||'—',vendor:d.vendor||'—',date:'Jul 01',status:'submitted',receipt:false,amount:parseAmt(d.amount),linked:0}); toast('Expense added','check'); break;
+    case 'addInvoice': businessState.invoices.unshift({id:'i'+(++bizSeq),businessId:d.businessId,customer:d.customer||'Customer',number:String(1100+bizSeq),issue:'Jul 01',due:d.due||'Jul 31',status:'draft',amount:parseAmt(d.amount),paid:0,source:'Manual'}); toast('Invoice created','check'); break;
+    case 'addBill': businessState.bills.unshift({id:'b'+(++bizSeq),businessId:d.businessId,vendor:d.vendor||'Vendor',category:d.category||'—',amount:parseAmt(d.amount),paid:0,due:d.due||'Aug 1',status:'open'}); toast('Bill added','check'); break;
+    case 'addCustomer': businessState.customers.push({id:'c'+(++bizSeq),businessId:d.businessId,name:d.name||'Customer',email:d.email||'—',phone:'—',taxId:d.taxId||'—',pays:d.pays||'ACH',terms:'Net 30',outstanding:0,lifetime:0}); toast('Customer added','check'); break;
+    case 'addVendor': businessState.vendors.push({id:'v'+(++bizSeq),businessId:d.businessId,name:d.name||'Vendor',contact:'—',email:d.email||'—',phone:'—',taxId:'—',terms:d.terms||'Net 30',category:d.category||'—',outstanding:0,spend:0}); toast('Vendor added','check'); break;
+    case 'addDocument': businessState.documents.unshift({id:'d'+(++bizSeq),businessId:d.businessId,name:d.name||'Document',category:d.category||'Other',year:d.year||'2026',added:'Jul 01',size:'—',link:false}); toast('Document added','check'); break;
+    case 'addInvite': businessState.team.push({id:'m'+(++bizSeq),businessId:d.access==='all'?'all':d.access,name:d.name||'Invitee',email:d.email||'—',role:d.role||'Viewer',access:d.access==='all'?'All businesses':bizName(d.access),status:'invited',last:'—',invite:'pending'}); toast('Invite sent','link2'); break;
+    case 'saveRole': { const m=businessState.team.find(x=>x.id===d.mid); if(m){ m.role=d.role; m.access=d.access; } toast('Role updated','check'); break; }
+    case 'savePermissions': toast('Permissions saved','check'); break;
+    default: toast('Saved','check');
+  }
+  closeDrawer(); rerenderBusiness();
+}
+function downloadBizCsv(coll){
+  const map={
+    transactions:{name:'transactions',head:['Business','Date','Description','Account','Category','Type','Status','Amount'],rows:()=>getBusinessScopedData(businessState.transactions).map(t=>[bizName(t.businessId),t.date,t.desc,t.account,t.category,t.type,t.status,t.amount])},
+    bills:{name:'bills',head:['Business','Vendor','Category','Amount','Paid','Due','Status'],rows:()=>getBusinessScopedData(businessState.bills).map(b=>[bizName(b.businessId),b.vendor,b.category,b.amount,b.paid,b.due,b.status])},
+    customers:{name:'customers',head:['Business','Name','Email','Tax ID','Pays by','Terms','Outstanding','Lifetime'],rows:()=>getBusinessScopedData(businessState.customers).map(c=>[bizName(c.businessId),c.name,c.email,c.taxId,c.pays,c.terms,c.outstanding,c.lifetime])},
+    vendors:{name:'vendors',head:['Business','Name','Email','Category','Terms','Open bills','Total spend'],rows:()=>getBusinessScopedData(businessState.vendors).map(v=>[bizName(v.businessId),v.name,v.email,v.category,v.terms,v.outstanding,v.spend])},
+    activities:{name:'activity',head:['When','User','Action','Record','Business','Status'],rows:()=>getBusinessScopedData(businessState.activities).map(a=>[a.ts,a.user,a.action,a.record,bizName(a.businessId),a.status])},
+    statement:{name:'profit-and-loss',head:['Line','Amount'],rows:()=>{ const k=bizKpis(); return [['Sales Income',k.rev],['Operating Expenses',k.exp],['Net profit',k.net]]; }},
+  };
+  const c=map[coll]||map.transactions; const label=(getSelectedBusiness()?getSelectedBusiness().name:'all-businesses').toLowerCase().replace(/[^a-z0-9]+/g,'-');
+  downloadCSV(`${label}-${c.name}.csv`,c.head,c.rows()); toast('CSV exported','download');
+}
+function downloadCSV(filename,header,rows){
+  const esc=v=>`"${String(v==null?'':v).replace(/"/g,'""')}"`;
+  const csv=[header.map(esc).join(','),...rows.map(r=>r.map(esc).join(','))].join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+/* ---- delegated listeners (independent of the main handler) --------------- */
+document.addEventListener('click',e=>{
+  const sel=e.target.closest('[data-bizsel]'); if(sel){ const v=sel.dataset.bizsel; if(v==='add'){ openBizDrawer('business'); } else { businessState.selectedBusinessId=v; rerenderBusiness(); } return; }
+  const per=e.target.closest('[data-bizperiod]'); if(per){ businessState.selectedPeriod=per.dataset.bizperiod; rerenderBusiness(); return; }
+  const tab=e.target.closest('[data-biztab]'); if(tab){ businessState.activeTab=tab.dataset.biztab; rerenderBusiness(); return; }
+  const exp=e.target.closest('[data-bizexpand]'); if(exp){ const m=exp.dataset.bizexpand; businessState.expandedBusinessIds=m==='all'?businessState.businesses.map(b=>b.id):[]; rerenderBusiness(); return; }
+  const cf=e.target.closest('[data-bizfilter][data-val]'); if(cf){ businessState.filters[cf.dataset.bizfilter]=cf.dataset.val; rerenderBizPanel(); return; }
+  const co=e.target.closest('[data-bizconfirm-ok]'); if(co){ const cb=pendingConfirm; pendingConfirm=null; closeDrawer(); if(cb) cb(); return; }
+  const sub=e.target.closest('[data-bizsubmit]'); if(sub){ bizHandleSubmit(sub.dataset.bizsubmit); return; }
+  const act=e.target.closest('[data-bizact]'); if(act){ bizHandleAction(act.dataset.bizact,act); return; }
+});
+document.addEventListener('change',e=>{ const f=e.target.closest('select[data-bizfilter]'); if(f){ businessState.filters[f.dataset.bizfilter]=f.value; rerenderBizPanel(); } });
+document.addEventListener('input',e=>{ const box=e.target.closest('[data-bizsearch]'); if(box){ const q=e.target.value.toLowerCase(); const table=document.querySelector(box.dataset.bizsearch); if(table) table.querySelectorAll('tbody tr').forEach(tr=>{ tr.style.display=tr.textContent.toLowerCase().includes(q)?'':'none'; }); } });
+
+PAGES.business = () => renderBusinessWorkspace();
+
+/* ---- BUSINESS · First-run onboarding (empty state) ---- */
+PAGES['business-onboarding'] = () => {
+  const stepCard=(n,color,icon,name,sub,btn)=>`<div class="card c4" style="border-top:3px solid var(--${color})"><div class="tile ${color==='accent'?'':color}" style="margin-bottom:var(--sp-2)">${I(icon)}</div><div class="r-name">${n} · ${name}</div><div class="r-sub" style="margin-bottom:${btn?'var(--sp-3)':'0'}">${sub}</div>${btn||''}</div>`;
+  const why=(name,sub,tag)=>`<div class="card c4" style="box-shadow:none;border:1px solid var(--border)"><div class="r-name">${name}</div><div class="r-sub" style="margin:6px 0 10px">${sub}</div><span class="badge pos">${tag}</span></div>`;
+  return `${wshead('Business','Set up your first business','Track each business separately — its own accounts, cash flow, invoices and documents — with a consolidated view across all of them.',`<button class="btn btn-ghost btn-sm" data-nav="business">${I('arr-l')} Back to Business</button>`)}
+    <div class="card" style="text-align:center;margin-bottom:var(--sp-5)">
+      <div class="tile" style="width:64px;height:64px;font-size:28px;margin:var(--sp-2) auto var(--sp-3)">${I('brief')}</div>
+      <div class="sec-title">No business added yet</div>
+      <p class="muted" style="font-size:var(--fs-sm);max-width:520px;margin:6px auto 0">Name it, link its accounts, and start invoicing — with a consolidated view across every entity you own.</p>
+    </div>
+    <div class="grid g12" style="margin-bottom:var(--sp-5)">
+      ${stepCard('1','accent','brief','Add a business',"Name it, pick the entity type — that's it. You can add more anytime.",`<button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Add a business</button>`)}
+      ${stepCard('2','pos','plug','Link its accounts','Link a bank or credit card and assign it to the business — transactions sync automatically. Or add a manual account.','')}
+      ${stepCard('3','info','invoice','Invoice &amp; file','Create invoices, track pending payments, and keep receipts &amp; contracts in the document center — filed by year.','')}
+    </div>
+    <div class="card">${sechead('Why it matters')}
+      <div class="grid g12">
+        ${why('Separate business cash flow','Per-business P&amp;L and ledger tracking','Clear')}
+        ${why('Track bills &amp; invoices','Payables, receivables and reminders','Smart')}
+        ${why('Ledger-backed statements','Export PDF / Excel','Tax-ready')}
+      </div>
     </div>`;
-  const statements=`<div class="card">${sechead('Financial statements <span class="badge pos">'+I('shield')+' Ledger verified</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('download')+' Excel</button><button class="btn btn-outline btn-sm">'+I('file')+' PDF</button></div>')}
-    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Real double-entry P&amp;L, Balance Sheet and Cash Flow — computed from journal entries, not estimates.</p>
-    <div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">Profit &amp; Loss</button><button>Balance Sheet</button><button>Cash Flow</button></div>
-    <div class="flow-row" style="padding-left:16px"><span>4000 · Sales Income</span><span class="num">$42,100</span></div>
-    <div class="flow-row strong"><span>Total income</span><span class="num">$42,100</span></div>
-    <div class="flow-row" style="padding-left:16px"><span>6000 · Operating Expenses</span><span class="num">$18,300</span></div>
-    <div class="flow-row strong"><span>Total expenses</span><span class="num">$18,300</span></div>
-    <div class="flow-row strong" style="border-top:2px solid var(--border)"><span>Net profit</span><span class="num" style="color:var(--pos)">$23,800</span></div></div>`;
-  const customers=`<div class="card">${sechead('<span>'+I('users')+' Customers</span>','<div class="row gap-2"><button class="btn btn-outline btn-sm">'+I('invoice')+' Tax rates</button><button class="btn btn-outline btn-sm">'+I('plus')+' Add</button></div>')}
-    <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">Saved billing parties reused across invoices — contact, tax ID, preferred payment, addresses. Pick one to auto-fill details <strong>and apply their location’s sales-tax rate</strong>.</p>
-    ${T(`<th>Name</th><th>Contact</th><th>Tax ID</th><th>Pays by</th><th${rt}>Outstanding</th>`,
-      [['Northwind Co.','billing@northwind.co','82-1746003',B('ACH','neutral'),'<span class="muted">—</span>'],
-       ['Harbor Group','ap@harbor.group','91-3300012',B('Card','neutral'),'<span class="num">$2,100</span>'],
-       ['Pinecrest Studio','owner@pinecrest.io','—',B('Card','neutral'),'<span class="num">$3,450</span>']]
-      .map(r=>`<tr>${r.map((c,i)=>`<td${i===4?rt:''}>${c}</td>`).join('')}</tr>`).join(''))}</div>`;
-  const documents=`<div class="card">${sechead('Document center <span class="badge neutral">5</span>','<button class="btn btn-outline btn-sm">'+I('download')+' Add document</button>')}
-    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All businesses</span><span class="chip">Summit Contracting</span><span class="chip">Cedar Rentals</span></div>
-    <div class="chiprow" style="margin-bottom:var(--sp-3)"><span class="chip active">All</span><span class="chip">Invoice</span><span class="chip">Receipt</span><span class="chip">Contract</span><span class="chip">Tax</span></div>
-    <div class="rowlist">
-      ${richRow({icon:'invoice',cls:'info',name:'Invoice #1042 — Northwind Co.',sub:'Invoice · Jun 2026 · Summit Contracting',amt:''})}
-      ${richRow({icon:'receipt',cls:'pos',name:'AWS receipt — May',sub:'Receipt · May 2026',amt:''})}
-      ${richRow({icon:'file',cls:'violet',name:'Master services agreement',sub:'Contract · Harbor Group',amt:''})}
-      ${richRow({icon:'file',cls:'gold',name:'2025 Form 1120-S',sub:'Tax · 2025',amt:''})}
-    </div></div>`;
-  return `${wshead('Business & Real estate','My business','QuickBooks-grade bookkeeping, invoicing, payables and docs — computed from a real double-entry ledger.',
-    `<button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} New invoice</button>`)}
-    <div class="card" style="border-color:var(--pos);margin-bottom:var(--sp-4)"><div class="rowitem" style="border:0;padding:0"><div class="tile sm pos">${I('check')}</div><div class="grow"><div class="r-name" style="font-weight:500">Invoice for $6,200 to Northwind Co. created.</div></div><button class="iconbtn">${I('x')}</button></div></div>
-    <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="chip active">${I('grid')} All businesses</span><span class="chip">${I('brief')} Summit Contracting</span><span class="chip">${I('estate')} Cedar Rentals</span><span class="chip">${I('plus')} Add</span></div>
-    <div class="card" style="border-left:4px solid var(--gold);margin-bottom:var(--sp-4);display:flex;align-items:center;gap:var(--sp-3)">${I('link2')}<div class="grow" style="font-size:var(--fs-sm)"><strong>Connect QuickBooks</strong> <span class="badge neutral">optional</span> — only to auto-sync revenue, expenses and invoices. Manual &amp; linked tracking works without it.</div><button class="btn btn-outline btn-sm">Connect</button><button class="iconbtn">${I('x')}</button></div>
-    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;flex-wrap:wrap;gap:var(--sp-6);align-items:flex-end;justify-content:space-between">
-      <div><div class="eyebrow">Total business cash</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$49,600</div><div class="muted" style="font-size:var(--fs-xs)">2 cash accounts · $4,180 owed on 1 card</div></div>
-      <div class="row gap-6 wrap"><div><div class="eyebrow">Net position</div><div class="num" style="font-weight:700;color:var(--pos)">$45,420</div></div><div><div class="eyebrow">Net cash flow · 6mo</div><div class="num" style="font-weight:700;color:var(--pos)">+$41,300</div></div></div>
-    </div>
-    <div class="chiprow" style="margin-bottom:var(--sp-4)"><span class="muted" style="font-size:var(--fs-xs);font-weight:600;align-self:center">${I('cal')} Period</span><span class="chip active">This month</span><span class="chip">This year</span><span class="chip">Trailing 12mo</span><span class="chip">Custom</span></div>
-    <div class="kpirow" style="margin-bottom:var(--sp-6)">
-      ${kpi('arr-ur','pos','Revenue','$51,800','this month')}
-      ${kpi('arr-dr','neg','Expenses','$32,120','this month')}
-      ${kpi('trend','','Net profit','$19,680','this month')}
-      ${kpi('invoice','gold','Outstanding (AR)','$4,650','as of today')}
-      ${kpi('receipt','neg','Bills due (AP)','$4,180','$420 overdue')}
-    </div>
-    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Cash flow · last 6 months','<span class="badge pos">Net +$41,300</span>')}<div data-chart="inout" data-v='[{"l":"Jan","i":6.0,"o":4.5},{"l":"Feb","i":8.5,"o":5.2},{"l":"Mar","i":6.0,"o":4.0},{"l":"Apr","i":9.5,"o":5.8},{"l":"May","i":8.0,"o":4.8},{"l":"Jun","i":10.0,"o":5.4}]'></div></div>
-    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('By business · click a row to open','<span class="badge neutral">This month</span>')}
-      ${T(`<th>Business</th><th${rt}>Revenue</th><th${rt}>Expenses</th><th${rt}>Net</th><th${rt}>Cash</th><th${rt}>Outstanding</th>`,
-        [['<strong>Summit Contracting</strong><div class="r-sub muted">Construction</div>','<span class="num">$42,000</span>','<span class="num" style="color:var(--neg)">$28,000</span>','<span class="num" style="color:var(--pos)">$14,000</span>','<span class="num">$31,200</span>','<span class="num">$3,450</span>'],
-         ['<strong>Cedar Rentals LLC</strong><div class="r-sub muted">Real estate</div>','<span class="num">$9,800</span>','<span class="num" style="color:var(--neg)">$4,120</span>','<span class="num" style="color:var(--pos)">$5,680</span>','<span class="num">$18,400</span>','<span class="num">$1,200</span>']]
-        .map(r=>`<tr data-drawer="business" data-id="${r[0].includes('Summit')?'summit':'cedar'}" style="cursor:pointer">${r.map((c,i)=>`<td${i>0?rt:''}>${c}</td>`).join('')}</tr>`).join('')+
-        `<tr style="font-weight:700;border-top:2px solid var(--border)"><td>All businesses</td><td${rt}><span class="num">$51,800</span></td><td${rt}><span class="num">$32,120</span></td><td${rt}><span class="num">$19,680</span></td><td${rt}><span class="num">$49,600</span></td><td${rt}><span class="num">$4,650</span></td></tr>`)}
-    </div>
-    <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Connected accounts','<div class="row gap-2"><button class="btn btn-primary btn-sm" data-drawer="link">'+I('link2')+' Link</button><button class="btn btn-outline btn-sm">'+I('plus')+' Manual</button></div>')}
-      <p class="muted" style="font-size:var(--fs-xs);margin:-6px 0 10px">${I('refresh')} Business accounts are auto-detected and sync automatically.</p>
-      ${carousel([['Operating Checking ··4021','Chase','$24,800','Checking','bank',''],['Business Savings ··8890','Chase','$6,400','Savings','pig','pos'],['Amex Biz Platinum ··1007','American Express','−$4,180','Credit · 21% used','card','gold']].map(a=>`<div class="acct-card"><div class="acct-top"><div class="tile ${a[5]==='gold'?'gold':a[5]}">${I(a[4])}</div><div class="grow"><div class="acct-name">${a[0]}</div><div class="acct-inst">${a[1]}</div></div></div><div class="acct-bal num">${a[2]}</div><div class="acct-meta">${a[3]}</div></div>`).join(''))}
-    </div>
-    ${tabsBlock([
-      {label:'Overview',icon:'grid',panel:overview},
-      {label:'Transactions',icon:'exchange',panel:transactions},
-      {label:'Expenses',icon:'receipt',panel:expenses},
-      {label:'Invoicing & POs',icon:'invoice',panel:invoicing},
-      {label:'Bills & AP',icon:'receipt',panel:ap},
-      {label:'Statements',icon:'file',panel:statements},
-      {label:'Customers',icon:'users',panel:customers},
-      {label:'Documents',icon:'folder',panel:documents},
-    ])}`;
 };
 
+// BEGIN PARITY ADDITION — Transactions direction filter (All · Income · Spending)
+let txnDir='all';
+function txnMatchesDir(id){ const pos=(TX[id].amt||'').trim().startsWith('+'); return txnDir==='all'||(txnDir==='income'&&pos)||(txnDir==='spending'&&!pos); }
+function txnRowsHTML(){
+  const ids=TXN_LIST.filter(txnMatchesDir);
+  if(!ids.length) return '<div class="empty" style="padding:var(--sp-5)"><p class="muted">No transactions match this filter.</p></div>';
+  return ids.map((id,i)=>{const t=TX[id];const pos=(t.amt||'').trim().startsWith('+');return `<div class="md-item${i===0?' active':''}" data-txn="${id}" role="option" aria-selected="${i===0}" tabindex="0"><div class="tile sm ${t.cls}">${I(t.icon)}</div><div class="grow"><div class="r-name">${t.title}</div><div class="r-sub">${t.sub} · ${t.cat}</div></div><div class="num money" style="font-weight:700;font-size:var(--fs-sm)${pos?';color:var(--pos)':''}">${t.amt}</div></div>`;}).join('');
+}
+// END PARITY ADDITION
 PAGES.transactions = () => {
   const cats=['All','Income','Groceries','Dining','Housing','Transport','Subscriptions','Shopping'];
   const rows=[
@@ -1441,7 +2009,7 @@ PAGES.transactions = () => {
         <div class="ab-search" style="flex:1;min-width:200px">${I('search')}<span>Search description or category…</span></div>
         <select class="finput" style="width:auto" aria-label="Account"><option>All accounts</option><optgroup label="Cards"><option>Sapphire Reserve</option></optgroup><optgroup label="Bank"><option>Primary Checking</option></optgroup></select>
         <select class="finput" style="width:auto" aria-label="Category"><option>All categories</option><option>Groceries</option><option>Housing</option><option>Income</option></select>
-        <div class="seg"><button class="active">All</button><button>Income</button><button>Spending</button></div>
+        <div class="seg" id="txnDir"><button class="${txnDir==='all'?'active':''}" data-dir="all">All</button><button class="${txnDir==='income'?'active':''}" data-dir="income">Income</button><button class="${txnDir==='spending'?'active':''}" data-dir="spending">Spending</button></div>
       </div>
       <div class="row gap-2 wrap">
         <select class="finput" style="width:auto" aria-label="Date range"><option>All time</option><option>Last 1 day</option><option>1 week</option><option>1 month</option><option>3 months</option><option>1 year</option><option>Custom range…</option></select>
@@ -1452,8 +2020,8 @@ PAGES.transactions = () => {
       </div>
     </div>
     <div class="md" id="txnMD">
-      <div class="md-list" role="listbox" aria-label="Transactions">${TXN_LIST.map((id,i)=>{const t=TX[id];const pos=(t.amt||'').trim().startsWith('+');return `<div class="md-item${i===0?' active':''}" data-txn="${id}" role="option" aria-selected="${i===0}" tabindex="0"><div class="tile sm ${t.cls}">${I(t.icon)}</div><div class="grow"><div class="r-name">${t.title}</div><div class="r-sub">${t.sub} · ${t.cat}</div></div><div class="num money" style="font-weight:700;font-size:var(--fs-sm)${pos?';color:var(--pos)':''}">${t.amt}</div></div>`;}).join('')}</div>
-      <div class="md-detail" id="txnDetail">${txnDetailHTML(TXN_LIST[0])}</div>
+      <div class="md-list" role="listbox" aria-label="Transactions">${txnRowsHTML()}</div>
+      <div class="md-detail" id="txnDetail">${txnDetailHTML(TXN_LIST.filter(txnMatchesDir)[0]||TXN_LIST[0])}</div>
     </div>`;
 };
 
@@ -1509,10 +2077,11 @@ PAGES.bills = () => `
     <div class="row" style="justify-content:space-between;margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border);font-weight:700"><span class="muted">Total due</span><span class="num">$2,130.14</span></div>
   </div>
   <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Who are you paying?')}
-    ${[['Credit Cards','card',[['Quicksilver ····4321','Capital One · Due Jul 5','$1,284.00'],['Sapphire Reserve ····7788','Chase · Due Jul 13','$2,210.45']]],['Mortgage','home',[['Home Loan ····9012','Rocket · Due Jul 10','$2,148.00']]],['Student Loans','file',[['Grad Unsubsidized ····5540','Nelnet · Due Jul 17','$310.00']]],['Auto / Car Loans','car',[['Auto Loan ····2277','Toyota Financial · Due Jul 22','$489.60']]]].map(g=>`<div style="margin-bottom:var(--sp-3)"><div class="eyebrow" style="margin-bottom:6px">${I(g[1])} ${g[0]} <span class="badge neutral" style="margin-left:4px">${g[2].length}</span></div>${g[2].map(p=>`<div class="rowitem act"><div class="tile sm">${I(g[1])}</div><div class="grow"><div class="r-name">${p[0]}</div><div class="r-sub">${p[1]}</div></div><div class="r-amt num">${p[2]}</div>${I('chev-r','muted')}</div>`).join('')}</div>`).join('')}
+    ${[['Credit Cards','card',[['Quicksilver ····4321','Capital One · Due Jul 5','$1,284.00'],['Sapphire Reserve ····7788','Chase · Due Jul 13','$2,210.45']]],['Mortgage','home',[['Home Loan ····9012','Rocket · Due Jul 10','$2,148.00']]],['Student Loans','file',[['Grad Unsubsidized ····5540','Nelnet · Due Jul 17','$310.00']]],['Auto / Car Loans','car',[['Auto Loan ····2277','Toyota Financial · Due Jul 22','$489.60']]]].map(g=>`<div style="margin-bottom:var(--sp-3)"><div class="eyebrow" style="margin-bottom:6px">${I(g[1])} ${g[0]} <span class="badge neutral" style="margin-left:4px">${g[2].length}</span></div>${g[2].map(p=>`<div class="rowitem act" data-payee="${p[0]}" data-payee-sub="${p[1]}" data-payee-amt="${p[2]}" style="cursor:pointer"><div class="tile sm">${I(g[1])}</div><div class="grow"><div class="r-name">${p[0]}</div><div class="r-sub">${p[1]}</div></div><div class="r-amt num">${p[2]}</div>${I('chev-r','muted')}</div>`).join('')}</div>`).join('')}
   </div>
-  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Make a payment · review','<span class="badge gold">Step 3 of 4</span>')}
+  <div class="card" id="pay-review" style="margin-bottom:var(--sp-6)">${sechead('Make a payment · review','<span class="badge gold">Step 3 of 4</span>')}
     <div class="row gap-2 wrap" style="margin-bottom:var(--sp-4)">${['Payee','Amount','Review','Done'].map((s,i)=>`<div class="row gap-2" style="align-items:center"><span style="width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:var(--fs-xs);background:${i<2?'var(--accent)':i===2?'var(--gold)':'var(--surface-3)'};color:${i<3?'var(--on-accent)':'var(--ink-3)'}">${i<2?'✓':i+1}</span><span style="font-size:var(--fs-sm);font-weight:600;color:${i<=2?'var(--ink)':'var(--ink-3)'}">${s}</span>${i<3?I('chev-r','muted'):''}</div>`).join('')}</div>
+    <div id="pay-selected" class="row gap-2" style="align-items:center;background:var(--accent-soft);border-radius:var(--r-sm);padding:10px 14px;font-size:var(--fs-sm);margin-bottom:var(--sp-4)">${I('receipt')} Select a payee above to load it into this review.</div>
     <div class="rowlist">
       ${richRow({icon:'card',cls:'info',name:'Pay from',sub:'',amt:'Visa ···· 4242'})}
       ${richRow({icon:'coins',cls:'pos',name:'Payment amount',sub:'',amt:'$1,250.42'})}
@@ -1520,7 +2089,7 @@ PAGES.bills = () => `
       ${richRow({icon:'cal',cls:'violet',name:'Est. settlement',sub:'3 business days',amt:'Fri, Jun 6'})}
       ${richRow({icon:'crown',cls:'gold',name:'Estimated rewards',sub:'',amt:'+125 pts',amtColor:'var(--gold)'})}
     </div>
-    <div class="row" style="justify-content:space-between;font-weight:700;font-size:var(--fs-title);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)"><span>Total payment</span><span class="num" style="font-family:var(--font-display)">$1,250.42</span></div>
+    <div class="row" style="justify-content:space-between;font-weight:700;font-size:var(--fs-title);margin-top:var(--sp-3);padding-top:var(--sp-3);border-top:1px solid var(--border)"><span>Total payment</span><span class="num" id="pay-total" style="font-family:var(--font-display)">$1,250.42</span></div>
     <div class="row gap-2" style="margin-top:var(--sp-4)"><button class="btn btn-outline">${I('arr-l')} Back</button><button class="btn btn-primary grow">${I('lock')} Confirm payment</button></div>
     <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-3)">${I('shield')} 256-bit encrypted · idempotency-protected</p>
   </div>
@@ -1763,7 +2332,14 @@ PAGES['net-worth'] = () => `
     ${kpi('trend','info','30-day change','+$15,732','')}
   </div>
   <div class="grid g12" style="margin-bottom:var(--sp-6)">
-    <div class="card c8">${sechead('Trend · 6 months','<span class="badge pos">+$15,732</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[${NW_SERIES.all.slice(-10)}]"></div></div>
+    <div class="card c8">
+      <div class="sec-head"><div><div class="eyebrow" id="nwLabel">Net worth</div><div class="row gap-2" style="align-items:baseline"><div class="num" id="nwValue" style="font-family:var(--font-display);font-size:1.5rem;line-height:1">$263,820</div><span class="delta up" id="nwDelta">${I('arr-ur')} 6.3% <span class="muted" style="font-weight:500">+$15,732 · ${nwRange}</span></span></div></div>
+        <div class="seg" id="nwType" role="group" aria-label="Chart type"><button class="${nwType==='area'?'active':''}" data-t="area">Area</button><button class="${nwType==='line'?'active':''}" data-t="line">Line</button><button class="${nwType==='bars'?'active':''}" data-t="bars">Bars</button></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin:var(--sp-2) 0"><select class="chip" id="nwFilter" style="padding:6px 12px;font-weight:600" aria-label="Portfolio filter"><option value="all">All · Net worth</option><option value="investments">Investments</option><option value="cash">Cash &amp; liquid</option><option value="realestate">Real estate equity</option><option value="business">Business</option><option value="debt">Debt &amp; liabilities</option></select></div>
+      <div id="nwChart" style="margin:var(--sp-2) 0 var(--sp-4)"></div>
+      <div class="seg" id="nwRange" role="group" aria-label="Range">${['1W','1M','3M','6M','1Y','All'].map(r=>`<button class="${r===nwRange?'active':''}" data-r="${r}">${r}</button>`).join('')}</div>
+    </div>
     <div class="card c4">${sechead('By asset class')}<div class="row gap-4" style="align-items:center"><div data-chart="donut" data-size="140" data-top="$427k" data-sub="assets" data-v='[{"label":"Investments","val":181029,"color":"--c4"},{"label":"Real estate","val":112000,"color":"--c2"},{"label":"Business","val":95200,"color":"--c5"},{"label":"Cash","val":38420,"color":"--c3"}]'></div><div class="grow">${legend([{label:'Investments',val:'$181k',color:'--c4'},{label:'Real estate',val:'$112k',color:'--c2'},{label:'Business',val:'$95k',color:'--c5'},{label:'Cash',val:'$38k',color:'--c3'}])}</div></div></div>
   </div>
   <div class="card">${sechead('What moved it · 30 days')}
@@ -1804,10 +2380,18 @@ PAGES.household = () => `
   ${wshead('Household','Household','Share goals and bills with a partner — without sharing everything.',
     `<button class="btn btn-primary btn-sm">${I('plus')} Invite someone</button>`)}
   ${actionBar(['Members','Shared','Invites'])}
-  <div class="card" style="margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4)"><div class="tile" style="width:52px;height:52px;font-size:24px">${I('users')}</div><div class="grow"><div class="sec-title" style="font-size:var(--fs-title)">Our home</div><div class="muted" style="font-size:var(--fs-sm)">2 members · you're the owner</div></div></div>
+  <div class="card" style="margin-bottom:var(--sp-6);display:flex;align-items:center;gap:var(--sp-4)"><div class="tile" style="width:52px;height:52px;font-size:24px">${I('users')}</div><div class="grow"><div class="sec-title" style="font-size:var(--fs-title)">Our home</div><div class="muted" style="font-size:var(--fs-sm)">2 members · you're the owner</div></div><button class="btn btn-outline btn-sm" style="color:var(--neg)" data-leave-household>${I('x')} Leave household</button></div>
   <div class="grid g12" style="margin-bottom:var(--sp-6)">
     <div class="card c6">${sechead('Members')}<div class="rowlist"><div class="rowitem"><div class="avatar" style="width:34px;height:34px">A</div><div class="grow"><div class="r-name">Alex Morgan</div><div class="r-sub">Owner</div></div></div><div class="rowitem"><div class="avatar" style="width:34px;height:34px;background:linear-gradient(140deg,var(--c3),var(--info))">J</div><div class="grow"><div class="r-name">Jordan Lee</div><div class="r-sub">Member</div></div><button class="btn btn-outline btn-sm">Remove</button></div></div></div>
     <div class="card c6">${sechead('Invite someone','<span class="badge pos">'+I('lock')+' Single-use</span>')}<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">One-click link, expires in 7 days, works only for the email you enter.</p><div class="row gap-2 wrap"><div class="omnibar" style="max-width:none;flex:1;min-width:160px"><span>their@email.com</span></div><button class="btn btn-primary">${I('arr-r')} Send</button></div></div>
+  </div>
+  <!-- parity: household pending-invite management -->
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Pending invites','<span class="badge neutral" id="inviteCount">1</span>')}
+    <p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">Single-use links, each tied to one email and expiring in 7 days. Copy to send another way, resend, or revoke.</p>
+    <div class="rowlist" id="inviteList">
+      <div class="rowitem"><div class="tile sm gold">${I('msg')}</div><div class="grow"><div class="r-name">jordan.partner@email.com</div><div class="r-sub">${I('clock')} Sent 2 days ago · expires in 5 days</div></div><div class="row gap-2 wrap"><button class="btn btn-outline btn-sm" data-copy-invite>${I('link2')} Copy link</button><button class="btn btn-ghost btn-sm" data-resend-invite>Resend</button><button class="btn btn-ghost btn-sm" style="color:var(--neg)" data-revoke-invite>Revoke</button></div></div>
+    </div>
+    <div class="card" style="background:var(--accent-soft);font-size:var(--fs-xs);word-break:break-all;margin-top:var(--sp-3);box-shadow:none">https://app.terravest.app/join/EPc05_k4zOiGYU…P9E</div>
   </div>
   <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Share an account','<span class="badge neutral">'+I('lock')+' Default private</span>')}
     <p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-3)">Nothing is shared until you choose it here. Members see the account and its balance — never your other accounts.</p>
@@ -2109,11 +2693,105 @@ PAGES.profile = () => `
     <div class="card c6">${sechead('Security')}<div class="tglrow"><div><div style="font-weight:500">Two-factor</div><div class="muted" style="font-size:var(--fs-xs)">Enabled</div></div><button class="btn btn-outline btn-sm" data-nav="security">Manage</button></div><div class="tglrow"><span style="font-weight:500">Password</span><button class="btn btn-outline btn-sm" data-nav="security">Change</button></div><hr class="divider"><button class="btn btn-outline" style="color:var(--neg)">${I('x')} Sign out</button></div>
   </div>`;
 
+/* ---- SETTINGS · Identity & KYC (two-step login + verification gate) ---- */
+// BEGIN PARITY ADDITION — KYC 3-step verification wizard (Personal · Address · Preferences)
+let kycStep = 0;
+const KYC_LABELS = ['Personal','Address','Preferences'];
+function kycDots(){
+  const seg = '<span style="flex:1;height:2px;background:var(--border);min-width:16px"></span>';
+  return KYC_LABELS.map((label,i)=>{
+    const on = i<=kycStep;
+    return `<div class="row gap-2" style="align-items:center;font-weight:600;color:${on?'var(--accent)':'var(--ink-3)'}"><span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;${on?'background:var(--accent);color:#fff':'background:var(--surface-2);border:2px solid var(--border);color:var(--ink-3)'}">${i<kycStep?I('check'):(i+1)}</span>${label}</div>`;
+  }).join(seg);
+}
+function kycBody(){
+  if(kycStep===0) return `<div class="fgrid fgrid-2" style="margin-bottom:var(--sp-3)">
+      <div><label class="flabel">Date of birth *</label><input class="finput" type="date"></div>
+      <div><label class="flabel" style="color:var(--gold)">Social Security Number *</label><input class="finput" value="•••-••-6789"><div class="muted" style="font-size:var(--fs-xs);margin-top:5px">${I('lock')} Required by federal law (KYC/AML). AES-256 encrypted, write-once — only the last 4 are ever shown.</div></div>
+    </div>`;
+  if(kycStep===1) return `<div class="fgrid fgrid-2" style="margin-bottom:var(--sp-3)">
+      <div style="grid-column:span 2"><label class="flabel">Address line 1 *</label><input class="finput" placeholder="123 Main St"></div>
+      <div style="grid-column:span 2"><label class="flabel">Address line 2</label><input class="finput" placeholder="Apartment, suite (optional)"></div>
+      <div><label class="flabel">City *</label><input class="finput" placeholder="Austin"></div>
+      <div><label class="flabel">State *</label><input class="finput" placeholder="TX"></div>
+      <div><label class="flabel">Postal code *</label><input class="finput" placeholder="78701" inputmode="numeric"></div>
+      <div><label class="flabel">Country *</label><select class="finput"><option>United States</option><option>Canada</option><option>United Kingdom</option></select></div>
+    </div>`;
+  return `<p class="muted" style="font-size:var(--fs-xs);margin:-4px 0 var(--sp-3)">Choose how we reach you. Security &amp; login alerts stay on — they protect your account.</p>
+    <div class="tglrow"><div><div class="r-name" style="font-weight:500">Security &amp; login alerts</div><div class="muted" style="font-size:var(--fs-xs)">Required — always on</div></div><div class="tgl on" role="switch" aria-checked="true" aria-disabled="true" style="opacity:.55;pointer-events:none"></div></div>
+    <div class="tglrow"><span style="font-weight:500">Product &amp; account emails</span><div class="tgl on" role="switch" aria-checked="true" tabindex="0"></div></div>
+    <div class="tglrow"><span style="font-weight:500">Weekly summary</span><div class="tgl" role="switch" aria-checked="false" tabindex="0"></div></div>
+    <div class="tglrow"><div><div class="r-name" style="font-weight:500">2FA channel</div><div class="muted" style="font-size:var(--fs-xs)">Where we send your login code</div></div><div class="seg"><button class="active">${I('msg')} Email</button><button>SMS</button></div></div>`;
+}
+function kycWizard(){
+  if(kycStep>=KYC_LABELS.length) return `<div class="stack" style="align-items:center;text-align:center;padding:var(--sp-4) 0">
+      <div class="tile pos" style="width:56px;height:56px;font-size:26px;margin-bottom:var(--sp-2)">${I('check')}</div>
+      <div class="sec-title">Identity verified — you're all set</div>
+      <p class="muted" style="font-size:var(--fs-sm);max-width:420px">Personal details, address and preferences are complete. Your account is fully unlocked.</p>
+      <button class="btn btn-outline btn-sm" data-kyc-reset>${I('refresh')} Review again</button>
+    </div>`;
+  const pct = Math.round(((kycStep+1)/KYC_LABELS.length)*100);
+  const last = kycStep===KYC_LABELS.length-1;
+  return `<div class="row" style="align-items:center;margin-bottom:var(--sp-3)">${kycDots()}</div>
+    <div class="bar" style="height:10px;margin-bottom:6px"><i style="width:${pct}%"></i></div>
+    <div class="row" style="justify-content:space-between;font-size:var(--fs-xs);color:var(--ink-3);margin-bottom:var(--sp-4)"><span>Step ${kycStep+1} of ${KYC_LABELS.length} · ${KYC_LABELS[kycStep]}</span><span>${pct}% complete</span></div>
+    <div class="row gap-2" style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:5px 11px;border-radius:999px;width:max-content;margin-bottom:var(--sp-4)">${I('shield')} Verify your identity</div>
+    ${kycBody()}
+    <hr class="divider">
+    <div class="row gap-2" style="align-items:center">${kycStep>0?`<button class="btn btn-outline" data-kyc-back>${I('arr-l')} Back</button>`:''}<button class="btn btn-primary" data-kyc-next>${last?I('check')+' Complete verification':I('arr-r')+' Save &amp; continue'}</button></div>
+    <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">${I('lock')} AES-256 · SOC 2 · We never sell your data</p>`;
+}
+// END PARITY ADDITION
+PAGES.identity = () => {
+  const otp=vals=>`<div class="row gap-2 wrap" style="margin-bottom:var(--sp-4)">${[0,1,2,3,4,5].map(i=>`<input class="finput" maxlength="1" aria-label="Digit ${i+1}" style="width:46px;text-align:center;font-size:1.2rem;font-weight:700;font-family:var(--font-display)" value="${vals[i]||''}">`).join('')}</div>`;
+  return `${wshead('Settings','Identity & verification','Two-step login and KYC identity verification — the compliance gate for opening a financial account.',
+    `<span class="badge pos">${I('shield')} Identity verified</span>`)}
+    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;gap:var(--sp-3);align-items:center">${I('shield')}<div style="font-size:var(--fs-sm)"><strong>KYC / AML:</strong> verifying your identity is a legal requirement to open a financial account. Sensitive details (SSN, DOB, address) are AES-256 encrypted, write-once — only the last 4 of your SSN are ever shown.</div></div>
+
+    ${sechead('<span>'+I('lock')+' Sign in</span>','<span class="badge neutral">MFA on every login</span>')}
+    <div class="grid g12" style="margin-bottom:var(--sp-6)">
+      <div class="card c6">
+        <div class="sec-title" style="font-size:var(--fs-body)">Welcome back</div>
+        <p class="muted" style="font-size:var(--fs-xs);margin:4px 0 var(--sp-3)">Step 1 — enter your credentials.</p>
+        <div class="fgrid">
+          <div><label class="flabel">Email</label><input class="finput" value="alex.kim@example.com"></div>
+          <div><label class="flabel">Password</label><input class="finput" type="password" value="············"></div>
+        </div>
+        <a class="more" style="display:inline-block;margin:var(--sp-3) 0">Forgot password?</a>
+        <button class="btn btn-primary" style="width:100%">${I('arr-r')} Sign in</button>
+      </div>
+      <div class="card c6">
+        <div class="sec-title" style="font-size:var(--fs-body)">Verify it's you</div>
+        <p class="muted" style="font-size:var(--fs-xs);margin:4px 0 var(--sp-3)">Step 2 — enter the 6-digit code sent to <strong>a•••@example.com</strong> via Email.</p>
+        ${otp(['4','2','9','1','',''])}
+        <div class="row gap-3 wrap" style="align-items:center"><button class="btn btn-primary">${I('shield')} Verify</button><a class="more">Resend code</a><a class="muted mla" style="font-size:var(--fs-sm)">Back to sign in</a></div>
+      </div>
+    </div>
+
+    ${sechead('<span>'+I('plus')+' Create your account</span>','<span class="badge neutral">Just the essentials</span>')}
+    <div class="card" style="margin-bottom:var(--sp-6)">
+      <div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">${I('users')} Individual</button><button>${I('brief')} Business</button></div>
+      <div class="fgrid fgrid-2" style="margin-bottom:var(--sp-3)"><div><label class="flabel">First name *</label><input class="finput" placeholder="Alex"></div><div><label class="flabel">Last name *</label><input class="finput" placeholder="Kim"></div></div>
+      <div class="fgrid fgrid-2" style="margin-bottom:var(--sp-3)">
+        <div><label class="flabel">Email *</label><div class="row gap-2"><input class="finput grow" placeholder="alex@example.com"><button class="btn btn-outline btn-sm">Verify</button><span class="badge pos">${I('check')}</span></div></div>
+        <div><label class="flabel">Phone *</label><div class="row gap-2"><input class="finput grow" placeholder="(415) 555-0142"><button class="btn btn-outline btn-sm">Verify</button><span class="badge pos">${I('check')}</span></div></div>
+      </div>
+      <div class="fgrid fgrid-2" style="margin-bottom:var(--sp-4)"><div><label class="flabel">Password *</label><input class="finput" type="password" placeholder="At least 12 characters"></div><div><label class="flabel">Confirm password *</label><input class="finput" type="password" placeholder="Re-enter password"></div></div>
+      <div class="card" style="background:var(--accent-soft);display:flex;gap:var(--sp-3);align-items:flex-start;margin-bottom:var(--sp-4);box-shadow:none">${I('lock')}<p class="muted" style="font-size:var(--fs-sm);margin:0">Next, we verify your identity — a legal requirement (KYC/AML). Sensitive details are collected there, not here, so they stay out of the sign-up step.</p></div>
+      <button class="btn btn-primary">${I('users')} Create account</button>
+      <p class="muted" style="font-size:var(--fs-xs);margin-top:var(--sp-3)">${I('lock')} Bank-grade encryption · Powered by Plaid</p>
+    </div>
+
+    ${sechead('<span>'+I('shield')+' Complete your profile</span>','<span class="badge gold">Required · blocks the app until done</span>')}
+    <!-- parity: KYC 3-step wizard (Personal · Address · Preferences) -->
+    <div id="kycCard" class="card">${kycWizard()}</div>`;
+};
+
 /* ---- Component gallery (Phase 6 documentation deliverable) ---- */
 PAGES.components = () => {
   const spec=(t,note,demo)=>`<div class="card" style="margin-bottom:var(--sp-5)"><div class="sec-head"><div class="sec-title" style="font-size:var(--fs-body)">${t}</div><span class="muted" style="font-size:var(--fs-xs);max-width:46ch;text-align:right">${note}</span></div>${demo}</div>`;
   return `${wshead('System','Component library','Every reusable part of the operating system, with its states and usage — the single source of truth for building new screens.',
-    `<span class="badge neutral">${I('grid')} 14 components</span>`)}
+    `<button class="btn btn-outline btn-sm" data-nav="flowmap">${I('map')} Flow map</button><span class="badge neutral">${I('grid')} 14 components</span>`)}
     <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;gap:var(--sp-3);align-items:center">${I('sparkles')}<div style="font-size:var(--fs-sm)"><strong>Rule:</strong> a new screen composes these parts — it never invents one-offs. If an interaction is genuinely new, it becomes a component here first, then gets used.</div></div>
 
     ${spec('Buttons','Primary for the single main action per view; ghost/outline for secondary; sizes sm + default.',
@@ -2163,6 +2841,16 @@ PAGES.components = () => {
     <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-6)">${I('shield')} Every workspace in TerraVest V3 is assembled from exactly these parts.</p>`;
 };
 
+// BEGIN PARITY ADDITION — UI flow map (generated from the live NAV model; reference terravest-redesign.html #page-flowmap)
+PAGES.flowmap = () => `${wshead('System','UI flow map','Every workspace and how it connects — generated live from the navigation model. Click any node to jump there.',
+    `<button class="btn btn-outline btn-sm" data-nav="components">${I('arr-l')} Components</button>`)}
+    <div class="card" style="border-left:4px solid var(--accent);margin-bottom:var(--sp-6);display:flex;gap:var(--sp-3);align-items:center">${I('map')}<div style="font-size:var(--fs-sm)"><strong>${NAV.length} primary hubs</strong> resolve to every sub-workspace via one router. Deep-links (<span class="mono" style="font-family:var(--font-mono,monospace)">#/&lt;id&gt;</span>), the command palette and in-page links all funnel through it.</div></div>
+    <div class="grid g12">${NAV.map(h=>`<div class="card c4">
+      <div class="row gap-2" style="margin-bottom:var(--sp-3)"><div class="tile sm">${I(h.icon)}</div><div class="grow"><a class="r-name" data-nav="${h.id}" style="cursor:pointer">${h.label}</a><div class="r-sub">${h.tabs?h.tabs.length+' workspaces':'Direct workspace'}</div></div>${h.badge?`<span class="badge neg">${h.badge}</span>`:''}</div>
+      ${h.tabs?`<div class="chiprow" style="flex-wrap:wrap;white-space:normal;gap:6px">${h.tabs.map(t=>`<span class="chip" data-nav="${t.id}" style="cursor:pointer">${t.label}${t.badge?` <span class="nav-badge">${t.badge}</span>`:''}</span>`).join('')}</div>`:`<button class="btn btn-outline btn-sm" data-nav="${h.id}">Open ${I('arr-r')}</button>`}
+    </div>`).join('')}</div>
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-6)">${I('grid')} Regenerates automatically as the NAV model changes — this map can never drift from the real routes.</p>`;
+// END PARITY ADDITION
 /* placeholder inherits the same shell */
 function placeholder(id){
   const label=LABELS[id]||'Workspace', group=(HUB[HUB_OF[id]]||{}).label||'', icon=ICONS[id]||'grid';
@@ -2187,7 +2875,6 @@ const TX = {
 };
 const TXN_LIST=['t1','t5','t2','t3','t4','t7','t6','t8'];
 const GOALS={ef:{icon:'umbrella',cls:'gold',title:'Emergency fund',sub:'Safety net · target Dec 2026',pct:70,have:'$14,000',target:'$20,000'},house:{icon:'home',cls:'',title:'House down payment',sub:'Real estate · target Aug 2028',pct:22,have:'$17,000',target:'$80,000'}};
-const BIZ={summit:{icon:'brief',cls:'',title:'Summit Contracting',sub:'LLC · Construction',rev:'$42,000',net:'+$14,000',cash:'$31,200'},cedar:{icon:'estate',cls:'gold',title:'Cedar Rentals LLC',sub:'LLC · Real estate',rev:'$9,800',net:'+$5,680',cash:'$18,400'}};
 
 const drawer=$('#drawer'), scrim=$('#scrim');
 function actionRows(list){ return `<div class="eyebrow" style="margin:var(--sp-4) 0 var(--sp-2)">Quick actions</div><div class="stack gap-2">${list.map(a=>`<button class="btn btn-outline" style="justify-content:flex-start">${I(a[0])} ${a[1]}</button>`).join('')}</div>`; }
@@ -2220,9 +2907,11 @@ function entityDrawer(type,id){
   if(type==='investment') return {icon:'trend',cls:'violet',title:'Portfolio',sub:'Fidelity · Vanguard · 7 positions',tl:'investment',
     overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Value</div><div class="num" style="font-family:var(--font-display);font-size:2.2rem">$161,260</div><div class="delta up" style="margin-top:4px">${I('arr-ur')} +$28,680 · +21.6%</div></div><div class="card">${sechead('Top holdings')}<div class="rowlist">${HOLDINGS.slice(0,3).map(h=>richRow({icon:'trend',cls:'violet',name:h[0],sub:h[1],amt:h[3],amtColor:'var(--pos)'})).join('')}</div></div>`,
     ai:aiPanel('Concentration is healthy but your bond allocation drifted 3% under target. A $4,800 rebalance restores your risk profile without triggering short-term gains.')};
-  if(type==='business'){ const b=BIZ[id]||BIZ.summit; return {icon:b.icon,cls:b.cls,title:b.title,sub:b.sub,tl:'business',
-    overview:`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-ur','pos','Revenue',b.rev,'this month')}${kpi('trend','','Net',b.net,'this month')}${kpi('bank','info','Cash',b.cash,'')}</div><div class="card">${sechead('Receivables')}<div class="rowlist">${richRow({icon:'invoice',cls:'gold',name:'Open invoices',sub:'2 customers',amt:'$4,650'})}</div></div>`,
-    ai:aiPanel(`${b.title} is cash-flow positive this quarter. One invoice is 12 days overdue — sending a reminder now typically recovers payment within a week.`)}; }
+  if(type==='business'){ const b=bizFind(id)||businessState.businesses[0]; if(!b) return {icon:'brief',cls:'',title:'Business',sub:'',tl:'business',overview:'<div class="empty"><p>No business.</p></div>',ai:aiPanel('No insight yet.')};
+    const ar=businessState.invoices.filter(iv=>iv.businessId===b.id&&iv.status!=='paid'&&iv.status!=='void');
+    return {icon:b.logo,cls:b.cls,title:b.name,sub:b.entity+' · '+b.industry,tl:'business',
+    overview:`<div class="kpirow" style="margin-bottom:var(--sp-4)">${kpi('arr-ur','pos','Revenue',bizMoney(b.kpi.rev),'this month')}${kpi('trend','','Net',bizMoney(b.kpi.net,true),'this month')}${kpi('bank','info','Cash',bizMoney(b.kpi.cash),'')}</div><div class="card">${sechead('Receivables')}<div class="rowlist">${ar.length?ar.map(iv=>richRow({icon:'invoice',cls:iv.status==='overdue'?'neg':'gold',name:iv.customer,sub:'Due '+iv.due,amt:bizMoney(iv.amount-iv.paid)})).join(''):richRow({icon:'invoice',cls:'pos',name:'No open invoices',sub:'All settled',amt:''})}</div></div>`,
+    ai:aiPanel(`${b.name} is cash-flow positive this quarter. ${ar.some(iv=>iv.status==='overdue')?'One invoice is overdue — a reminder now typically recovers payment within a week.':'No overdue invoices right now.'}`)}; }
   if(type==='transaction'){ const t=TX[id]||TX.t1; return {icon:t.icon,cls:t.cls,title:t.title,sub:t.sub,tl:'transaction',
     overview:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="eyebrow">Amount</div><div class="num" style="font-family:var(--font-display);font-size:2rem;${t.pos?'color:var(--pos)':''}">${t.amt}</div><div class="row gap-2" style="margin-top:8px"><span class="badge neutral">${t.cat}</span><span class="badge pos">${I('check')} Cleared</span></div></div>${actionRows([['tag','Recategorize'],['exchange','Split transaction'],['clip','Attach receipt'],['search','Find similar']])}`,
     ai:aiPanel(`This is a typical ${t.cat.toLowerCase()} charge for you. It fits your usual pattern and no duplicate was detected.`)}; }
@@ -2239,6 +2928,10 @@ const ACTION_DRAWERS={
     <div class="rowitem"><div class="tile sm neg">${I('plug')}</div><div class="grow"><div class="r-name">Fidelity</div><div class="r-sub">Reauthorization required</div></div><button class="btn btn-outline btn-sm">Reconnect</button></div>
   </div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-4)">${I('refresh')} Sync all sources</button><p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-3)">${I('shield')} Read-only via Plaid · we never store credentials.</p>`},
   expexport:{icon:'download',title:'Export expenses',sub:'Download or file in Documents',body:`<label class="flabel">Scope</label><div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">This business</button><button>All businesses</button></div><label class="flabel">Format</label><div class="chiprow" style="margin:6px 0 var(--sp-5)"><span class="chip active">PDF</span><span class="chip">Excel</span><span class="chip">CSV</span><span class="chip">Executive summary</span></div><div class="row gap-2"><button class="btn btn-outline" style="flex:1">${I('download')} Download</button><button class="btn btn-primary" style="flex:1">${I('folder')} Save to Documents</button></div>`},
+  txnlink:{icon:'link2',title:'Link existing transactions',sub:'Attach ledger activity to this expense',body:`<div class="ab-search" style="margin-bottom:var(--sp-3)">${I('search')}<span>Search description, merchant or category…</span></div>
+    <div class="seg" style="margin-bottom:var(--sp-3)"><button class="active">Money out</button><button>Money in</button><button>All</button></div>
+    <div class="rowlist">${[['AWS','Software · 2026-05-31','−$1,430.00',true,false],['Gusto — payroll run','Payroll · 2026-05-28','−$8,400.00',false,false],['WeWork — office rent','Rent · 2026-05-25','−$1,800.00',false,false],['AWS','Software · 2026-04-30','−$1,290.00',false,true]].map(t=>`<label class="rowitem${t[4]?'':' act'}" style="${t[4]?'opacity:.55':'cursor:pointer'}"><input type="checkbox" ${t[3]?'checked':''} ${t[4]?'disabled':''} style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0"><div class="grow"><div class="r-name">${t[0]}${t[4]?' <span class="badge neutral">Already linked</span>':''}</div><div class="r-sub">${t[1]}</div></div><div class="r-amt num" style="color:var(--neg)">${t[2]}</div></label>`).join('')}</div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-top:var(--sp-4);padding-top:var(--sp-3);border-top:1px solid var(--border)"><span class="muted" style="font-size:var(--fs-sm)"><strong>1</strong> selected · <strong class="num">$1,430.00</strong></span><div class="row gap-2"><button class="btn btn-outline btn-sm" data-close-drawer>Cancel</button><button class="btn btn-primary btn-sm">${I('link2')} Link 1</button></div></div>`},
   link:{icon:'bank',title:'Link an account',sub:'Securely via Plaid',body:`<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-4)">Connect a bank, card, brokerage or loan. Read-only and encrypted — we never store your credentials.</p><div class="rowlist">${['Chase','Bank of America','Ally','Fidelity','Vanguard','American Express'].map(b=>`<div class="rowitem act"><div class="tile sm">${I('bank')}</div><div class="grow"><div class="r-name">${b}</div><div class="r-sub">Search 12,000+ institutions</div></div>${I('chev-r','muted')}</div>`).join('')}</div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-5)">${I('lock')} Continue with Plaid</button>`},
   goal:{icon:'target',title:'New goal',sub:'Link accounts or track by hand',body:`<div class="stack gap-4"><div><label class="eyebrow">Name</label><div class="omnibar" style="max-width:none;margin-top:6px">Vacation fund</div></div><div><label class="eyebrow">Target amount</label><div class="omnibar" style="max-width:none;margin-top:6px">$10,000</div></div><div><label class="eyebrow">Fund from</label><div class="row gap-2 wrap" style="margin-top:6px"><span class="chip active">${I('check')} Ally Savings · $24,680</span><span class="chip">Chase · $8,450</span></div></div></div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-6)">${I('plus')} Create goal</button>`},
   profile:{icon:'shield',title:'Alex Kim',sub:'Accredited investor',body:`<div class="card" style="margin-bottom:var(--sp-4)"><div class="row gap-2" style="justify-content:space-between"><span class="muted">Identity</span><span class="badge pos">${I('shield')} Verified</span></div></div>${actionRows([['settings','Settings'],['shield','Security'],['x','Sign out']])}`},
@@ -2247,7 +2940,9 @@ const ACTION_DRAWERS={
 
 let drawerTabState=0;
 function openDrawer(type,id){
-  const action=ACTION_DRAWERS[type];
+  // BEGIN PARITY ADDITION — a "goal" WITH an id opens its entity drawer, not the "New goal" action drawer
+  const action=(type==='goal'&&id)?null:ACTION_DRAWERS[type];
+  // END PARITY ADDITION
   $('#drawerIcon').className='tile '+(action?'':entityDrawer(type,id).cls);
   const tabsEl=$('#drawerTabs'), body=$('#drawerBody');
   if(action){
@@ -2406,12 +3101,29 @@ document.addEventListener('click',e=>{
   const dtab=e.target.closest('[data-dtab]'); if(dtab){ const body=$('#drawerBody'); $$('#drawerTabs .drawer-tab').forEach(t=>{const on=t===dtab;t.classList.toggle('active',on);t.setAttribute('aria-selected',on);}); body.innerHTML=body.__panels[+dtab.dataset.dtab]; body.querySelectorAll('[data-chart]').forEach(drawChartEl); return; }
   const nwt=e.target.closest('#nwType [data-t]'); if(nwt){ nwType=nwt.dataset.t; $$('#nwType button').forEach(b=>b.classList.toggle('active',b===nwt)); drawNW(); return; }
   const nwr=e.target.closest('#nwRange [data-r]'); if(nwr){ nwRange=nwr.dataset.r; $$('#nwRange button').forEach(b=>b.classList.toggle('active',b===nwr)); drawNW(); return; }
+  // BEGIN PARITY ADDITION — Transactions direction filter
+  const td=e.target.closest('#txnDir [data-dir]'); if(td){ txnDir=td.dataset.dir; $$('#txnDir button').forEach(b=>b.classList.toggle('active',b===td)); const list=$('#txnMD .md-list'); if(list){ list.innerHTML=txnRowsHTML(); const first=list.querySelector('.md-item'); const d=$('#txnDetail'); if(first&&d){ d.innerHTML=txnDetailHTML(first.dataset.txn); d.querySelectorAll('[data-chart]').forEach(drawChartEl); } const md=$('#txnMD'); if(md) md.classList.remove('show-detail'); } return; }
+  // END PARITY ADDITION
+  // BEGIN PARITY ADDITION — Bills: selecting a payee loads it into the payment review
+  const pp=e.target.closest('[data-payee]'); if(pp){ const sel=$('#pay-selected'); if(sel) sel.innerHTML=`${I('check')} Paying <strong>${pp.dataset.payee}</strong> · ${pp.dataset.payeeSub} — <span class="num" style="font-weight:700">${pp.dataset.payeeAmt}</span>`; const tot=$('#pay-total'); if(tot) tot.textContent=pp.dataset.payeeAmt; const card=$('#pay-review'); if(card){ card.scrollIntoView({behavior:'smooth',block:'center'}); card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash'); } return; }
+  // END PARITY ADDITION
   const dot=e.target.closest('#aiDots [data-dot]'); if(dot){ aiGo(+dot.dataset.dot); return; }
   const aip=e.target.closest('[data-ai-toggle]'); if(aip){ aiPlaying=!aiPlaying; aip.innerHTML=aiPlaying?I('pause'):I('play'); return; }
   if(e.target.closest('#galleryCmdk')){ openCmdk(); return; }
   const ed=e.target.closest('[data-editprop]'); if(ed){ const c=$('#prop-edit'); if(c){ c.style.display=''; const nm=$('#prop-edit-name'); if(nm)nm.textContent=ed.dataset.editprop; const ad=$('#prop-edit-addr'); if(ad)ad.value=ed.dataset.editprop; c.scrollIntoView({behavior:'smooth',block:'center'}); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } return; }
   if(e.target.closest('[data-editprop-cancel]')){ const c=$('#prop-edit'); if(c) c.style.display='none'; return; }
   const ssn=e.target.closest('[data-ssn]'); if(ssn){ const el=$('#ssnval'); if(el){ const shown=el.textContent.includes('6789'); el.textContent=shown?'•••-••-••••':'•••-••-6789'; ssn.innerHTML=(shown?I('lock')+' Show':I('lock')+' Hide'); } return; }
+  // BEGIN PARITY ADDITION — KYC wizard step navigation
+  const kn=e.target.closest('[data-kyc-next]'); if(kn){ kycStep=Math.min(kycStep+1,KYC_LABELS.length); const c=$('#kycCard'); if(c){ c.innerHTML=kycWizard(); c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } if(kycStep>=KYC_LABELS.length) toast('Identity verified','check'); return; }
+  const kb=e.target.closest('[data-kyc-back]'); if(kb){ kycStep=Math.max(kycStep-1,0); const c=$('#kycCard'); if(c) c.innerHTML=kycWizard(); return; }
+  if(e.target.closest('[data-kyc-reset]')){ kycStep=0; const c=$('#kycCard'); if(c) c.innerHTML=kycWizard(); return; }
+  // END PARITY ADDITION
+  // BEGIN PARITY ADDITION — household invite actions
+  if(e.target.closest('[data-copy-invite]')){ toast('Invite link copied','link2'); return; }
+  if(e.target.closest('[data-resend-invite]')){ toast('Invite resent','check'); return; }
+  const rv=e.target.closest('[data-revoke-invite]'); if(rv){ const item=rv.closest('.rowitem'); if(item) item.remove(); const list=$('#inviteList'), cnt=$('#inviteCount'); if(list&&cnt) cnt.textContent=list.querySelectorAll('.rowitem').length; if(list&&!list.querySelector('.rowitem')) list.innerHTML='<p class="muted" style="font-size:var(--fs-sm)">No pending invites.</p>'; toast('Invite revoked','x'); return; }
+  if(e.target.closest('[data-leave-household]')){ toast('You left the household','check'); return; }
+  // END PARITY ADDITION
   const tg=e.target.closest('.tgl'); if(tg){ tg.classList.toggle('on'); tg.setAttribute('aria-checked',tg.classList.contains('on')); return; }
   const set=e.target.closest('.setlink[data-set]'); if(set){ $$('.setlink').forEach(x=>x.classList.toggle('active',x===set)); $$('#setPanels [data-setpanel]').forEach(p=>p.style.display=p.dataset.setpanel===set.dataset.set?'':'none'); return; }
   const tab=e.target.closest('.tab[data-tabidx]'); if(tab){ const block=tab.closest('.tabs-block'); if(!block) return; const idx=tab.dataset.tabidx;
@@ -2424,7 +3136,8 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{ if(e.target.id==='nwFilter'){ nwFilter=e.target.value; drawNW(); } });
 document.addEventListener('keydown',e=>{
-  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('md-item')){ e.preventDefault(); e.target.click(); return; }
+  const kt=e.target;
+  if((e.key==='Enter'||e.key===' ')&&kt.classList&&(kt.classList.contains('md-item')||(kt.classList.contains('chip')&&kt.hasAttribute('data-bizsel')))){ e.preventDefault(); kt.click(); return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); cmdk.classList.contains('show')?closeCmdk():openCmdk(); }
   if(e.key==='Escape'){ closeCmdk(); closeDrawer(); fab.classList.remove('open'); app.classList.remove('rail-open'); }
 });
