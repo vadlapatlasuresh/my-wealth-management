@@ -8,9 +8,8 @@
 <!--
   TerraVest V3 — Financial Operating System (standalone prototype)
   Self-contained, no build step. Brand fonts (DM Serif Display + DM Sans) load
-  from Google Fonts for on-brand local viewing; icons are an inline SVG sprite
-  (no network dependency). The Artifact-published twin uses a system-font fallback
-  under the claude.ai CSP — otherwise the two are identical.
+  from Google Fonts for local viewing; icons are an inline SVG sprite. The
+  Artifact twin uses a system-font fallback under the claude.ai CSP.
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -452,6 +451,31 @@ select.finput{cursor:pointer;appearance:none}
 .prop-card{width:300px;border-radius:var(--r-md);overflow:hidden;border:1px solid var(--border);background:var(--surface);box-shadow:var(--sh1);transition:box-shadow var(--d2),transform var(--d2)}
 .prop-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
 .prop-photo{height:120px;display:grid;place-items:center;font-size:40px;background:linear-gradient(135deg,var(--accent-soft),var(--surface-3));color:var(--accent)}
+/* privacy mode — masks currency values app-wide (hover a value to peek) */
+.priv .kpi-val,.priv .acct-bal,.priv .sc-val,.priv .r-amt,.priv .ai-metric,.priv .money{filter:blur(7px);transition:filter var(--d1);cursor:pointer;user-select:none}
+.priv .kpi-val:hover,.priv .acct-bal:hover,.priv .sc-val:hover,.priv .r-amt:hover,.priv .ai-metric:hover,.priv .money:hover{filter:none}
+/* data-freshness / sync pill */
+.fresh{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:var(--r-full);background:var(--surface-3);color:var(--ink-2);font-size:var(--fs-xs);font-weight:600;white-space:nowrap;border:1px solid transparent;transition:border-color var(--d2)}
+.fresh:hover{border-color:var(--border-strong)}
+.fresh .dot{width:7px;height:7px;border-radius:50%;background:var(--pos);flex-shrink:0}
+.fresh.syncing .dot{background:var(--warn);animation:pulsedot 1s infinite}
+@keyframes pulsedot{50%{opacity:.35}}
+@media(max-width:860px){#freshTxt{display:none}#connBtn{display:none}}
+/* master–detail layout (Accounts, and the pattern for Transactions/Real estate) */
+.md{display:grid;grid-template-columns:326px 1fr;gap:var(--sp-5);align-items:start}
+.md-list{display:flex;flex-direction:column;gap:2px;position:sticky;top:calc(var(--hub-h) + var(--sp-4));max-height:calc(100vh - var(--bar-h) - var(--hub-h) - var(--sp-6));overflow-y:auto}
+.md-item{display:flex;align-items:center;gap:var(--sp-3);padding:10px 12px;border-radius:var(--r-sm);cursor:pointer;border:1px solid transparent;transition:background var(--d1),border-color var(--d1)}
+.md-item:hover{background:var(--surface-2)}
+.md-item.active{background:var(--accent-soft);border-color:var(--accent-line)}
+.md-back{display:none}
+@media(max-width:920px){
+  .md{grid-template-columns:1fr}
+  .md-list{position:static;max-height:none}
+  .md .md-detail{display:none}
+  .md.show-detail .md-list{display:none}
+  .md.show-detail .md-detail{display:block}
+  .md.show-detail .md-back{display:inline-flex}
+}
 
 /* ---- 16 · MOBILE --------------------------------------------------------- */
 .mobnav{display:none}.hamb{display:none}
@@ -558,6 +582,9 @@ select.finput{cursor:pointer;appearance:none}
   <symbol id="i-compass" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.2 5.2-5.2 2.2 2.2-5.2z"/></symbol>
   <symbol id="i-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20s-6.5-4.2-9-8.2C1.5 9 3 5.5 6.2 5.5c1.9 0 3 1.2 3.8 2.3.8-1.1 1.9-2.3 3.8-2.3 3.2 0 4.7 3.5 3.2 6.3C18.5 15.8 12 20 12 20z"/></symbol>
   <symbol id="i-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18h16M4 18l-1.2-9L8 13l4-7 4 7 5.2-4L20 18"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l18 18M10.6 10.6a3 3 0 004.2 4.2M9.9 5.2A9.7 9.7 0 0112 5c6.5 0 10 7 10 7a17 17 0 01-3.2 4M6.1 6.1A17 17 0 002 12s3.5 7 10 7a9.7 9.7 0 003-.5"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6M15 2v6M7 8h10v3a5 5 0 01-10 0zM12 16v4"/></symbol>
 </svg>
 
 <!-- ===================== APP SHELL ===================== -->
@@ -588,19 +615,22 @@ select.finput{cursor:pointer;appearance:none}
       <button class="iconbtn" id="collapse" aria-label="Collapse rail" title="Collapse"><svg class="ic"><use href="#i-list"/></svg></button>
       <button class="omnibar" id="omni" aria-haspopup="dialog"><svg class="ic"><use href="#i-search"/></svg><span class="grow" style="text-align:left">Search accounts, transactions, actions…</span><span class="kbd">⌘K</span></button>
       <div class="mla row gap-2">
+        <button class="fresh" id="syncBtn" title="Data as of just now — click to sync" aria-label="Data freshness — sync now"><span class="dot"></span><span id="freshTxt">Synced just now</span></button>
+        <button class="iconbtn" id="privBtn" aria-label="Privacy mode" aria-pressed="false" title="Privacy mode — hide balances"><svg class="ic"><use href="#i-eye"/></svg></button>
+        <button class="iconbtn" id="connBtn" aria-label="Connection health" title="Connection health"><svg class="ic"><use href="#i-plug"/></svg></button>
         <div class="seg icons" role="group" aria-label="Theme">
           <button data-theme-set="light" title="Light" aria-label="Light theme"><svg class="ic"><use href="#i-sun"/></svg></button>
           <button data-theme-set="dark" title="Dark" aria-label="Dark theme"><svg class="ic"><use href="#i-moon"/></svg></button>
           <button data-theme-set="system" title="System" aria-label="System theme"><svg class="ic"><use href="#i-monitor"/></svg></button>
         </div>
         <button class="iconbtn" aria-label="Help"><svg class="ic"><use href="#i-help"/></svg></button>
-        <button class="iconbtn" id="notif" aria-label="Notifications"><svg class="ic"><use href="#i-bell"/></svg><span class="ping"></span></button>
+        <button class="iconbtn" id="notif" data-nav="messages" aria-label="Notifications — open Messages"><svg class="ic"><use href="#i-bell"/></svg><span class="ping"></span></button>
       </div>
     </header>
 
     <main class="viewport scroll" id="viewport">
       <!-- Generated workspaces mount into #wsHost; Today is authored inline below -->
-      <div class="hub-bar" id="hubBar"></div>
+      <div class="hub-bar" id="hubBar" role="tablist" aria-label="Section"></div>
       <div class="container" id="wsHost"></div>
     </main>
   </div>
@@ -643,7 +673,7 @@ select.finput{cursor:pointer;appearance:none}
   <a data-nav="ai"><svg class="ic"><use href="#i-robot"/></svg>Advisor</a>
 </nav>
 
-<div class="toastwrap" id="toasts"></div>
+<div class="toastwrap" id="toasts" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script>
 /* ============================================================================
@@ -739,7 +769,7 @@ let CURRENT = 'today', CURRENT_HUB = 'overview', BOOTED = false;
 const viewport = $('#viewport'), app = $('#app');
 /* navigate accepts either a primary hub id or any sub-workspace id (deep links,
    command palette, in-page data-nav all resolve to the right hub + tab). */
-function navigate(target){
+function applyRoute(target){
   let hub, sub;
   if (HUB[target]) { hub = HUB[target]; sub = hub.tabs ? hub.tabs[0].id : target; }
   else if (HUB_OF[target]) { hub = HUB[HUB_OF[target]]; sub = target; }
@@ -752,6 +782,10 @@ function navigate(target){
   app.classList.remove('rail-open');
   closeCmdk();
 }
+/* deep-linking + browser history: every workspace & entity is a shareable URL */
+function pushRoute(id){ const u = '#/'+id; if (location.hash !== u) history.pushState({id}, '', u); }
+function navigate(target){ applyRoute(target); pushRoute(CURRENT); }
+window.addEventListener('popstate', () => applyRoute((location.hash.slice(2)) || 'overview'));
 function renderHub(hub, sub){
   const bar = $('#hubBar');
   if (hub && hub.tabs) {
@@ -840,7 +874,7 @@ function areaPath(vals,w,h,pad){
 }
 function sparkSVG(vals){
   const p=areaPath(vals,120,34,4), c=cssVar('--accent');
-  return `<svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none"><path d="${p.line} L 116 34 L 4 34 Z" fill="${c}" opacity=".13"/><path d="${p.line}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`;
+  return `<svg class="spark" viewBox="0 0 120 34" preserveAspectRatio="none" aria-hidden="true"><path d="${p.line} L 116 34 L 4 34 Z" fill="${c}" opacity=".13"/><path d="${p.line}" fill="none" stroke="${c}" stroke-width="2" stroke-linecap="round"/></svg>`;
 }
 function donutSVG(segs,size,top,sub){
   size=size||150; const r=size/2, ir=r*0.62, cx=r, cy=r, total=segs.reduce((s,x)=>s+x.val,0)||1;
@@ -851,7 +885,8 @@ function donutSVG(segs,size,top,sub){
     const xi2=cx+ir*Math.cos(a2),yi2=cy+ir*Math.sin(a2),xi1=cx+ir*Math.cos(a),yi1=cy+ir*Math.sin(a);
     out+=`<path d="M${x1} ${y1} A${r} ${r} 0 ${lg} 1 ${x2} ${y2} L${xi2} ${yi2} A${ir} ${ir} 0 ${lg} 0 ${xi1} ${yi1} Z" fill="${col}"/>`; a=a2; });
   const ctr=top?`<text x="${cx}" y="${cy-1}" text-anchor="middle" font-size="15" font-weight="700" fill="${cssVar('--ink')}" font-family="Georgia,serif">${top}</text><text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="9" fill="${cssVar('--ink-3')}">${sub||''}</text>`:'';
-  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0">${out}${ctr}</svg>`;
+  const desc=segs.map(s=>`${s.label} ${Math.round(s.val/total*100)}%`).join(', ');
+  return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0" role="img" aria-label="Breakdown: ${desc}">${out}${ctr}</svg>`;
 }
 function inoutSVG(data){
   const w=560,h=170,pad=24,max=Math.max(...data.map(d=>Math.max(d.i,d.o)))*1.15;
@@ -1120,33 +1155,47 @@ function greet(){
    ============================================================================ */
 const PAGES = {};
 
+/* master–detail: right-hand pane renders the selected account (reused by the
+   list clicks; the same entity also opens the full universal drawer). */
+function acctDetailHTML(id){
+  const a=ACCT_BY[id]||ACCOUNTS[0];
+  return `<button class="btn btn-ghost btn-sm md-back" data-md-back>${I('arr-l')} Accounts</button>
+    <div class="card" style="margin-top:var(--sp-2)">
+      <div class="row gap-3" style="margin-bottom:var(--sp-4)"><div class="tile ${a.cls}">${I(a.icon)}</div><div class="grow"><div class="sec-title">${a.name}</div><div class="muted" style="font-size:var(--fs-sm)">${a.inst} · ${a.type}</div></div><span class="fresh" title="Data as of 2 minutes ago"><span class="dot"></span>2m ago</span></div>
+      <div class="eyebrow">Current balance</div><div class="acct-bal num" style="font-size:2.2rem">${a.bal}</div><div class="muted" style="font-size:var(--fs-xs)">${a.meta}</div>
+      <div data-chart="spark" data-v="[${a.spark}]" style="margin:var(--sp-3) 0"></div>
+      <div class="row gap-2 wrap"><button class="btn btn-primary btn-sm" data-drawer="account" data-id="${a.id}">${I('ext')} Open full drawer</button><button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-outline btn-sm">${I('note')} Rename</button></div>
+    </div>
+    <div class="card" style="margin-top:var(--sp-4)">${sechead('Recent activity','<a class="more" data-nav="transactions">All '+I('arr-r')+'</a>')}
+      <div class="rowlist">
+        ${richRow({icon:'arr-dl',cls:'pos',name:'Payroll — Acme Corp',sub:'May 30 · Income',amt:'+$4,250.00',amtColor:'var(--pos)',entity:{type:'transaction',id:'t1'}})}
+        ${richRow({icon:'cart',cls:'',name:'Whole Foods Market',sub:'Jun 1 · Groceries',amt:'−$84.32',entity:{type:'transaction',id:'t2'}})}
+        ${richRow({icon:'car',cls:'gold',name:'Shell Station',sub:'May 31 · Transport',amt:'−$62.10',entity:{type:'transaction',id:'t3'}})}
+      </div>
+    </div>`;
+}
 PAGES.accounts = () => {
   const groups=[
-    {name:'Cash & Banking',total:'$33,130',icon:'bank',cls:'',rows:['chk','sav']},
-    {name:'Investments',total:'$161,260',icon:'trend',cls:'violet',rows:['brk','ira']},
-    {name:'Credit Cards',total:'−$2,210',icon:'card',cls:'neg',rows:['ccd']},
-    {name:'Loans',total:'−$18,400',icon:'car',cls:'gold',rows:['auto']},
+    {name:'Cash & Banking',total:'$33,130',rows:['chk','sav']},
+    {name:'Investments',total:'$161,260',rows:['brk','ira']},
+    {name:'Credit Cards',total:'−$2,210',rows:['ccd']},
+    {name:'Loans',total:'−$18,400',rows:['auto']},
   ];
-  return `${wshead('Money','Accounts','Everything you own and owe — grouped, synced, and one tap from the full story.',
+  const listHTML = groups.map(g=>`<div class="eyebrow" style="padding:10px 12px 4px">${g.name} · ${g.total}</div>`+g.rows.map(id=>{const a=ACCT_BY[id]; return `<div class="md-item${id===ACCOUNTS[0].id?' active':''}" data-acct="${a.id}" role="option" aria-selected="${id===ACCOUNTS[0].id}" tabindex="0"><div class="tile sm ${a.cls}">${I(a.icon)}</div><div class="grow"><div class="r-name">${a.name}</div><div class="r-sub">${a.inst}</div></div><div class="num money" style="font-weight:700;font-size:var(--fs-sm)">${a.bal}</div></div>`;}).join('')).join('');
+  return `${wshead('Money','Accounts','Everything you own and owe — pick an account on the left to see its full story on the right.',
     `<button class="btn btn-outline btn-sm">${I('refresh')} Sync</button><button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Link account</button>`)}
     ${actionBar(['All','Cash','Investments','Credit','Loans'])}
     <div class="kpirow" style="margin-bottom:var(--sp-6)">
       ${kpi('scale','','Net position','$173,780','<span class="badge pos">'+I('arr-ur')+' +6.3% · 30d</span>')}
       ${kpi('coins','pos','Total assets','$194,391','6 accounts')}
       ${kpi('bank','info','Cash','$33,130','')}
-      ${kpi('trend','violet','Investments','$161,260','+21.6% all-time')}
       ${kpi('card','neg','Total debt','$20,610','2 accounts')}
     </div>
-    <div class="grid g12" style="margin-bottom:var(--sp-6)">
-      <div class="card c7">${sechead('Net worth · 6 months','<span class="badge pos">+$15,732</span>')}<div data-chart="nw" data-color="--c1" data-type="area" data-v="[${NW_SERIES.all.slice(-10)}]"></div></div>
-      <div class="card c5">${sechead('Asset allocation')}<div class="row gap-5" style="align-items:center"><div data-chart="donut" data-size="150" data-top="$194k" data-sub="assets" data-v='[{"label":"Cash","val":33130,"color":"--c3"},{"label":"Investments","val":161260,"color":"--c1"}]'></div><div class="grow">${legend([{label:'Cash & banking',val:'$33,130',color:'--c3',pct:'17%'},{label:'Investments',val:'$161,260',color:'--c1',pct:'83%'}])}</div></div></div>
+    <div class="md" id="acctMD">
+      <div class="md-list" role="listbox" aria-label="Accounts">${listHTML}<button class="btn btn-outline btn-sm" data-drawer="link" style="margin:var(--sp-3) 8px 0">${I('plus')} Link account</button></div>
+      <div class="md-detail" id="acctDetail">${acctDetailHTML(ACCOUNTS[0].id)}</div>
     </div>
-    ${sechead('By type · click any account for its full drawer','<a class="more" data-nav="transactions">Transactions '+I('arr-r')+'</a>')}
-    ${groups.map(g=>`<div class="card" style="margin-bottom:var(--sp-4)">
-      <div class="sec-head"><div class="row gap-3"><div class="tile ${g.cls}">${I(g.icon)}</div><div><div class="sec-title" style="font-size:var(--fs-body)">${g.name}</div><div class="muted" style="font-size:var(--fs-xs)">${g.rows.length} account${g.rows.length>1?'s':''}</div></div></div><div class="num" style="font-weight:700">${g.total}</div></div>
-      <div class="rowlist">${g.rows.map(id=>{const a=ACCT_BY[id]; return richRow({icon:a.icon,cls:a.cls,name:a.name,sub:a.inst+' · '+a.meta,amt:a.bal,entity:{type:'account',id:a.id}});}).join('')}</div>
-    </div>`).join('')}
-    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-4)">${I('shield')} Read-only and secured by Plaid — credentials are never stored.</p>`;
+    <p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-5)">${I('shield')} Read-only and secured by Plaid — credentials are never stored.</p>`;
 };
 
 PAGES.investments = () => {
@@ -1392,6 +1441,22 @@ PAGES.bills = () => `
   ${wshead('Money','Bills & payments','Pay a card, loan or biller — securely, with reminders so nothing surprises you.',
     `<button class="btn btn-primary btn-sm" data-drawer="link">${I('plus')} Pay someone</button>`)}
   ${actionBar(['Upcoming','Scheduled','Paid','Recurring'])}
+  <div class="card" style="margin-bottom:var(--sp-6)">${sechead('Action queue','<span class="badge neutral">Prioritized by urgency</span>')}
+    <div class="eyebrow" style="color:var(--neg);margin-bottom:6px">${I('flame')} Critical · pay now</div>
+    <div class="rowlist">
+      <div class="rowitem" style="border-left:3px solid var(--neg);padding-left:10px;margin-left:-10px"><div class="tile sm neg">${I('home')}</div><div class="grow"><div class="r-name">Mortgage <span class="badge neg">Due in 2 days</span></div><div class="r-sub">Rocket · <span class="money">$1,842.00</span></div></div><button class="btn btn-primary btn-sm">Pay</button></div>
+    </div>
+    <div class="eyebrow" style="color:var(--gold);margin:var(--sp-4) 0 6px">${I('clock')} Due soon</div>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm gold">${I('bolt')}</div><div class="grow"><div class="r-name">Electricity <span class="badge warn">Jun 17</span></div><div class="r-sub">City Power · <span class="money">$87.64</span></div></div><button class="btn btn-ghost btn-sm">Pay</button></div>
+      <div class="rowitem"><div class="tile sm info">${I('wifi')}</div><div class="grow"><div class="r-name">Internet <span class="badge warn">Jun 21</span></div><div class="r-sub">Fiber Co. · <span class="money">$65.00</span></div></div><button class="btn btn-ghost btn-sm">Pay</button></div>
+    </div>
+    <div class="eyebrow" style="color:var(--pos);margin:var(--sp-4) 0 6px">${I('sparkles')} Opportunities</div>
+    <div class="rowlist">
+      <div class="rowitem"><div class="tile sm pos">${I('repeat')}</div><div class="grow"><div class="r-name">3 subscriptions unused 60+ days</div><div class="r-sub">Cancel to save ~$92/mo</div></div><button class="btn btn-outline btn-sm" data-nav="recurring">Review</button></div>
+      <div class="rowitem"><div class="tile sm pos">${I('card')}</div><div class="grow"><div class="r-name">Autopay available on 2 billers</div><div class="r-sub">Never miss a due date</div></div><button class="btn btn-outline btn-sm">Enable</button></div>
+    </div>
+  </div>
   <div class="kpirow" style="margin-bottom:var(--sp-6)">
     ${kpi('receipt','warn','Due in 7 days','$2,130','3 bills')}
     ${kpi('cal','','Next payment','Jun 15','Mortgage')}
@@ -2088,6 +2153,21 @@ function docRows(){ return `<div class="rowlist">
   ${richRow({icon:'file',cls:'info',name:'Agreement',sub:'PDF · 88 KB',amt:''})}
 </div><button class="btn btn-outline btn-sm" style="margin-top:var(--sp-4)">${I('download')} Upload document</button>`; }
 function aiPanel(text){ return `<div class="ai-card" style="width:auto"><div class="ai-head"><div class="tile">${I('robot')}</div><div class="ai-title">Advisor summary</div></div><div class="ai-body">${text}</div><button class="btn btn-ghost btn-sm" data-nav="ai" style="align-self:flex-start">Open advisor ${I('arr-r')}</button></div>`; }
+function notesPanel(){ return `<div class="card">${sechead('Notes','<span class="badge neutral">Private</span>')}<textarea class="finput" style="height:auto;min-height:80px;padding:10px 12px" placeholder="Add a private note about this item…"></textarea><button class="btn btn-primary btn-sm" style="margin-top:var(--sp-3)">${I('plus')} Save note</button><div class="rowlist" style="margin-top:var(--sp-4)"><div class="rowitem"><div class="tile sm">${I('note')}</div><div class="grow"><div class="r-name">Reconcile before filing</div><div class="r-sub">You · 2 days ago</div></div></div></div>`; }
+function relatedPanel(type){
+  const rel={account:[['exchange','Recent transactions','118 this month'],['target','Emergency fund goal','Linked account']],investment:[['coins','Alternatives','$84,500'],['percent','Tax lots','12 lots']],business:[['invoice','Open invoices','$4,650'],['receipt','Bills due','$4,180']],transaction:[['tag','Similar transactions','9 found'],['bank','Primary Checking','Account']],goal:[['bank','Ally Savings','Funding source'],['home','123 Oak St','Related asset']]}[type]||[['sparkles','AI insights','View']];
+  return `<div class="card">${sechead('Related')}<div class="rowlist">${rel.map(r=>`<div class="rowitem act"><div class="tile sm">${I(r[0])}</div><div class="grow"><div class="r-name">${r[1]}</div><div class="r-sub">${r[2]}</div></div>${I('chev-r','muted')}</div>`).join('')}</div></div>`;
+}
+/* accessibility: focus trap + restore for overlays (drawer, command palette) */
+let lastFocused=null;
+function trapFocus(container){
+  const sel='a[href],button:not([disabled]),input:not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"])';
+  const onKey=e=>{ if(e.key!=='Tab')return; const f=[...container.querySelectorAll(sel)].filter(el=>el.offsetParent!==null); if(!f.length)return; const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){last.focus();e.preventDefault();} else if(!e.shiftKey&&document.activeElement===last){first.focus();e.preventDefault();} };
+  container.__trap=onKey; container.addEventListener('keydown',onKey);
+}
+function releaseFocus(container){ if(container.__trap){ container.removeEventListener('keydown',container.__trap); container.__trap=null; } }
+function restoreFocus(){ if(lastFocused&&lastFocused.focus){ try{lastFocused.focus();}catch(e){} } }
 
 function entityDrawer(type,id){
   if(type==='account'){ const a=ACCT_BY[id]||ACCOUNTS[0]; return {icon:a.icon,cls:a.cls,title:a.name,sub:a.inst+' · '+a.type,tl:'account',
@@ -2108,6 +2188,12 @@ function entityDrawer(type,id){
   return {icon:'wallet',cls:'',title:LABELS[type]||'Detail',sub:'',tl:null,overview:'<div class="empty"><p>No detail available.</p></div>',ai:aiPanel('No insight yet.')};
 }
 const ACTION_DRAWERS={
+  connections:{icon:'plug',title:'Connection health',sub:'6 sources · 1 needs attention',body:`<div class="rowlist">
+    <div class="rowitem"><div class="tile sm pos">${I('bank')}</div><div class="grow"><div class="r-name">Chase</div><div class="r-sub">2 accounts · synced 2m ago</div></div><span class="badge pos">${I('check')} Connected</span></div>
+    <div class="rowitem"><div class="tile sm pos">${I('bank')}</div><div class="grow"><div class="r-name">Ally</div><div class="r-sub">1 account · synced 5m ago</div></div><span class="badge pos">${I('check')} Connected</span></div>
+    <div class="rowitem"><div class="tile sm gold">${I('refresh')}</div><div class="grow"><div class="r-name">Vanguard</div><div class="r-sub">Syncing…</div></div><span class="badge warn">Syncing</span></div>
+    <div class="rowitem"><div class="tile sm neg">${I('plug')}</div><div class="grow"><div class="r-name">Fidelity</div><div class="r-sub">Reauthorization required</div></div><button class="btn btn-outline btn-sm">Reconnect</button></div>
+  </div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-4)">${I('refresh')} Sync all sources</button><p class="muted" style="font-size:var(--fs-xs);text-align:center;margin-top:var(--sp-3)">${I('shield')} Read-only via Plaid · we never store credentials.</p>`},
   expexport:{icon:'download',title:'Export expenses',sub:'Download or file in Documents',body:`<label class="flabel">Scope</label><div class="seg" style="margin-bottom:var(--sp-4)"><button class="active">This business</button><button>All businesses</button></div><label class="flabel">Format</label><div class="chiprow" style="margin:6px 0 var(--sp-5)"><span class="chip active">PDF</span><span class="chip">Excel</span><span class="chip">CSV</span><span class="chip">Executive summary</span></div><div class="row gap-2"><button class="btn btn-outline" style="flex:1">${I('download')} Download</button><button class="btn btn-primary" style="flex:1">${I('folder')} Save to Documents</button></div>`},
   link:{icon:'bank',title:'Link an account',sub:'Securely via Plaid',body:`<p class="muted" style="font-size:var(--fs-sm);margin-bottom:var(--sp-4)">Connect a bank, card, brokerage or loan. Read-only and encrypted — we never store your credentials.</p><div class="rowlist">${['Chase','Bank of America','Ally','Fidelity','Vanguard','American Express'].map(b=>`<div class="rowitem act"><div class="tile sm">${I('bank')}</div><div class="grow"><div class="r-name">${b}</div><div class="r-sub">Search 12,000+ institutions</div></div>${I('chev-r','muted')}</div>`).join('')}</div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-5)">${I('lock')} Continue with Plaid</button>`},
   goal:{icon:'target',title:'New goal',sub:'Link accounts or track by hand',body:`<div class="stack gap-4"><div><label class="eyebrow">Name</label><div class="omnibar" style="max-width:none;margin-top:6px">Vacation fund</div></div><div><label class="eyebrow">Target amount</label><div class="omnibar" style="max-width:none;margin-top:6px">$10,000</div></div><div><label class="eyebrow">Fund from</label><div class="row gap-2 wrap" style="margin-top:6px"><span class="chip active">${I('check')} Ally Savings · $24,680</span><span class="chip">Chase · $8,450</span></div></div></div><button class="btn btn-primary" style="width:100%;margin-top:var(--sp-6)">${I('plus')} Create goal</button>`},
@@ -2126,21 +2212,26 @@ function openDrawer(type,id){
   } else {
     const d=entityDrawer(type,id);
     $('#drawerIcon').innerHTML=I(d.icon); $('#drawerTitle').textContent=d.title; $('#drawerSub').textContent=d.sub;
-    const tabs=['Overview', ...(d.tl?['Timeline']:[]),'Documents','AI'];
-    tabsEl.style.display=''; drawerTabState=0;
-    tabsEl.innerHTML=tabs.map((t,i)=>`<button class="drawer-tab${i===0?' active':''}" data-dtab="${i}">${t}</button>`).join('');
+    const tabs=['Overview', ...(d.tl?['Activity']:[]),'Documents','Notes','Related','AI'];
+    tabsEl.style.display=''; tabsEl.setAttribute('role','tablist'); drawerTabState=0;
+    tabsEl.innerHTML=tabs.map((t,i)=>`<button class="drawer-tab${i===0?' active':''}" data-dtab="${i}" role="tab" aria-selected="${i===0}">${t}</button>`).join('');
     const panels={0:d.overview};
-    let k=1; if(d.tl){panels[k]=`<div class="card">${sechead('Timeline')}${timeline(TIMELINES[d.tl]||[])}</div>`; k++;}
+    let k=1; if(d.tl){panels[k]=`<div class="card">${sechead('Activity')}${timeline(TIMELINES[d.tl]||[])}</div>`; k++;}
     panels[k]=`<div class="card">${sechead('Documents')}${docRows()}</div>`; k++;
+    panels[k]=notesPanel(); k++;
+    panels[k]=relatedPanel(type); k++;
     panels[k]=d.ai;
     body.dataset.panels=JSON.stringify(Object.keys(panels));
     body.__panels=panels;
     body.innerHTML=panels[0];
   }
+  lastFocused=document.activeElement;
   drawer.classList.add('show'); scrim.classList.add('show');
   body.querySelectorAll('[data-chart]').forEach(drawChartEl);
+  trapFocus(drawer);
+  setTimeout(()=>{ const f=drawer.querySelector('[data-close-drawer]'); if(f) f.focus(); }, 60);
 }
-function closeDrawer(){ drawer.classList.remove('show'); if(!$('#cmdk').classList.contains('show')) scrim.classList.remove('show'); }
+function closeDrawer(){ if(!drawer.classList.contains('show'))return; drawer.classList.remove('show'); releaseFocus(drawer); if(!$('#cmdk').classList.contains('show')) scrim.classList.remove('show'); restoreFocus(); }
 
 /* ============================================================================
    9 · CAROUSELS
@@ -2200,8 +2291,8 @@ function renderCmdk(q=''){
   cmdkFiltered.forEach((c,i)=>{ if(c.type!==last){html+=`<div class="cmdk-grp">${c.type}</div>`;last=c.type;} html+=`<div class="cmdk-item${i===0?' active':''}" data-i="${i}">${I(c.icon)}<span>${c.label}</span>${c.hint?`<span class="cmdk-hint">${c.hint}</span>`:''}</div>`; });
   cmdkList.innerHTML=html||`<div class="empty" style="padding:var(--sp-6)"><p>No matches</p></div>`;
 }
-function openCmdk(){ renderCmdk(); cmdk.classList.add('show'); scrim.classList.add('show'); cmdkInput.value=''; cmdkInput.focus(); }
-function closeCmdk(){ cmdk.classList.remove('show'); if(!drawer.classList.contains('show')) scrim.classList.remove('show'); }
+function openCmdk(){ if(!cmdk.classList.contains('show')) lastFocused=document.activeElement; renderCmdk(); cmdk.classList.add('show'); scrim.classList.add('show'); cmdkInput.value=''; cmdkInput.focus(); trapFocus(cmdk); }
+function closeCmdk(){ if(!cmdk.classList.contains('show'))return; cmdk.classList.remove('show'); releaseFocus(cmdk); if(!drawer.classList.contains('show')){ scrim.classList.remove('show'); restoreFocus(); } }
 function runCmdk(i){ const c=cmdkFiltered[i]; if(c){ closeCmdk(); c.run(); } }
 $('#omni').addEventListener('click',openCmdk);
 cmdkInput.addEventListener('input',e=>renderCmdk(e.target.value));
@@ -2237,14 +2328,36 @@ $('#hamb').addEventListener('click',()=>app.classList.toggle('rail-open'));
 const fab=$('#fab');
 $('#fabBtn').addEventListener('click',()=>{ const o=fab.classList.toggle('open'); $('#fabBtn').setAttribute('aria-expanded',o); });
 function toast(msg,icon='check'){ const t=document.createElement('div'); t.className='toast'; t.innerHTML=`${I(icon)} ${msg}`; $('#toasts').appendChild(t); setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(12px)';setTimeout(()=>t.remove(),320);},2600); }
-$('#notif').addEventListener('click',()=>toast('2 alerts need your attention','bell'));
+/* bell navigates to Messages via data-nav delegation (no extra listener) */
+
+/* ---- Privacy mode (mask balances app-wide; persists) ---- */
+const privBtn=$('#privBtn');
+function applyPriv(on){ document.documentElement.classList.toggle('priv',on); privBtn.setAttribute('aria-pressed',on); privBtn.innerHTML=I(on?'eye-off':'eye'); try{localStorage.setItem('tv3-priv',on?'1':'0');}catch(e){} }
+privBtn.addEventListener('click',()=>{ const on=!document.documentElement.classList.contains('priv'); applyPriv(on); toast(on?'Privacy mode on — balances hidden':'Privacy mode off', on?'eye-off':'eye'); });
+applyPriv((()=>{ try{return localStorage.getItem('tv3-priv')==='1';}catch(e){return false;} })());
+
+/* ---- Data freshness / sync ---- */
+const syncBtn=$('#syncBtn'), freshTxt=$('#freshTxt');
+let freshAt=Date.now();
+function freshLabel(){ const m=Math.round((Date.now()-freshAt)/60000); return m<1?'Synced just now':`Synced ${m}m ago`; }
+setInterval(()=>{ if(!syncBtn.classList.contains('syncing')&&freshTxt) freshTxt.textContent=freshLabel(); }, 60000);
+syncBtn.addEventListener('click',()=>{
+  if(syncBtn.classList.contains('syncing'))return;
+  syncBtn.classList.add('syncing'); if(freshTxt) freshTxt.textContent='Syncing…';
+  setTimeout(()=>{ syncBtn.classList.remove('syncing'); freshAt=Date.now(); if(freshTxt) freshTxt.textContent='Synced just now'; toast('Accounts synced','check'); rerender(); }, 900);
+});
+
+/* ---- Connection health ---- */
+$('#connBtn').addEventListener('click',()=>openDrawer('connections'));
 
 document.addEventListener('click',e=>{
-  const hs=e.target.closest('.hub-tab[data-sub]'); if(hs){ $$('#hubBar .hub-tab').forEach(x=>{const on=x===hs;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); renderSub(hs.dataset.sub); viewport.scrollTop=0; return; }
+  const hs=e.target.closest('.hub-tab[data-sub]'); if(hs){ $$('#hubBar .hub-tab').forEach(x=>{const on=x===hs;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); renderSub(hs.dataset.sub); pushRoute(hs.dataset.sub); viewport.scrollTop=0; return; }
+  const mdi=e.target.closest('.md-item[data-acct]'); if(mdi){ const wrap=mdi.closest('.md'); wrap.querySelectorAll('.md-item').forEach(x=>{const on=x===mdi;x.classList.toggle('active',on);x.setAttribute('aria-selected',on);}); wrap.classList.add('show-detail'); const d=$('#acctDetail'); if(d){ d.innerHTML=acctDetailHTML(mdi.dataset.acct); d.querySelectorAll('[data-chart]').forEach(drawChartEl); } return; }
+  if(e.target.closest('[data-md-back]')){ const wrap=e.target.closest('.md'); if(wrap) wrap.classList.remove('show-detail'); return; }
   const nav=e.target.closest('[data-nav]'); if(nav){ e.preventDefault(); navigate(nav.dataset.nav); return; }
   const dr=e.target.closest('[data-drawer]'); if(dr){ e.preventDefault(); openDrawer(dr.dataset.drawer,dr.dataset.id); return; }
   if(e.target.closest('[data-close-drawer]')){ closeDrawer(); return; }
-  const dtab=e.target.closest('[data-dtab]'); if(dtab){ const body=$('#drawerBody'); $$('#drawerTabs .drawer-tab').forEach(t=>t.classList.toggle('active',t===dtab)); body.innerHTML=body.__panels[+dtab.dataset.dtab]; body.querySelectorAll('[data-chart]').forEach(drawChartEl); return; }
+  const dtab=e.target.closest('[data-dtab]'); if(dtab){ const body=$('#drawerBody'); $$('#drawerTabs .drawer-tab').forEach(t=>{const on=t===dtab;t.classList.toggle('active',on);t.setAttribute('aria-selected',on);}); body.innerHTML=body.__panels[+dtab.dataset.dtab]; body.querySelectorAll('[data-chart]').forEach(drawChartEl); return; }
   const nwt=e.target.closest('#nwType [data-t]'); if(nwt){ nwType=nwt.dataset.t; $$('#nwType button').forEach(b=>b.classList.toggle('active',b===nwt)); drawNW(); return; }
   const nwr=e.target.closest('#nwRange [data-r]'); if(nwr){ nwRange=nwr.dataset.r; $$('#nwRange button').forEach(b=>b.classList.toggle('active',b===nwr)); drawNW(); return; }
   const dot=e.target.closest('#aiDots [data-dot]'); if(dot){ aiGo(+dot.dataset.dot); return; }
@@ -2265,6 +2378,7 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('change',e=>{ if(e.target.id==='nwFilter'){ nwFilter=e.target.value; drawNW(); } });
 document.addEventListener('keydown',e=>{
+  if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('md-item')){ e.preventDefault(); e.target.click(); return; }
   if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); cmdk.classList.contains('show')?closeCmdk():openCmdk(); }
   if(e.key==='Escape'){ closeCmdk(); closeDrawer(); fab.classList.remove('open'); app.classList.remove('rail-open'); }
 });
@@ -2275,7 +2389,8 @@ scrim.addEventListener('click',()=>{ closeCmdk(); closeDrawer(); app.classList.r
    ============================================================================ */
 applyTheme(themePref);
 BOOTED = true;
-navigate('overview');   /* opens the Overview hub with the Today flagship active */
+applyRoute((location.hash.slice(2)) || 'overview');   /* deep-link aware: honor #/<id> on load */
+history.replaceState({id:CURRENT}, '', '#/'+CURRENT);
 </script>
 
 
